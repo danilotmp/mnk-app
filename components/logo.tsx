@@ -1,0 +1,45 @@
+import { useTheme } from '@/hooks/use-theme';
+import React from 'react';
+import { Image, StyleSheet, View } from 'react-native';
+
+interface LogoProps {
+  size?: 'small' | 'medium' | 'large';
+  style?: any;
+}
+
+export function Logo({ size = 'medium', style }: LogoProps) {
+  const { spacing } = useTheme();
+
+  const getSize = () => {
+    switch (size) {
+      case 'small':
+        return { width: 40, height: 40 };
+      case 'large':
+        return { width: 80, height: 80 };
+      default:
+        return { width: 60, height: 60 };
+    }
+  };
+
+  const logoSize = getSize();
+
+  return (
+    <View style={[styles.container, { marginRight: spacing.md }, style]}>
+      <Image
+        source={require('@/assets/images/icon.png')}
+        style={[styles.logo, logoSize]}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    borderRadius: 8,
+  },
+});

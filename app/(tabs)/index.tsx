@@ -1,98 +1,151 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
+import { Header } from '@/components/header';
 import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useTheme } from '@/hooks/use-theme';
 import { Link } from 'expo-router';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { colors, spacing } = useTheme();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <ThemedView style={styles.container}>
+      <Header title="Bienvenido" />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Section */}
+        <Card variant="elevated" style={styles.heroCard}>
+          <ThemedView style={styles.titleContainer}>
+            <ThemedText type="h1" variant="primary">¡Bienvenido!</ThemedText>
+            <HelloWave />
+          </ThemedView>
+          <ThemedText type="body1" style={styles.heroDescription}>
+            Descubre una experiencia única con nuestra aplicación diseñada especialmente para ti.
+          </ThemedText>
+        </Card>
+
+        {/* Features Section */}
+        <ThemedView style={styles.featuresContainer}>
+          <ThemedText type="h2" style={styles.sectionTitle}>Características</ThemedText>
+          
+          <Card variant="outlined" style={styles.featureCard}>
+            <ThemedText type="h4" variant="secondary">Paso 1: Pruébalo</ThemedText>
+            <ThemedText type="body1" style={styles.featureDescription}>
+              Edita <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> para ver los cambios.
+              Presiona{' '}
+              <ThemedText type="defaultSemiBold" variant="accent">
+                {Platform.select({
+                  ios: 'cmd + d',
+                  android: 'cmd + m',
+                  web: 'F12',
+                })}
+              </ThemedText>{' '}
+              para abrir las herramientas de desarrollador.
+            </ThemedText>
+          </Card>
+
+          <Card variant="outlined" style={styles.featureCard}>
+            <ThemedText type="h4" variant="secondary">Paso 2: Explora</ThemedText>
+            <ThemedText type="body1" style={styles.featureDescription}>
+              Toca la pestaña Explorar para aprender más sobre lo que incluye esta aplicación.
+            </ThemedText>
+            <View style={styles.buttonContainer}>
+              <Link href="/modal" asChild>
+                <Button
+                  title="Abrir Modal"
+                  onPress={() => {}}
+                  variant="primary"
+                  size="medium"
+                />
+              </Link>
+            </View>
+          </Card>
+
+          <Card variant="outlined" style={styles.featureCard}>
+            <ThemedText type="h4" variant="secondary">Paso 3: Comienza de nuevo</ThemedText>
+            <ThemedText type="body1" style={styles.featureDescription}>
+              Cuando estés listo, ejecuta{' '}
+              <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> para obtener un directorio{' '}
+              <ThemedText type="defaultSemiBold">app</ThemedText> fresco.
+            </ThemedText>
+          </Card>
+        </ThemedView>
+
+        {/* Action Buttons */}
+        <ThemedView style={styles.actionsContainer}>
+          <Button
+            title="Explorar más"
+            onPress={() => {}}
+            variant="primary"
+            size="large"
+            style={styles.actionButton}
+          />
+          <Button
+            title="Configuración"
+            onPress={() => {}}
+            variant="outline"
+            size="large"
+            style={styles.actionButton}
+          />
+        </ThemedView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  heroCard: {
+    marginBottom: 24,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  heroDescription: {
+    textAlign: 'center',
+    opacity: 0.8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  featuresContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  featureCard: {
+    marginBottom: 16,
+  },
+  featureDescription: {
+    marginTop: 8,
+    lineHeight: 24,
+  },
+  buttonContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  actionsContainer: {
+    gap: 12,
+  },
+  actionButton: {
+    width: '100%',
   },
 });

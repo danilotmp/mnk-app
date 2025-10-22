@@ -1,0 +1,20 @@
+// Componentes de UI
+export { Button } from './ui/button';
+export { Card } from './ui/card';
+export { Collapsible } from './ui/collapsible';
+export { IconSymbol } from './ui/icon-symbol';
+
+// Componentes temáticos
+export { ThemedText } from './themed-text';
+export { ThemedView } from './themed-view';
+
+// Componentes de navegación
+export { Header } from './header';
+export { Logo } from './logo';
+
+// Componentes existentes
+export { ExternalLink } from './external-link';
+export { HapticTab } from './haptic-tab';
+export { HelloWave } from './hello-wave';
+export { ParallaxScrollView } from './parallax-scroll-view';
+
