@@ -1,5 +1,4 @@
 import { ExternalLink } from '@/components/external-link';
-import { Header } from '@/components/header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
@@ -16,8 +15,6 @@ export default function TabTwoScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Header title="Explorar" />
-      
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -138,14 +135,14 @@ export default function TabTwoScreen() {
             title="Ver documentación"
             onPress={() => {}}
             variant="primary"
-            size="large"
+            size="lg"
             style={styles.actionButton}
           />
           <Button
             title="GitHub"
             onPress={() => {}}
             variant="outline"
-            size="large"
+            size="lg"
             style={styles.actionButton}
           />
         </ThemedView>

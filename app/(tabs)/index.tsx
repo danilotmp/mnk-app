@@ -1,4 +1,3 @@
-import { Header } from '@/components/header';
 import { HelloWave } from '@/components/hello-wave';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -8,8 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { 
   MultiCompanyService, 
   useCompany, 
-  useMultiCompany,
-  UserProfileHeader 
+  useMultiCompany
 } from '@/src/domains/shared';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';
@@ -46,14 +44,6 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Header title="Bienvenido">
-        <UserProfileHeader 
-          onLogout={() => console.log('Logout')}
-          onSettings={() => console.log('Settings')}
-          onProfile={() => console.log('Profile')}
-        />
-      </Header>
-      
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

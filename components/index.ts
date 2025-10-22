@@ -12,6 +12,9 @@ export { ThemedView } from './themed-view';
 export { Header } from './header';
 export { Logo } from './logo';
 
+// Layouts
+export { MainLayout } from './layouts';
+
 // Componentes existentes
 export { ExternalLink } from './external-link';
 export { HapticTab } from './haptic-tab';
