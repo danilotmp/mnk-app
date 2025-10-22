@@ -73,8 +73,12 @@ export const LightTheme = {
   colors: {
     // Colores principales
     primary: BrandColors.blue[500],
+    primaryLight: BrandColors.blue[100],
+    primaryDark: BrandColors.blue[700],
     secondary: BrandColors.green[500],
+    secondaryLight: BrandColors.green[100],
     accent: BrandColors.orange[500],
+    accentLight: BrandColors.orange[100],
     
     // Colores de fondo
     background: '#FFFFFF',
@@ -146,8 +150,12 @@ export const DarkTheme = {
   colors: {
     // Colores principales
     primary: BrandColors.blue[400],
+    primaryLight: BrandColors.blue[300],
+    primaryDark: BrandColors.blue[600],
     secondary: BrandColors.green[400],
+    secondaryLight: BrandColors.green[300],
     accent: BrandColors.orange[400],
+    accentLight: BrandColors.orange[300],
     
     // Colores de fondo
     background: BrandColors.gray[900],

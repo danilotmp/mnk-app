@@ -5,11 +5,40 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
+import { BranchSelector, MultiCompanyService, useBranches, useCompany, useMultiCompany } from '@/src/domains/shared';
 import { Link } from 'expo-router';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function HomeScreen() {
   const { colors, spacing } = useTheme();
+  const { company, branch, user } = useCompany();
+  const { branches } = useBranches();
+  const { setUserContext, isLoading } = useMultiCompany();
+
+  // Simular login automático del usuario "danilo" para demostración
+  useEffect(() => {
+    const initUser = async () => {
+      if (!user) {
+        const service = MultiCompanyService.getInstance();
+        const mockUsers = service.getMockUsers();
+        // Usar el primer usuario (Danilo - Administrador)
+        await setUserContext(mockUsers[0]);
+      }
+    };
+    initUser();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText style={{ marginTop: 16 }}>Cargando información...</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -20,6 +49,35 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Multi-Company Info Section */}
+        {user && company && branch && (
+          <Card variant="elevated" style={styles.heroCard}>
+            <ThemedText type="h3" variant="primary" style={{ marginBottom: 12 }}>
+              👋 ¡Hola {user.firstName}!
+            </ThemedText>
+            <ThemedText type="body2" variant="secondary" style={{ marginBottom: 4 }}>
+              Empresa: <ThemedText type="defaultSemiBold">{company.name}</ThemedText>
+            </ThemedText>
+            <ThemedText type="body2" variant="secondary" style={{ marginBottom: 4 }}>
+              Sucursal: <ThemedText type="defaultSemiBold">{branch.name}</ThemedText>
+            </ThemedText>
+            <ThemedText type="body2" variant="secondary" style={{ marginBottom: 12 }}>
+              Ciudad: <ThemedText type="defaultSemiBold">{branch.address.city}</ThemedText>
+            </ThemedText>
+            
+            {branches.length > 1 && (
+              <>
+                <ThemedText type="body2" variant="secondary" style={{ marginBottom: 8 }}>
+                  Tienes acceso a {branches.length} sucursales
+                </ThemedText>
+                <BranchSelector onBranchChange={(newBranch: any) => {
+                  console.log('Cambiado a:', newBranch.name);
+                }} />
+              </>
+            )}
+          </Card>
+        )}
+
         {/* Hero Section */}
         <Card variant="elevated" style={styles.heroCard}>
           <ThemedView style={styles.titleContainer}>
@@ -62,7 +120,7 @@ export default function HomeScreen() {
                   title="Abrir Modal"
                   onPress={() => {}}
                   variant="primary"
-                  size="medium"
+                  size="md"
                 />
               </Link>
             </View>
@@ -84,14 +142,14 @@ export default function HomeScreen() {
             title="Explorar más"
             onPress={() => {}}
             variant="primary"
-            size="large"
+            size="lg"
             style={styles.actionButton}
           />
           <Button
             title="Configuración"
             onPress={() => {}}
             variant="outline"
-            size="large"
+            size="lg"
             style={styles.actionButton}
           />
         </ThemedView>
@@ -103,6 +161,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
