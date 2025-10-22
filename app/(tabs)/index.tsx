@@ -5,7 +5,12 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
-import { BranchSelector, MultiCompanyService, useBranches, useCompany, useMultiCompany } from '@/src/domains/shared';
+import { 
+  MultiCompanyService, 
+  useCompany, 
+  useMultiCompany,
+  UserProfileHeader 
+} from '@/src/domains/shared';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -13,7 +18,6 @@ import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react
 export default function HomeScreen() {
   const { colors, spacing } = useTheme();
   const { company, branch, user } = useCompany();
-  const { branches } = useBranches();
   const { setUserContext, isLoading } = useMultiCompany();
 
   // Simular login automático del usuario "danilo" para demostración
@@ -42,42 +46,19 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Header title="Bienvenido" />
+      <Header title="Bienvenido">
+        <UserProfileHeader 
+          onLogout={() => console.log('Logout')}
+          onSettings={() => console.log('Settings')}
+          onProfile={() => console.log('Profile')}
+        />
+      </Header>
       
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Multi-Company Info Section */}
-        {user && company && branch && (
-          <Card variant="elevated" style={styles.heroCard}>
-            <ThemedText type="h3" variant="primary" style={{ marginBottom: 12 }}>
-              👋 ¡Hola {user.firstName}!
-            </ThemedText>
-            <ThemedText type="body2" variant="secondary" style={{ marginBottom: 4 }}>
-              Empresa: <ThemedText type="defaultSemiBold">{company.name}</ThemedText>
-            </ThemedText>
-            <ThemedText type="body2" variant="secondary" style={{ marginBottom: 4 }}>
-              Sucursal: <ThemedText type="defaultSemiBold">{branch.name}</ThemedText>
-            </ThemedText>
-            <ThemedText type="body2" variant="secondary" style={{ marginBottom: 12 }}>
-              Ciudad: <ThemedText type="defaultSemiBold">{branch.address.city}</ThemedText>
-            </ThemedText>
-            
-            {branches.length > 1 && (
-              <>
-                <ThemedText type="body2" variant="secondary" style={{ marginBottom: 8 }}>
-                  Tienes acceso a {branches.length} sucursales
-                </ThemedText>
-                <BranchSelector onBranchChange={(newBranch: any) => {
-                  console.log('Cambiado a:', newBranch.name);
-                }} />
-              </>
-            )}
-          </Card>
-        )}
-
         {/* Hero Section */}
         <Card variant="elevated" style={styles.heroCard}>
           <ThemedView style={styles.titleContainer}>
