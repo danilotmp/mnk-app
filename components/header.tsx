@@ -8,11 +8,27 @@ interface HeaderProps {
   title?: string;
   showLogo?: boolean;
   children?: React.ReactNode;
+  inline?: boolean; // Nuevo: para usar en header unificado
 }
 
-export function Header({ title, showLogo = true, children }: HeaderProps) {
+export function Header({ title, showLogo = true, children, inline = false }: HeaderProps) {
   const { colors, spacing, shadows } = useTheme();
 
+  // Versión inline: sin SafeAreaView, sin padding, sin borde (para header unificado)
+  if (inline) {
+    return (
+      <View style={styles.inlineContent}>
+        {showLogo && <Logo size="medium" />}
+        {title && (
+          <ThemedText type="title" style={[styles.inlineTitle, { color: colors.text }]}>
+            {title}
+          </ThemedText>
+        )}
+      </View>
+    );
+  }
+
+  // Versión completa: con SafeAreaView, padding y borde (original)
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.container, { backgroundColor: colors.background, ...shadows.sm }]}>
@@ -52,5 +68,14 @@ const styles = StyleSheet.create({
   children: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  // Estilos para versión inline
+  inlineContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inlineTitle: {
+    marginLeft: 4,
   },
 });

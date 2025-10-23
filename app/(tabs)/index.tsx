@@ -4,10 +4,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
-import { 
-  MultiCompanyService, 
-  useCompany, 
-  useMultiCompany
+import {
+    MultiCompanyService,
+    useCompany,
+    useMultiCompany
 } from '@/src/domains/shared';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';

@@ -5,46 +5,46 @@
 
 import { Platform } from 'react-native';
 
-// Colores base de la paleta
+// Colores base de la paleta - Estilo Hapi Trade (Dark Finance UI)
 export const BrandColors = {
-  // Azules
+  // Cyan/Turquesa - Color principal (inspirado en Hapi)
   blue: {
-    50: '#E6F3FF',
-    100: '#CCE7FF',
-    200: '#99CFFF',
-    300: '#66B7FF',
-    400: '#339FFF',
-    500: '#0087FF', // Azul principal
-    600: '#006FCC',
-    700: '#005799',
-    800: '#003F66',
-    900: '#002733',
+    50: '#E6FBFF',
+    100: '#B3F2FF',
+    200: '#80E9FF',
+    300: '#4DD4FF',  // Cyan brillante principal
+    400: '#1AC8FF',
+    500: '#00B8F0', 
+    600: '#00A8CC',
+    700: '#0088A3',
+    800: '#006175',
+    900: '#003947',
   },
-  // Verdes
+  // Verde brillante para valores positivos
   green: {
-    50: '#E6F7E6',
-    100: '#CCEFCC',
-    200: '#99DF99',
-    300: '#66CF66',
-    400: '#33BF33',
-    500: '#00AF00', // Verde principal
-    600: '#008C00',
-    700: '#006900',
-    800: '#004600',
-    900: '#002300',
+    50: '#E6FFF5',
+    100: '#B3FFE0',
+    200: '#80FFCB',
+    300: '#4DFFB6',
+    400: '#1AFFA1',
+    500: '#00D98D', // Verde brillante (estilo Hapi)
+    600: '#00B377',
+    700: '#008D5E',
+    800: '#006745',
+    900: '#00412C',
   },
-  // Naranjas
+  // Amarillo/Naranja para warnings
   orange: {
-    50: '#FFF2E6',
-    100: '#FFE5CC',
-    200: '#FFCB99',
-    300: '#FFB166',
-    400: '#FF9733',
-    500: '#FF7D00', // Naranja principal
-    600: '#CC6400',
-    700: '#994B00',
-    800: '#663200',
-    900: '#331900',
+    50: '#FFFDE6',
+    100: '#FFFAB3',
+    200: '#FFF780',
+    300: '#FFF44D',
+    400: '#FFD93D', // Amarillo brillante
+    500: '#FFC700',
+    600: '#E6B000',
+    700: '#CC9900',
+    800: '#997300',
+    900: '#664D00',
   },
   // Grises
   gray: {
@@ -59,26 +59,26 @@ export const BrandColors = {
     800: '#3C4043',
     900: '#202124',
   },
-  // Colores de estado
+  // Colores de estado - Estilo Hapi Trade
   status: {
-    success: '#00AF00',
-    warning: '#FF7D00',
-    error: '#EA4335',
-    info: '#0087FF',
+    success: '#00D98D',  // Verde brillante (valores positivos)
+    warning: '#FFD93D',  // Amarillo brillante
+    error: '#FF3366',    // Rojo/Rosa brillante (valores negativos)
+    info: '#4DD4FF',     // Cyan brillante
   },
 };
 
-// Tema claro
+// Tema claro - Actualizado con colores Hapi
 export const LightTheme = {
   colors: {
     // Colores principales
-    primary: BrandColors.blue[500],
+    primary: BrandColors.blue[600],      // Cyan más oscuro para modo claro
     primaryLight: BrandColors.blue[100],
-    primaryDark: BrandColors.blue[700],
-    secondary: BrandColors.green[500],
+    primaryDark: BrandColors.blue[800],
+    secondary: BrandColors.green[600],   // Verde más oscuro para modo claro
     secondaryLight: BrandColors.green[100],
-    accent: BrandColors.orange[500],
-    accentLight: BrandColors.orange[100],
+    accent: BrandColors.blue[500],       // Cyan para acentos
+    accentLight: BrandColors.blue[100],
     
     // Colores de fondo
     background: '#FFFFFF',
@@ -145,42 +145,42 @@ export const LightTheme = {
   },
 };
 
-// Tema oscuro
+// Tema oscuro - Inspirado en Hapi Trade
 export const DarkTheme = {
   colors: {
-    // Colores principales
-    primary: BrandColors.blue[400],
-    primaryLight: BrandColors.blue[300],
-    primaryDark: BrandColors.blue[600],
-    secondary: BrandColors.green[400],
-    secondaryLight: BrandColors.green[300],
-    accent: BrandColors.orange[400],
-    accentLight: BrandColors.orange[300],
+    // Colores principales - Cyan/Turquesa brillante (estilo Hapi)
+    primary: '#4dd4ff',      // Cyan brillante (botones, links)
+    primaryLight: '#7ee0ff',  // Cyan más claro
+    primaryDark: '#00a8cc',   // Cyan oscuro
+    secondary: '#00d4aa',     // Verde turquesa
+    secondaryLight: '#33e0bb',
+    accent: '#4dd4ff',        // Mismo cyan para consistencia
+    accentLight: '#7ee0ff',
     
-    // Colores de fondo
-    background: BrandColors.gray[900],
-    surface: BrandColors.gray[800],
-    surfaceVariant: BrandColors.gray[700],
+    // Colores de fondo - Azul oscuro profundo (estilo Hapi)
+    background: '#0a0e27',    // Azul oscuro muy profundo (fondo principal)
+    surface: '#151b2e',       // Azul oscuro medio (cards, containers)
+    surfaceVariant: '#1e2538', // Azul oscuro ligeramente más claro
     
     // Colores de texto
-    text: BrandColors.gray[50],
-    textSecondary: BrandColors.gray[300],
-    textTertiary: BrandColors.gray[500],
+    text: '#ffffff',          // Blanco puro para texto principal
+    textSecondary: '#a0a8c1', // Gris azulado claro para texto secundario
+    textTertiary: '#6b7588',  // Gris azulado medio
     
-    // Colores de borde
-    border: BrandColors.gray[700],
-    borderLight: BrandColors.gray[600],
+    // Colores de borde - Sutiles
+    border: '#1e2538',        // Bordes sutiles
+    borderLight: '#2a3142',   // Bordes más visibles
     
     // Colores de estado
-    success: BrandColors.status.success,
-    warning: BrandColors.status.warning,
-    error: BrandColors.status.error,
-    info: BrandColors.status.info,
+    success: '#00d98d',       // Verde brillante (valores positivos)
+    warning: '#ffd93d',       // Amarillo brillante
+    error: '#ff3366',         // Rojo/Rosa brillante (valores negativos)
+    info: '#4dd4ff',          // Cyan (mismo que primary)
     
     // Colores de navegación
-    tabIconDefault: BrandColors.gray[500],
-    tabIconSelected: BrandColors.blue[400],
-    tint: BrandColors.blue[400],
+    tabIconDefault: '#6b7588',
+    tabIconSelected: '#4dd4ff',
+    tint: '#4dd4ff',
   },
   spacing: {
     xs: 4,

@@ -11,6 +11,8 @@ export { ThemedView } from './themed-view';
 // Componentes de navegación
 export { Header } from './header';
 export { Logo } from './logo';
+export { HorizontalMenu } from './navigation';
+export type { MenuItem } from './navigation';
 
 // Layouts
 export { MainLayout } from './layouts';

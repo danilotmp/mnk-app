@@ -1,14 +1,16 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { useBranches, useCompany, useMultiCompany } from '../hooks/use-multi-company.hook';
 import { Branch } from '../types';
@@ -30,6 +32,11 @@ export function UserProfileHeader({
   const { clearContext } = useMultiCompany();
   const [modalVisible, setModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
+  
+  // Responsive: Detectar tamaño de pantalla
+  const { width } = useWindowDimensions();
+  const isMobile = isMobileDevice(width);
+  const isDesktop = isDesktopDevice(width);
 
   if (!user || !company || !branch) {
     return null;
@@ -65,9 +72,13 @@ export function UserProfileHeader({
 
   return (
     <>
-      {/* Botón de perfil */}
+      {/* Botón de perfil - RESPONSIVE */}
       <TouchableOpacity
-        style={[styles.profileButton, { backgroundColor: colors.surface }]}
+        style={[
+          styles.profileButton, 
+          { backgroundColor: colors.surface },
+          isMobile && styles.profileButtonMobile
+        ]}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.7}
       >
@@ -78,18 +89,25 @@ export function UserProfileHeader({
           </ThemedText>
         </View>
 
-        {/* Info del usuario */}
-        <View style={styles.userInfo}>
-          <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
-            {user.firstName} {user.lastName}
-          </ThemedText>
-          <ThemedText type="caption" variant="secondary" numberOfLines={1}>
-            {branch.name}
-          </ThemedText>
-        </View>
+        {/* Info del usuario - Solo visible en Tablet y Desktop */}
+        {!isMobile && (
+          <View style={styles.userInfo}>
+            <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
+              {user.firstName} {isDesktop ? user.lastName : ''}
+            </ThemedText>
+            {/* Sucursal solo visible en Desktop */}
+            {isDesktop && (
+              <ThemedText type="caption" variant="secondary" numberOfLines={1}>
+                {branch.name}
+              </ThemedText>
+            )}
+          </View>
+        )}
 
-        {/* Icono de dropdown */}
-        <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
+        {/* Icono de dropdown - Solo visible en Tablet y Desktop */}
+        {!isMobile && (
+          <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
+        )}
       </TouchableOpacity>
 
       {/* Modal con opciones */}
@@ -260,6 +278,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 8,
   },
+  // Mobile: Solo avatar, más compacto
+  profileButtonMobile: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderRadius: 18,
+    gap: 0,
+  },
   avatar: {
     width: 36,
     height: 36,
@@ -274,6 +299,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
     marginRight: 4,
+    minWidth: 100, // Evitar que se comprima demasiado
   },
   userName: {
     fontSize: 14,
