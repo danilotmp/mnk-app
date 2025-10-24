@@ -15,14 +15,44 @@ export default function TabLayout() {
     {
       id: 'home',
       label: 'Inicio',
-      route: '/index',
+      route: '/(tabs)',  // Ruta correcta para Home
       onPress: () => console.log('Navegar a Home'),
     },
     {
       id: 'explore',
       label: 'Explorar',
-      route: '/explore',
+      route: '/(tabs)/explore',  // Ruta correcta para Explore
       onPress: () => console.log('Navegar a Explore'),
+    },
+    {
+      id: 'products',
+      label: 'Productos',
+      columns: [
+        {
+          title: 'PRODUCTOS',
+          items: [
+            { id: 'network-security', label: 'Seguridad de la red', route: '/products/network-security' },
+            { id: 'vulnerability', label: 'Gestión de vulnerabilidades', route: '/products/vulnerability' },
+            { id: 'pam', label: 'Gestión de acceso privilegiado', route: '/products/pam' },
+            { id: 'endpoint', label: 'Seguridad de puntos finales', route: '/products/endpoint' },
+          ],
+        },
+        {
+          title: 'PLATAFORMA',
+          items: [
+            { id: 'threat-hunting', label: 'Caza de amenazas', route: '/platform/threat-hunting' },
+            { id: 'uem', label: 'Gestión unificada de puntos finales', route: '/platform/uem' },
+            { id: 'email-security', label: 'Seguridad del correo electrónico', route: '/platform/email-security' },
+          ],
+        },
+        {
+          title: 'SERVICIOS ADMINISTRADOS',
+          items: [
+            { id: 'xdr', label: 'Detección y respuesta extendidas (XDR)', route: '/services/xdr' },
+            { id: 'mxdr', label: 'Detección y respuesta administradas (MDR)', route: '/services/mxdr' },
+          ],
+        },
+      ],
     },
     {
       id: 'accounts',
@@ -37,9 +67,36 @@ export default function TabLayout() {
       id: 'loans',
       label: 'Préstamos',
       submenu: [
-        { id: 'personal', label: 'Préstamo Personal', route: '/loans/personal' },
-        { id: 'mortgage', label: 'Préstamo Hipotecario', route: '/loans/mortgage' },
-        { id: 'auto', label: 'Préstamo Vehicular', route: '/loans/auto' },
+        { 
+          id: 'multicredit', 
+          label: 'Multicrédito', 
+          description: 'Define el monto y las cuotas en línea.',
+          route: '/loans/multicredit' 
+        },
+        { 
+          id: 'microcredit', 
+          label: 'Microcrédito', 
+          description: 'Potencia tu pequeño negocio.',
+          route: '/loans/microcredit' 
+        },
+        { 
+          id: 'casafacil', 
+          label: 'Casafácil', 
+          description: 'Compra una casa nueva o usada.',
+          route: '/loans/casafacil' 
+        },
+        { 
+          id: 'autofacil', 
+          label: 'Autofácil', 
+          description: 'Califica por un crédito del 80% del monto total.',
+          route: '/loans/autofacil' 
+        },
+        { 
+          id: 'educativo', 
+          label: 'Educativo', 
+          description: 'Solicítalo y paga cuando te gradúes.',
+          route: '/loans/educativo' 
+        },
       ],
     },
     {
@@ -67,7 +124,7 @@ export default function TabLayout() {
   ];
 
   return (
-    <MainLayout title="MNK App" menuItems={menuItems}>
+    <MainLayout title="MNK" menuItems={menuItems}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,

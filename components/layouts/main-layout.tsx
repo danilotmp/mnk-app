@@ -1,6 +1,7 @@
 import { Header } from '@/components/header';
 import { HorizontalMenu, MenuItem } from '@/components/navigation';
 import { ThemedView } from '@/components/themed-view';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { UserProfileHeader } from '@/src/domains/shared';
 import { useRouter } from 'expo-router';
@@ -21,15 +22,16 @@ interface MainLayoutProps {
  * Contiene elementos persistentes como el Header, Logo y UserProfile
  * que no deben variar al navegar entre páginas
  */
-export function MainLayout({ 
-  children, 
-  title = 'MNK App',
+export function MainLayout({
+  children,
+  title = 'MNK',
   showHeader = true,
   showUserProfile = true,
   showNavigation = true,
-  menuItems = [] 
+  menuItems = []
 }: MainLayoutProps) {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
 
   // Menú por defecto si no se proporciona
   const defaultMenuItems: MenuItem[] = [
@@ -103,27 +105,58 @@ export function MainLayout({
       {/* Header unificado: Logo + Menú + UserProfile en la misma línea */}
       {showHeader && (
         <View style={[styles.unifiedHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <Header title={title} inline={true} />
-          </View>
+          {isMobile ? (
+            // Layout Mobile: [Hamburger] [Logo] ──────────── [Usuario]
+            <>
+              {/* Hamburger Menu a la izquierda */}
+              {showNavigation && (
+                <View style={styles.mobileMenuSection}>
+                  <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
+                </View>
+              )}
+              
+              {/* Logo en el centro */}
+              <View style={styles.mobileLogoSection}>
+                <Header title={title} inline={true} logoSize="small" />
+              </View>
+              
+              {/* UserProfile a la derecha */}
+              {showUserProfile && (
+                <View style={styles.mobileUserSection}>
+                  <UserProfileHeader
+                    onLogout={handleLogout}
+                    onSettings={handleSettings}
+                    onProfile={handleProfile}
+                  />
+                </View>
+              )}
+            </>
+          ) : (
+            // Layout Desktop/Tablet: [Logo] ──── [Menú CENTRADO] ──── [Usuario]
+            <>
+              {/* Logo */}
+              <View style={styles.logoSection}>
+                <Header title={title} inline={true} />
+              </View>
 
-          {/* Menú de navegación horizontal en el centro */}
-          {showNavigation && (
-            <View style={styles.menuSection}>
-              <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
-            </View>
-          )}
+              {/* Menú de navegación horizontal en el centro */}
+              {showNavigation && (
+                <View style={styles.menuSection}>
+                  <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
+                </View>
+              )}
 
-          {/* UserProfile en la derecha */}
-          {showUserProfile && (
-            <View style={styles.userSection}>
-              <UserProfileHeader
-                onLogout={handleLogout}
-                onSettings={handleSettings}
-                onProfile={handleProfile}
-              />
-            </View>
+              {/* UserProfile en la derecha */}
+              {showUserProfile && (
+                <View style={styles.userSection}>
+                  <UserProfileHeader
+                    onLogout={handleLogout}
+                    onSettings={handleSettings}
+                    onProfile={handleProfile}
+                  />
+                </View>
+              )}
+            </>
           )}
         </View>
       )}
@@ -149,6 +182,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     zIndex: 1000,
   },
+  
+  // Estilos Desktop/Tablet
   logoSection: {
     flexShrink: 0,
     minWidth: 150, // Ancho mínimo para el logo
@@ -165,6 +200,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     flexDirection: 'row',
   },
+  
+  // Estilos Mobile
+  mobileMenuSection: {
+    flexShrink: 0,
+    marginRight: 8, // Espacio entre hamburger y logo
+  },
+  mobileLogoSection: {
+    flex: 1,
+    alignItems: 'center', // Logo centrado en mobile
+  },
+  mobileUserSection: {
+    flexShrink: 0,
+    marginLeft: 8, // Espacio entre logo y usuario
+  },
+  
   content: {
     flex: 1,
   },

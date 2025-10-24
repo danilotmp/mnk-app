@@ -1,4 +1,4 @@
-# Sistema de Diseño MNK App
+# Sistema de Diseño MNK
 
 Este documento describe el sistema de diseño implementado en la aplicación MNK, basado en una paleta de colores azules, verdes y naranjas.
 

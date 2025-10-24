@@ -4,11 +4,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
-import {
-    MultiCompanyService,
-    useCompany,
-    useMultiCompany
-} from '@/src/domains/shared';
+import { useCompany, useMultiCompany } from '@/src/domains/shared/hooks';
+import { MultiCompanyService } from '@/src/domains/shared/services';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -51,7 +48,7 @@ export default function HomeScreen() {
       >
         {/* Hero Section */}
         <Card variant="elevated" style={styles.heroCard}>
-          <ThemedView style={styles.titleContainer}>
+          <ThemedView style={styles.titleContainer} variant="transparent">
             <ThemedText type="h1" variant="primary">¡Bienvenido!</ThemedText>
             <HelloWave />
           </ThemedView>

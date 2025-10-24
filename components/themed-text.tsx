@@ -16,7 +16,7 @@ export function ThemedText({
   variant,
   ...rest
 }: ThemedTextProps) {
-  const { colors, typography } = useTheme();
+  const { colors, typography, isDark } = useTheme();
   
   // Determinar el color basado en la variante
   const getColor = () => {
@@ -41,10 +41,12 @@ export function ThemedText({
         case 'info':
           return colors.info;
         default:
+          // En modo claro dentro de cards, usar rgb(30, 41, 59)
           return colors.text;
       }
     }
     
+    // Color por defecto
     return colors.text;
   };
 

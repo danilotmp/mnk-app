@@ -82,11 +82,11 @@ export const LightTheme = {
     
     // Colores de fondo
     background: '#FFFFFF',
-    surface: BrandColors.gray[50],
+    surface: '#f8f9fa',           // rgb(248, 249, 250) - Color del botón de tema
     surfaceVariant: BrandColors.gray[100],
     
     // Colores de texto
-    text: BrandColors.gray[900],
+    text: '#1e2538',          // rgb(30, 41, 59) - Color oscuro para modo claro
     textSecondary: BrandColors.gray[700],
     textTertiary: BrandColors.gray[500],
     
@@ -104,6 +104,8 @@ export const LightTheme = {
     tabIconDefault: BrandColors.gray[500],
     tabIconSelected: BrandColors.blue[500],
     tint: BrandColors.blue[500],
+    icon: '#1e2538',           // Iconos oscuros en modo claro
+    iconSecondary: BrandColors.gray[600],
   },
   spacing: {
     xs: 4,
@@ -158,9 +160,9 @@ export const DarkTheme = {
     accentLight: '#7ee0ff',
     
     // Colores de fondo - Azul oscuro profundo (estilo Hapi)
-    background: '#0a0e27',    // Azul oscuro muy profundo (fondo principal)
-    surface: '#151b2e',       // Azul oscuro medio (cards, containers)
-    surfaceVariant: '#1e2538', // Azul oscuro ligeramente más claro
+    background: '#151b2e',       // Azul oscuro medio (el que era surface)
+    surface: 'rgba(188,197,239,.2)', // Azul claro transparente
+    surfaceVariant: '#1e2538',   // Azul oscuro ligeramente más claro
     
     // Colores de texto
     text: '#ffffff',          // Blanco puro para texto principal
@@ -181,6 +183,8 @@ export const DarkTheme = {
     tabIconDefault: '#6b7588',
     tabIconSelected: '#4dd4ff',
     tint: '#4dd4ff',
+    icon: '#ffffff',          // Iconos blancos en modo oscuro
+    iconSecondary: '#a0a8c1', // Iconos secundarios
   },
   spacing: {
     xs: 4,

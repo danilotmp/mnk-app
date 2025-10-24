@@ -1,6 +1,6 @@
 # 🚀 Inicio Rápido - Arquitectura Multiempresa
 
-Esta guía te ayudará a entender y usar la arquitectura multiempresa implementada en MNK App.
+Esta guía te ayudará a entender y usar la arquitectura multiempresa implementada en MNK.
 
 ## 📦 ¿Qué se ha implementado?
 

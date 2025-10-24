@@ -1,20 +1,20 @@
 import { BrandColors, DarkTheme, LightTheme, Typography } from '@/constants/theme';
-import { useColorScheme } from './use-color-scheme';
+import { useThemeMode } from './use-theme-mode';
 
 export function useTheme() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? DarkTheme : LightTheme;
+  const { isDark } = useThemeMode();
+  const theme = isDark ? DarkTheme : LightTheme;
 
   return {
     theme,
-    colorScheme,
+    colorScheme: isDark ? 'dark' : 'light',
     colors: theme.colors,
     spacing: theme.spacing,
     borderRadius: theme.borderRadius,
     shadows: theme.shadows,
     typography: Typography,
     brandColors: BrandColors,
-    isDark: colorScheme === 'dark',
-    isLight: colorScheme === 'light',
+    isDark,
+    isLight: !isDark,
   };
 }

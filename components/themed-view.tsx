@@ -4,7 +4,7 @@ import { View, type ViewProps } from 'react-native';
 export type ThemedViewProps = ViewProps & {
   lightColor?: string;
   darkColor?: string;
-  variant?: 'background' | 'surface' | 'surfaceVariant' | 'primary' | 'secondary' | 'accent';
+  variant?: 'background' | 'surface' | 'surfaceVariant' | 'primary' | 'secondary' | 'accent' | 'transparent';
 };
 
 export function ThemedView({ 
@@ -33,6 +33,8 @@ export function ThemedView({
         return colors.secondary;
       case 'accent':
         return colors.accent;
+      case 'transparent':
+        return 'transparent';
       default:
         return colors.background;
     }

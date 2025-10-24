@@ -125,7 +125,7 @@ export default function TabLayout() {
 ```tsx
 export default function TabLayout() {
   return (
-    <MainLayout title="MNK App">
+    <MainLayout title="MNK">
       <Tabs>
         <Tabs.Screen name="index" />
         <Tabs.Screen name="explore" />
@@ -196,7 +196,7 @@ Usuario en Página A (index.tsx)
 │
 ├─ Header (Persistente) ────────────────┐
 │  ├─ Logo                              │
-│  ├─ Título: "MNK App"                 │
+│  ├─ Título: "MNK"                 │
 │  └─ UserProfile: [DA] Danilo ▼       │ <- Siempre visible
 │                                        │
 ├─ Contenido de Página A                │
@@ -211,7 +211,7 @@ Usuario en Página B (explore.tsx)       │
 │                                        │
 ├─ Header (Persistente) ────────────────┘ <- Mismo header
 │  ├─ Logo                                  NO se recarga
-│  ├─ Título: "MNK App"
+│  ├─ Título: "MNK"
 │  └─ UserProfile: [DA] Danilo ▼
 │
 ├─ Contenido de Página B  <- Solo cambia esto

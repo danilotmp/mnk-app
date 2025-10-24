@@ -2,7 +2,7 @@
 export const AppConfig = {
   // Información de la aplicación
   app: {
-    name: 'MNK App',
+    name: 'MNK',
     version: '1.0.0',
     description: 'Aplicación React Native con arquitectura DDD',
   },

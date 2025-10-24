@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import React, { useState } from 'react';
@@ -72,8 +73,10 @@ export function UserProfileHeader({
 
   return (
     <>
-      {/* Botón de perfil - RESPONSIVE */}
-      <TouchableOpacity
+      {/* Contenedor del perfil y toggle de tema */}
+      <View style={styles.profileContainer}>
+        {/* Botón de perfil - RESPONSIVE */}
+        <TouchableOpacity
         style={[
           styles.profileButton, 
           { backgroundColor: colors.surface },
@@ -109,6 +112,10 @@ export function UserProfileHeader({
           <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
         )}
       </TouchableOpacity>
+
+        {/* Toggle de tema - Al lado del perfil */}
+        <ThemeToggle onToggle={() => console.log('Toggle tema')} />
+      </View>
 
       {/* Modal con opciones */}
       <Modal
@@ -269,6 +276,11 @@ export function UserProfileHeader({
 }
 
 const styles = StyleSheet.create({
+  // Contenedor del perfil y toggle de tema
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   // Botón de perfil
   profileButton: {
     flexDirection: 'row',

@@ -323,5 +323,5 @@ import { ThemedText } from '@/components/themed-text';
 
 **Creado:** Octubre 2025  
 **Inspirado por:** Hapi Trade UI Design  
-**Autor:** MNK App Team
+**Autor:** MNK Team
 

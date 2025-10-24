@@ -9,18 +9,22 @@ interface HeaderProps {
   showLogo?: boolean;
   children?: React.ReactNode;
   inline?: boolean; // Nuevo: para usar en header unificado
+  logoSize?: 'small' | 'medium' | 'large'; // Nuevo: tamaño del logo
 }
 
-export function Header({ title, showLogo = true, children, inline = false }: HeaderProps) {
+export function Header({ title, showLogo = true, children, inline = false, logoSize = 'medium' }: HeaderProps) {
   const { colors, spacing, shadows } = useTheme();
 
   // Versión inline: sin SafeAreaView, sin padding, sin borde (para header unificado)
   if (inline) {
     return (
       <View style={styles.inlineContent}>
-        {showLogo && <Logo size="medium" />}
+        {showLogo && <Logo size={logoSize} />}
         {title && (
-          <ThemedText type="title" style={[styles.inlineTitle, { color: colors.text }]}>
+          <ThemedText 
+            type={logoSize === 'small' ? 'h3' : 'title'} 
+            style={[styles.inlineTitle, { color: colors.text }]}
+          >
             {title}
           </ThemedText>
         )}

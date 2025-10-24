@@ -1,4 +1,4 @@
-# Arquitectura DDD - MNK App
+# Arquitectura DDD - MNK
 
 Este documento describe la arquitectura Domain-Driven Design (DDD) implementada en la aplicación MNK.
 

@@ -16,7 +16,7 @@ Reemplazar el Tab Bar inferior por un **menú de navegación horizontal** simila
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [Logo] MNK App                              [DA] Danilo ▼  │ <- Header
+│ [Logo] MNK                              [DA] Danilo ▼  │ <- Header
 ├─────────────────────────────────────────────────────────────┤
 │ Inicio | Cuentas ▼ | Préstamos ▼ | Tarjetas ▼ | Servicios │ <- Menú Horizontal
 ├─────────────────────────────────────────────────────────────┤
@@ -30,7 +30,7 @@ Reemplazar el Tab Bar inferior por un **menú de navegación horizontal** simila
 
 ```
 ┌─────────────────────────────┐
-│ [☰] MNK App        [DA]    │ <- Header compacto
+│ [☰] MNK        [DA]    │ <- Header compacto
 ├─────────────────────────────┤
 │                             │
 │ Contenido de la página      │
@@ -140,7 +140,7 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-<MainLayout title="MNK App" menuItems={menuItems}>
+<MainLayout title="MNK" menuItems={menuItems}>
   <Tabs>...</Tabs>
 </MainLayout>
 ```
@@ -286,7 +286,7 @@ export default function TabLayout() {
   ];
 
   return (
-    <MainLayout title="MNK App" menuItems={menuItems}>
+    <MainLayout title="MNK" menuItems={menuItems}>
       <Tabs>
         <Tabs.Screen name="index" />
         <Tabs.Screen name="explore" />
