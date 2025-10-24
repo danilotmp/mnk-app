@@ -34,8 +34,6 @@ export function ThemeToggle({ onToggle }: ThemeToggleProps) {
     if (onToggle) {
       onToggle();
     }
-    
-    console.log(`Tema cambiado a: ${newMode}`);
   };
 
   return (

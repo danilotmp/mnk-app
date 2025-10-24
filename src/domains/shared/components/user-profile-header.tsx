@@ -114,7 +114,7 @@ export function UserProfileHeader({
       </TouchableOpacity>
 
         {/* Toggle de tema - Al lado del perfil */}
-        <ThemeToggle onToggle={() => console.log('Toggle tema')} />
+        <ThemeToggle />
       </View>
 
       {/* Modal con opciones */}

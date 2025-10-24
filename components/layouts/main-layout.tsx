@@ -66,25 +66,20 @@ export function MainLayout({
   const finalMenuItems = menuItems.length > 0 ? menuItems : defaultMenuItems;
 
   const handleLogout = () => {
-    console.log('Logout - Redirigir a login');
     // TODO: Implementar lógica de logout real
   };
 
   const handleSettings = () => {
-    console.log('Settings - Navegar a configuración');
     // TODO: Navegar a pantalla de configuración
   };
 
   const handleProfile = () => {
-    console.log('Profile - Navegar a perfil');
     // TODO: Navegar a pantalla de perfil
   };
 
   const router = useRouter();
 
   const handleMenuItemPress = (item: MenuItem) => {
-    console.log('Navegando a:', item.label, item.route);
-    
     // Navegación real con Expo Router
     if (item.route) {
       try {
@@ -180,7 +175,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    zIndex: 1000,
+    zIndex: 9999, // ← Aumentado para que el mega menú quede por encima
   },
   
   // Estilos Desktop/Tablet

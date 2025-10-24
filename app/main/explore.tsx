@@ -46,8 +46,8 @@ export default function TabTwoScreen() {
             <Collapsible title="Enrutamiento basado en archivos">
               <ThemedText type="body1" style={styles.collapsibleContent}>
                 Esta aplicación tiene dos pantallas:{' '}
-                <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> y{' '}
-                <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
+                <ThemedText type="defaultSemiBold">app/(tabs)/main/index.tsx</ThemedText> y{' '}
+                <ThemedText type="defaultSemiBold">app/(tabs)/main/explore.tsx</ThemedText>
               </ThemedText>
               <ThemedText type="body1" style={styles.collapsibleContent}>
                 El archivo de diseño en <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
@@ -212,3 +212,4 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
+

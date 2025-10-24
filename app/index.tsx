@@ -64,7 +64,7 @@ export default function HomeScreen() {
           <Card variant="outlined" style={styles.featureCard}>
             <ThemedText type="h4" variant="secondary">Paso 1: Pruébalo</ThemedText>
             <ThemedText type="body1" style={styles.featureDescription}>
-              Edita <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> para ver los cambios.
+              Edita <ThemedText type="defaultSemiBold">app/index.tsx</ThemedText> para ver los cambios.
               Presiona{' '}
               <ThemedText type="defaultSemiBold" variant="accent">
                 {Platform.select({
