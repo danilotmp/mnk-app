@@ -149,7 +149,7 @@ export function UserProfileHeader({
                   <ThemedText type="body2" variant="secondary">
                     {user.email}
                   </ThemedText>
-                  <View style={[styles.badge, { backgroundColor: colors.primaryLight }]}>
+                  <View style={[styles.badge, { backgroundColor: 'transparent' }]}>
                     <ThemedText type="caption" variant="primary">
                       {company.name}
                     </ThemedText>
@@ -157,19 +157,6 @@ export function UserProfileHeader({
                 </View>
 
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                {/* Sucursal actual */}
-                <View style={styles.section}>
-                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                    Sucursal Actual
-                  </ThemedText>
-                  <View style={[styles.currentBranchCard, { backgroundColor: colors.surface }]}>
-                    <ThemedText type="defaultSemiBold">{branch.name}</ThemedText>
-                    <ThemedText type="caption" variant="secondary">
-                      {branch.address.city}, {branch.address.state}
-                    </ThemedText>
-                  </View>
-                </View>
 
                 {/* Selector de sucursales */}
                 {branches.length > 1 && (
@@ -196,8 +183,8 @@ export function UserProfileHeader({
                                 {
                                   backgroundColor:
                                     branchItem.id === branch.id
-                                      ? colors.primaryLight
-                                      : colors.surface,
+                                      ? colors.surface  // Activa usa estilo de inactiva
+                                      : 'transparent',  // Inactiva usa fondo transparente
                                 },
                               ]}
                               onPress={() => handleBranchSwitch(branchItem)}
@@ -206,7 +193,7 @@ export function UserProfileHeader({
                               <View style={styles.branchOptionInfo}>
                                 <ThemedText
                                   type="defaultSemiBold"
-                                  variant={branchItem.id === branch.id ? 'primary' : undefined}
+                                  variant={branchItem.id === branch.id ? undefined : 'primary'}  // Invertido
                                 >
                                   {branchItem.name}
                                 </ThemedText>
@@ -215,7 +202,7 @@ export function UserProfileHeader({
                                 </ThemedText>
                               </View>
                               {branchItem.id === branch.id && (
-                                <ThemedText variant="primary">✓</ThemedText>
+                                <ThemedText style={{ color: colors.text }}>✓</ThemedText>  // Usar color normal
                               )}
                             </TouchableOpacity>
                           ))}
@@ -378,10 +365,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: 12,
-  },
-  currentBranchCard: {
-    padding: 16,
-    borderRadius: 12,
   },
   branchOption: {
     flexDirection: 'row',
