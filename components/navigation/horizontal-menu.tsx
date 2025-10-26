@@ -396,8 +396,12 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                     {column.items.map((subitem) => (
                       <TouchableOpacity
                         key={subitem.id}
-                        style={[styles.megaMenuItem, { borderBottomColor: colors.border }]}
-                        onPress={() => handleItemPress(subitem)}
+                        style={[
+                          styles.megaMenuItem, 
+                          { borderBottomColor: colors.border },
+                          activeSubmenuItem === subitem.id && styles.activeMegaMenuItem
+                        ]}
+                        onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
                       >
                         <ThemedText type="body2" style={styles.megaMenuItemText}>
                           {subitem.label}
@@ -598,6 +602,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
+  },
+  activeMegaMenuItem: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#ff3366', // Línea roja vertical izquierda
+    paddingLeft: 7, // Reducir padding izquierdo para compensar el borde
   },
   megaMenuItemText: {
     opacity: 0.8,

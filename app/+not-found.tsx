@@ -31,12 +31,12 @@ export default function NotFoundScreen() {
         </View>
 
         {/* Título */}
-        <ThemedText style={styles.title}>
+        <ThemedText style={[styles.title, { color: colors.text }]}>
           NOT FOUND
         </ThemedText>
 
         {/* Mensaje */}
-        <ThemedText style={styles.message}>
+        <ThemedText style={[styles.message, { color: colors.text }]}>
           Sorry, but you are looking for something that isn't here.
         </ThemedText>
 
@@ -108,13 +108,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0,
     marginBottom: 32,
-    color: '#FFFFFF',
   },
   message: {
     textAlign: 'center',
     marginBottom: 40,
     fontSize: 14,
-    color: '#FFFFFF',
     opacity: 0.8,
   },
   linkContainer: {

@@ -1,12 +1,49 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { MainLayout, MenuItem } from '@/components/layouts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
 import { MultiCompanyProvider } from '@/src/domains/shared';
+import { useMultiCompany } from '@/src/domains/shared/hooks';
+import { MultiCompanyService } from '@/src/domains/shared/services';
+
+function LayoutContent({ menuItems }: { menuItems: MenuItem[] }) {
+  const colorScheme = useColorScheme();
+  const { user, setUserContext } = useMultiCompany();
+
+  // Simular login automático del usuario "danilo" para demostración
+  useEffect(() => {
+    const initUser = async () => {
+      if (!user) {
+        const service = MultiCompanyService.getInstance();
+        const mockUsers = service.getMockUsers();
+        // Usar el primer usuario (Danilo - Administrador)
+        await setUserContext(mockUsers[0]);
+      }
+    };
+    initUser();
+  }, []);
+
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <MainLayout title="MNK" menuItems={menuItems}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="main" />
+          <Stack.Screen name="services" />
+          <Stack.Screen name="products" />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="+not-found" options={{ title: '404' }} />
+        </Stack>
+      </MainLayout>
+      <StatusBar style="auto" />
+    </ThemeProvider>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -34,6 +71,7 @@ export default function RootLayout() {
             { id: 'vulnerability', label: 'Gestión de vulnerabilidades', route: '/products/vulnerability' },
             { id: 'pam', label: 'Gestión de acceso privilegiado', route: '/products/pam' },
             { id: 'endpoint', label: 'Seguridad de puntos finales', route: '/products/endpoint' },
+            { id: 'insurance', label: 'Seguros', route: '/products/insurance' },
           ],
         },
         {
@@ -112,7 +150,6 @@ export default function RootLayout() {
       submenu: [
         { id: 'transfers', label: 'Transferencias', route: '/services/transfers' },
         { id: 'payments', label: 'Pagos', route: '/services/payments' },
-        { id: 'insurance', label: 'Seguros', route: '/services/insurance' },
       ],
     },
     {
@@ -125,18 +162,7 @@ export default function RootLayout() {
   return (
     <CustomThemeProvider>
       <MultiCompanyProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <MainLayout title="MNK" menuItems={menuItems}>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="main" />
-              <Stack.Screen name="services" />
-              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              <Stack.Screen name="+not-found" options={{ title: '404' }} />
-            </Stack>
-          </MainLayout>
-          <StatusBar style="auto" />
-        </ThemeProvider>
+        <LayoutContent menuItems={menuItems} />
       </MultiCompanyProvider>
     </CustomThemeProvider>
   );
