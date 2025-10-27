@@ -4,14 +4,14 @@ import { useTheme } from '@/hooks/use-theme';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  useWindowDimensions
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+    useWindowDimensions
 } from 'react-native';
 
 export interface MenuItem {
@@ -65,27 +65,18 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
         return true;
       }
       
-      // Verificar si el pathname contiene la ruta como segmento completo
-      // Asegurar que no sea solo una subcadena (evitar matches como "contact" en "contact-us")
-      const routeSegments = normalizedRoute.split('/');
-      const pathSegments = normalizedPath.split('/');
-      
-      // Verificar si todos los segmentos de la ruta están presentes en el path
-      for (const segment of routeSegments) {
-        if (!pathSegments.includes(segment)) {
-          return false;
-        }
+      // Verificar si el pathname empieza con la ruta seguida de /
+      if (normalizedPath.startsWith(normalizedRoute + '/')) {
+        return true;
       }
       
-      // Verificar que los segmentos estén en el mismo orden
-      let routeIndex = 0;
-      for (let i = 0; i < pathSegments.length && routeIndex < routeSegments.length; i++) {
-        if (pathSegments[i] === routeSegments[routeIndex]) {
-          routeIndex++;
-        }
+      // Verificar si el pathname termina con / seguido de la ruta
+      if (normalizedPath.endsWith('/' + normalizedRoute)) {
+        return true;
       }
       
-      return routeIndex === routeSegments.length;
+      // Verificar si contiene la ruta con delimitadores
+      return normalizedPath.includes('/' + normalizedRoute + '/');
     };
 
     // Función recursiva para buscar el item activo basado en la ruta
