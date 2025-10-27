@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -11,6 +12,18 @@ export default function NotFoundScreen() {
 
   const handleGoHome = () => {
     router.push('/');
+  };
+
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+
+  const handleContactUs = () => {
+    router.push('main/contact' as any);
   };
 
   return (
@@ -40,12 +53,38 @@ export default function NotFoundScreen() {
           Sorry, but you are looking for something that isn't here.
         </ThemedText>
 
-        {/* Link */}
-        <TouchableOpacity onPress={handleGoHome} style={styles.linkContainer}>
-          <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
-            Go back
-          </ThemedText>
-        </TouchableOpacity>
+        {/* Links con Go Back a la izquierda y Go Home centrado */}
+        <View style={styles.linksContainer}>
+          {/* Sección izquierda - Go Back */}
+          <View style={styles.leftSection}>
+            <TouchableOpacity onPress={handleGoBack} style={styles.linkButton}>
+              <Ionicons name="arrow-back" size={18} color={colors.primary} />
+              <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
+                Go Back
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Sección central - Go Home */}
+          <View style={styles.centerSection}>
+            <TouchableOpacity onPress={handleGoHome} style={styles.linkButton}>
+              <Ionicons name="home" size={18} color={colors.primary} />
+              <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
+                Go Home
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Sección derecha - Contact Us */}
+          <View style={styles.rightSection}>
+            <TouchableOpacity onPress={handleContactUs} style={styles.linkButton}>
+              <Ionicons name="mail" size={18} color={colors.primary} />
+              <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
+                Contact Us
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ThemedView>
     </>
   );
@@ -115,9 +154,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.8,
   },
-  linkContainer: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  linksContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 600,
+  },
+  leftSection: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  centerSection: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rightSection: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  linkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   linkText: {
     fontSize: 16,

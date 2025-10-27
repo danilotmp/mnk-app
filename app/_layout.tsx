@@ -153,9 +153,9 @@ export default function RootLayout() {
       ],
     },
     {
-      id: 'business',
-      label: 'Empresas',
-      route: '/business',
+      id: 'contact',
+      label: 'Contactos',
+      route: 'main/contact' as any,
     },
   ];
 

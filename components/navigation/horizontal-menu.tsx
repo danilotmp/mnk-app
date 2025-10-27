@@ -55,14 +55,44 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
 
   // Detectar la ruta actual y establecer el item activo
   useEffect(() => {
+    // Función para comparar rutas de manera flexible
+    const isRouteMatch = (pathname: string, route: string): boolean => {
+      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+      
+      // Verificar coincidencia exacta
+      if (normalizedPath === normalizedRoute) {
+        return true;
+      }
+      
+      // Verificar si el pathname contiene la ruta como segmento completo
+      // Asegurar que no sea solo una subcadena (evitar matches como "contact" en "contact-us")
+      const routeSegments = normalizedRoute.split('/');
+      const pathSegments = normalizedPath.split('/');
+      
+      // Verificar si todos los segmentos de la ruta están presentes en el path
+      for (const segment of routeSegments) {
+        if (!pathSegments.includes(segment)) {
+          return false;
+        }
+      }
+      
+      // Verificar que los segmentos estén en el mismo orden
+      let routeIndex = 0;
+      for (let i = 0; i < pathSegments.length && routeIndex < routeSegments.length; i++) {
+        if (pathSegments[i] === routeSegments[routeIndex]) {
+          routeIndex++;
+        }
+      }
+      
+      return routeIndex === routeSegments.length;
+    };
+
     // Función recursiva para buscar el item activo basado en la ruta
     const findActiveItem = (items: MenuItem[], parentId?: string): { itemId: string | null; parentId: string | null } => {
       for (const item of items) {
-        // Normalizar ambas rutas para comparación
-        const normalizedPathname = pathname.toLowerCase();
-        const normalizedRoute = item.route?.toLowerCase();
-        
-        if (item.route && normalizedPathname === normalizedRoute) {
+        // Comparar la ruta
+        if (item.route && isRouteMatch(pathname, item.route)) {
           // Si encontramos el item activo en el nivel principal, marcarlo
           if (!parentId) {
             setActiveMenuItem(item.id);
