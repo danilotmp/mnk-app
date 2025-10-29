@@ -66,13 +66,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
   mobileThemeToggle: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    marginLeft: 4,
   },
   themeIcon: {
     fontSize: 16,

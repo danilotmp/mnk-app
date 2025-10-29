@@ -141,7 +141,7 @@ export default function TabTwoScreen() {
           <Button
             title="GitHub"
             onPress={() => {}}
-            variant="outline"
+            variant="outlined"
             size="lg"
             style={styles.actionButton}
           />

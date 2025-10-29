@@ -68,7 +68,7 @@ export const createButtonStyles = (theme: BaseTheme) => {
         backgroundColor: theme.brand.accent,
         borderWidth: 0,
       },
-      outline: {
+      outlined: {
         backgroundColor: 'transparent',
         borderWidth: theme.borders.width.sm,
         borderColor: theme.brand.primary,
@@ -101,7 +101,7 @@ export const createButtonStyles = (theme: BaseTheme) => {
       primary: theme.shadows.sm,
       secondary: theme.shadows.sm,
       accent: theme.shadows.sm,
-      outline: {},
+      outlined: {},
       ghost: {},
       filled: theme.shadows.sm,
     },
@@ -111,7 +111,7 @@ export const createButtonStyles = (theme: BaseTheme) => {
       primary: '#FFFFFF',
       secondary: '#FFFFFF',
       accent: '#FFFFFF',
-      outline: theme.brand.primary,
+      outlined: theme.brand.primary,
       ghost: theme.brand.primary,
       filled: '#FFFFFF',
     },

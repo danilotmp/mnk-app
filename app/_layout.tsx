@@ -10,6 +10,7 @@ import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
 import { MultiCompanyProvider } from '@/src/domains/shared';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { MultiCompanyService } from '@/src/domains/shared/services';
+import { LanguageProvider } from '@/src/infrastructure/i18n';
 
 function LayoutContent({ menuItems }: { menuItems: MenuItem[] }) {
   const colorScheme = useColorScheme();
@@ -33,9 +34,6 @@ function LayoutContent({ menuItems }: { menuItems: MenuItem[] }) {
       <MainLayout title="MNK" menuItems={menuItems}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="main" />
-          <Stack.Screen name="services" />
-          <Stack.Screen name="products" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="+not-found" options={{ title: '404' }} />
         </Stack>
@@ -160,10 +158,12 @@ export default function RootLayout() {
   ];
 
   return (
-    <CustomThemeProvider>
-      <MultiCompanyProvider>
-        <LayoutContent menuItems={menuItems} />
-      </MultiCompanyProvider>
-    </CustomThemeProvider>
+    <LanguageProvider>
+      <CustomThemeProvider>
+        <MultiCompanyProvider>
+          <LayoutContent menuItems={menuItems} />
+        </MultiCompanyProvider>
+      </CustomThemeProvider>
+    </LanguageProvider>
   );
 }

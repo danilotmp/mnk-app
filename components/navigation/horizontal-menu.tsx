@@ -4,6 +4,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    Animated,
     Modal,
     Platform,
     Pressable,
@@ -52,6 +53,18 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
   const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(null); // Para rastrear opción activa del submenú
   const menuItemRefs = useRef<any>({});
+  const slideAnim = useRef(new Animated.Value(-400)).current; // Animación para deslizar desde la izquierda
+
+  // Función para cerrar el menú con animación
+  const closeMobileMenu = () => {
+    Animated.timing(slideAnim, {
+      toValue: -400,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setMobileMenuOpen(false);
+    });
+  };
 
   // Detectar la ruta actual y establecer el item activo
   useEffect(() => {
@@ -161,7 +174,7 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
         onItemPress(item);
       }
       if (isMobile) {
-        setMobileMenuOpen(false);
+        closeMobileMenu();
       }
       setActiveSubmenu(null);
     }
@@ -176,7 +189,7 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
       onItemPress(item);
     }
     if (isMobile) {
-      setMobileMenuOpen(false);
+      closeMobileMenu();
     }
   };
 
@@ -247,6 +260,20 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     }
   }, [activeSubmenu]);
 
+  // Efecto para animar el menú móvil
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      // Resetear animación al abrir
+      slideAnim.setValue(-400);
+      // Animar entrada desde la izquierda
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [mobileMenuOpen]);
+
   // Mobile: Hamburger Menu
   if (isMobile) {
     return (
@@ -260,22 +287,31 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
         </TouchableOpacity>
 
         <Modal
-          animationType="slide"
+          animationType="none"
           transparent={true}
           visible={mobileMenuOpen}
-          onRequestClose={() => setMobileMenuOpen(false)}
+          onRequestClose={closeMobileMenu}
         >
           <Pressable
             style={styles.mobileMenuOverlay}
-            onPress={() => setMobileMenuOpen(false)}
+            onPress={closeMobileMenu}
           >
-            <Pressable
-              style={[styles.mobileMenuContainer, { backgroundColor: colors.background }]}
-              onPress={(e) => e.stopPropagation()}
+            <Animated.View
+              style={[
+                styles.mobileMenuContainer,
+                { backgroundColor: colors.background },
+                {
+                  transform: [{ translateX: slideAnim }],
+                },
+              ]}
             >
+              <Pressable
+                onPress={(e) => e.stopPropagation()}
+                style={{ flex: 1 }}
+              >
               <View style={[styles.mobileMenuHeader, { borderBottomColor: colors.border }]}>
                 <ThemedText type="h3">Menú</ThemedText>
-                <TouchableOpacity onPress={() => setMobileMenuOpen(false)}>
+                <TouchableOpacity onPress={closeMobileMenu}>
                   <ThemedText type="h3">✕</ThemedText>
                 </TouchableOpacity>
               </View>
@@ -338,7 +374,8 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                   </View>
                 ))}
               </ScrollView>
-            </Pressable>
+              </Pressable>
+            </Animated.View>
           </Pressable>
         </Modal>
       </>
@@ -506,9 +543,11 @@ const styles = StyleSheet.create({
   mobileMenuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flexDirection: 'row',
   },
   mobileMenuContainer: {
     width: '80%',
+    maxWidth: 320,
     height: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },

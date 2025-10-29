@@ -99,32 +99,40 @@ export function MainLayout({
     <ThemedView style={styles.container}>
       {/* Header unificado: Logo + Menú + UserProfile en la misma línea */}
       {showHeader && (
-        <View style={[styles.unifiedHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[
+          styles.unifiedHeader,
+          { 
+            backgroundColor: colors.background, 
+            borderBottomColor: colors.border,
+            paddingHorizontal: 16
+          }
+        ]}>
           {isMobile ? (
-            // Layout Mobile: [Hamburger] [Logo] ──────────── [Usuario]
+            // Layout Mobile: [Logo] ──────────── [Usuario] [Hamburger]
             <>
-              {/* Hamburger Menu a la izquierda */}
-              {showNavigation && (
-                <View style={styles.mobileMenuSection}>
-                  <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
-                </View>
-              )}
-              
-              {/* Logo en el centro */}
+              {/* Logo alineado a la izquierda */}
               <View style={styles.mobileLogoSection}>
                 <Header title={title} inline={true} logoSize="small" />
               </View>
               
-              {/* UserProfile a la derecha */}
-              {showUserProfile && (
-                <View style={styles.mobileUserSection}>
-                  <UserProfileHeader
-                    onLogout={handleLogout}
-                    onSettings={handleSettings}
-                    onProfile={handleProfile}
-                  />
-                </View>
-              )}
+              {/* UserProfile y Hamburger a la derecha */}
+              <View style={styles.mobileRightSection}>
+                {showUserProfile && (
+                  <View style={styles.mobileUserSection}>
+                    <UserProfileHeader
+                      onLogout={handleLogout}
+                      onSettings={handleSettings}
+                      onProfile={handleProfile}
+                    />
+                  </View>
+                )}
+                {/* Hamburger Menu a la derecha */}
+                {showNavigation && (
+                  <View style={styles.mobileMenuSection}>
+                    <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
+                  </View>
+                )}
+              </View>
             </>
           ) : (
             // Layout Desktop/Tablet: [Logo] ──── [Menú CENTRADO] ──── [Usuario]
@@ -172,7 +180,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between', // Distribuir espacio
-    paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
     zIndex: 9999, // ← Aumentado para que el mega menú quede por encima
@@ -197,17 +204,21 @@ const styles = StyleSheet.create({
   },
   
   // Estilos Mobile
+  mobileRightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   mobileMenuSection: {
     flexShrink: 0,
-    marginRight: 8, // Espacio entre hamburger y logo
+    marginLeft: 8, // Espacio entre usuario y hamburger
   },
   mobileLogoSection: {
     flex: 1,
-    alignItems: 'center', // Logo centrado en mobile
+    alignItems: 'flex-start', // Logo alineado a la izquierda en mobile
   },
   mobileUserSection: {
     flexShrink: 0,
-    marginLeft: 8, // Espacio entre logo y usuario
   },
   
   content: {

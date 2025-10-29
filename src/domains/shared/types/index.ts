@@ -39,7 +39,7 @@ export type Platform = 'ios' | 'android' | 'web';
 export type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 // Tipos de variante de componente
-export type ComponentVariant = 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost' | 'filled';
+export type ComponentVariant = 'primary' | 'secondary' | 'accent' | 'outlined' | 'ghost' | 'filled';
 
 // Exportar tipos de multiempresa
 export * from './multi-company.types';

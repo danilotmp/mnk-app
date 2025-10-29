@@ -116,7 +116,7 @@ export default function HomeScreen() {
           <Button
             title="Configuración"
             onPress={() => {}}
-            variant="outline"
+            variant="outlined"
             size="lg"
             style={styles.actionButton}
           />

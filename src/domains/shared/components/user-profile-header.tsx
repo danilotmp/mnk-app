@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
+import { LanguageSelector } from '@/src/infrastructure/i18n';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -73,48 +74,45 @@ export function UserProfileHeader({
 
   return (
     <>
-      {/* Contenedor del perfil y toggle de tema */}
+      {/* Contenedor del perfil */}
       <View style={styles.profileContainer}>
         {/* Botón de perfil - RESPONSIVE */}
         <TouchableOpacity
-        style={[
-          styles.profileButton, 
-          { backgroundColor: colors.surface },
-          isMobile && styles.profileButtonMobile
-        ]}
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.7}
-      >
-        {/* Avatar */}
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
-            {getInitials()}
-          </ThemedText>
-        </View>
-
-        {/* Info del usuario - Solo visible en Tablet y Desktop */}
-        {!isMobile && (
-          <View style={styles.userInfo}>
-            <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
-              {user.firstName} {isDesktop ? user.lastName : ''}
+          style={[
+            styles.profileButton, 
+            { backgroundColor: colors.surface },
+            isMobile && styles.profileButtonMobile
+          ]}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          {/* Avatar */}
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
+              {getInitials()}
             </ThemedText>
-            {/* Sucursal solo visible en Desktop */}
-            {isDesktop && (
-              <ThemedText type="caption" variant="secondary" numberOfLines={1}>
-                {branch.name}
-              </ThemedText>
-            )}
           </View>
-        )}
 
-        {/* Icono de dropdown - Solo visible en Tablet y Desktop */}
-        {!isMobile && (
-          <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
-        )}
-      </TouchableOpacity>
+          {/* Info del usuario - Solo visible en Tablet y Desktop */}
+          {!isMobile && (
+            <View style={styles.userInfo}>
+              <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
+                {user.firstName} {isDesktop ? user.lastName : ''}
+              </ThemedText>
+              {/* Sucursal solo visible en Desktop */}
+              {isDesktop && (
+                <ThemedText type="caption" variant="secondary" numberOfLines={1}>
+                  {branch.name}
+                </ThemedText>
+              )}
+            </View>
+          )}
 
-        {/* Toggle de tema - Al lado del perfil */}
-        <ThemeToggle />
+          {/* Icono de dropdown - Solo visible en Tablet y Desktop */}
+          {!isMobile && (
+            <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Modal con opciones */}
@@ -135,6 +133,17 @@ export function UserProfileHeader({
             style={styles.modalContainer}
           >
             <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              {/* Controles en la esquina superior derecha del modal */}
+              <View style={[
+                styles.modalControlsContainer,
+                isMobile && styles.modalControlsContainerMobile
+              ]}>
+                {/* Selector de idioma */}
+                <LanguageSelector />
+                {/* Toggle de tema */}
+                <ThemeToggle />
+              </View>
+
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Encabezado del modal */}
                 <View style={styles.modalHeader}>
@@ -263,10 +272,26 @@ export function UserProfileHeader({
 }
 
 const styles = StyleSheet.create({
-  // Contenedor del perfil y toggle de tema
+  // Contenedor del perfil
   profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  // Contenedor de controles en la esquina superior derecha del modal
+  modalControlsContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 10,
+  },
+  // Mobile: ajustar espaciado
+  modalControlsContainerMobile: {
+    top: 12,
+    right: 12,
+    gap: 4,
   },
   // Botón de perfil
   profileButton: {
@@ -323,6 +348,7 @@ const styles = StyleSheet.create({
   modalContent: {
     borderRadius: 16,
     padding: 24,
+    position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
