@@ -1,10 +1,13 @@
 /**
  * Configuración centralizada de la API
+ * Ahora usa valores de app.config.ts para mantener todo centralizado
  */
 
+import { APP_CONFIG } from '@/src/config/app.config';
+
 export const API_CONFIG = {
-  // URL base del backend (desde variables de entorno o configuración)
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
+  // URL base del backend (desde configuración centralizada)
+  BASE_URL: APP_CONFIG.API.BASE_URL,
   
   // Claves de almacenamiento
   STORAGE_KEYS: {
@@ -14,14 +17,15 @@ export const API_CONFIG = {
     USER_CONTEXT: 'userContext',
   },
   
-  // Configuración de tokens
+  // Configuración de tokens (desde configuración centralizada)
   TOKENS: {
-    ACCESS_TOKEN_DURATION: 15 * 60 * 1000, // 15 minutos
-    REFRESH_TOKEN_DURATION: 7 * 24 * 60 * 60 * 1000, // 7 días
+    ACCESS_TOKEN_DURATION: APP_CONFIG.AUTH.ACCESS_TOKEN_DURATION,
+    REFRESH_TOKEN_DURATION: APP_CONFIG.AUTH.REFRESH_TOKEN_DURATION,
+    TOKEN_REFRESH_THRESHOLD: APP_CONFIG.AUTH.TOKEN_REFRESH_THRESHOLD,
   },
   
-  // Timeout para requests
-  TIMEOUT: 30000, // 30 segundos
+  // Timeout para requests (desde configuración centralizada)
+  TIMEOUT: APP_CONFIG.API.TIMEOUT,
   
   // Endpoints
   ENDPOINTS: {
@@ -29,6 +33,8 @@ export const API_CONFIG = {
     REGISTER: '/seguridades/register',
     REFRESH_TOKEN: '/seguridades/refresh-token',
     LOGOUT: '/seguridades/logout',
+    PROFILE: '/seguridades/profile',
+    CURRENT_USER: '/usuarios/me',
   },
 };
 

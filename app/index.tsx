@@ -5,10 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
 import { useCompany, useMultiCompany } from '@/src/domains/shared/hooks';
-import { MultiCompanyService } from '@/src/domains/shared/services';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { Link } from 'expo-router';
-import { useEffect } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function HomeScreen() {
@@ -17,18 +15,8 @@ export default function HomeScreen() {
   const { setUserContext, isLoading } = useMultiCompany();
   const { t, interpolate } = useTranslation();
 
-  // Simular login automático del usuario "danilo" para demostración
-  useEffect(() => {
-    const initUser = async () => {
-      if (!user) {
-        const service = MultiCompanyService.getInstance();
-        const mockUsers = service.getMockUsers();
-        // Usar el primer usuario (Danilo - Administrador)
-        await setUserContext(mockUsers[0]);
-      }
-    };
-    initUser();
-  }, []);
+  // Por ahora no restringimos el acceso, las páginas son públicas
+  // En el futuro se implementará autenticación selectiva según sea necesario
 
   if (isLoading) {
     return (

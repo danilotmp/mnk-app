@@ -1,11 +1,5 @@
 import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  interpolate,
-  useAnimatedRef,
-  useAnimatedStyle,
-  useScrollOffset,
-} from 'react-native-reanimated';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -23,9 +17,40 @@ export default function ParallaxScrollView({
   headerImage,
   headerBackgroundColor,
 }: Props) {
-  const backgroundColor = useThemeColor({}, 'background');
   const colorScheme = useColorScheme() ?? 'light';
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const backgroundColor = useThemeColor(
+    { light: headerBackgroundColor.light, dark: headerBackgroundColor.dark },
+    'background'
+  );
+  
+  // En web, usar ScrollView estándar para evitar problemas con worklets
+  if (Platform.OS === 'web') {
+    return (
+      <ThemedView style={{ backgroundColor, flex: 1 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+          <View
+            style={[
+              styles.header,
+              { backgroundColor: headerBackgroundColor[colorScheme] },
+            ]}>
+            {headerImage}
+          </View>
+          <ThemedView style={styles.content}>{children}</ThemedView>
+        </ScrollView>
+      </ThemedView>
+    );
+  }
+
+  // Para iOS/Android, usar reanimated
+  const Animated = require('react-native-reanimated').default;
+  const {
+    interpolate,
+    useAnimatedRef,
+    useAnimatedStyle,
+    useScrollOffset,
+  } = require('react-native-reanimated');
+  
+  const scrollRef = useAnimatedRef();
   const scrollOffset = useScrollOffset(scrollRef);
   const headerAnimatedStyle = useAnimatedStyle(() => {
     return {

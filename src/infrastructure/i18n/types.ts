@@ -134,11 +134,49 @@ export interface Translations {
     menu: string;
   };
   
+  auth: {
+    login: string;
+    logout: string;
+    register: string;
+    email: string;
+    password: string;
+    rememberMe: string;
+    forgotPassword: string;
+    signIn: string;
+    signUp: string;
+    dontHaveAccount: string;
+    alreadyHaveAccount: string;
+    loginSuccess: string;
+    loginError: string;
+    invalidCredentials: string;
+    emailRequired: string;
+    passwordRequired: string;
+    companyCode: string;
+    companyCodePlaceholder: string;
+  };
+  
   errors: {
     generic: string;
     networkError: string;
     unauthorized: string;
     notFound: string;
+    badRequest: string;
+    forbidden: string;
+    conflict: string;
+    unprocessableEntity: string;
+    tooManyRequests: string;
+    serverError: string;
+    serviceUnavailable: string;
+    connectionTimeout: string;
+    unknownError: string;
+  };
+  
+  api: {
+    loginSuccess: string;
+    loginFailed: string;
+    sessionExpired: string;
+    requestFailed: string;
+    networkUnavailable: string;
   };
 }
 

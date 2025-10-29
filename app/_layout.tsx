@@ -1,19 +1,68 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Platform } from 'react-native';
+
+// Solo importar reanimated en plataformas nativas para evitar problemas con worklets en web
+if (Platform.OS !== 'web') {
+  require('react-native-reanimated');
+}
 
 import { MainLayout, MenuItem } from '@/components/layouts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
 import { MultiCompanyProvider } from '@/src/domains/shared';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { MultiCompanyService } from '@/src/domains/shared/services';
 import { LanguageProvider, useTranslation } from '@/src/infrastructure/i18n';
+
+// Suprimir errores de FontFaceObserver timeout en web
+// Este error no afecta la funcionalidad, solo es un warning de carga de fuentes
+if (typeof window !== 'undefined') {
+  // Interceptar errores no capturados de FontFaceObserver
+  const originalError = window.console?.error;
+  if (originalError) {
+    window.console.error = (...args: any[]) => {
+      const errorMessage = args[0]?.toString() || '';
+      // Ignorar errores específicos de FontFaceObserver timeout
+      if (
+        errorMessage.includes('fontfaceobserver') ||
+        errorMessage.includes('6000ms timeout exceeded') ||
+        errorMessage.includes('timeout exceeded')
+      ) {
+        // Este es un error conocido y no afecta la funcionalidad
+        // Las fuentes del sistema se cargan correctamente sin necesidad de FontFaceObserver
+        return;
+      }
+      originalError(...args);
+    };
+  }
+  
+  // También capturar errores no capturados globalmente
+  const originalOnError = window.onerror;
+  window.onerror = (message, source, lineno, colno, error) => {
+    const errorString = message?.toString() || '';
+    if (
+      errorString.includes('fontfaceobserver') ||
+      errorString.includes('6000ms timeout exceeded') ||
+      errorString.includes('timeout exceeded')
+    ) {
+      // Suprimir este error específico
+      return true; // Prevenir que se muestre en consola
+    }
+    if (originalOnError) {
+      return originalOnError(message, source, lineno, colno, error);
+    }
+    return false;
+  };
+}
 
 function LayoutContent() {
   const { t, interpolate } = useTranslation();
+  const pathname = usePathname();
+  const segments = useSegments();
+  
+  // Determinar si estamos en una ruta de autenticación
+  const isAuthRoute = pathname?.startsWith('/auth') || segments[0] === 'auth';
   
   // Definir menú global para todas las páginas - usando traducciones
   const menuItems: MenuItem[] = [
@@ -128,19 +177,21 @@ function LayoutContent() {
   const colorScheme = useColorScheme();
   const { user, setUserContext } = useMultiCompany();
 
-  // Simular login automático del usuario "danilo" para demostración
-  useEffect(() => {
-    const initUser = async () => {
-      if (!user) {
-        const service = MultiCompanyService.getInstance();
-        const mockUsers = service.getMockUsers();
-        // Usar el primer usuario (Danilo - Administrador)
-        await setUserContext(mockUsers[0]);
-      }
-    };
-    initUser();
-  }, []);
+  // No inicializar usuario automáticamente
+  // El usuario se establecerá solo después de hacer login exitoso
+  // Esto permite que las páginas funcionen sin autenticación y muestren el botón "Iniciar sesión"
 
+  // Si es una ruta de autenticación, no usar MainLayout
+  if (isAuthRoute) {
+    return (
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    );
+  }
+
+  // Para otras rutas, usar MainLayout
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <MainLayout title="MNK" menuItems={menuItems}>
@@ -160,11 +211,11 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
-      <CustomThemeProvider>
-        <MultiCompanyProvider>
+    <CustomThemeProvider>
+      <MultiCompanyProvider>
           <LayoutContent />
-        </MultiCompanyProvider>
-      </CustomThemeProvider>
+      </MultiCompanyProvider>
+    </CustomThemeProvider>
     </LanguageProvider>
   );
 }

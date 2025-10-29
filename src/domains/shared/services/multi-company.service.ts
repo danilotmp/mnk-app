@@ -1,13 +1,14 @@
 import {
-    ApiResponse,
-    Branch,
-    BranchSwitchRequest,
-    BranchSwitchResponse,
-    Company,
-    CompanyContext,
-    MultiCompanyState,
-    MultiCompanyUser,
-    Permission,
+  ApiResponse,
+  Branch,
+  BranchAccess,
+  BranchSwitchRequest,
+  BranchSwitchResponse,
+  Company,
+  CompanyContext,
+  MultiCompanyState,
+  MultiCompanyUser,
+  Permission,
 } from '../types';
 
 /**
@@ -56,28 +57,86 @@ export class MultiCompanyService {
       await this.simulateNetworkDelay();
 
       // Obtener empresa del usuario
-      const company = await this.getCompanyById(user.companyId);
+      let company = await this.getCompanyById(user.companyId);
+      
+      // Si no se encuentra la empresa (por ejemplo, viene un UUID del API que no existe en mock),
+      // usar la primera empresa disponible de los datos mock
       if (!company) {
-        throw new Error('Empresa no encontrada');
+        console.warn(`⚠️ Empresa con ID "${user.companyId}" no encontrada en datos mock. Usando primera empresa disponible.`);
+        if (this.mockCompanies.length > 0) {
+          company = this.mockCompanies[0];
+          // Actualizar el companyId del usuario para que sea consistente
+          user.companyId = company.id;
+        } else {
+          throw new Error('No hay empresas disponibles en el sistema');
+        }
       }
 
       // Obtener sucursal actual
-      const currentBranch = await this.getBranchById(user.currentBranchId);
+      // Si el usuario no tiene currentBranchId, usar la primera sucursal disponible o una por defecto
+      let currentBranch = user.currentBranchId 
+        ? await this.getBranchById(user.currentBranchId)
+        : null;
+      
+      // Si no se encontró la sucursal, intentar usar la primera disponible del usuario
+      if (!currentBranch && user.availableBranches && user.availableBranches.length > 0) {
+        const firstBranchId = user.availableBranches[0]?.branchId;
+        if (firstBranchId) {
+          currentBranch = await this.getBranchById(firstBranchId);
+        }
+      }
+      
+      // Si aún no hay sucursal, usar la primera sucursal de la empresa (buscando en mockBranches)
       if (!currentBranch) {
-        throw new Error('Sucursal actual no encontrada');
+        const companyBranches = this.mockBranches.filter(b => b.companyId === company.id);
+        if (companyBranches.length > 0) {
+          currentBranch = companyBranches[0];
+          // Actualizar el currentBranchId del usuario
+          user.currentBranchId = currentBranch.id;
+        }
+      }
+      
+      if (!currentBranch) {
+        console.warn('⚠️ No se pudo encontrar una sucursal para el usuario, continuando sin sucursal');
       }
 
       // Obtener sucursales disponibles
-      const availableBranches = await this.getUserAvailableBranches(user.id);
+      let availableBranches: BranchAccess[] = [];
+      const userAvailableBranches = user.availableBranches || [];
+      
+      if (userAvailableBranches.length > 0) {
+        // Usar las sucursales disponibles del usuario
+        availableBranches = userAvailableBranches;
+      } else {
+        // Si no hay sucursales disponibles pero hay sucursales en la empresa, usar esas
+        const companyBranches = this.mockBranches.filter(b => b.companyId === company.id);
+        availableBranches = companyBranches.map(branch => ({
+          branchId: branch.id,
+          branch: branch,
+          role: 'user',
+          permissions: [],
+          grantedAt: new Date(),
+          grantedBy: 'system',
+          isActive: true,
+        }));
+      }
 
       // Obtener permisos del usuario para la sucursal actual
-      const permissions = await this.getUserPermissions(user.id, user.currentBranchId);
+      // Si no hay sucursal actual, usar permisos vacíos
+      const branchIdForPermissions = currentBranch?.id || user.currentBranchId || '';
+      const permissions = branchIdForPermissions 
+        ? await this.getUserPermissions(user.id, branchIdForPermissions)
+        : [];
 
       // Actualizar estado
+      // availableBranches en el estado debe ser Branch[], pero tenemos BranchAccess[]
+      // Convertir BranchAccess[] a Branch[] para el estado
+      const branchesForState = availableBranches.map(access => access.branch);
+      
       this.currentState = {
         currentCompany: company,
         currentBranch: currentBranch,
-        availableBranches: availableBranches,
+        availableBranches: branchesForState,
         user: user,
         permissions: permissions,
         isLoading: false,
@@ -86,9 +145,12 @@ export class MultiCompanyService {
 
       const context: CompanyContext = {
         company,
-        currentBranch,
+        currentBranch: currentBranch || null,
         availableBranches,
-        user,
+        user: {
+          ...user,
+          currentBranchId: currentBranch?.id || user.currentBranchId || '',
+        },
         permissions,
         canSwitchBranch: availableBranches.length > 1,
       };
@@ -205,11 +267,22 @@ export class MultiCompanyService {
       return null;
     }
 
+    // Convertir Branch[] a BranchAccess[] para el contexto
+    const availableBranchesAccess: BranchAccess[] = this.currentState.availableBranches.map(branch => ({
+      branchId: branch.id,
+      branch: branch,
+      role: 'user',
+      permissions: [],
+      grantedAt: new Date(),
+      grantedBy: 'system',
+      isActive: true,
+    }));
+
     return {
-      company: this.currentState.currentCompany,
+      company: this.currentState.currentCompany!,
       currentBranch: this.currentState.currentBranch,
-      availableBranches: this.currentState.availableBranches,
-      user: this.currentState.user,
+      availableBranches: availableBranchesAccess,
+      user: this.currentState.user!,
       permissions: this.currentState.permissions,
       canSwitchBranch: this.canSwitchBranch(),
     };

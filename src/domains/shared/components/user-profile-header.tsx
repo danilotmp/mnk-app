@@ -1,9 +1,11 @@
+import { LoginModal } from '@/components/auth/login-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -33,6 +35,7 @@ export function UserProfileHeader({
   const { branches, switchBranch } = useBranches();
   const { clearContext } = useMultiCompany();
   const [modalVisible, setModalVisible] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
   const { t } = useTranslation();
   
@@ -41,8 +44,47 @@ export function UserProfileHeader({
   const isMobile = isMobileDevice(width);
   const isDesktop = isDesktopDevice(width);
 
+  // Si no hay usuario autenticado, mostrar botón de login
   if (!user || !company || !branch) {
-    return null;
+    return (
+      <>
+        <View style={styles.profileContainer}>
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              { backgroundColor: colors.surface },
+              isMobile && styles.loginButtonMobile
+            ]}
+            onPress={() => setLoginModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
+              {t.auth.login}
+            </ThemedText>
+            <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
+              <Ionicons name="person-outline" size={18} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+
+          {/* Selector de idioma - Junto al botón de login */}
+          <View style={[
+            styles.languageSelectorWrapper,
+            isMobile && styles.languageSelectorWrapperMobile
+          ]}>
+            <LanguageSelector />
+          </View>
+        </View>
+
+        {/* Modal de Login */}
+        <LoginModal
+          visible={loginModalVisible}
+          onClose={() => setLoginModalVisible(false)}
+          onLoginSuccess={() => {
+            setLoginModalVisible(false);
+          }}
+        />
+      </>
+    );
   }
 
   // Obtener iniciales del nombre para el avatar
@@ -67,8 +109,17 @@ export function UserProfileHeader({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setModalVisible(false);
+    
+    // Limpiar tokens de autenticación
+    try {
+      const { authService } = await import('@/src/infrastructure/services/auth.service');
+      await authService.logout();
+    } catch (error) {
+      console.error('Error al hacer logout:', error);
+    }
+    
     clearContext();
     onLogout?.();
   };
@@ -213,7 +264,7 @@ export function UserProfileHeader({
                                   {branchItem.name}
                                 </ThemedText>
                                 <ThemedText type="caption" variant="secondary">
-                                  {branchItem.address.city}
+                                  {branchItem.address?.city || branchItem.code || ''}
                                 </ThemedText>
                               </View>
                               {branchItem.id === branch.id && (
@@ -273,6 +324,15 @@ export function UserProfileHeader({
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Modal de Login */}
+      <LoginModal
+        visible={loginModalVisible}
+        onClose={() => setLoginModalVisible(false)}
+        onLoginSuccess={() => {
+          setLoginModalVisible(false);
+        }}
+      />
     </>
   );
 }
@@ -291,6 +351,32 @@ const styles = StyleSheet.create({
   // Mobile: ajustar espaciado
   languageSelectorWrapperMobile: {
     marginLeft: 4,
+  },
+  // Botón de login
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 8,
+  },
+  loginButtonMobile: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    gap: 6,
+  },
+  loginButtonText: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  loginIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   // Contenedor de controles en la esquina superior derecha del modal
   modalControlsContainer: {

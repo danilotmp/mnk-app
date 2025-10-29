@@ -157,8 +157,8 @@ export interface MultiCompanyState {
 
 export interface CompanyContext {
   company: Company;
-  currentBranch: Branch;
-  availableBranches: Branch[];
+  currentBranch: Branch | null;
+  availableBranches: BranchAccess[];
   user: MultiCompanyUser;
   permissions: Permission[];
   canSwitchBranch: boolean;

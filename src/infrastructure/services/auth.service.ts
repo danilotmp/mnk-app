@@ -28,6 +28,7 @@ interface AuthResponse {
     email: string;
     firstName: string;
     lastName: string;
+    companyId?: string;
     companyCode?: string;
   };
 }
@@ -41,29 +42,48 @@ export class AuthService {
 
   /**
    * Inicia sesión y guarda los tokens automáticamente
+   * El código de empresa viene en la respuesta del API, no se requiere en el login
    */
   async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
-    const response = await apiClient.request<AuthResponse>({
-      endpoint: API_CONFIG.ENDPOINTS.LOGIN,
-      method: 'POST',
-      body: credentials,
-      skipAuth: true, // No requiere autenticación
-    });
-
-    // Guardar tokens automáticamente
-    if (response.data.accessToken && response.data.refreshToken) {
-      await apiClient.setTokens(response.data.accessToken, response.data.refreshToken);
-    }
-
-    // Configurar contexto de usuario si está disponible
-    if (response.data.user) {
-      this.config.setUserContext({
-        userId: response.data.user.id,
-        companyCode: response.data.user.companyCode,
+    console.log('🔐 AuthService.login llamado');
+    console.log('📍 Endpoint:', API_CONFIG.ENDPOINTS.LOGIN);
+    console.log('🌐 Base URL:', API_CONFIG.BASE_URL);
+    console.log('📝 Body:', { email: credentials.email, password: '***' });
+    
+    try {
+      const response = await apiClient.request<AuthResponse>({
+        endpoint: API_CONFIG.ENDPOINTS.LOGIN,
+        method: 'POST',
+        body: {
+          email: credentials.email,
+          password: credentials.password,
+        },
+        skipAuth: true, // No requiere autenticación
       });
-    }
+      console.log('✅ Respuesta recibida del API:', response);
 
-    return response;
+      // Guardar tokens automáticamente
+      if (response.data.accessToken && response.data.refreshToken) {
+        await apiClient.setTokens(response.data.accessToken, response.data.refreshToken);
+      }
+
+      // Configurar contexto de usuario si está disponible
+      // Solo los campos básicos vienen en el login: id, email, firstName, lastName, companyId
+      // companyCode y otros campos vienen del perfil
+      if (response.data.user) {
+        this.config.setUserContext({
+          userId: response.data.user.id,
+          // companyCode puede no venir del login, solo del perfil
+          companyCode: response.data.user.companyCode,
+          companyId: response.data.user.companyId,
+        });
+      }
+
+      return response;
+    } catch (error) {
+      console.error('❌ Error en AuthService.login:', error);
+      throw error;
+    }
   }
 
   /**
@@ -83,10 +103,13 @@ export class AuthService {
     }
 
     // Configurar contexto de usuario
+    // El register puede retornar diferentes campos, pero siempre incluye id y companyId
     if (response.data.user) {
       this.config.setUserContext({
         userId: response.data.user.id,
+        // companyCode puede no venir del register, solo se usa si existe
         companyCode: response.data.user.companyCode,
+        companyId: response.data.user.companyId,
       });
     }
 
@@ -109,12 +132,12 @@ export class AuthService {
   }
 
   /**
-   * Obtiene los datos del usuario actual
+   * Obtiene los datos del usuario actual después del login
    */
   async getCurrentUser(): Promise<any> {
     try {
       const response = await apiClient.request({
-        endpoint: '/usuarios/me',
+        endpoint: API_CONFIG.ENDPOINTS.CURRENT_USER,
         method: 'GET',
       });
 
@@ -123,12 +146,38 @@ export class AuthService {
         this.config.setUserContext({
           userId: response.data.id,
           companyCode: response.data.companyCode,
+          companyId: response.data.companyId,
         });
       }
 
       return response.data;
     } catch (error) {
       console.error('Error obteniendo usuario actual:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtiene el perfil completo del usuario desde /seguridades/profile
+   */
+  async getProfile(): Promise<any> {
+    try {
+      const response = await apiClient.request({
+        endpoint: API_CONFIG.ENDPOINTS.PROFILE,
+        method: 'GET',
+      });
+
+      if (response.data) {
+        this.config.setUserContext({
+          userId: response.data.id,
+          companyCode: response.data.companyCode,
+          companyId: response.data.companyId,
+        });
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo perfil:', error);
       return null;
     }
   }
