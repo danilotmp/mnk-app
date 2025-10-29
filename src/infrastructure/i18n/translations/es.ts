@@ -1,0 +1,143 @@
+/**
+ * Traducciones en Español
+ */
+import { Translations } from '../types';
+
+export const es: Translations = {
+  common: {
+    welcome: '¡Bienvenido!',
+    loading: 'Cargando información...',
+    error: 'Error',
+    success: 'Éxito',
+    cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    save: 'Guardar',
+    delete: 'Eliminar',
+    edit: 'Editar',
+    close: 'Cerrar',
+    back: 'Volver',
+    next: 'Siguiente',
+    search: 'Buscar',
+    filter: 'Filtrar',
+    actions: 'Acciones',
+  },
+  
+  navigation: {
+    home: 'Inicio',
+    explore: 'Explorar',
+    products: 'Productos',
+    services: 'Servicios',
+    contact: 'Contactos',
+    about: 'Acerca de',
+    settings: 'Configuración',
+    profile: 'Perfil',
+    logout: 'Cerrar Sesión',
+  },
+  
+  menu: {
+    inicio: 'Inicio',
+    explorar: 'Explorar',
+    productos: 'Productos',
+    cuentas: 'Cuentas e Inversiones',
+    prestamos: 'Préstamos',
+    tarjetas: 'Tarjetas de Crédito',
+    masServicios: 'Más Servicios',
+    contactos: 'Contactos',
+    // Submenús
+    productosTitle: 'PRODUCTOS',
+    plataformaTitle: 'PLATAFORMA',
+    serviciosAdministradosTitle: 'SERVICIOS ADMINISTRADOS',
+    networkSecurity: 'Seguridad de la red',
+    vulnerability: 'Gestión de vulnerabilidades',
+    pam: 'Gestión de acceso privilegiado',
+    endpoint: 'Seguridad de puntos finales',
+    insurance: 'Seguros',
+    threatHunting: 'Caza de amenazas',
+    uem: 'Gestión unificada de puntos finales',
+    emailSecurity: 'Seguridad del correo electrónico',
+    xdr: 'Detección y respuesta extendidas (XDR)',
+    mxdr: 'Detección y respuesta administradas (MDR)',
+    savings: 'Cuentas de Ahorro',
+    checking: 'Cuentas Corrientes',
+    investments: 'Inversiones',
+    multicredit: 'Multicrédito',
+    multicreditDesc: 'Define el monto y las cuotas en línea.',
+    microcredit: 'Microcrédito',
+    microcreditDesc: 'Potencia tu pequeño negocio.',
+    casafacil: 'Casafácil',
+    casafacilDesc: 'Compra una casa nueva o usada.',
+    autofacil: 'Autofácil',
+    autofacilDesc: 'Califica por un crédito del 80% del monto total.',
+    educativo: 'Educativo',
+    educativoDesc: 'Solicítalo y paga cuando te gradúes.',
+    transfers: 'Transferencias',
+    payments: 'Pagos',
+  },
+  
+  pages: {
+    home: {
+      title: 'Inicio',
+      welcomeMessage: '¡Bienvenido!',
+      description: 'Descubre una experiencia única con nuestra aplicación diseñada especialmente para ti.',
+      features: 'Características',
+      step1: 'Paso 1: Pruébalo',
+      step1Description: 'Edita app/index.tsx para ver los cambios. Presiona {platform} para abrir las herramientas de desarrollador.',
+      step2: 'Paso 2: Explora',
+      step2Description: 'Toca la pestaña Explorar para aprender más sobre lo que incluye esta aplicación.',
+      step3: 'Paso 3: Comienza de nuevo',
+      step3Description: 'Cuando estés listo, ejecuta npm run reset-project para obtener un directorio app fresco.',
+      exploreMore: 'Explorar más',
+      configuration: 'Configuración',
+    },
+    contact: {
+      title: 'Contáctanos',
+      subtitle: 'Puedes escribirnos, llamarnos o visitarnos, estamos para ayudarte.',
+      mainPhone: 'Teléfono Principal',
+      mainPhoneLabel: 'Teléfono Principal',
+      needHelp: '¿Necesitas ayuda?',
+      customerService: 'Atención al cliente',
+      offices: 'Nuestras Oficinas',
+      officesSubtitle: 'MNK está siempre cerca de ti',
+      map: 'Mapa',
+      contactForm: 'Formulario de Contacto',
+      schedule: 'Horario',
+      address: 'Dirección',
+      phone: 'Teléfono',
+      mobile: 'Móvil',
+      email: 'Correo',
+    },
+    notFound: {
+      title: 'Página no encontrada',
+      message: 'Lo sentimos, la página que buscas no existe.',
+      goHome: 'Ir al inicio',
+      goBack: 'Volver',
+      contactUs: 'Contáctanos',
+    },
+  },
+  
+  user: {
+    profile: 'Mi Perfil',
+    settings: 'Configuración',
+    logout: 'Cerrar Sesión',
+    changeBranch: 'Cambiar Sucursal',
+    changing: 'Cambiando...',
+    myProfile: 'Mi Perfil',
+    configuration: 'Configuración',
+  },
+  
+  language: {
+    selectLanguage: 'Selecciona el idioma',
+  },
+  
+  menuLabel: {
+    menu: 'Menú',
+  },
+  
+  errors: {
+    generic: 'Ha ocurrido un error',
+    networkError: 'Error de conexión',
+    unauthorized: 'No autorizado',
+    notFound: 'Recurso no encontrado',
+  },
+};
+

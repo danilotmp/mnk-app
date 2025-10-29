@@ -3,9 +3,9 @@
  * Implementa la estructura genérica header-data-result
  */
 
-import { ApiResponse, RequestConfig, RequestHeaders, Tokens, StorageAdapter } from './types';
+import { API_CONFIG, ApiConfig } from './config';
 import { getStorageAdapter } from './storage.adapter';
-import { ApiConfig, API_CONFIG } from './config';
+import { ApiResponse, RequestConfig, RequestHeaders, StorageAdapter, Tokens } from './types';
 
 export class ApiClient {
   private storage: StorageAdapter;
@@ -26,10 +26,19 @@ export class ApiClient {
       // Construir headers automáticamente
       const headers = await this.buildHeaders(config.headers, config.skipAuth);
 
+      // Convertir RequestHeaders a formato compatible con fetch
+      const fetchHeaders: Record<string, string> = {};
+      Object.keys(headers).forEach((key) => {
+        const value = headers[key as keyof typeof headers];
+        if (value !== undefined && value !== null) {
+          fetchHeaders[key] = String(value);
+        }
+      });
+
       // Realizar el request
       const response = await fetch(`${this.config.getBaseUrl()}${config.endpoint}`, {
         method: config.method,
-        headers,
+        headers: fetchHeaders,
         body: config.body ? JSON.stringify(config.body) : undefined,
       });
 

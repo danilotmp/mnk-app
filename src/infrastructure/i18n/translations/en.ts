@@ -1,0 +1,143 @@
+/**
+ * Translations in English
+ */
+import { Translations } from '../types';
+
+export const en: Translations = {
+  common: {
+    welcome: 'Welcome!',
+    loading: 'Loading information...',
+    error: 'Error',
+    success: 'Success',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    close: 'Close',
+    back: 'Back',
+    next: 'Next',
+    search: 'Search',
+    filter: 'Filter',
+    actions: 'Actions',
+  },
+  
+  navigation: {
+    home: 'Home',
+    explore: 'Explore',
+    products: 'Products',
+    services: 'Services',
+    contact: 'Contact',
+    about: 'About',
+    settings: 'Settings',
+    profile: 'Profile',
+    logout: 'Logout',
+  },
+  
+  menu: {
+    inicio: 'Home',
+    explorar: 'Explore',
+    productos: 'Products',
+    cuentas: 'Accounts & Investments',
+    prestamos: 'Loans',
+    tarjetas: 'Credit Cards',
+    masServicios: 'More Services',
+    contactos: 'Contact',
+    // Submenús
+    productosTitle: 'PRODUCTS',
+    plataformaTitle: 'PLATFORM',
+    serviciosAdministradosTitle: 'MANAGED SERVICES',
+    networkSecurity: 'Network Security',
+    vulnerability: 'Vulnerability Management',
+    pam: 'Privileged Access Management',
+    endpoint: 'Endpoint Security',
+    insurance: 'Insurance',
+    threatHunting: 'Threat Hunting',
+    uem: 'Unified Endpoint Management',
+    emailSecurity: 'Email Security',
+    xdr: 'Extended Detection and Response (XDR)',
+    mxdr: 'Managed Detection and Response (MDR)',
+    savings: 'Savings Accounts',
+    checking: 'Checking Accounts',
+    investments: 'Investments',
+    multicredit: 'Multi Credit',
+    multicreditDesc: 'Define the amount and installments online.',
+    microcredit: 'Microcredit',
+    microcreditDesc: 'Power your small business.',
+    casafacil: 'Easy Home',
+    casafacilDesc: 'Buy a new or used house.',
+    autofacil: 'Easy Auto',
+    autofacilDesc: 'Qualify for a credit of 80% of the total amount.',
+    educativo: 'Educational',
+    educativoDesc: 'Apply and pay when you graduate.',
+    transfers: 'Transfers',
+    payments: 'Payments',
+  },
+  
+  pages: {
+    home: {
+      title: 'Home',
+      welcomeMessage: 'Welcome!',
+      description: 'Discover a unique experience with our application designed especially for you.',
+      features: 'Features',
+      step1: 'Step 1: Try it',
+      step1Description: 'Edit app/index.tsx to see the changes. Press {platform} to open developer tools.',
+      step2: 'Step 2: Explore',
+      step2Description: 'Tap the Explore tab to learn more about what this app includes.',
+      step3: 'Step 3: Start fresh',
+      step3Description: 'When you\'re ready, run npm run reset-project to get a fresh app directory.',
+      exploreMore: 'Explore more',
+      configuration: 'Settings',
+    },
+    contact: {
+      title: 'Contact Us',
+      subtitle: 'You can write to us, call us or visit us, we are here to help you.',
+      mainPhone: 'Main Phone',
+      mainPhoneLabel: 'Main Phone',
+      needHelp: 'Need help?',
+      customerService: 'Customer Service',
+      offices: 'Our Offices',
+      officesSubtitle: 'MNK is always close to you',
+      map: 'Map',
+      contactForm: 'Contact Form',
+      schedule: 'Schedule',
+      address: 'Address',
+      phone: 'Phone',
+      mobile: 'Mobile',
+      email: 'Email',
+    },
+    notFound: {
+      title: 'Page not found',
+      message: 'Sorry, the page you are looking for does not exist.',
+      goHome: 'Go home',
+      goBack: 'Go back',
+      contactUs: 'Contact us',
+    },
+  },
+  
+  user: {
+    profile: 'My Profile',
+    settings: 'Settings',
+    logout: 'Logout',
+    changeBranch: 'Change Branch',
+    changing: 'Changing...',
+    myProfile: 'My Profile',
+    configuration: 'Settings',
+  },
+  
+  language: {
+    selectLanguage: 'Select language',
+  },
+  
+  menuLabel: {
+    menu: 'Menu',
+  },
+  
+  errors: {
+    generic: 'An error occurred',
+    networkError: 'Connection error',
+    unauthorized: 'Unauthorized',
+    notFound: 'Resource not found',
+  },
+};
+

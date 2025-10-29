@@ -2,11 +2,10 @@
  * Contexto de idioma para la aplicación
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Language } from '../api/types';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { API_CONFIG, ApiConfig } from '../api/config';
 import { getStorageAdapter } from '../api/storage.adapter';
-import { API_CONFIG } from '../api/config';
-import { ApiConfig } from '../api/config';
+import { Language } from './types';
 
 interface LanguageContextType {
   language: Language;

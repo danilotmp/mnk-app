@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/src/infrastructure/i18n';
 
 interface OfficeInfo {
   name: string;
@@ -18,6 +19,7 @@ interface OfficeInfo {
 
 export default function ContactPage() {
   const { colors, spacing } = useTheme();
+  const { t } = useTranslation();
 
   const offices: OfficeInfo[] = [
     {
@@ -58,10 +60,10 @@ export default function ContactPage() {
         <Card style={styles.headerCard}>
           <Ionicons name="call" size={64} color={colors.primary} />
           <ThemedText type="h1" variant="primary" style={styles.title}>
-            Contáctanos
+            {t.pages.contact.title}
           </ThemedText>
           <ThemedText type="body1" variant="secondary" style={styles.subtitle}>
-            Puedes escribirnos, llamarnos o visitarnos, estamos para ayudarte.
+            {t.pages.contact.subtitle}
           </ThemedText>
         </Card>
 
@@ -70,13 +72,13 @@ export default function ContactPage() {
           <View style={styles.mainContact}>
             <Ionicons name="call-circle" size={48} color={colors.primary} />
             <ThemedText type="h2" variant="primary" style={styles.mainPhoneTitle}>
-              ¿Necesitas ayuda?
+              {t.pages.contact.needHelp}
             </ThemedText>
             <ThemedText type="h2" variant="primary">
               6020-920
             </ThemedText>
             <ThemedText type="body2" variant="secondary" style={styles.mainPhoneSubtitle}>
-              Atención al cliente
+              {t.pages.contact.customerService}
             </ThemedText>
             <ThemedText type="body2" variant="secondary">
               Lunes a Viernes: 08:30 a 17:30
@@ -87,10 +89,10 @@ export default function ContactPage() {
         {/* Nuestras Oficinas */}
         <Card style={styles.officesCard}>
           <ThemedText type="h2" variant="primary" style={styles.sectionTitle}>
-            Nuestras Oficinas
+            {t.pages.contact.offices}
           </ThemedText>
           <ThemedText type="body2" variant="secondary" style={styles.sectionSubtitle}>
-            MNK está siempre cerca de ti
+            {t.pages.contact.officesSubtitle}
           </ThemedText>
 
           {offices.map((office, index) => (

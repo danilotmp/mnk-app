@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
 import { useCompany, useMultiCompany } from '@/src/domains/shared/hooks';
 import { MultiCompanyService } from '@/src/domains/shared/services';
+import { useTranslation } from '@/src/infrastructure/i18n';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -14,6 +15,7 @@ export default function HomeScreen() {
   const { colors, spacing } = useTheme();
   const { company, branch, user } = useCompany();
   const { setUserContext, isLoading } = useMultiCompany();
+  const { t, interpolate } = useTranslation();
 
   // Simular login automático del usuario "danilo" para demostración
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <ThemedText style={{ marginTop: 16 }}>Cargando información...</ThemedText>
+          <ThemedText style={{ marginTop: 16 }}>{t.common.loading}</ThemedText>
         </View>
       </ThemedView>
     );
@@ -49,43 +51,40 @@ export default function HomeScreen() {
         {/* Hero Section */}
         <Card variant="elevated" style={styles.heroCard}>
           <ThemedView style={styles.titleContainer} variant="transparent">
-            <ThemedText type="h1" variant="primary">¡Bienvenido!</ThemedText>
+            <ThemedText type="h1" variant="primary">{t.pages.home.welcomeMessage}</ThemedText>
             <HelloWave />
           </ThemedView>
           <ThemedText type="body1" style={styles.heroDescription}>
-            Descubre una experiencia única con nuestra aplicación diseñada especialmente para ti.
+            {t.pages.home.description}
           </ThemedText>
         </Card>
 
         {/* Features Section */}
         <ThemedView style={styles.featuresContainer}>
-          <ThemedText type="h2" style={styles.sectionTitle}>Características</ThemedText>
+          <ThemedText type="h2" style={styles.sectionTitle}>{t.pages.home.features}</ThemedText>
           
           <Card variant="outlined" style={styles.featureCard}>
-            <ThemedText type="h4" variant="secondary">Paso 1: Pruébalo</ThemedText>
+            <ThemedText type="h4" variant="secondary">{t.pages.home.step1}</ThemedText>
             <ThemedText type="body1" style={styles.featureDescription}>
-              Edita <ThemedText type="defaultSemiBold">app/index.tsx</ThemedText> para ver los cambios.
-              Presiona{' '}
-              <ThemedText type="defaultSemiBold" variant="accent">
-                {Platform.select({
+              {interpolate(t.pages.home.step1Description, {
+                platform: Platform.select({
                   ios: 'cmd + d',
                   android: 'cmd + m',
                   web: 'F12',
-                })}
-              </ThemedText>{' '}
-              para abrir las herramientas de desarrollador.
+                }) || 'F12',
+              })}
             </ThemedText>
           </Card>
 
           <Card variant="outlined" style={styles.featureCard}>
-            <ThemedText type="h4" variant="secondary">Paso 2: Explora</ThemedText>
+            <ThemedText type="h4" variant="secondary">{t.pages.home.step2}</ThemedText>
             <ThemedText type="body1" style={styles.featureDescription}>
-              Toca la pestaña Explorar para aprender más sobre lo que incluye esta aplicación.
+              {t.pages.home.step2Description}
             </ThemedText>
             <View style={styles.buttonContainer}>
               <Link href="/modal" asChild>
                 <Button
-                  title="Abrir Modal"
+                  title={t.common.actions}
                   onPress={() => {}}
                   variant="primary"
                   size="md"
@@ -95,11 +94,9 @@ export default function HomeScreen() {
           </Card>
 
           <Card variant="outlined" style={styles.featureCard}>
-            <ThemedText type="h4" variant="secondary">Paso 3: Comienza de nuevo</ThemedText>
+            <ThemedText type="h4" variant="secondary">{t.pages.home.step3}</ThemedText>
             <ThemedText type="body1" style={styles.featureDescription}>
-              Cuando estés listo, ejecuta{' '}
-              <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> para obtener un directorio{' '}
-              <ThemedText type="defaultSemiBold">app</ThemedText> fresco.
+              {t.pages.home.step3Description}
             </ThemedText>
           </Card>
         </ThemedView>
@@ -107,14 +104,14 @@ export default function HomeScreen() {
         {/* Action Buttons */}
         <ThemedView style={styles.actionsContainer}>
           <Button
-            title="Explorar más"
+            title={t.pages.home.exploreMore}
             onPress={() => {}}
             variant="primary"
             size="lg"
             style={styles.actionButton}
           />
           <Button
-            title="Configuración"
+            title={t.pages.home.configuration}
             onPress={() => {}}
             variant="outlined"
             size="lg"

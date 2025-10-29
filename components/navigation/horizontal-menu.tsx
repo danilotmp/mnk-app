@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/src/infrastructure/i18n';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -47,6 +48,7 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const pathname = usePathname();
   const isMobile = isMobileDevice(width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t } = useTranslation();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
@@ -310,7 +312,7 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                 style={{ flex: 1 }}
               >
               <View style={[styles.mobileMenuHeader, { borderBottomColor: colors.border }]}>
-                <ThemedText type="h3">Menú</ThemedText>
+                <ThemedText type="h3">{t.menuLabel.menu}</ThemedText>
                 <TouchableOpacity onPress={closeMobileMenu}>
                   <ThemedText type="h3">✕</ThemedText>
                 </TouchableOpacity>

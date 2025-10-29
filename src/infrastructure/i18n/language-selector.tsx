@@ -16,12 +16,14 @@ import {
     View,
 } from 'react-native';
 import { useLanguage } from './language.context';
+import { useTranslation } from './use-translation';
 
 export function LanguageSelector() {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { language, setLanguage, availableLanguages } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
+  const { t } = useTranslation();
 
   const currentLanguage = availableLanguages.find((lang) => lang.code === language);
 
@@ -66,7 +68,7 @@ export function LanguageSelector() {
             onStartShouldSetResponder={() => true}
           >
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-              <ThemedText type="h3">Selecciona el idioma</ThemedText>
+              <ThemedText type="h3">{t.language.selectLanguage}</ThemedText>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <ThemedText type="h4">✕</ThemedText>
               </TouchableOpacity>

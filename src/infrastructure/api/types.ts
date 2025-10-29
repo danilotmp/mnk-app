@@ -16,9 +16,8 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * Tipos de lenguaje soportados
+ * Tipos de lenguaje soportados - importado de i18n
  */
-export type Language = 'es' | 'en';
 
 /**
  * Tokens de autenticación
@@ -34,10 +33,11 @@ export interface Tokens {
 export interface RequestHeaders {
   'Content-Type'?: string;
   'Authorization'?: string;
-  'Accept-Language'?: Language;
+  'Accept-Language'?: string;
   'company-code'?: string;
   'user-id'?: string;
   'app-source'?: 'mobile' | 'web' | 'legacy';
+  [key: string]: string | undefined;
 }
 
 /**

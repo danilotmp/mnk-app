@@ -3,7 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
-import { LanguageSelector } from '@/src/infrastructure/i18n';
+import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -34,6 +34,7 @@ export function UserProfileHeader({
   const { clearContext } = useMultiCompany();
   const [modalVisible, setModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const { t } = useTranslation();
   
   // Responsive: Detectar tamaño de pantalla
   const { width } = useWindowDimensions();
@@ -173,13 +174,13 @@ export function UserProfileHeader({
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
                     <View style={styles.section}>
                       <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                        Cambiar Sucursal
+                        {t.user.changeBranch}
                       </ThemedText>
                       {switching ? (
                         <View style={styles.loadingContainer}>
                           <ActivityIndicator size="small" color={colors.primary} />
                           <ThemedText type="caption" style={{ marginLeft: 8 }}>
-                            Cambiando...
+                            {t.user.changing}
                           </ThemedText>
                         </View>
                       ) : (
@@ -233,7 +234,7 @@ export function UserProfileHeader({
                     }}
                   >
                     <ThemedText style={styles.menuIcon}>👤</ThemedText>
-                    <ThemedText type="defaultSemiBold">Mi Perfil</ThemedText>
+                    <ThemedText type="defaultSemiBold">{t.user.myProfile}</ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -244,13 +245,13 @@ export function UserProfileHeader({
                     }}
                   >
                     <ThemedText style={styles.menuIcon}>⚙️</ThemedText>
-                    <ThemedText type="defaultSemiBold">Configuración</ThemedText>
+                    <ThemedText type="defaultSemiBold">{t.user.configuration}</ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity style={styles.menuOption} onPress={handleLogout}>
                     <ThemedText style={styles.menuIcon}>🚪</ThemedText>
                     <ThemedText type="defaultSemiBold" variant="error">
-                      Cerrar Sesión
+                      {t.user.logout}
                     </ThemedText>
                   </TouchableOpacity>
                 </View>
@@ -260,7 +261,7 @@ export function UserProfileHeader({
                   style={[styles.closeButton, { backgroundColor: colors.surface }]}
                   onPress={() => setModalVisible(false)}
                 >
-                  <ThemedText type="defaultSemiBold">Cerrar</ThemedText>
+                  <ThemedText type="defaultSemiBold">{t.common.close}</ThemedText>
                 </TouchableOpacity>
               </ScrollView>
             </ThemedView>

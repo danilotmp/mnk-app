@@ -5,10 +5,12 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/src/infrastructure/i18n';
 
 export default function NotFoundScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleGoHome = () => {
     router.push('/');
@@ -28,7 +30,7 @@ export default function NotFoundScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Página no encontrada', headerShown: false }} />
+      <Stack.Screen options={{ title: t.pages.notFound.title, headerShown: false }} />
       <ThemedView style={styles.container}>
         {/* Icono de archivos apilados */}
         <View style={styles.iconContainer}>
@@ -45,12 +47,12 @@ export default function NotFoundScreen() {
 
         {/* Título */}
         <ThemedText style={[styles.title, { color: colors.text }]}>
-          NOT FOUND
+          {t.pages.notFound.title.toUpperCase()}
         </ThemedText>
 
         {/* Mensaje */}
         <ThemedText style={[styles.message, { color: colors.text }]}>
-          Sorry, but you are looking for something that isn't here.
+          {t.pages.notFound.message}
         </ThemedText>
 
         {/* Links con Go Back a la izquierda y Go Home centrado */}
@@ -60,7 +62,7 @@ export default function NotFoundScreen() {
             <TouchableOpacity onPress={handleGoBack} style={styles.linkButton}>
               <Ionicons name="arrow-back" size={18} color={colors.primary} />
               <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
-                Go Back
+                {t.pages.notFound.goBack}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -70,7 +72,7 @@ export default function NotFoundScreen() {
             <TouchableOpacity onPress={handleGoHome} style={styles.linkButton}>
               <Ionicons name="home" size={18} color={colors.primary} />
               <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
-                Go Home
+                {t.pages.notFound.goHome}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -80,7 +82,7 @@ export default function NotFoundScreen() {
             <TouchableOpacity onPress={handleContactUs} style={styles.linkButton}>
               <Ionicons name="mail" size={18} color={colors.primary} />
               <ThemedText type="defaultSemiBold" style={[styles.linkText, { color: colors.primary }]}>
-                Contact Us
+                {t.pages.notFound.contactUs}
               </ThemedText>
             </TouchableOpacity>
           </View>
