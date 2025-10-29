@@ -114,6 +114,14 @@ export function UserProfileHeader({
             <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
           )}
         </TouchableOpacity>
+
+        {/* Selector de idioma - Junto al perfil */}
+        <View style={[
+          styles.languageSelectorWrapper,
+          isMobile && styles.languageSelectorWrapperMobile
+        ]}>
+          <LanguageSelector />
+        </View>
       </View>
 
       {/* Modal con opciones */}
@@ -134,14 +142,11 @@ export function UserProfileHeader({
             style={styles.modalContainer}
           >
             <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-              {/* Controles en la esquina superior derecha del modal */}
+              {/* Toggle de tema en la esquina superior derecha del modal */}
               <View style={[
                 styles.modalControlsContainer,
                 isMobile && styles.modalControlsContainerMobile
               ]}>
-                {/* Selector de idioma */}
-                <LanguageSelector />
-                {/* Toggle de tema */}
                 <ThemeToggle />
               </View>
 
@@ -277,6 +282,15 @@ const styles = StyleSheet.create({
   profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  // Wrapper para el selector de idioma
+  languageSelectorWrapper: {
+    marginLeft: 8,
+  },
+  // Mobile: ajustar espaciado
+  languageSelectorWrapperMobile: {
+    marginLeft: 4,
   },
   // Contenedor de controles en la esquina superior derecha del modal
   modalControlsContainer: {
@@ -285,14 +299,12 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     zIndex: 10,
   },
   // Mobile: ajustar espaciado
   modalControlsContainerMobile: {
     top: 12,
     right: 12,
-    gap: 4,
   },
   // Botón de perfil
   profileButton: {
