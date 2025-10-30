@@ -1,6 +1,7 @@
+import { createNotFoundStyles } from '@/src/styles/components/not-found.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,6 +12,8 @@ export default function NotFoundScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const styles = createNotFoundStyles(width);
 
   const handleGoHome = () => {
     router.push('/');
@@ -92,96 +95,5 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  iconContainer: {
-    marginBottom: 40,
-  },
-  iconStack: {
-    width: 140,
-    height: 160,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  documentBack: {
-    position: 'absolute',
-    width: 100,
-    height: 120,
-    borderRadius: 8,
-    opacity: 0.6,
-  },
-  documentLeft: {
-    left: 0,
-    top: 15,
-    transform: [{ rotate: '-8deg' }],
-  },
-  documentRight: {
-    right: 0,
-    top: 15,
-    transform: [{ rotate: '8deg' }],
-  },
-  documentFront: {
-    width: 100,
-    height: 120,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    zIndex: 3,
-  },
-  questionMark: {
-    fontSize: 120,
-    fontWeight: 'bold',
-    opacity: 0.9,
-  },
-  title: {
-    fontSize: 64,
-    fontWeight: 'bold',
-    letterSpacing: 0,
-    marginBottom: 32,
-  },
-  message: {
-    textAlign: 'center',
-    marginBottom: 40,
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  linksContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 600,
-  },
-  leftSection: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  centerSection: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  rightSection: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  linkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  linkText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-});
+// estilos movidos a src/styles/components/not-found.styles.ts
 

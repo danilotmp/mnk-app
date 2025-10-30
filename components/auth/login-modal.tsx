@@ -15,18 +15,19 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { authService } from '@/src/infrastructure/services/auth.service';
 import { mapApiUserToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
+import { useSession } from '@/src/infrastructure/session';
+import { createLoginModalStyles } from '@/src/styles/components/login-modal.styles';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 /**
@@ -106,7 +107,9 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { setUserContext } = useMultiCompany();
+  const { saveSession } = useSession();
   const alert = useAlert();
+  const styles = createLoginModalStyles();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -147,24 +150,19 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
       });
 
       const isSuccess = response.result?.statusCode === SUCCESS_STATUS_CODE;
-      
       if (isSuccess && response.data && response.data.user) {
         try {
           const userProfile = await authService.getProfile();
           const userData = userProfile || response.data.user;
-          
           let mappedUser = mapApiUserToMultiCompanyUser({
             ...response.data.user,
             ...userData,
             companyId: userData?.companyId || response.data.user.companyId || '',
           });
-          
           const multiCompanyService = MultiCompanyService.getInstance();
           const mockUsers = multiCompanyService.getMockUsers();
-          
           if (!mappedUser.companyId || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
-            
             if (mockUser) {
               mappedUser = {
                 ...mappedUser,
@@ -178,61 +176,61 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
               };
             }
           }
-          
           await setUserContext(mappedUser);
           
-          // Cerrar modal y ejecutar callback de éxito
+          // Guardar sesión (los tokens ya están guardados por authService.login)
+          await saveSession(mappedUser);
+          
+          // Mensaje de éxito
+          const successMessage = response.result?.description || t.api.loginSuccess || 'Login exitoso';
+          alert.showSuccess(successMessage);
           onClose();
           onLoginSuccess?.();
         } catch (profileError) {
-          console.error('⚠️ Error obteniendo perfil:', profileError);
-          
-          try {
-            let mappedUser = mapApiUserToMultiCompanyUser(response.data.user);
-            
-            if (!mappedUser.companyId || !mappedUser.currentBranchId) {
-              const multiCompanyService = MultiCompanyService.getInstance();
-              const mockUsers = multiCompanyService.getMockUsers();
-              const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
-              
-              if (mockUser) {
-                mappedUser = {
-                  ...mappedUser,
-                  companyId: mappedUser.companyId || mockUser.companyId,
-                  currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
-                  availableBranches: mappedUser.availableBranches.length > 0 
-                    ? mappedUser.availableBranches 
-                    : mockUser.availableBranches,
-                  roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
-                  permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
-                };
-              }
+          // Si falla obtener el perfil, usar solo info del login
+          let mappedUser = mapApiUserToMultiCompanyUser(response.data.user);
+          if (!mappedUser.companyId || !mappedUser.currentBranchId) {
+            const multiCompanyService = MultiCompanyService.getInstance();
+            const mockUsers = multiCompanyService.getMockUsers();
+            const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
+            if (mockUser) {
+              mappedUser = {
+                ...mappedUser,
+                companyId: mappedUser.companyId || mockUser.companyId,
+                currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
+                availableBranches: mappedUser.availableBranches.length > 0 
+                  ? mappedUser.availableBranches 
+                  : mockUser.availableBranches,
+                roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
+                permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
+              };
             }
-            
-            await setUserContext(mappedUser);
-            onClose();
-            onLoginSuccess?.();
-          } catch (mappingError) {
-            console.error('❌ Error mapeando usuario:', mappingError);
-            alert.showError(t.api.loginFailed);
           }
+          await setUserContext(mappedUser);
+          // Guardar sesión también en caso de error al obtener perfil
+          await saveSession(mappedUser);
+          onClose();
+          onLoginSuccess?.();
         }
       } else {
+        // Mostrar detalle de error si está presente
         const errorMessage = response.result?.description || t.auth.invalidCredentials;
-        alert.showError(errorMessage);
+        const errorDetail = (response as any)?.result?.details || '';
+        alert.showError(errorMessage, false, undefined, errorDetail);
         setErrors({ general: errorMessage });
       }
     } catch (error: any) {
-      console.error('Error en login:', error);
-      
       let errorMessage = t.api.loginFailed;
-      if (error?.result?.description) {
-        errorMessage = error.result.description;
-      } else if (error?.message) {
+      let errorDetail = '';
+      if (error?.message) {
         errorMessage = error.message;
       }
-      
-      alert.showError(errorMessage);
+      if (error?.details) {
+        errorDetail = error.details;
+      } else if (error?.result?.details) {
+        errorDetail = error.result.details;
+      }
+      alert.showError(errorMessage, false, undefined, errorDetail);
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
@@ -464,156 +462,5 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
   );
 }
 
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 480,
-    maxHeight: '90%',
-  },
-  modalContent: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingTop: 40,
-    paddingHorizontal: 40,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  headerContent: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  closeButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  scrollView: {
-    maxHeight: 600,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-  },
-  card: {
-    padding: 20,
-    gap: 16,
-  },
-  inputGroup: {
-    marginBottom: 4,
-  },
-  label: {
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    // Asegurar que no haya outline adicional en web
-    ...(Platform.OS === 'web' && {
-      outline: 'none',
-      outlineStyle: 'none',
-      outlineWidth: 0,
-      outlineColor: 'transparent',
-    }),
-  },
-  inputIcon: {
-    marginRight: 0,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  errorText: {
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  rememberMe: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rememberMeText: {
-    fontSize: 14,
-  },
-  forgotPassword: {
-    fontSize: 14,
-  },
-  generalError: {
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  loginButton: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loader: {
-    marginRight: 8,
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  registerLink: {
-    fontWeight: '600',
-  },
-});
+// estilos movidos a src/styles/components/login-modal.styles.ts
 

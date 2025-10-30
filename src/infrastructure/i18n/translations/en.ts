@@ -152,6 +152,7 @@ export const en: Translations = {
     passwordRequired: 'Password is required',
     companyCode: 'Company Code',
     companyCodePlaceholder: 'Enter your company code',
+    logoutSuccess: 'Signed out successfully',
   },
   
   errors: {

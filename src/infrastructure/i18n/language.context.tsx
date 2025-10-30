@@ -37,7 +37,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         config.setCurrentLanguage(savedLanguage);
       }
     } catch (error) {
-      console.error('Error loading language:', error);
+      // Eliminados console.error en manejo de persistencia de idioma
     }
   };
 
@@ -47,7 +47,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
       setLanguageState(newLanguage);
       config.setCurrentLanguage(newLanguage);
     } catch (error) {
-      console.error('Error saving language:', error);
+      // Eliminados console.error en manejo de persistencia de idioma
     }
   };
 

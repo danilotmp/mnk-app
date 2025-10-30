@@ -32,7 +32,7 @@ export function BranchSelector({ onBranchChange }: BranchSelectorProps) {
       setModalVisible(false);
       onBranchChange?.(branch);
     } catch (error) {
-      console.error('Error al cambiar sucursal:', error);
+      // Eliminado console.error en cambio de sucursal
     } finally {
       setSwitching(false);
     }

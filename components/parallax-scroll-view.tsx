@@ -1,5 +1,6 @@
+import { createParallaxScrollViewStyles } from '@/src/styles/components/parallax-scroll-view.styles';
 import type { PropsWithChildren, ReactElement } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -25,6 +26,7 @@ export default function ParallaxScrollView({
   
   // En web, usar ScrollView estándar para evitar problemas con worklets
   if (Platform.OS === 'web') {
+    const styles = createParallaxScrollViewStyles(HEADER_HEIGHT);
     return (
       <ThemedView style={{ backgroundColor, flex: 1 }}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -69,6 +71,7 @@ export default function ParallaxScrollView({
     };
   });
 
+  const styles = createParallaxScrollViewStyles(HEADER_HEIGHT);
   return (
     <Animated.ScrollView
       ref={scrollRef}

@@ -4,9 +4,10 @@ import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { UserProfileHeader } from '@/src/domains/shared';
+import { createMainLayoutStyles } from '@/src/styles/components/main-layout.styles';
 import { useRouter } from 'expo-router';
 import React, { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -32,6 +33,7 @@ export function MainLayout({
 }: MainLayoutProps) {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
+  const styles = createMainLayoutStyles();
 
   // Menú por defecto si no se proporciona
   const defaultMenuItems: MenuItem[] = [
@@ -85,7 +87,9 @@ export function MainLayout({
       try {
         router.push(item.route as any);
       } catch (error) {
-        console.error('Error al navegar:', error);
+        // Si realmente es crítico, usa un toast:
+        // alert.showError('No se pudo navegar a la ruta.');
+        // Pero nunca console.error
       }
     }
     
@@ -172,57 +176,5 @@ export function MainLayout({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  unifiedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between', // Distribuir espacio
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    zIndex: 9999, // ← Aumentado para que el mega menú quede por encima
-  },
-  
-  // Estilos Desktop/Tablet
-  logoSection: {
-    flexShrink: 0,
-    minWidth: 150, // Ancho mínimo para el logo
-  },
-  menuSection: {
-    flex: 1,
-    alignItems: 'center', // Centrar el menú
-    justifyContent: 'center',
-    marginHorizontal: 16,
-  },
-  userSection: {
-    flexShrink: 0,
-    minWidth: 150, // Ancho mínimo para balance con logo
-    justifyContent: 'flex-end',
-    flexDirection: 'row',
-  },
-  
-  // Estilos Mobile
-  mobileRightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  mobileMenuSection: {
-    flexShrink: 0,
-    marginLeft: 8, // Espacio entre usuario y hamburger
-  },
-  mobileLogoSection: {
-    flex: 1,
-    alignItems: 'flex-start', // Logo alineado a la izquierda en mobile
-  },
-  mobileUserSection: {
-    flexShrink: 0,
-  },
-  
-  content: {
-    flex: 1,
-  },
-});
+// estilos movidos a src/styles/components/main-layout.styles.ts
 

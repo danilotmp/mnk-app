@@ -1,6 +1,8 @@
-import { Platform, StyleSheet, Text } from 'react-native';
+import { createHelloWaveStyles } from '@/src/styles/components/hello-wave.styles';
+import { Platform, Text } from 'react-native';
 
 export function HelloWave() {
+  const styles = createHelloWaveStyles();
   // En web, usar animación CSS simple para evitar problemas con worklets
   if (Platform.OS === 'web') {
     return (
@@ -48,10 +50,4 @@ export function HelloWave() {
   }
 }
 
-const styles = StyleSheet.create({
-  waveText: {
-    fontSize: 28,
-    lineHeight: 32,
-    marginTop: -6,
-  },
-});
+// estilos movidos a src/styles/components/hello-wave.styles.ts

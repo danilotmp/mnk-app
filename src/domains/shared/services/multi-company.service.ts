@@ -62,7 +62,7 @@ export class MultiCompanyService {
       // Si no se encuentra la empresa (por ejemplo, viene un UUID del API que no existe en mock),
       // usar la primera empresa disponible de los datos mock
       if (!company) {
-        console.warn(`⚠️ Empresa con ID "${user.companyId}" no encontrada en datos mock. Usando primera empresa disponible.`);
+        // Se eliminan console.warn innecesarios; mantener flujo por defecto/fallback sin logs
         if (this.mockCompanies.length > 0) {
           company = this.mockCompanies[0];
           // Actualizar el companyId del usuario para que sea consistente
@@ -97,7 +97,7 @@ export class MultiCompanyService {
       }
       
       if (!currentBranch) {
-        console.warn('⚠️ No se pudo encontrar una sucursal para el usuario, continuando sin sucursal');
+        // Se eliminan console.warn innecesarios; mantener flujo por defecto/fallback sin logs
       }
 
       // Obtener sucursales disponibles

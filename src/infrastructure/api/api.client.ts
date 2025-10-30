@@ -38,20 +38,13 @@ export class ApiClient {
 
       // Construir URL completa
       const fullUrl = `${this.config.getBaseUrl()}${config.endpoint}`;
-      console.log('🌐 URL completa:', fullUrl);
-      console.log('📤 Método:', config.method);
-      console.log('📋 Headers:', fetchHeaders);
-      console.log('📦 Body:', config.body ? JSON.stringify(config.body) : 'N/A');
-      
+
       // Realizar el request
       const response = await fetch(fullUrl, {
         method: config.method,
         headers: fetchHeaders,
         body: config.body ? JSON.stringify(config.body) : undefined,
       });
-      
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response ok:', response.ok);
 
       // Si el token expiró (401), intentar refrescar y reintentar
       if (response.status === HTTP_STATUS.UNAUTHORIZED && !config.skipAuth) {
@@ -60,8 +53,6 @@ export class ApiClient {
 
       // Parsear respuesta
       const data = await response.json();
-      
-      console.log('📥 Response data:', JSON.stringify(data, null, 2));
 
       // Lanzar error si el status code HTTP indica error
       // Pero permitir que los códigos de estado en result.statusCode sean manejados por el componente

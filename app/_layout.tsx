@@ -12,8 +12,9 @@ import { MainLayout, MenuItem } from '@/components/layouts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
 import { MultiCompanyProvider } from '@/src/domains/shared';
-import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { LanguageProvider, useTranslation } from '@/src/infrastructure/i18n';
+import { ToastContainer, ToastProvider } from '@/src/infrastructure/messages';
+import { useSession } from '@/src/infrastructure/session';
 
 // Suprimir errores de FontFaceObserver timeout en web
 // Este error no afecta la funcionalidad, solo es un warning de carga de fuentes
@@ -60,6 +61,7 @@ function LayoutContent() {
   const { t, interpolate } = useTranslation();
   const pathname = usePathname();
   const segments = useSegments();
+  const { isLoading: isSessionLoading } = useSession();
   
   // Determinar si estamos en una ruta de autenticación
   const isAuthRoute = pathname?.startsWith('/auth') || segments[0] === 'auth';
@@ -175,11 +177,13 @@ function LayoutContent() {
     },
   ];
   const colorScheme = useColorScheme();
-  const { user, setUserContext } = useMultiCompany();
-
-  // No inicializar usuario automáticamente
-  // El usuario se establecerá solo después de hacer login exitoso
-  // Esto permite que las páginas funcionen sin autenticación y muestren el botón "Iniciar sesión"
+  
+  // La sesión se rehidrata automáticamente en useSession
+  // Mostrar loading si aún se está cargando la sesión
+  if (isSessionLoading) {
+    // Por ahora solo esperamos, puedes agregar un loader aquí si lo deseas
+    return null;
+  }
 
   // Si es una ruta de autenticación, no usar MainLayout
   if (isAuthRoute) {
@@ -211,11 +215,14 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
-    <CustomThemeProvider>
-      <MultiCompanyProvider>
-          <LayoutContent />
-      </MultiCompanyProvider>
-    </CustomThemeProvider>
+      <CustomThemeProvider>
+        <MultiCompanyProvider>
+          <ToastProvider>
+            <LayoutContent />
+            <ToastContainer />
+          </ToastProvider>
+        </MultiCompanyProvider>
+      </CustomThemeProvider>
     </LanguageProvider>
   );
 }

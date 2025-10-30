@@ -5,13 +5,15 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
+import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { useSession } from '@/src/infrastructure/session';
+import { createUserProfileHeaderStyles } from '@/src/styles/components/user-profile-header.styles';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -31,13 +33,16 @@ export function UserProfileHeader({
   onProfile,
 }: UserProfileHeaderProps) {
   const { colors } = useTheme();
+  const styles = createUserProfileHeaderStyles();
   const { user, company, branch } = useCompany();
   const { branches, switchBranch } = useBranches();
   const { clearContext } = useMultiCompany();
+  const { clearSession } = useSession();
   const [modalVisible, setModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
   const { t } = useTranslation();
+  const alert = useAlert();
   
   // Responsive: Detectar tamaño de pantalla
   const { width } = useWindowDimensions();
@@ -49,6 +54,14 @@ export function UserProfileHeader({
     return (
       <>
         <View style={styles.profileContainer}>
+          {/* Toggle de tema - Al lado izquierdo del botón de login */}
+          <View style={[
+            styles.themeToggleWrapper,
+            isMobile && styles.themeToggleWrapperMobile
+          ]}>
+            <ThemeToggle />
+          </View>
+
           <TouchableOpacity
             style={[
               styles.loginButton,
@@ -58,9 +71,11 @@ export function UserProfileHeader({
             onPress={() => setLoginModalVisible(true)}
             activeOpacity={0.7}
           >
-            <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
-              {t.auth.login}
-            </ThemedText>
+            {!isMobile && (
+              <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
+                {t.auth.login}
+              </ThemedText>
+            )}
             <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
               <Ionicons name="person-outline" size={18} color="#FFFFFF" />
             </View>
@@ -103,7 +118,7 @@ export function UserProfileHeader({
       setSwitching(true);
       await switchBranch(newBranch.id);
     } catch (error) {
-      console.error('Error al cambiar sucursal:', error);
+      // console.error('Error al cambiar sucursal:', error);
     } finally {
       setSwitching(false);
     }
@@ -117,17 +132,28 @@ export function UserProfileHeader({
       const { authService } = await import('@/src/infrastructure/services/auth.service');
       await authService.logout();
     } catch (error) {
-      console.error('Error al hacer logout:', error);
+      // console.error('Error al hacer logout:', error);
     }
     
-    clearContext();
+    // Limpiar sesión completa (tokens, usuario, etc.)
+    await clearSession();
     onLogout?.();
+    // Toast de confirmación multilenguaje
+    alert.showSuccess('auth.logoutSuccess');
   };
 
   return (
     <>
       {/* Contenedor del perfil */}
       <View style={styles.profileContainer}>
+        {/* Toggle de tema - Al lado izquierdo del avatar */}
+        <View style={[
+          styles.themeToggleWrapper,
+          isMobile && styles.themeToggleWrapperMobile
+        ]}>
+          <ThemeToggle />
+        </View>
+
         {/* Botón de perfil - RESPONSIVE */}
         <TouchableOpacity
           style={[
@@ -138,13 +164,6 @@ export function UserProfileHeader({
           onPress={() => setModalVisible(true)}
           activeOpacity={0.7}
         >
-          {/* Avatar */}
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
-              {getInitials()}
-            </ThemedText>
-          </View>
-
           {/* Info del usuario - Solo visible en Tablet y Desktop */}
           {!isMobile && (
             <View style={styles.userInfo}>
@@ -160,10 +179,12 @@ export function UserProfileHeader({
             </View>
           )}
 
-          {/* Icono de dropdown - Solo visible en Tablet y Desktop */}
-          {!isMobile && (
-            <ThemedText style={styles.dropdownIcon}>▼</ThemedText>
-          )}
+          {/* Avatar */}
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
+              {getInitials()}
+            </ThemedText>
+          </View>
         </TouchableOpacity>
 
         {/* Selector de idioma - Junto al perfil */}
@@ -193,14 +214,6 @@ export function UserProfileHeader({
             style={styles.modalContainer}
           >
             <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-              {/* Toggle de tema en la esquina superior derecha del modal */}
-              <View style={[
-                styles.modalControlsContainer,
-                isMobile && styles.modalControlsContainerMobile
-              ]}>
-                <ThemeToggle />
-              </View>
-
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Encabezado del modal */}
                 <View style={styles.modalHeader}>
@@ -337,195 +350,5 @@ export function UserProfileHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  // Contenedor del perfil
-  profileContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  // Wrapper para el selector de idioma
-  languageSelectorWrapper: {
-    marginLeft: 8,
-  },
-  // Mobile: ajustar espaciado
-  languageSelectorWrapperMobile: {
-    marginLeft: 4,
-  },
-  // Botón de login
-  loginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    gap: 8,
-  },
-  loginButtonMobile: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 18,
-    gap: 6,
-  },
-  loginButtonText: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  loginIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Contenedor de controles en la esquina superior derecha del modal
-  modalControlsContainer: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  // Mobile: ajustar espaciado
-  modalControlsContainerMobile: {
-    top: 12,
-    right: 12,
-  },
-  // Botón de perfil
-  profileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    gap: 8,
-  },
-  // Mobile: Solo avatar, más compacto
-  profileButtonMobile: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    borderRadius: 18,
-    gap: 0,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  userInfo: {
-    flex: 1,
-    marginRight: 4,
-    minWidth: 100, // Evitar que se comprima demasiado
-  },
-  userName: {
-    fontSize: 14,
-  },
-  dropdownIcon: {
-    fontSize: 10,
-    opacity: 0.6,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '90%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  modalContent: {
-    borderRadius: 16,
-    padding: 24,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarTextLarge: {
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  modalUserName: {
-    marginBottom: 4,
-  },
-  badge: {
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  divider: {
-    height: 1,
-    marginVertical: 16,
-  },
-
-  // Secciones
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    marginBottom: 12,
-  },
-  branchOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  branchOptionInfo: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-
-  // Menú de opciones
-  menuOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 12,
-  },
-  menuIcon: {
-    fontSize: 20,
-  },
-
-  // Botón cerrar
-  closeButton: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-});
+// estilos movidos a src/styles/components/user-profile-header.styles.ts
 

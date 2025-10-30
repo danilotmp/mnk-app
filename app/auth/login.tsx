@@ -18,14 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function LoginPage() {
@@ -40,7 +40,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -60,70 +60,39 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
-    console.log('🚀 handleLogin llamado');
-    console.log('📧 Email:', email);
-    console.log('🔐 Password length:', password.length);
-    
     if (!validateForm()) {
-      console.log('❌ Validación fallida');
       return;
     }
 
-    console.log('✅ Validación exitosa, iniciando login...');
     setIsLoading(true);
     setErrors({});
 
     try {
-      console.log('📡 Llamando a authService.login...');
       const response = await authService.login({
         email: email.trim(),
         password: password,
       });
-      console.log('✅ Respuesta del login:', JSON.stringify(response, null, 2));
-      console.log('📊 StatusCode del result:', response.result?.statusCode);
-      console.log('📊 SUCCESS_STATUS_CODE:', SUCCESS_STATUS_CODE);
-      console.log('📊 response.data existe?', !!response.data);
-      console.log('📊 response.data.user existe?', !!response.data?.user);
 
-      // Verificar que la respuesta sea exitosa usando el statusCode
       const isSuccess = response.result?.statusCode === SUCCESS_STATUS_CODE;
-      console.log('✅ isSuccess:', isSuccess);
-      
       if (isSuccess && response.data && response.data.user) {
-        console.log('✅ Condiciones cumplidas, procesando usuario...');
-        // Intentar obtener información completa del usuario desde el perfil
         try {
           const userProfile = await authService.getProfile();
-          
-          // Si tenemos perfil, usarlo; sino, usar datos del login
           const userData = userProfile || response.data.user;
           
-          // Mapear datos del API al formato MultiCompanyUser
-          // El login solo retorna: id, email, firstName, lastName, companyId
-          // Los demás campos vienen del perfil o se completan con datos mock
           let mappedUser = mapApiUserToMultiCompanyUser({
-            ...response.data.user, // Datos del login
-            ...userData, // Datos del perfil si existen
-            // Asegurar que companyId esté presente
+            ...response.data.user,
+            ...userData,
             companyId: userData?.companyId || response.data.user.companyId || '',
           });
           
-          // Verificar y ajustar companyId si es necesario
-          // El API puede retornar un UUID que no existe en los datos mock
-          // En ese caso, dejamos que setUserContext maneje el fallback a la primera empresa mock
           const multiCompanyService = MultiCompanyService.getInstance();
           const mockUsers = multiCompanyService.getMockUsers();
           
-          // Si el usuario no tiene datos completos, completar con datos mock
           if (!mappedUser.companyId || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
-            
             if (mockUser) {
-              // Combinar datos reales del login con datos mock necesarios
               mappedUser = {
                 ...mappedUser,
-                // Si no tiene companyId o viene un UUID que no existe en mock, usar el del mock
-                // setUserContext se encargará de usar la primera empresa mock si no existe
                 companyId: mappedUser.companyId || mockUser.companyId,
                 currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
                 availableBranches: mappedUser.availableBranches.length > 0 
@@ -132,41 +101,18 @@ export default function LoginPage() {
                 roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
                 permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
               };
-              
-              console.log('📝 Usuario ajustado con datos mock:', {
-                companyId: mappedUser.companyId,
-                currentBranchId: mappedUser.currentBranchId,
-              });
             }
           }
           
-          console.log('🔄 Mapeando usuario al contexto...');
-          console.log('👤 MappedUser:', JSON.stringify(mappedUser, null, 2));
-          
           await setUserContext(mappedUser);
-          
-          console.log('✅ Usuario establecido correctamente en el contexto');
-          console.log('🔄 Redirigiendo a la página principal...');
-          
-          // Navegar a la página principal
           router.replace('/');
-          
-          console.log('✅ Redirección ejecutada');
-          setLoading(false);
         } catch (profileError) {
-          console.error('⚠️ Error obteniendo perfil:', profileError);
-          console.log('📝 Continuando con datos del login solamente...');
-          
-          // En caso de error, intentar mapear solo con datos del login
           try {
             let mappedUser = mapApiUserToMultiCompanyUser(response.data.user);
-            
-            // Completar con datos mock si es necesario
             if (!mappedUser.companyId || !mappedUser.currentBranchId) {
               const multiCompanyService = MultiCompanyService.getInstance();
               const mockUsers = multiCompanyService.getMockUsers();
               const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
-              
               if (mockUser) {
                 mappedUser = {
                   ...mappedUser,
@@ -180,41 +126,31 @@ export default function LoginPage() {
                 };
               }
             }
-            
-            console.log('🔄 Estableciendo contexto de usuario (sin perfil)...');
             await setUserContext(mappedUser);
-            console.log('✅ Usuario establecido sin perfil, redirigiendo...');
             router.replace('/');
           } catch (mappingError) {
-            console.error('❌ Error mapeando usuario:', mappingError);
             alert.showError(t.api.loginFailed);
-            setLoading(false);
+            setIsLoading(false);
           }
         }
       } else {
-        // Si el statusCode no es 200 o no hay datos, mostrar error
-        console.log('❌ Condiciones no cumplidas para el login:');
-        console.log('   - isSuccess:', isSuccess);
-        console.log('   - response.data existe?', !!response.data);
-        console.log('   - response.data.user existe?', !!response.data?.user);
-        
         const errorMessage = response.result?.description || t.auth.invalidCredentials;
-        console.log('❌ Error a mostrar:', errorMessage);
-        alert.showError(errorMessage);
+        const errorDetail = (response as any)?.result?.details || '';
+        alert.showError(errorMessage, false, undefined, errorDetail);
         setErrors({ general: errorMessage });
       }
     } catch (error: any) {
-      console.error('Error en login:', error);
-      
-      // Extraer mensaje de error localizado
       let errorMessage = t.api.loginFailed;
-      if (error?.result?.description) {
-        errorMessage = error.result.description;
-      } else if (error?.message) {
+      let errorDetail = '';
+      if (error?.message) {
         errorMessage = error.message;
       }
-      
-      alert.showError(errorMessage);
+      if (error?.details) {
+        errorDetail = error.details;
+      } else if (error?.result?.details) {
+        errorDetail = error.result.details;
+      }
+      alert.showError(errorMessage, false, undefined, errorDetail);
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);

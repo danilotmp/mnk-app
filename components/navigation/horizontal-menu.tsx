@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -10,7 +11,6 @@ import {
     Platform,
     Pressable,
     ScrollView,
-    StyleSheet,
     TouchableOpacity,
     View,
     useWindowDimensions
@@ -45,6 +45,7 @@ interface HorizontalMenuProps {
 export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
+  const styles = createHorizontalMenuStyles();
   const pathname = usePathname();
   const isMobile = isMobileDevice(width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -514,197 +515,4 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  // Desktop Container
-  desktopContainer: {
-    position: 'relative',
-    flex: 1,
-  },
-
-  // Overlay
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 999,
-  },
-
-  // Mobile Hamburger
-  hamburgerButton: {
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  hamburgerIcon: {
-    fontSize: 24,
-  },
-
-  // Mobile Menu Modal
-  mobileMenuOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    flexDirection: 'row',
-  },
-  mobileMenuContainer: {
-    width: '80%',
-    maxWidth: 320,
-    height: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  mobileMenuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-  },
-  mobileMenuContent: {
-    flex: 1,
-  },
-  mobileMenuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  submenuContainer: {
-    paddingLeft: 16,
-  },
-  submenuItem: {
-    padding: 12,
-    paddingLeft: 24,
-  },
-  submenuText: {
-    opacity: 0.8,
-  },
-  mobileColumn: {
-    marginBottom: 16,
-  },
-  mobileColumnTitle: {
-    marginBottom: 8,
-    marginTop: 8,
-    opacity: 0.9,
-  },
-
-  // Horizontal Menu (Desktop/Tablet)
-  horizontalMenuScroll: {
-    flexGrow: 0,
-  },
-  horizontalMenuContent: {
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    gap: 4,
-    alignItems: 'center',
-  },
-  horizontalMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 4,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeMenuItem: {
-    borderBottomColor: '#ff3366', // Línea roja inferior
-  },
-  menuItemText: {
-    fontSize: 14,
-  },
-  dropdownIndicator: {
-    fontSize: 10,
-    opacity: 0.6,
-    marginLeft: 4,
-  },
-
-  // Mega Menu (Desktop)
-  megaMenu: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    width: '100%',
-    maxWidth: 1200,
-    borderWidth: 1,
-    borderRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 10000,
-    padding: 24,
-  },
-  megaMenuContent: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    gap: 48,
-  },
-  megaMenuColumn: {
-    flex: 1,
-    minWidth: 200,
-  },
-  megaMenuColumnTitle: {
-    marginBottom: 8,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  megaMenuColumnLine: {
-    height: 1,
-    width: '100%',
-    marginBottom: 12,
-  },
-  megaMenuItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-  },
-  activeMegaMenuItem: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#ff3366', // Línea roja vertical izquierda
-    paddingLeft: 7, // Reducir padding izquierdo para compensar el borde
-  },
-  megaMenuItemText: {
-    opacity: 0.8,
-  },
-
-  // Desktop Submenu Dropdown
-  desktopSubmenu: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    minWidth: 280,
-    maxWidth: 320,
-    borderWidth: 1,
-    borderRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 10000,
-    padding: 12,
-  },
-  desktopSubmenuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  activeSubmenuItem: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#ff3366', // Línea roja vertical izquierda
-    paddingLeft: 13, // Reducir padding izquierdo para compensar el borde
-  },
-  submenuItemTitle: {
-    marginBottom: 4,
-  },
-  submenuItemDescription: {
-    opacity: 0.7,
-    lineHeight: 16,
-  },
-});
+// estilos movidos a src/styles/components/horizontal-menu.styles.ts

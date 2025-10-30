@@ -45,11 +45,6 @@ export class AuthService {
    * El código de empresa viene en la respuesta del API, no se requiere en el login
    */
   async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
-    console.log('🔐 AuthService.login llamado');
-    console.log('📍 Endpoint:', API_CONFIG.ENDPOINTS.LOGIN);
-    console.log('🌐 Base URL:', API_CONFIG.BASE_URL);
-    console.log('📝 Body:', { email: credentials.email, password: '***' });
-    
     try {
       const response = await apiClient.request<AuthResponse>({
         endpoint: API_CONFIG.ENDPOINTS.LOGIN,
@@ -60,7 +55,6 @@ export class AuthService {
         },
         skipAuth: true, // No requiere autenticación
       });
-      console.log('✅ Respuesta recibida del API:', response);
 
       // Guardar tokens automáticamente
       if (response.data.accessToken && response.data.refreshToken) {
@@ -81,7 +75,6 @@ export class AuthService {
 
       return response;
     } catch (error) {
-      console.error('❌ Error en AuthService.login:', error);
       throw error;
     }
   }
@@ -152,7 +145,6 @@ export class AuthService {
 
       return response.data;
     } catch (error) {
-      console.error('Error obteniendo usuario actual:', error);
       return null;
     }
   }
@@ -177,7 +169,6 @@ export class AuthService {
 
       return response.data;
     } catch (error) {
-      console.error('Error obteniendo perfil:', error);
       return null;
     }
   }

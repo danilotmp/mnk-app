@@ -152,6 +152,7 @@ export const es: Translations = {
     passwordRequired: 'La contraseña es requerida',
     companyCode: 'Código de Empresa',
     companyCodePlaceholder: 'Ingresa el código de tu empresa',
+    logoutSuccess: 'Sesión cerrada correctamente',
   },
   
   errors: {
