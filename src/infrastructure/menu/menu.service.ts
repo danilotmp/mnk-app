@@ -2,7 +2,7 @@
  * Servicio para obtener el menú dinámico desde el backend
  * 
  * Estrategia:
- * - Si el usuario está autenticado: Llama a /api/menu con token (devuelve público + privado según permisos)
+ * - Si el usuario está autenticado: Llama a /api/seguridades/menu con token (devuelve público + privado según permisos)
  * - Si NO está autenticado: Usa menú por defecto con páginas públicas (no llama al servicio)
  */
 
@@ -17,6 +17,9 @@ export class MenuService {
    * Solo se debe llamar cuando el usuario está autenticado
    * El endpoint devuelve menú público + privado según el rol del usuario
    * 
+   * IMPORTANTE: El roleId se obtiene automáticamente del token JWT (en el header Authorization).
+   * NO se envía como parámetro de query. El backend debe extraer el roleId del token decodificado.
+   * 
    * Garantiza que las páginas públicas siempre estén presentes,
    * incluso si el backend no las devuelve en el menú
    * 
@@ -25,6 +28,8 @@ export class MenuService {
    */
   static async getMenu(language: string = 'es'): Promise<MenuItem[]> {
     try {
+      // El endpoint NO debe recibir roleId como parámetro.
+      // El roleId se extrae del token JWT en el header Authorization por el backend.
       const response = await apiClient.request<MenuItem[]>({
         endpoint: API_CONFIG.ENDPOINTS.MENU,
         method: 'GET',

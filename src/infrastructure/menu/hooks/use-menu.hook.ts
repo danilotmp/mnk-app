@@ -28,7 +28,7 @@ export function useMenu() {
       setError(null);
 
       // Obtener menú según estado de autenticación
-      // Si está autenticado: llama al servicio /api/menu (devuelve público + privado según permisos)
+      // Si está autenticado: llama al servicio /api/seguridades/menu (devuelve público + privado según permisos)
       // Si NO está autenticado: usa menú por defecto con páginas públicas (no llama al servicio)
       const menuItems = await MenuService.getMenuForUser(
         currentLanguage,

@@ -178,6 +178,68 @@ export interface Translations {
     requestFailed: string;
     networkUnavailable: string;
   };
+
+  security?: {
+    users?: {
+      title: string;
+      subtitle: string;
+      create: string;
+      edit: string;
+      delete: string;
+      email: string;
+      name: string;
+      phone: string;
+      role: string;
+      status: string;
+      active: string;
+      inactive: string;
+      searchPlaceholder: string;
+      loadError: string;
+      activated: string;
+      deactivated: string;
+      deleted: string;
+    };
+    roles?: {
+      title: string;
+      subtitle: string;
+      create: string;
+      edit: string;
+      delete: string;
+      name: string;
+      code: string;
+      description: string;
+      permissions: string;
+      searchPlaceholder: string;
+      loadError: string;
+    };
+    permissions?: {
+      title: string;
+      subtitle: string;
+      create: string;
+      edit: string;
+      delete: string;
+      name: string;
+      code: string;
+      module: string;
+      action: string;
+      searchPlaceholder: string;
+      loadError: string;
+    };
+    accesses?: {
+      title: string;
+      subtitle: string;
+      create: string;
+      edit: string;
+      delete: string;
+      user: string;
+      company: string;
+      branch: string;
+      role: string;
+      permissions: string;
+      searchPlaceholder: string;
+      loadError: string;
+    };
+  };
 }
 
 export type Language = 'es' | 'en';

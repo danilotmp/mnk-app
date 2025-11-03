@@ -129,7 +129,7 @@ const response = await apiClient.request({
 ┌─────────────────────────────────────────────┐
 │ 1. Login                                    │
 ├─────────────────────────────────────────────┤
-│ POST /seguridades/login                     │
+│ POST /seguridades/auth/login                │
 │ Body: { email, password }                   │
 │ Response: { accessToken, refreshToken }    │
 │ ↓                                           │
@@ -151,7 +151,7 @@ const response = await apiClient.request({
 │ Header: Authorization: Bearer <expired>    │
 │ Response: 401 Unauthorized ❌               │
 │ ↓                                           │
-│ POST /seguridades/refresh-token             │
+│ POST /seguridades/auth/refresh-token        │
 │ Body: { refreshToken }                      │
 │ Response: { accessToken, refreshToken }     │
 │ ↓                                           │
