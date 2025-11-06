@@ -19,32 +19,65 @@ export function InputWithFocus({ children, containerStyle, primaryColor, error }
   // Clonar children para agregar props de focus
   const childrenWithFocus = React.Children.map(children, (child) => {
     if (React.isValidElement(child) && child.type === TextInput) {
-      return React.cloneElement(child as React.ReactElement<any>, {
-        onFocus: (e: any) => {
-          setIsFocused(true);
-          if (child.props.onFocus) {
-            child.props.onFocus(e);
-          }
-        },
-        onBlur: (e: any) => {
-          setIsFocused(false);
-          if (child.props.onBlur) {
-            child.props.onBlur(e);
-          }
-        },
-        // Eliminar completamente el outline en web para evitar el cuadrado negro/blanco
-        style: [
-          child.props.style,
-          Platform.OS === 'web' && {
-            outline: 'none',
-            outlineStyle: 'none',
-            outlineWidth: 0,
-            outlineColor: 'transparent',
-            WebkitAppearance: 'none',
-            appearance: 'none',
-          },
-        ],
+      const originalStyle = child.props.style;
+      const webStyle = Platform.OS === 'web' ? {
+        outline: 'none',
+        outlineStyle: 'none',
+        outlineWidth: 0,
+        outlineColor: 'transparent',
+        WebkitAppearance: 'none',
+        appearance: 'none',
+      } : {};
+      
+      // Extraer las props críticas ANTES de hacer el spread
+      const originalOnChangeText = child.props.onChangeText;
+      const originalOnFocus = child.props.onFocus;
+      const originalOnBlur = child.props.onBlur;
+      const originalValue = child.props.value;
+      const originalPlaceholder = child.props.placeholder;
+      const originalPlaceholderTextColor = child.props.placeholderTextColor;
+      const originalReturnKeyType = child.props.returnKeyType;
+      const originalOnSubmitEditing = child.props.onSubmitEditing;
+      
+      // Crear objeto de props preservando TODO explícitamente
+      const newProps: any = {};
+      
+      // Primero copiar todas las props originales
+      Object.keys(child.props).forEach((key) => {
+        newProps[key] = child.props[key as keyof typeof child.props];
       });
+      
+      // CRÍTICO: Asegurar que onChangeText se preserve explícitamente
+      // Esto es crítico porque React Native necesita esta función para actualizar el valor
+      newProps.onChangeText = originalOnChangeText;
+      newProps.value = originalValue;
+      newProps.placeholder = originalPlaceholder;
+      newProps.placeholderTextColor = originalPlaceholderTextColor;
+      newProps.returnKeyType = originalReturnKeyType;
+      newProps.onSubmitEditing = originalOnSubmitEditing;
+      
+      // Sobrescribir solo onFocus y onBlur para manejar el estado de focus
+      newProps.onFocus = (e: any) => {
+        setIsFocused(true);
+        if (originalOnFocus) {
+          originalOnFocus(e);
+        }
+      };
+      
+      newProps.onBlur = (e: any) => {
+        setIsFocused(false);
+        if (originalOnBlur) {
+          originalOnBlur(e);
+        }
+      };
+      
+      // Aplicar estilos web para eliminar outline nativo
+      newProps.style = [
+        originalStyle,
+        webStyle,
+      ].filter(Boolean);
+      
+      return React.cloneElement(child as React.ReactElement<any>, newProps);
     }
     return child;
   });
@@ -75,4 +108,3 @@ export function InputWithFocus({ children, containerStyle, primaryColor, error }
     </View>
   );
 }
-

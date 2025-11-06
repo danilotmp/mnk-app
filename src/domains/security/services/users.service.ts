@@ -15,6 +15,14 @@ export class UsersService {
   private static readonly BASE_ENDPOINT = '/seguridades/usuarios';
 
   /**
+   * Validar si un string es un UUID válido
+   */
+  private static isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  }
+
+  /**
    * Obtener lista de usuarios con paginación
    * 
    * El backend acepta page y limit como query parameters y los transforma automáticamente
@@ -47,7 +55,8 @@ export class UsersService {
       if (filters.isActive !== undefined) {
         queryParams.append('isActive', filters.isActive.toString());
       }
-      if (filters.companyId) {
+      // Solo agregar companyId si es un UUID válido
+      if (filters.companyId && this.isValidUUID(filters.companyId)) {
         queryParams.append('companyId', filters.companyId);
       }
       if (filters.roleId) {
@@ -65,24 +74,26 @@ export class UsersService {
       });
 
       if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-        // El backend devuelve la estructura: { data: [...], pagination: {...} }
+        // El backend devuelve la estructura: { data: [...], meta: {...} }
         // Verificar que response.data tenga la estructura correcta de PaginatedResponse
         const paginatedData = response.data as any;
         
-        // Si response.data ya tiene data y pagination, devolverlo directamente
-        if (paginatedData.data && paginatedData.pagination) {
+        // Si response.data ya tiene data y meta, devolverlo directamente
+        if (paginatedData.data && paginatedData.meta) {
           return paginatedData as PaginatedResponse<SecurityUser>;
         }
         
-        // Si response.data es un array, construir la estructura
+        // Si response.data es un array (respuesta sin paginación), construir la estructura
         if (Array.isArray(paginatedData)) {
           return {
             data: paginatedData,
-            pagination: {
+            meta: {
               page: filters.page || 1,
               limit: filters.limit || 10,
               total: paginatedData.length,
               totalPages: 1,
+              hasNext: false,
+              hasPrev: false,
             },
           };
         }

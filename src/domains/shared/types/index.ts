@@ -19,13 +19,18 @@ export interface PaginationParams {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
 }
 
 // Tipos de tema
@@ -43,3 +48,4 @@ export type ComponentVariant = 'primary' | 'secondary' | 'accent' | 'outlined' |
 
 // Exportar tipos de multiempresa
 export * from './multi-company.types';
+

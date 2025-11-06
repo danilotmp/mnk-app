@@ -5,13 +5,32 @@
 
 import { StyleSheet } from 'react-native';
 
-export const createDataTableStyles = () =>
+export const createDataTableStyles = (isMobile: boolean = false) =>
   StyleSheet.create({
     container: {
       flex: 1,
       borderRadius: 12,
       overflow: 'hidden',
       width: '100%',
+      minHeight: 400,
+      padding: 0,
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    horizontalScrollContainer: {
+      flex: 1,
+      width: '100%',
+      minHeight: 0, // Permite que el scroll funcione correctamente
+    },
+    horizontalScrollContent: {
+      minWidth: '100%',
+      flexGrow: 1,
+    },
+    tableWrapper: {
+      flex: 1,
+      minWidth: '100%',
+      minHeight: 0, // Permite que el scroll funcione correctamente
     },
     loadingContainer: {
       padding: 40,
@@ -31,17 +50,21 @@ export const createDataTableStyles = () =>
     },
     header: {
       borderBottomWidth: 1,
+      zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'stretch',
+      minWidth: '100%',
+      width: '100%',
     },
     headerCell: {
       paddingVertical: 12,
-      paddingHorizontal: 16,
+      paddingHorizontal: isMobile ? 12 : 16,
       borderRightWidth: 1,
       justifyContent: 'center',
       minHeight: 48,
+      zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
     },
     headerCellCenter: {
       alignItems: 'center',
@@ -54,23 +77,33 @@ export const createDataTableStyles = () =>
       fontWeight: '600',
     },
     body: {
-      maxHeight: 600,
+      flex: 1,
+      minHeight: 0, // Importante para que el scroll funcione correctamente
     },
     row: {
       flexDirection: 'row',
       alignItems: 'stretch',
       borderBottomWidth: 1,
       minHeight: 56,
+      width: '100%',
     },
     stripedRow: {
       backgroundColor: 'rgba(0, 0, 0, 0.02)',
     },
     cell: {
       paddingVertical: 12,
-      paddingHorizontal: 16,
+      paddingHorizontal: isMobile ? 12 : 16,
       borderRightWidth: 1,
       justifyContent: 'center',
       minHeight: 56,
+      // Permitir que las celdas crezcan según el contenido
+      alignItems: 'stretch',
+    },
+    cellFirst: {
+      paddingLeft: isMobile ? 16 : 16,
+    },
+    cellLast: {
+      paddingRight: isMobile ? 16 : 16,
     },
     cellCenter: {
       alignItems: 'center',
@@ -82,64 +115,81 @@ export const createDataTableStyles = () =>
       fontSize: 14,
     },
     pagination: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 16,
+      flexDirection: isMobile ? 'column' : 'row',
+      justifyContent: isMobile ? 'flex-start' : 'space-between',
+      alignItems: isMobile ? 'stretch' : 'center',
+      padding: isMobile ? 8 : 16,
+      paddingHorizontal: isMobile ? 8 : 16,
       borderTopWidth: 1,
-      flexWrap: 'wrap',
-      gap: 16,
+      gap: isMobile ? 12 : 16,
+      flexShrink: 0, // La paginación no se comprime
     },
     paginationInfo: {
-      flex: 1,
-      minWidth: 150,
+      flex: isMobile ? 0 : 1,
+      minWidth: isMobile ? 100 : 150,
+    },
+    paginationInfoMobile: {
+      width: '100%',
+      marginBottom: 4,
     },
     paginationControls: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 16,
+      gap: isMobile ? 8 : 16,
       flexWrap: 'wrap',
+      flexShrink: 1,
+    },
+    paginationControlsMobile: {
+      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
     },
     limitSelector: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: isMobile ? 4 : 8,
     },
     limitLabel: {
-      fontSize: 14,
+      fontSize: isMobile ? 12 : 14,
     },
     limitOptions: {
       flexDirection: 'row',
       gap: 4,
     },
     limitOption: {
-      paddingHorizontal: 12,
+      paddingHorizontal: isMobile ? 8 : 12,
       paddingVertical: 6,
       borderRadius: 6,
       borderWidth: 1,
-      minWidth: 40,
+      minWidth: isMobile ? 32 : 40,
       alignItems: 'center',
     },
     pageButtons: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: isMobile ? 4 : 8,
+      flexShrink: 0,
+    },
+    pageButtonsMobile: {
+      marginLeft: 'auto',
     },
     pageButton: {
-      padding: 8,
+      padding: isMobile ? 6 : 8,
       borderRadius: 6,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      minWidth: 36,
-      minHeight: 36,
+      minWidth: isMobile ? 32 : 36,
+      minHeight: isMobile ? 32 : 36,
     },
     pageButtonDisabled: {
       opacity: 0.5,
     },
     pageIndicator: {
-      paddingHorizontal: 12,
-      minWidth: 100,
+      paddingHorizontal: isMobile ? 8 : 12,
+      minWidth: isMobile ? 80 : 100,
       alignItems: 'center',
     },
   });

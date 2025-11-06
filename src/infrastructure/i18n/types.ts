@@ -21,6 +21,7 @@ export interface Translations {
     search: string;
     filter: string;
     actions: string;
+    searchHint: string;
   };
   
   navigation: {
@@ -153,6 +154,7 @@ export interface Translations {
     passwordRequired: string;
     companyCode: string;
     companyCodePlaceholder: string;
+    logoutSuccess: string;
   };
   
   errors: {
@@ -185,7 +187,13 @@ export interface Translations {
       subtitle: string;
       create: string;
       edit: string;
+      editShort: string;
       delete: string;
+      deleteShort: string;
+      activate: string;
+      activateShort: string;
+      deactivate: string;
+      deactivateShort: string;
       email: string;
       name: string;
       phone: string;
@@ -193,8 +201,10 @@ export interface Translations {
       status: string;
       active: string;
       inactive: string;
+      filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
+      empty: string;
       activated: string;
       deactivated: string;
       deleted: string;
@@ -204,11 +214,14 @@ export interface Translations {
       subtitle: string;
       create: string;
       edit: string;
+      editShort: string;
       delete: string;
+      deleteShort: string;
       name: string;
       code: string;
       description: string;
       permissions: string;
+      filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
     };
@@ -217,11 +230,14 @@ export interface Translations {
       subtitle: string;
       create: string;
       edit: string;
+      editShort: string;
       delete: string;
+      deleteShort: string;
       name: string;
       code: string;
       module: string;
       action: string;
+      filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
     };
@@ -230,12 +246,15 @@ export interface Translations {
       subtitle: string;
       create: string;
       edit: string;
+      editShort: string;
       delete: string;
+      deleteShort: string;
       user: string;
       company: string;
       branch: string;
       role: string;
       permissions: string;
+      filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
     };

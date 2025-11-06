@@ -70,18 +70,20 @@ export class AccessesService {
       if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
         const paginatedData = response.data as any;
         
-        if (paginatedData.data && paginatedData.pagination) {
+        if (paginatedData.data && paginatedData.meta) {
           return paginatedData as PaginatedResponse<SecurityAccess>;
         }
         
         if (Array.isArray(paginatedData)) {
           return {
             data: paginatedData,
-            pagination: {
+            meta: {
               page: filters.page || 1,
               limit: filters.limit || 10,
               total: paginatedData.length,
               totalPages: 1,
+              hasNext: false,
+              hasPrev: false,
             },
           };
         }

@@ -3,7 +3,7 @@
  * Incluye Usuarios, Roles, Permisos y Accesos
  */
 
-import { BaseEntity } from '../../shared/types';
+import { BaseEntity, PaginationParams } from '../../shared/types';
 
 /**
  * Usuario del sistema
@@ -70,34 +70,10 @@ export interface RolePermission extends BaseEntity {
 }
 
 /**
- * Respuesta paginada
- */
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-/**
- * Parámetros de paginación
- */
-export interface PaginationParams {
-  page: number;
-  limit: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  search?: string;
-  filters?: Record<string, any>;
-}
-
-/**
  * Filtros comunes
  */
 export interface UserFilters extends PaginationParams {
+  search?: string;
   isActive?: boolean;
   companyId?: string;
   roleId?: string;
@@ -105,17 +81,20 @@ export interface UserFilters extends PaginationParams {
 }
 
 export interface RoleFilters extends PaginationParams {
+  search?: string;
   isActive?: boolean;
   isSystem?: boolean;
 }
 
 export interface PermissionFilters extends PaginationParams {
+  search?: string;
   isActive?: boolean;
   module?: string;
   action?: string;
 }
 
 export interface AccessFilters extends PaginationParams {
+  search?: string;
   userId?: string;
   companyId?: string;
   branchId?: string;

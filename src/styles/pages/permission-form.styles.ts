@@ -41,7 +41,7 @@ export const createPermissionFormStyles = () =>
       marginBottom: 4,
     },
     formCard: {
-      padding: 20,
+      padding: 25,
       gap: 20,
     },
     inputGroup: {

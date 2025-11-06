@@ -6,7 +6,7 @@ import { TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { ThemedText } from '../themed-text';
 
 interface ButtonProps {
-  title: string;
+  title?: string;
   onPress: () => void;
   variant?: ComponentVariant;
   size?: Size;
@@ -39,18 +39,20 @@ export function Button({
       activeOpacity={0.7}
     >
       {children}
-      <ThemedText
-        style={[
-          {
-            color: textColor,
-            fontFamily: theme.typography.fontFamily.primary,
-            fontWeight: theme.typography.fontWeight.medium,
-          },
-          textStyle,
-        ]}
-      >
-        {title}
-      </ThemedText>
+      {title && title.length > 0 && (
+        <ThemedText
+          style={[
+            {
+              color: textColor,
+              fontFamily: theme.typography.fontFamily.primary,
+              fontWeight: theme.typography.fontWeight.medium,
+            },
+            textStyle,
+          ]}
+        >
+          {title}
+        </ThemedText>
+      )}
     </TouchableOpacity>
   );
 }
