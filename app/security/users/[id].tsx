@@ -11,11 +11,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { RolesService, UsersService } from '@/src/domains/security';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { MultiCompanyService } from '@/src/domains/shared/services';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUserFormStyles } from '@/src/styles/pages/user-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -24,9 +25,16 @@ export default function EditUserPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const pathname = usePathname();
   const alert = useAlert();
   const { company } = useMultiCompany();
   const styles = createUserFormStyles();
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+  } = useRouteAccessGuard(pathname);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -50,6 +58,10 @@ export default function EditUserPage() {
    * Cargar opciones (empresas y roles)
    */
   useEffect(() => {
+    if (!hasAccess || accessLoading) {
+      return;
+    }
+
     const loadOptions = async () => {
       try {
         setLoadingOptions(true);
@@ -65,10 +77,16 @@ export default function EditUserPage() {
             isActive: true,
           });
           setRoles(rolesResponse.data);
-        } catch (error) {
+        } catch (error: any) {
+          if (handleApiError(error)) {
+            return;
+          }
           setRoles([]);
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
         // Silenciar errores
       } finally {
         setLoadingOptions(false);
@@ -76,12 +94,16 @@ export default function EditUserPage() {
     };
 
     loadOptions();
-  }, []);
+  }, [accessLoading, hasAccess, handleApiError]);
 
   /**
    * Cargar datos del usuario
    */
   useEffect(() => {
+    if (!hasAccess || accessLoading) {
+      return;
+    }
+
     const loadUser = async () => {
       if (!id) {
         alert.showError('ID de usuario no válido');
@@ -102,6 +124,9 @@ export default function EditUserPage() {
           isActive: user.isActive ?? true,
         });
       } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
         alert.showError(error.message || 'Error al cargar usuario');
         router.back();
       } finally {
@@ -110,7 +135,7 @@ export default function EditUserPage() {
     };
 
     loadUser();
-  }, [id, router, alert]);
+  }, [accessLoading, alert, handleApiError, hasAccess, id, router]);
 
   /**
    * Validar formulario
@@ -191,6 +216,9 @@ export default function EditUserPage() {
       alert.showSuccess(t.security?.users?.edit || 'Usuario actualizado exitosamente');
       router.back();
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || 'Error al actualizar usuario';
       const errorDetail = (error as any)?.result?.details || '';
       alert.showError(errorMessage, false, undefined, errorDetail);
@@ -205,6 +233,23 @@ export default function EditUserPage() {
   const handleCancel = () => {
     router.back();
   };
+
+  if (accessLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
+            {t.common?.loading || 'Cargando información...'}
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   if (loadingUser || loadingOptions) {
     return (

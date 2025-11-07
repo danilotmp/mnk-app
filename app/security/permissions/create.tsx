@@ -9,20 +9,28 @@ import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { PermissionsService } from '@/src/domains/security';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createPermissionFormStyles } from '@/src/styles/pages/permission-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function CreatePermissionPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const styles = createPermissionFormStyles();
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+  } = useRouteAccessGuard(pathname);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -101,6 +109,9 @@ export default function CreatePermissionPage() {
       alert.showSuccess(t.security?.permissions?.create || 'Permiso creado exitosamente');
       router.back();
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || 'Error al crear permiso';
       const errorDetail = (error as any)?.result?.details || '';
       alert.showError(errorMessage, false, undefined, errorDetail);
@@ -115,6 +126,30 @@ export default function CreatePermissionPage() {
   const handleCancel = () => {
     router.back();
   };
+
+  if (accessLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
+                {t.common?.loading || 'Cargando información...'}
+              </ThemedText>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   return (
     <ThemedView style={styles.container}>

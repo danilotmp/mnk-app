@@ -4,16 +4,16 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { usePathname } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    TouchableOpacity,
-    View,
-    useWindowDimensions
+  Animated,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  TouchableOpacity,
+  View,
+  useWindowDimensions
 } from 'react-native';
 
 export interface MenuItem {
@@ -57,6 +57,10 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(null); // Para rastrear opción activa del submenú
   const menuItemRefs = useRef<any>({});
   const slideAnim = useRef(new Animated.Value(-400)).current; // Animación para deslizar desde la izquierda
+  const pendingRouteRef = useRef<string | null>(null); // Para rastrear la ruta que estamos navegando
+  const pendingItemIdRef = useRef<string | null>(null); // Para rastrear el itemId que estamos navegando
+  const justClickedRef = useRef<boolean>(false); // Flag para indicar que acabamos de hacer click
+  const pendingSubmenuItemRef = useRef<string | null>(null); // Para almacenar el itemId del submenú que debe activarse después del render
 
   // Función para cerrar el menú con animación
   const closeMobileMenu = () => {
@@ -71,8 +75,30 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
 
   // Detectar la ruta actual y establecer el item activo
   useEffect(() => {
+    // Si acabamos de hacer click, NO procesar todavía
+    // Esto previene que el useEffect limpie el estado inmediatamente después del click
+    if (justClickedRef.current) {
+      return; // Salir inmediatamente sin procesar
+    }
+    
+    // Si no hay pathname, no hacer nada
+    if (!pathname) {
+      return;
+    }
+    
+    // Si no hay items todavía (menú cargando), esperar a que cargue
+    // IMPORTANTE: No retornar temprano aquí, porque cuando el menú carga,
+    // necesitamos que este useEffect se ejecute para detectar la ruta activa
+    if (!items || items.length === 0) {
+      // Si el menú está vacío pero hay una ruta activa, mantener el estado
+      // Esto previene que se pierda la selección durante la carga del menú
+      return;
+    }
+
     // Función para comparar rutas de manera flexible
     const isRouteMatch = (pathname: string, route: string): boolean => {
+      if (!route) return false;
+      
       const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
       const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
       
@@ -131,15 +157,267 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     };
 
     const { itemId, parentId } = findActiveItem(items);
-    if (itemId) {
-      setActiveSubmenuItem(itemId);
-    } else {
-      // Si no hay item activo, limpiar los estados
-      setActiveMenuItem(null);
-      setActiveSubmenuItem(null);
-      setActiveSubmenu(null);
+    
+    // Si hay una ruta pendiente, verificar primero si el pathname coincide
+    if (pendingRouteRef.current) {
+      const routeMatches = isRouteMatch(pathname, pendingRouteRef.current);
+      
+      if (routeMatches && itemId) {
+        // La ruta coincide y encontramos el item - establecerlo
+        // IMPORTANTE: NO limpiar las banderas todavía - mantenerlas mientras el item esté activo
+        
+        // Mantener el submenú abierto si es necesario
+        if (parentId) {
+          const findParentItemById = (items: MenuItem[], targetId: string): MenuItem | null => {
+            for (const item of items) {
+              if (item.id === targetId) {
+                return item;
+              }
+              if (item.submenu) {
+                const found = findParentItemById(item.submenu, targetId);
+                if (found) return item;
+              }
+              if (item.columns) {
+                for (const column of item.columns) {
+                  const found = findParentItemById(column.items, targetId);
+                  if (found) return item;
+                }
+              }
+            }
+            return null;
+          };
+          
+        const parentItem = findParentItemById(items, parentId);
+        if (parentItem && (parentItem.submenu || parentItem.columns)) {
+          // Abrir el submenú primero
+          setActiveSubmenu(parentItem.id);
+          setActiveMenuItem(parentItem.id);
+          
+          // Para submenús simples, almacenar el itemId en memoria y aplicar después del render
+          // Para columnas, establecer directamente (ya funciona bien)
+          if (parentItem.submenu && !parentItem.columns) {
+            // Es un submenú simple - almacenar en ref para aplicar después del render
+            // Usar setTimeout para asegurar que React haya procesado el cambio de activeSubmenu
+            pendingSubmenuItemRef.current = itemId;
+            setTimeout(() => {
+              if (pendingSubmenuItemRef.current === itemId) {
+                setActiveSubmenuItem(itemId);
+                pendingSubmenuItemRef.current = null;
+              }
+            }, 50); // Delay suficiente para que React procese el cambio de estado
+          } else {
+            // Es un menú con columnas - establecer directamente (ya funciona bien)
+            setActiveSubmenuItem(itemId);
+          }
+        } else {
+          // Si no encontramos el padre, establecer el item activo directamente
+          setActiveSubmenuItem(itemId);
+        }
+      } else {
+        // Si no hay parentId, establecer el item activo directamente
+        setActiveSubmenuItem(itemId);
+      }
+        
+        // Solo limpiar las banderas si el itemId coincide con el pendiente
+        // Esto asegura que el estado se mantenga correctamente
+        if (pendingItemIdRef.current === itemId) {
+          // Las banderas se mantendrán hasta que cambie la ruta o se seleccione otro item
+          // No las limpiamos aquí para evitar que se pierda la selección
+        }
+        return; // Salir temprano - ya manejamos el caso
+      } else if (routeMatches && !itemId) {
+        // La ruta coincide pero no encontramos el item - usar el itemId pendiente
+        if (pendingItemIdRef.current) {
+          setActiveSubmenuItem(pendingItemIdRef.current);
+          // Buscar el padre del item pendiente
+          const findItemById = (items: MenuItem[], targetId: string): { item: MenuItem | null; parent: MenuItem | null } => {
+            for (const item of items) {
+              if (item.id === targetId) {
+                return { item, parent: null };
+              }
+              if (item.submenu) {
+                for (const subitem of item.submenu) {
+                  if (subitem.id === targetId) {
+                    return { item: subitem, parent: item };
+                  }
+                }
+              }
+              if (item.columns) {
+                for (const column of item.columns) {
+                  for (const colItem of column.items) {
+                    if (colItem.id === targetId) {
+                      return { item: colItem, parent: item };
+                    }
+                  }
+                }
+              }
+            }
+            return { item: null, parent: null };
+          };
+          
+          const { parent } = findItemById(items, pendingItemIdRef.current);
+          if (parent && (parent.submenu || parent.columns)) {
+            setActiveSubmenu(parent.id);
+            setActiveMenuItem(parent.id);
+          }
+        }
+        return; // Mantener el estado pendiente hasta que se encuentre el item
+      } else {
+        // La ruta no coincide todavía - mantener el estado pendiente
+        // NO limpiar nada, esperar a que la navegación complete
+        return;
+      }
     }
-  }, [pathname]); // Removido items del array de dependencias para evitar loops infinitos
+    
+    // Si no hay ruta pendiente, comportamiento normal
+    if (itemId) {
+      // Limpiar las banderas pendientes solo si el itemId actual es diferente al pendiente
+      // Esto previene que se limpien las banderas cuando el item está activo
+      if (pendingItemIdRef.current && pendingItemIdRef.current !== itemId) {
+        // El item activo es diferente al pendiente - limpiar las banderas
+        pendingRouteRef.current = null;
+        pendingItemIdRef.current = null;
+        justClickedRef.current = false;
+      } else if (pendingItemIdRef.current === itemId) {
+        // El item activo coincide con el pendiente - limpiar el flag de click
+        // pero mantener las banderas para proteger el estado
+        justClickedRef.current = false;
+      }
+      
+      // Si el item activo está en un submenú, mantener el submenú abierto
+      // IMPORTANTE: Esto es crítico para que el item activo sea visible después del refresh
+      if (parentId) {
+        // Buscar el item padre por su ID directamente en el menú principal
+        const findParentItemById = (items: MenuItem[], targetId: string): MenuItem | null => {
+          for (const item of items) {
+            // Buscar el item que tiene el targetId como su id
+            if (item.id === targetId) {
+              return item;
+            }
+            // Si no lo encontramos en este nivel, buscar recursivamente en submenús
+            // pero solo para encontrar el item padre, no para buscar dentro de submenús
+            if (item.submenu) {
+              // Verificar si alguno de los subitems tiene el targetId como padre
+              // Si es así, el item actual es el padre
+              const hasChildWithId = item.submenu.some(subItem => subItem.id === targetId);
+              if (hasChildWithId) {
+                return item;
+              }
+            }
+            if (item.columns) {
+              // Verificar si alguno de los items en las columnas tiene el targetId
+              for (const column of item.columns) {
+                const hasChildWithId = column.items.some(colItem => colItem.id === targetId);
+                if (hasChildWithId) {
+                  return item;
+                }
+              }
+            }
+          }
+          return null;
+        };
+        
+        const parentItem = findParentItemById(items, parentId);
+        if (parentItem && (parentItem.submenu || parentItem.columns)) {
+          // Abrir el submenú primero
+          setActiveSubmenu(parentItem.id);
+          setActiveMenuItem(parentItem.id);
+          
+          // Para submenús simples, almacenar el itemId en memoria y aplicar después del render
+          // Para columnas, establecer directamente (ya funciona bien)
+          if (parentItem.submenu && !parentItem.columns) {
+            // Es un submenú simple - almacenar en ref para aplicar después del render
+            // Usar setTimeout para asegurar que React haya procesado el cambio de activeSubmenu
+            pendingSubmenuItemRef.current = itemId;
+            setTimeout(() => {
+              if (pendingSubmenuItemRef.current === itemId) {
+                setActiveSubmenuItem(itemId);
+                pendingSubmenuItemRef.current = null;
+              }
+            }, 50); // Delay suficiente para que React procese el cambio de estado
+          } else {
+            // Es un menú con columnas - establecer directamente (ya funciona bien)
+            setActiveSubmenuItem(itemId);
+          }
+        } else {
+          // Si no encontramos el padre o no tiene submenú/columnas, establecer el item activo directamente
+          setActiveSubmenuItem(itemId);
+        }
+      } else {
+        // Si no hay parentId pero encontramos un item activo en el nivel principal
+        // Asegurarnos de que el item principal esté marcado como activo
+        const findItemById = (items: MenuItem[], targetId: string): MenuItem | null => {
+          for (const item of items) {
+            if (item.id === targetId) {
+              return item;
+            }
+            if (item.submenu) {
+              const found = findItemById(item.submenu, targetId);
+              if (found) return item;
+            }
+            if (item.columns) {
+              for (const column of item.columns) {
+                const found = findItemById(column.items, targetId);
+                if (found) return item;
+              }
+            }
+          }
+          return null;
+        };
+        
+        const foundItem = findItemById(items, itemId);
+        if (foundItem && !foundItem.submenu && !foundItem.columns) {
+          // Es un item de nivel principal sin submenú
+          setActiveMenuItem(itemId);
+        }
+      }
+    } else {
+      // Si no hay item activo, verificar si debemos limpiar las banderas
+      // IMPORTANTE: Si hay una ruta pendiente y activeSubmenuItem está establecido,
+      // NO limpiar - mantener el estado hasta que se encuentre el item
+      if (pendingRouteRef.current && pendingItemIdRef.current) {
+        // Hay una ruta pendiente y un itemId pendiente - mantener el estado
+        // Solo limpiar si la ruta actual definitivamente NO coincide
+        if (!isRouteMatch(pathname, pendingRouteRef.current)) {
+          // La ruta cambió y no coincide con la pendiente - limpiar todo
+          pendingRouteRef.current = null;
+          pendingItemIdRef.current = null;
+          justClickedRef.current = false;
+          setActiveMenuItem(null);
+          setActiveSubmenuItem(null);
+        }
+        // Si la ruta coincide o aún no ha cambiado, mantener el estado
+      } else if (!pendingRouteRef.current) {
+        // No hay ruta pendiente y no hay item activo - limpiar normalmente
+        setActiveMenuItem(null);
+        setActiveSubmenuItem(null);
+      }
+      // Si hay ruta pendiente pero aún no coincide, mantener el estado (no limpiar)
+    }
+  }, [pathname, items]); // Agregado items a las dependencias para que se actualice cuando el menú carga
+
+  // useLayoutEffect para aplicar el item activo del submenú ANTES del paint
+  // Esto es necesario solo para submenús simples, ya que se renderizan condicionalmente
+  // useLayoutEffect se ejecuta de forma síncrona después de todas las mutaciones del DOM pero antes del paint
+  useLayoutEffect(() => {
+    // Solo procesar si hay un item pendiente
+    if (pendingSubmenuItemRef.current) {
+      // Si el submenú ya está abierto, aplicar inmediatamente
+      if (activeSubmenu) {
+        const activeItem = items.find(item => item.id === activeSubmenu);
+        if (activeItem && activeItem.submenu && !activeItem.columns) {
+          // Verificar que el item pendiente realmente existe en el submenú
+          const itemExists = activeItem.submenu.some(subitem => subitem.id === pendingSubmenuItemRef.current);
+          if (itemExists) {
+            // Es un submenú simple, está abierto y el item existe - aplicar inmediatamente
+            setActiveSubmenuItem(pendingSubmenuItemRef.current);
+            pendingSubmenuItemRef.current = null; // Limpiar el ref después de aplicar
+          }
+        }
+      }
+      // Si el submenú aún no está abierto, esperar a que se abra (se procesará en el siguiente render)
+    }
+  }, [activeSubmenu, items, pathname]); // Se ejecuta cuando activeSubmenu, items o pathname cambian
 
   const handleItemPress = (item: MenuItem) => {
     if (item.submenu && item.submenu.length > 0) {
@@ -150,9 +428,16 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
           setSubmenuPosition({ left: x });
         });
       }
-      // Si el submenú ya está abierto, lo cerramos; si no, lo abrimos
-      setActiveSubmenu(activeSubmenu === item.id ? null : item.id);
-      setActiveMenuItem(item.id); // Marcar como activa
+      // Si el submenú ya está abierto, cerrarlo (toggle)
+      // Si está cerrado, abrirlo
+      if (activeSubmenu === item.id) {
+        // Si el submenú está abierto, cerrarlo
+        setActiveSubmenu(null);
+      } else {
+        // Abrir el submenú y marcar como activo
+        setActiveSubmenu(item.id);
+        setActiveMenuItem(item.id);
+      }
       // NO limpiar activeSubmenuItem aquí porque el useEffect lo manejará basado en la ruta actual
     } else if (item.columns && item.columns.length > 0) {
       // Medir posición del elemento antes de abrir el mega menú
@@ -162,9 +447,16 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
           setSubmenuPosition({ left: x });
         });
       }
-      // Si el mega menú ya está abierto, lo cerramos; si no, lo abrimos
-      setActiveSubmenu(activeSubmenu === item.id ? null : item.id);
-      setActiveMenuItem(item.id); // Marcar como activa
+      // Si el mega menú ya está abierto, cerrarlo (toggle)
+      // Si está cerrado, abrirlo
+      if (activeSubmenu === item.id) {
+        // Si el mega menú está abierto, cerrarlo
+        setActiveSubmenu(null);
+      } else {
+        // Abrir el mega menú y marcar como activo
+        setActiveSubmenu(item.id);
+        setActiveMenuItem(item.id);
+      }
       // NO limpiar activeSubmenuItem aquí porque el useEffect lo manejará basado en la ruta actual
     } else {
       // Navegar o ejecutar acción
@@ -184,7 +476,31 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   };
 
   const handleSubmenuItemPress = (item: MenuItem, parentId: string) => {
-    setActiveSubmenuItem(item.id); // Marcar como activa
+    // IMPORTANTE: Marcar que acabamos de hacer click para prevenir que el useEffect limpie el estado
+    justClickedRef.current = true;
+    
+    // 1. Guardar la ruta y el itemId esperados ANTES de navegar
+    if (item.route) {
+      pendingRouteRef.current = item.route;
+    }
+    pendingItemIdRef.current = item.id;
+    
+    // 2. Establecer el item activo inmediatamente para feedback visual
+    setActiveSubmenuItem(item.id);
+    
+    // 3. Asegurar que el submenú/mega menú permanezca abierto
+    // Esto es crítico - igual que con columnas, el menú debe permanecer visible
+    if (parentId) {
+      // Buscar el item padre para mantener su submenú abierto
+      const parentItem = items.find(i => i.id === parentId);
+      if (parentItem && (parentItem.submenu || parentItem.columns)) {
+        setActiveSubmenu(parentItem.id);
+        setActiveMenuItem(parentItem.id);
+      }
+    }
+    
+    // 4. Ejecutar callbacks de navegación DESPUÉS de establecer el estado
+    // Esto asegura que el estado visual se establezca antes de que cambie el pathname
     if (item.onPress) {
       item.onPress();
     }
@@ -194,6 +510,11 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     if (isMobile) {
       closeMobileMenu();
     }
+    
+    // Resetear el flag después de un delay más largo para asegurar que el useEffect no limpie
+    setTimeout(() => {
+      justClickedRef.current = false;
+    }, 500);
   };
 
   const handleMouseEnter = (itemId: string) => {
@@ -322,35 +643,87 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
               <ScrollView style={styles.mobileMenuContent}>
                 {items.map((item) => (
                   <View key={item.id}>
-                    <TouchableOpacity
-                      style={[
-                        styles.mobileMenuItem,
-                        { borderBottomColor: colors.border },
-                      ]}
-                      onPress={() => handleItemPress(item)}
-                    >
-                      <ThemedText type="defaultSemiBold">{item.label}</ThemedText>
-                      {(item.submenu || item.columns) && (
-                        <ThemedText>{activeSubmenu === item.id ? '▲' : '▼'}</ThemedText>
-                      )}
-                    </TouchableOpacity>
+                    {(() => {
+                      // Función para comparar rutas de manera flexible
+                      const isRouteMatch = (pathname: string, route: string): boolean => {
+                        if (!route) return false;
+                        const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                        const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                        if (normalizedPath === normalizedRoute) return true;
+                        if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                        if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                        return normalizedPath.includes('/' + normalizedRoute + '/');
+                      };
+                      
+                      // Verificar si algún subitem de este menú padre está activo
+                      let hasActiveSubitem = false;
+                      if (item.submenu) {
+                        hasActiveSubitem = item.submenu.some(subitem => {
+                          const isActive = activeSubmenuItem === subitem.id || 
+                                         (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                          return isActive;
+                        });
+                      } else if (item.columns) {
+                        hasActiveSubitem = item.columns.some(column =>
+                          column.items.some(subitem => {
+                            const isActive = activeSubmenuItem === subitem.id || 
+                                           (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                            return isActive;
+                          })
+                        );
+                      }
+                      
+                      return (
+                        <TouchableOpacity
+                          style={[
+                            styles.mobileMenuItem,
+                            { borderBottomColor: colors.border },
+                            hasActiveSubitem && styles.activeMobileMenuItemParent,
+                          ]}
+                          onPress={() => handleItemPress(item)}
+                        >
+                          <ThemedText type="defaultSemiBold">{item.label}</ThemedText>
+                          {(item.submenu || item.columns) && (
+                            <ThemedText>{activeSubmenu === item.id ? '▲' : '▼'}</ThemedText>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })()}
 
                     {(item.submenu || item.columns) && activeSubmenu === item.id && (
                       <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
-                        {item.submenu?.map((subitem) => (
-                          <TouchableOpacity
-                            key={subitem.id}
-                            style={[
-                              styles.submenuItem,
-                              activeSubmenuItem === subitem.id && styles.activeSubmenuItem
-                            ]}
-                            onPress={() => handleSubmenuItemPress(subitem, item.id)}
-                          >
-                            <ThemedText type="body2" style={styles.submenuText}>
-                              {subitem.label}
-                            </ThemedText>
-                          </TouchableOpacity>
-                        ))}
+                        {item.submenu?.map((subitem) => {
+                          // Función para comparar rutas de manera flexible
+                          const isRouteMatch = (pathname: string, route: string): boolean => {
+                            if (!route) return false;
+                            const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                            const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                            if (normalizedPath === normalizedRoute) return true;
+                            if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                            if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                            return normalizedPath.includes('/' + normalizedRoute + '/');
+                          };
+                          
+                          // Verificar si este item debe estar activo basándose en la ruta actual
+                          // Esto es más confiable que depender solo del estado activeSubmenuItem
+                          const isActive = activeSubmenuItem === subitem.id || 
+                                           (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                          
+                          return (
+                            <TouchableOpacity
+                              key={subitem.id}
+                              style={[
+                                styles.submenuItem,
+                                isActive && styles.activeSubmenuItem
+                              ]}
+                              onPress={() => handleSubmenuItemPress(subitem, item.id)}
+                            >
+                              <ThemedText type="body2" style={styles.submenuText}>
+                                {subitem.label}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          );
+                        })}
                         {item.columns?.map((column, colIdx) => (
                           <View key={colIdx} style={styles.mobileColumn}>
                             <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
@@ -434,7 +807,7 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                 {
                   backgroundColor: colors.background,
                   borderColor: colors.border,
-                  shadowColor: colors.text,
+                  ...(Platform.OS === 'web' ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' } : { shadowColor: colors.text }),
                   left: submenuPosition.left,
                 },
               ]}
@@ -482,31 +855,49 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                 {
                   backgroundColor: colors.background, // ← Agregado explícitamente
                   borderColor: colors.border,
-                  shadowColor: colors.text,
+                  ...(Platform.OS === 'web' ? { boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' } : { shadowColor: colors.text }),
                   left: submenuPosition.left, // ← Posición calculada
                 },
               ]}
             >
-              {activeItem.submenu.map((subitem) => (
-                <TouchableOpacity
-                  key={subitem.id}
-                  style={[
-                    styles.desktopSubmenuItem, 
-                    { borderBottomColor: colors.border },
-                    activeSubmenuItem === subitem.id && styles.activeSubmenuItem
-                  ]}
-                  onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
-                >
-                  <ThemedText type="defaultSemiBold" style={styles.submenuItemTitle}>
-                    {subitem.label}
-                  </ThemedText>
-                  {subitem.description && (
-                    <ThemedText type="caption" style={styles.submenuItemDescription}>
-                      {subitem.description}
+              {activeItem.submenu.map((subitem) => {
+                // Función para comparar rutas de manera flexible
+                const isRouteMatch = (pathname: string, route: string): boolean => {
+                  if (!route) return false;
+                  const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                  const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                  if (normalizedPath === normalizedRoute) return true;
+                  if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                  if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                  return normalizedPath.includes('/' + normalizedRoute + '/');
+                };
+                
+                // Verificar si este item debe estar activo basándose en la ruta actual
+                // Esto es más confiable que depender solo del estado activeSubmenuItem
+                const isActive = activeSubmenuItem === subitem.id || 
+                                 (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                
+                return (
+                  <TouchableOpacity
+                    key={subitem.id}
+                    style={[
+                      styles.desktopSubmenuItem, 
+                      { borderBottomColor: colors.border },
+                      isActive && styles.activeSubmenuItem
+                    ]}
+                    onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                  >
+                    <ThemedText type="defaultSemiBold" style={styles.submenuItemTitle}>
+                      {subitem.label}
                     </ThemedText>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {subitem.description && (
+                      <ThemedText type="caption" style={styles.submenuItemDescription}>
+                        {subitem.description}
+                      </ThemedText>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </>

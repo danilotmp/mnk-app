@@ -13,21 +13,30 @@ import { AccessesService } from '@/src/domains/security';
 import { AccessFilters, SecurityAccess } from '@/src/domains/security/types';
 import { DataTable, TableColumn } from '@/src/domains/shared/components/data-table';
 import { FilterConfig, SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createAccessesListStyles } from '@/src/styles/pages/accesses-list.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 export default function AccessesListPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createAccessesListStyles(isMobile);
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+    isScreenFocused,
+  } = useRouteAccessGuard(pathname);
 
   const [accesses, setAccesses] = useState<SecurityAccess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +117,9 @@ export default function AccessesListPage() {
       
       setHasError(false);
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || t.security?.accesses?.loadError || 'Error al cargar accesos';
       setError(errorMessage);
       setHasError(true);
@@ -117,18 +129,17 @@ export default function AccessesListPage() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [alert, t]);
+  }, [alert, handleApiError, t]);
 
   /**
    * Efecto para cargar accesos cuando cambian los filtros
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    // Resetear el flag de error cuando cambian los filtros para permitir un nuevo intento
-    setHasError(false);
-    loadAccesses(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit, filters.search, filters.userId, filters.companyId, filters.branchId, filters.roleId, filters.isActive]);
+    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
+      loadAccesses(filters);
+    }
+  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadAccesses, filters]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -143,12 +154,14 @@ export default function AccessesListPage() {
    */
   const handleLocalFilterChange = useCallback((value: string) => {
     setLocalFilter(value);
+    setHasError(false);
   }, []);
 
   /**
    * Manejar búsqueda API (consulta al backend)
    */
   const handleSearchSubmit = (search: string) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, search, page: 1 }));
   };
 
@@ -156,6 +169,7 @@ export default function AccessesListPage() {
    * Manejar cambio de filtros avanzados (consulta API)
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
@@ -171,6 +185,7 @@ export default function AccessesListPage() {
       isActive: undefined,
     });
     setLocalFilter(''); // Limpiar también el filtro local
+    setHasError(false);
   };
 
   /**
@@ -211,6 +226,9 @@ export default function AccessesListPage() {
       await loadAccesses(filters);
       alert.showSuccess(t.security?.accesses?.delete || 'Acceso eliminado');
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       alert.showError(error.message || 'Error al eliminar acceso');
     }
   };
@@ -331,6 +349,19 @@ export default function AccessesListPage() {
       type: 'boolean',
     },
   ];
+
+  if (accessLoading) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   return (
     <ThemedView style={styles.container}>

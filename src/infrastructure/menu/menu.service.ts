@@ -53,12 +53,21 @@ export class MenuService {
    * Si el backend no las incluye, se agregan automáticamente
    * Evita duplicados comparando por `route`
    * 
+   * Orden del menú resultante:
+   * 1. Home (siempre al inicio)
+   * 2. Menú autorizado del usuario (del backend)
+   * 3. Resto de páginas públicas por defecto (Contacto, Explorar, etc.)
+   * 
    * @param backendMenu Menú devuelto por el backend
-   * @returns Menú con páginas públicas garantizadas
+   * @returns Menú con páginas públicas garantizadas y orden correcto
    */
   private static ensurePublicPages(backendMenu: MenuItem[]): MenuItem[] {
     const defaultMenu = this.getDefaultMenu();
     const publicRoutes = new Set(defaultMenu.map(item => item.route));
+
+    // Separar Home del resto de páginas públicas
+    const homeItem = defaultMenu.find(item => item.route === '/');
+    const otherPublicItems = defaultMenu.filter(item => item.route !== '/');
 
     // Verificar qué páginas públicas ya están en el menú del backend
     const existingPublicRoutes = new Set<string>();
@@ -84,18 +93,25 @@ export class MenuService {
 
     processMenu(backendMenu);
 
-    // Agregar páginas públicas que faltan al inicio del menú
-    const missingPublicPages = defaultMenu.filter(
-      item => item.route && !existingPublicRoutes.has(item.route)
-    );
-
-    // Si faltan páginas públicas, agregarlas al inicio
-    if (missingPublicPages.length > 0) {
-      return [...missingPublicPages, ...backendMenu];
+    // Construir el menú final en el orden correcto:
+    // 1. Home (SIEMPRE al inicio, incluso si el backend lo incluye)
+    const finalMenu: MenuItem[] = [];
+    
+    if (homeItem) {
+      finalMenu.push(homeItem);
     }
 
-    // Si todas las páginas públicas ya están, retornar el menú del backend tal cual
-    return backendMenu;
+    // 2. Menú autorizado del backend (remover Home si está incluido para evitar duplicados)
+    const backendMenuWithoutHome = backendMenu.filter(item => item.route !== '/');
+    finalMenu.push(...backendMenuWithoutHome);
+
+    // 3. Resto de páginas públicas por defecto (sin Home, solo las que faltan)
+    const missingOtherPublicPages = otherPublicItems.filter(
+      item => item.route && !existingPublicRoutes.has(item.route)
+    );
+    finalMenu.push(...missingOtherPublicPages);
+
+    return finalMenu;
   }
 
   /**

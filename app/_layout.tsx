@@ -70,7 +70,8 @@ function LayoutContent() {
   
   // Convertir menú del backend al formato del componente
   // El menú viene del backend y ya tiene la estructura correcta
-  const menuItems: MenuItem[] = menu.map((item) => {
+  // Si el menú está vacío (durante la carga), usar un array vacío
+  const menuItems: MenuItem[] = menu.length > 0 ? menu.map((item) => {
     // Mapear submenu del backend al formato del componente
     const mappedItem: MenuItem = {
       id: item.id,
@@ -103,16 +104,24 @@ function LayoutContent() {
     }
 
     return mappedItem;
-  });
+  }) : [];
 
   const colorScheme = useColorScheme();
   
   // La sesión se rehidrata automáticamente en useSession
-  // Mostrar loading si aún se está cargando la sesión o el menú
-  if (isSessionLoading || menuLoading) {
-    // Por ahora solo esperamos, puedes agregar un loader aquí si lo deseas
+  // IMPORTANTE: No bloquear la renderización durante la carga del menú
+  // Esto previene redirecciones al home cuando se refresca la página
+  // Solo esperar si la sesión está cargando (necesario para autenticación)
+  // El menú puede cargarse en segundo plano sin bloquear la navegación
+  if (isSessionLoading) {
+    // Solo esperar si la sesión está cargando (necesario para determinar autenticación)
     return null;
   }
+  
+  // Si el menú está cargando, usar un menú vacío temporalmente
+  // Esto permite que la página actual se renderice mientras el menú carga
+  // El menú se actualizará automáticamente cuando termine de cargar
+  const menuItemsToUse: MenuItem[] = menuLoading ? [] : menuItems;
 
   // Si es una ruta de autenticación, no usar MainLayout
   if (isAuthRoute) {
@@ -125,9 +134,11 @@ function LayoutContent() {
   }
 
   // Para otras rutas, usar MainLayout
+  // Usar menuItemsToUse que puede estar vacío durante la carga inicial
+  // Esto permite que la página actual se renderice mientras el menú carga
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <MainLayout title="MNK" menuItems={menuItems}>
+      <MainLayout title="MNK" menuItems={menuItemsToUse}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

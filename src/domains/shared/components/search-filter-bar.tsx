@@ -101,10 +101,8 @@ export function SearchFilterBar({
   const currentPlaceholder = isCollapsed ? filterPlaceholder : searchPlaceholder;
   
   // Determinar si mostrar el mensaje de ayuda
-  const hasLocalFilter = filterValue && filterValue.trim().length > 0;
-  const hasNoFilteredResults = hasLocalFilter && filteredCount !== undefined && filteredCount === 0;
-  const hasTotalResults = totalCount !== undefined && totalCount > 0;
-  const shouldShowHint = showSearchHint && hasLocalFilter && hasNoFilteredResults && hasTotalResults;
+  const hasLocalFilter = typeof filterValue === 'string' && filterValue.trim().length > 0;
+  const shouldShowHint = showSearchHint && hasLocalFilter;
   
   // Toggle colapsar/expandir
   const toggleFilters = useCallback(() => {

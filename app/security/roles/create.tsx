@@ -11,11 +11,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '@/src/domains/security';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { MultiCompanyService } from '@/src/domains/shared/services';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createRoleFormStyles } from '@/src/styles/pages/role-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -23,9 +24,16 @@ export default function CreateRolePage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const { company } = useMultiCompany();
   const styles = createRoleFormStyles();
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+  } = useRouteAccessGuard(pathname);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -44,6 +52,10 @@ export default function CreateRolePage() {
    * Cargar opciones (empresas)
    */
   useEffect(() => {
+    if (!hasAccess || accessLoading) {
+      return;
+    }
+
     const loadOptions = async () => {
       try {
         setLoadingOptions(true);
@@ -54,7 +66,10 @@ export default function CreateRolePage() {
         if (company?.id) {
           setFormData((prev) => ({ ...prev, companyId: company.id }));
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
         // Silenciar errores
       } finally {
         setLoadingOptions(false);
@@ -62,7 +77,7 @@ export default function CreateRolePage() {
     };
 
     loadOptions();
-  }, [company]);
+  }, [accessLoading, company, handleApiError, hasAccess]);
 
   /**
    * Validar formulario
@@ -114,6 +129,9 @@ export default function CreateRolePage() {
       alert.showSuccess(t.security?.roles?.create || 'Rol creado exitosamente');
       router.back();
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || 'Error al crear rol';
       const errorDetail = (error as any)?.result?.details || '';
       alert.showError(errorMessage, false, undefined, errorDetail);
@@ -128,6 +146,23 @@ export default function CreateRolePage() {
   const handleCancel = () => {
     router.back();
   };
+
+  if (accessLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
+            {t.common?.loading || 'Cargando información...'}
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   if (loadingOptions) {
     return (

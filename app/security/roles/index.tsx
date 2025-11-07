@@ -11,32 +11,41 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '@/src/domains/security';
-import { RoleEditForm } from '@/src/domains/security/components/role-edit-form';
+import { RoleCreateForm, RoleEditForm } from '@/src/domains/security/components';
 import { RoleFilters, SecurityRole } from '@/src/domains/security/types';
 import { DataTable, TableColumn } from '@/src/domains/shared/components/data-table';
 import { FilterConfig, SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createRolesListStyles } from '@/src/styles/pages/roles-list.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 export default function RolesListPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createRolesListStyles(isMobile);
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+    isScreenFocused,
+  } = useRouteAccessGuard(pathname);
 
   const [roles, setRoles] = useState<SecurityRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -113,6 +122,9 @@ export default function RolesListPage() {
       
       setHasError(false);
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || t.security?.roles?.loadError || 'Error al cargar roles';
       setError(errorMessage);
       setHasError(true);
@@ -122,18 +134,17 @@ export default function RolesListPage() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [alert, t]);
+  }, [alert, handleApiError, t]);
 
   /**
    * Efecto para cargar roles cuando cambian los filtros
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    // Resetear el flag de error cuando cambian los filtros para permitir un nuevo intento
-    setHasError(false);
-    loadRoles(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit, filters.search, filters.isActive, filters.isSystem]);
+    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
+      loadRoles(filters);
+    }
+  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadRoles, filters]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -148,12 +159,14 @@ export default function RolesListPage() {
    */
   const handleLocalFilterChange = useCallback((value: string) => {
     setLocalFilter(value);
+    setHasError(false);
   }, []);
 
   /**
    * Manejar búsqueda API (consulta al backend)
    */
   const handleSearchSubmit = (search: string) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, search, page: 1 }));
   };
 
@@ -161,6 +174,7 @@ export default function RolesListPage() {
    * Manejar cambio de filtros avanzados (consulta API)
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
@@ -173,6 +187,7 @@ export default function RolesListPage() {
       isSystem: undefined,
     });
     setLocalFilter(''); // Limpiar también el filtro local
+    setHasError(false);
   };
 
   /**
@@ -198,7 +213,10 @@ export default function RolesListPage() {
   }, [roles, localFilter]);
 
   const handleCreateRole = () => {
-    router.push('/security/roles/create' as any);
+    setFormActions(null);
+    setSelectedRoleId(null);
+    setModalMode('create');
+    setIsModalVisible(true);
   };
 
   /**
@@ -207,25 +225,28 @@ export default function RolesListPage() {
    * En móvil: abre modal lateral (100% del ancho)
    */
   const handleEditRole = (role: SecurityRole) => {
-    setEditingRoleId(role.id);
-    setEditModalVisible(true);
+    setFormActions(null);
+    setSelectedRoleId(role.id);
+    setModalMode('edit');
+    setIsModalVisible(true);
   };
 
   /**
    * Cerrar modal de edición
    */
-  const handleCloseEditModal = () => {
-    setEditModalVisible(false);
-    setEditingRoleId(null);
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setModalMode(null);
+    setSelectedRoleId(null);
     setFormActions(null); // Resetear acciones del formulario
   };
 
   /**
-   * Manejar éxito al editar rol
+   * Manejar éxito al crear/editar rol
    */
-  const handleEditSuccess = () => {
+  const handleFormSuccess = () => {
     loadRoles(filters);
-    handleCloseEditModal();
+    handleCloseModal();
   };
 
   const handleDeleteRole = async (role: SecurityRole) => {
@@ -238,6 +259,9 @@ export default function RolesListPage() {
       await loadRoles(filters);
       alert.showSuccess(t.security?.roles?.delete || 'Rol eliminado');
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       alert.showError(error.message || 'Error al eliminar rol');
     }
   };
@@ -341,6 +365,19 @@ export default function RolesListPage() {
     },
   ];
 
+  if (accessLoading) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
+
   return (
     <ThemedView style={styles.container}>
       <View style={styles.content}>
@@ -412,13 +449,21 @@ export default function RolesListPage() {
           />
         </View>
 
-        {/* Modal de edición */}
-        {editingRoleId && (
+        {/* Modal de creación/edición */}
+        {modalMode && (
           <SideModal
-            visible={editModalVisible}
-            onClose={handleCloseEditModal}
-            title={t.security?.roles?.edit || 'Editar Rol'}
-            subtitle="Modifica los datos del rol"
+            visible={isModalVisible}
+            onClose={handleCloseModal}
+            title={
+              modalMode === 'edit'
+                ? t.security?.roles?.edit || 'Editar Rol'
+                : t.security?.roles?.create || 'Crear Rol'
+            }
+            subtitle={
+              modalMode === 'edit'
+                ? 'Modifica los datos del rol'
+                : 'Completa los datos para registrar un nuevo rol'
+            }
             footer={
               formActions ? (
                 <>
@@ -430,7 +475,11 @@ export default function RolesListPage() {
                     disabled={formActions.isLoading}
                   />
                   <Button
-                    title={t.common.save}
+                    title={
+                      modalMode === 'edit'
+                        ? t.common.save
+                        : t.security?.roles?.create || 'Crear Rol'
+                    }
                     onPress={formActions.handleSubmit}
                     variant="primary"
                     size="md"
@@ -440,14 +489,25 @@ export default function RolesListPage() {
               ) : null
             }
           >
-            <RoleEditForm
-              roleId={editingRoleId}
-              onSuccess={handleEditSuccess}
-              onCancel={handleCloseEditModal}
-              showHeader={false}
-              showFooter={false}
-              onFormReady={setFormActions}
-            />
+            {modalMode === 'edit' && selectedRoleId ? (
+              <RoleEditForm
+                roleId={selectedRoleId}
+                onSuccess={handleFormSuccess}
+                onCancel={handleCloseModal}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+            ) : null}
+            {modalMode === 'create' ? (
+              <RoleCreateForm
+                onSuccess={handleFormSuccess}
+                onCancel={handleCloseModal}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+            ) : null}
           </SideModal>
         )}
       </View>

@@ -50,6 +50,11 @@ export const createHorizontalMenuStyles = () =>
       padding: 16,
       borderBottomWidth: 1,
     },
+    activeMobileMenuItemParent: {
+      borderLeftWidth: 3,
+      borderLeftColor: '#ff3366',
+      paddingLeft: 13, // Reducir padding izquierdo para compensar el borde
+    },
     submenuContainer: { paddingLeft: 16 },
     submenuItem: { padding: 12, paddingLeft: 24 },
     submenuText: { opacity: 0.8 },

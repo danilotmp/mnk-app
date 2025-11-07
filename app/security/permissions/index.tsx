@@ -11,32 +11,41 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { PermissionsService } from '@/src/domains/security';
-import { PermissionEditForm } from '@/src/domains/security/components/permission-edit-form';
+import { PermissionCreateForm, PermissionEditForm } from '@/src/domains/security/components';
 import { PermissionFilters, SecurityPermission } from '@/src/domains/security/types';
 import { DataTable, TableColumn } from '@/src/domains/shared/components/data-table';
 import { FilterConfig, SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createPermissionsListStyles } from '@/src/styles/pages/permissions-list.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 export default function PermissionsListPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createPermissionsListStyles(isMobile);
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+    isScreenFocused,
+  } = useRouteAccessGuard(pathname);
 
   const [permissions, setPermissions] = useState<SecurityPermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingPermissionId, setEditingPermissionId] = useState<string | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [selectedPermissionId, setSelectedPermissionId] = useState<string | null>(null);
   const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
   const [localFilter, setLocalFilter] = useState(''); // Filtro local para la tabla
   const [pagination, setPagination] = useState({
@@ -69,7 +78,6 @@ export default function PermissionsListPage() {
       loadingRef.current = true;
       setLoading(true);
       setError(null);
-      setHasError(false);
       
       const response = await PermissionsService.getPermissions(currentFilters);
       
@@ -111,6 +119,10 @@ export default function PermissionsListPage() {
       
       setHasError(false);
     } catch (error: any) {
+      if (handleApiError(error)) {
+        setHasError(true);
+        return;
+      }
       const errorMessage = error.message || t.security?.permissions?.loadError || 'Error al cargar permisos';
       setError(errorMessage);
       setHasError(true);
@@ -120,18 +132,17 @@ export default function PermissionsListPage() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [alert, t]);
+  }, [alert, handleApiError, t]);
 
   /**
    * Efecto para cargar permisos cuando cambian los filtros
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    // Resetear el flag de error cuando cambian los filtros para permitir un nuevo intento
-    setHasError(false);
-    loadPermissions(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit, filters.search, filters.isActive, filters.module, filters.action]);
+    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
+      loadPermissions(filters);
+    }
+  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadPermissions, filters]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -146,12 +157,14 @@ export default function PermissionsListPage() {
    */
   const handleLocalFilterChange = useCallback((value: string) => {
     setLocalFilter(value);
+    setHasError(false);
   }, []);
 
   /**
    * Manejar búsqueda API (consulta al backend)
    */
   const handleSearchSubmit = (search: string) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, search, page: 1 }));
   };
 
@@ -159,6 +172,7 @@ export default function PermissionsListPage() {
    * Manejar cambio de filtros avanzados (consulta API)
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
@@ -172,6 +186,7 @@ export default function PermissionsListPage() {
       action: undefined,
     });
     setLocalFilter(''); // Limpiar también el filtro local
+    setHasError(false);
   };
 
   /**
@@ -199,7 +214,10 @@ export default function PermissionsListPage() {
   }, [permissions, localFilter]);
 
   const handleCreatePermission = () => {
-    router.push('/security/permissions/create' as any);
+    setFormActions(null);
+    setSelectedPermissionId(null);
+    setModalMode('create');
+    setIsModalVisible(true);
   };
 
   /**
@@ -208,25 +226,22 @@ export default function PermissionsListPage() {
    * En móvil: abre modal lateral (100% del ancho)
    */
   const handleEditPermission = (permission: SecurityPermission) => {
-    setEditingPermissionId(permission.id);
-    setEditModalVisible(true);
+    setFormActions(null);
+    setSelectedPermissionId(permission.id);
+    setModalMode('edit');
+    setIsModalVisible(true);
   };
 
-  /**
-   * Cerrar modal de edición
-   */
-  const handleCloseEditModal = () => {
-    setEditModalVisible(false);
-    setEditingPermissionId(null);
-    setFormActions(null); // Resetear acciones del formulario
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setModalMode(null);
+    setSelectedPermissionId(null);
+    setFormActions(null);
   };
 
-  /**
-   * Manejar éxito al editar permiso
-   */
-  const handleEditSuccess = () => {
+  const handleFormSuccess = () => {
     loadPermissions(filters);
-    handleCloseEditModal();
+    handleCloseModal();
   };
 
   const handleDeletePermission = async (permission: SecurityPermission) => {
@@ -235,6 +250,9 @@ export default function PermissionsListPage() {
       await loadPermissions(filters);
       alert.showSuccess(t.security?.permissions?.delete || 'Permiso eliminado');
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       alert.showError(error.message || 'Error al eliminar permiso');
     }
   };
@@ -337,6 +355,19 @@ export default function PermissionsListPage() {
     },
   ];
 
+  if (accessLoading) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
+
   return (
     <ThemedView style={styles.container}>
       <View style={styles.content}>
@@ -409,13 +440,21 @@ export default function PermissionsListPage() {
           />
         </View>
 
-        {/* Modal de edición */}
-        {editingPermissionId && (
+        {/* Modal de creación/edición */}
+        {modalMode && (
           <SideModal
-            visible={editModalVisible}
-            onClose={handleCloseEditModal}
-            title={t.security?.permissions?.edit || 'Editar Permiso'}
-            subtitle="Modifica los datos del permiso"
+            visible={isModalVisible}
+            onClose={handleCloseModal}
+            title={
+              modalMode === 'edit'
+                ? t.security?.permissions?.edit || 'Editar Permiso'
+                : t.security?.permissions?.create || 'Crear Permiso'
+            }
+            subtitle={
+              modalMode === 'edit'
+                ? 'Modifica los datos del permiso'
+                : 'Completa los datos del nuevo permiso'
+            }
             footer={
               formActions ? (
                 <>
@@ -427,7 +466,11 @@ export default function PermissionsListPage() {
                     disabled={formActions.isLoading}
                   />
                   <Button
-                    title={t.common.save}
+                    title={
+                      modalMode === 'edit'
+                        ? t.common.save
+                        : t.security?.permissions?.create || 'Crear Permiso'
+                    }
                     onPress={formActions.handleSubmit}
                     variant="primary"
                     size="md"
@@ -437,14 +480,25 @@ export default function PermissionsListPage() {
               ) : null
             }
           >
-            <PermissionEditForm
-              permissionId={editingPermissionId}
-              onSuccess={handleEditSuccess}
-              onCancel={handleCloseEditModal}
-              showHeader={false}
-              showFooter={false}
-              onFormReady={setFormActions}
-            />
+            {modalMode === 'edit' && selectedPermissionId ? (
+              <PermissionEditForm
+                permissionId={selectedPermissionId}
+                onSuccess={handleFormSuccess}
+                onCancel={handleCloseModal}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+            ) : null}
+            {modalMode === 'create' ? (
+              <PermissionCreateForm
+                onSuccess={handleFormSuccess}
+                onCancel={handleCloseModal}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+            ) : null}
           </SideModal>
         )}
       </View>

@@ -11,7 +11,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { UsersService } from '@/src/domains/security';
-import { UserEditForm } from '@/src/domains/security/components/user-edit-form';
+import { UserCreateForm, UserEditForm } from '@/src/domains/security/components';
 import { SecurityUser, UserFilters } from '@/src/domains/security/types';
 import { DataTable, TableColumn } from '@/src/domains/shared/components/data-table';
 import { FilterConfig, SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar';
@@ -20,18 +20,27 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUsersListStyles } from '@/src/styles/pages/users-list.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 
 export default function UsersListPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const { currentCompany: company } = useMultiCompany();
   const { isMobile } = useResponsive();
   const styles = createUsersListStyles(isMobile);
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+    isScreenFocused,
+  } = useRouteAccessGuard(pathname);
 
   /**
    * Validar si un string es un UUID válido
@@ -45,8 +54,9 @@ export default function UsersListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -124,6 +134,10 @@ export default function UsersListPage() {
       
       setHasError(false);
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
+
       const errorMessage = error.message || t.security?.users?.loadError || 'Error al cargar usuarios';
       setError(errorMessage);
       setHasError(true);
@@ -133,7 +147,7 @@ export default function UsersListPage() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [alert, t]);
+  }, [alert, handleApiError, t]);
 
   /**
    * Efecto para actualizar companyId cuando cambia la empresa
@@ -159,11 +173,10 @@ export default function UsersListPage() {
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    // Resetear el flag de error cuando cambian los filtros para permitir un nuevo intento
-    setHasError(false);
-    loadUsers(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit, filters.search, filters.isActive, filters.companyId]);
+    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
+      loadUsers(filters);
+    }
+  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadUsers, filters]);
 
   /**
    * Manejar cambio de página
@@ -184,12 +197,14 @@ export default function UsersListPage() {
    */
   const handleLocalFilterChange = useCallback((value: string) => {
     setLocalFilter(value);
+    setHasError(false);
   }, []);
 
   /**
    * Manejar búsqueda API (consulta al backend)
    */
   const handleSearchSubmit = (search: string) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, search, page: 1 }));
   };
 
@@ -197,6 +212,7 @@ export default function UsersListPage() {
    * Manejar cambio de filtros avanzados (consulta API)
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
+    setHasError(false);
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
@@ -212,6 +228,7 @@ export default function UsersListPage() {
       companyId: company?.id && isValidUUID(company.id) ? company.id : undefined,
     });
     setLocalFilter(''); // Limpiar también el filtro local
+    setHasError(false);
   };
 
   /**
@@ -241,7 +258,10 @@ export default function UsersListPage() {
    * Navegar a crear usuario
    */
   const handleCreateUser = () => {
-    router.push('/security/users/create' as any);
+    setFormActions(null);
+    setSelectedUserId(null);
+    setModalMode('create');
+    setIsModalVisible(true);
   };
 
   /**
@@ -250,25 +270,28 @@ export default function UsersListPage() {
    * En móvil: abre modal lateral (100% del ancho)
    */
   const handleEditUser = (user: SecurityUser) => {
-    setEditingUserId(user.id);
-    setEditModalVisible(true);
+    setFormActions(null);
+    setSelectedUserId(user.id);
+    setModalMode('edit');
+    setIsModalVisible(true);
   };
 
   /**
    * Cerrar modal de edición
    */
-  const handleCloseEditModal = () => {
-    setEditModalVisible(false);
-    setEditingUserId(null);
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setModalMode(null);
+    setSelectedUserId(null);
     setFormActions(null); // Resetear acciones del formulario
   };
 
   /**
-   * Manejar éxito al editar usuario
+   * Manejar éxito al crear/editar usuario
    */
-  const handleEditSuccess = () => {
+  const handleFormSuccess = () => {
     loadUsers(filters);
-    handleCloseEditModal();
+    handleCloseModal();
   };
 
   /**
@@ -284,6 +307,9 @@ export default function UsersListPage() {
           : t.security?.users?.activated || 'Usuario activado'
       );
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       alert.showError(error.message || 'Error al cambiar estado del usuario');
     }
   };
@@ -297,6 +323,9 @@ export default function UsersListPage() {
       loadUsers(filters);
       alert.showSuccess(t.security?.users?.deleted || 'Usuario eliminado');
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       alert.showError(error.message || 'Error al eliminar usuario');
     }
   };
@@ -422,6 +451,19 @@ export default function UsersListPage() {
     },
   ];
 
+  if (accessLoading) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
+
   return (
     <ThemedView style={styles.container}>
       <View style={styles.content}>
@@ -492,13 +534,21 @@ export default function UsersListPage() {
           />
         </View>
 
-        {/* Modal de edición */}
-        {editingUserId && (
+        {/* Modal de creación/edición */}
+        {modalMode && (
           <SideModal
-            visible={editModalVisible}
-            onClose={handleCloseEditModal}
-            title={t.security?.users?.edit || 'Editar Usuario'}
-            subtitle="Modifica los datos del usuario"
+            visible={isModalVisible}
+            onClose={handleCloseModal}
+            title={
+              modalMode === 'edit'
+                ? t.security?.users?.edit || 'Editar Usuario'
+                : t.security?.users?.create || 'Crear Usuario'
+            }
+            subtitle={
+              modalMode === 'edit'
+                ? 'Modifica los datos del usuario'
+                : 'Completa los datos para registrar un nuevo usuario'
+            }
             footer={
               formActions ? (
                 <>
@@ -510,7 +560,11 @@ export default function UsersListPage() {
                     disabled={formActions.isLoading}
                   />
                   <Button
-                    title={t.common.save}
+                    title={
+                      modalMode === 'edit'
+                        ? t.common.save
+                        : t.security?.users?.create || 'Crear Usuario'
+                    }
                     onPress={formActions.handleSubmit}
                     variant="primary"
                     size="md"
@@ -520,14 +574,25 @@ export default function UsersListPage() {
               ) : null
             }
           >
-            <UserEditForm
-              userId={editingUserId}
-              onSuccess={handleEditSuccess}
-              onCancel={handleCloseEditModal}
-              showHeader={false}
-              showFooter={false}
-              onFormReady={setFormActions}
-            />
+            {modalMode === 'edit' && selectedUserId ? (
+              <UserEditForm
+                userId={selectedUserId}
+                onSuccess={handleFormSuccess}
+                onCancel={handleCloseModal}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+            ) : null}
+            {modalMode === 'create' ? (
+              <UserCreateForm
+                onSuccess={handleFormSuccess}
+                onCancel={handleCloseModal}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+            ) : null}
           </SideModal>
         )}
       </View>

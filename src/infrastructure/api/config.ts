@@ -36,6 +36,7 @@ export const API_CONFIG = {
     PROFILE: '/seguridades/profile',
     CURRENT_USER: '/usuarios/me',
     MENU: '/seguridades/menu', // Endpoint único: con token devuelve público+privado, sin token no se llama
+    ACCESS_CHECK: '/seguridades/access',
   },
 };
 

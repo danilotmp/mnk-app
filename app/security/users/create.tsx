@@ -11,11 +11,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { RolesService, UsersService } from '@/src/domains/security';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { MultiCompanyService } from '@/src/domains/shared/services';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUserFormStyles } from '@/src/styles/pages/user-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -23,9 +24,16 @@ export default function CreateUserPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const alert = useAlert();
   const { company } = useMultiCompany();
   const styles = createUserFormStyles();
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+  } = useRouteAccessGuard(pathname);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -63,7 +71,10 @@ export default function CreateUserPage() {
             isActive: true, // Solo roles activos
           });
           setRoles(rolesResponse.data);
-        } catch (error) {
+        } catch (error: any) {
+          if (handleApiError(error)) {
+            return;
+          }
           // Si falla, continuar sin roles
           setRoles([]);
         }
@@ -72,7 +83,10 @@ export default function CreateUserPage() {
         if (company?.id) {
           setFormData((prev) => ({ ...prev, companyId: company.id }));
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
         // Silenciar errores
       } finally {
         setLoadingOptions(false);
@@ -150,6 +164,9 @@ export default function CreateUserPage() {
       alert.showSuccess(t.security?.users?.create || 'Usuario creado exitosamente');
       router.back();
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || 'Error al crear usuario';
       const errorDetail = (error as any)?.result?.details || '';
       alert.showError(errorMessage, false, undefined, errorDetail);
@@ -164,6 +181,23 @@ export default function CreateUserPage() {
   const handleCancel = () => {
     router.back();
   };
+
+  if (accessLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
+            {t.common?.loading || 'Cargando información...'}
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   if (loadingOptions) {
     return (

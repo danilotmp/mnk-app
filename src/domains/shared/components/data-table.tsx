@@ -11,11 +11,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
-  TouchableOpacity,
-  View,
-  useWindowDimensions
+    ActivityIndicator,
+    ScrollView,
+    TouchableOpacity,
+    View,
+    useWindowDimensions
 } from 'react-native';
 import { createDataTableStyles } from '../../../styles/components/data-table.styles';
 
@@ -313,6 +313,8 @@ export function DataTable<T = any>({
     // Ordenar las opciones finales
     finalLimitOptions.sort((a, b) => a - b);
 
+    const minLimitValue = finalLimitOptions.length > 0 ? Math.min(...finalLimitOptions) : limit;
+
     return (
       <View style={[styles.pagination, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         {isMobile ? (
@@ -327,7 +329,7 @@ export function DataTable<T = any>({
             {/* Controles - línea completa */}
             <View style={styles.paginationControlsMobile}>
               {/* Selector de registros por página - alineado a la izquierda */}
-              {onLimitChange && finalLimitOptions && finalLimitOptions.length > 0 && (
+              {onLimitChange && finalLimitOptions && finalLimitOptions.length > 0 && total > minLimitValue && (
                 <View style={styles.limitSelector}>
                   <ThemedText type="body2" variant="secondary" style={styles.limitLabel}>
                     Mostrar:
@@ -448,7 +450,7 @@ export function DataTable<T = any>({
             {/* Controles de paginación */}
             <View style={styles.paginationControls}>
               {/* Selector de registros por página */}
-              {onLimitChange && finalLimitOptions && finalLimitOptions.length > 0 && (
+              {onLimitChange && finalLimitOptions && finalLimitOptions.length > 0 && total > minLimitValue && (
                 <View style={styles.limitSelector}>
                   <ThemedText type="body2" variant="secondary" style={styles.limitLabel}>
                     Mostrar:

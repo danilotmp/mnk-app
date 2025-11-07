@@ -11,11 +11,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '@/src/domains/security';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { MultiCompanyService } from '@/src/domains/shared/services';
+import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createRoleFormStyles } from '@/src/styles/pages/role-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -24,9 +25,16 @@ export default function EditRolePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const pathname = usePathname();
   const alert = useAlert();
   const { company } = useMultiCompany();
   const styles = createRoleFormStyles();
+
+  const {
+    loading: accessLoading,
+    allowed: hasAccess,
+    handleApiError,
+  } = useRouteAccessGuard(pathname);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,13 +54,20 @@ export default function EditRolePage() {
    * Cargar opciones (empresas)
    */
   useEffect(() => {
+    if (!hasAccess || accessLoading) {
+      return;
+    }
+
     const loadOptions = async () => {
       try {
         setLoadingOptions(true);
         const multiCompanyService = MultiCompanyService.getInstance();
         const mockCompanies = multiCompanyService.getMockCompanies();
         setCompanies(mockCompanies);
-      } catch (error) {
+      } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
         // Silenciar errores
       } finally {
         setLoadingOptions(false);
@@ -60,12 +75,16 @@ export default function EditRolePage() {
     };
 
     loadOptions();
-  }, []);
+  }, [accessLoading, handleApiError, hasAccess]);
 
   /**
    * Cargar datos del rol
    */
   useEffect(() => {
+    if (!hasAccess || accessLoading) {
+      return;
+    }
+
     const loadRole = async () => {
       if (!id) {
         alert.showError('ID de rol no válido');
@@ -85,6 +104,9 @@ export default function EditRolePage() {
           isSystem: role.isSystem ?? false,
         });
       } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
         alert.showError(error.message || 'Error al cargar rol');
         router.back();
       } finally {
@@ -93,7 +115,7 @@ export default function EditRolePage() {
     };
 
     loadRole();
-  }, [id, router, alert]);
+  }, [accessLoading, alert, handleApiError, hasAccess, id, router]);
 
   /**
    * Validar formulario
@@ -146,6 +168,9 @@ export default function EditRolePage() {
       alert.showSuccess(t.security?.roles?.edit || 'Rol actualizado exitosamente');
       router.back();
     } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
       const errorMessage = error.message || 'Error al actualizar rol';
       const errorDetail = (error as any)?.result?.details || '';
       alert.showError(errorMessage, false, undefined, errorDetail);
@@ -160,6 +185,23 @@ export default function EditRolePage() {
   const handleCancel = () => {
     router.back();
   };
+
+  if (accessLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
+            {t.common?.loading || 'Cargando información...'}
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   if (loadingRole || loadingOptions) {
     return (

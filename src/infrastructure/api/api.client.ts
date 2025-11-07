@@ -143,7 +143,14 @@ export class ApiClient {
       this.failedQueue.forEach(({ reject }) => reject(error));
       this.failedQueue = [];
       await this.clearTokens();
-      throw error;
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        'Token inválido o ausente',
+        HTTP_STATUS.UNAUTHORIZED,
+        error instanceof Error ? error.message : error
+      );
     } finally {
       this.isRefreshing = false;
     }
