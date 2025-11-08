@@ -9,6 +9,7 @@ import {
     PaginatedResponse,
     SecurityUser,
     UserFilters,
+    UserUpdatePayload,
 } from '../types';
 
 export class UsersService {
@@ -133,6 +134,26 @@ export class UsersService {
   }
 
   /**
+   * Obtener usuario completo por ID (incluye sucursales y roles)
+   */
+  static async getUserByIdComplete(id: string): Promise<SecurityUser> {
+    try {
+      const response = await apiClient.request<SecurityUser>({
+        endpoint: `${this.BASE_ENDPOINT}/${id}/completo`,
+        method: 'GET',
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.result?.description || 'Error al obtener usuario');
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al obtener usuario');
+    }
+  }
+
+  /**
    * Crear nuevo usuario
    */
   static async createUser(userData: Partial<SecurityUser>): Promise<SecurityUser> {
@@ -163,6 +184,30 @@ export class UsersService {
     try {
       const response = await apiClient.request<SecurityUser>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
+        method: 'PUT',
+        body: userData,
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.result?.description || 'Error al actualizar usuario');
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar usuario');
+    }
+  }
+
+  /**
+   * Actualizar usuario completo (datos básicos + rol + sucursales)
+   */
+  static async updateUserComplete(
+    id: string,
+    userData: UserUpdatePayload
+  ): Promise<SecurityUser> {
+    try {
+      const response = await apiClient.request<SecurityUser>({
+        endpoint: `${this.BASE_ENDPOINT}/${id}/completo`,
         method: 'PUT',
         body: userData,
       });

@@ -5,6 +5,8 @@
 
 import { BaseEntity, PaginationParams } from '../../shared/types';
 
+export type { PaginatedResponse, PaginationMeta } from '../../shared/types';
+
 /**
  * Usuario del sistema
  */
@@ -20,6 +22,18 @@ export interface SecurityUser extends BaseEntity {
   companyId: string;
   roleId: string;
   branchIds?: string[]; // Sucursales a las que tiene acceso
+}
+
+export interface UserUpdatePayload {
+  email?: string;
+  password?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  companyId?: string;
+  roleId?: string;
+  branchIds?: string[];
+  isActive?: boolean;
 }
 
 /**
@@ -99,6 +113,131 @@ export interface AccessFilters extends PaginationParams {
   companyId?: string;
   branchId?: string;
   roleId?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Empresas
+ */
+export interface SecurityCompany extends BaseEntity {
+  code: string;
+  name: string;
+  email: string;
+  description?: string;
+  phone?: string;
+  address?: CompanyAddress;
+  settings?: CompanySettings;
+  subscriptionPlan?: CompanySubscriptionPlan;
+  isActive: boolean;
+}
+
+export interface CompanyAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+}
+
+export interface CompanySettings {
+  timezone?: string;
+  currency?: string;
+  language?: string;
+  dateFormat?: string;
+  features?: string[];
+  [key: string]: unknown;
+}
+
+export interface CompanySubscriptionPlan {
+  id?: string;
+  plan?: string;
+  name?: string;
+  features?: string[];
+  maxUsers?: number;
+  maxBranches?: number;
+  isActive?: boolean;
+  [key: string]: unknown;
+}
+
+export interface CompanyFilters extends PaginationParams {
+  search?: string;
+  code?: string;
+  name?: string;
+  email?: string;
+  isActive?: boolean;
+}
+
+export interface CompanyPayload {
+  code?: string;
+  name?: string;
+  email?: string;
+  description?: string;
+  phone?: string;
+  address?: CompanyAddress;
+  settings?: CompanySettings;
+  subscriptionPlan?: CompanySubscriptionPlan;
+  isActive?: boolean;
+}
+
+/**
+ * Sucursales
+ */
+export type BranchType = 'headquarters' | 'branch' | 'warehouse' | 'store';
+
+export interface SecurityBranch extends BaseEntity {
+  companyId: string;
+  code: string;
+  name: string;
+  type?: BranchType;
+  description?: string;
+  address?: CompanyAddress;
+  contactInfo?: BranchContactInfo;
+  settings?: BranchSettings;
+  isActive: boolean;
+  company?: Pick<SecurityCompany, 'id' | 'code' | 'name'>;
+}
+
+export interface BranchContactInfo {
+  phone?: string;
+  email?: string;
+  website?: string;
+  [key: string]: unknown;
+}
+
+export interface BranchSettings {
+  timezone?: string;
+  workingHours?: Record<string, BranchDaySchedule>;
+  openHours?: string;
+  maxCapacity?: number;
+  services?: string[];
+  features?: string[];
+  [key: string]: unknown;
+}
+
+export interface BranchDaySchedule {
+  isOpen: boolean;
+  openTime?: string;
+  closeTime?: string;
+}
+
+export interface BranchFilters extends PaginationParams {
+  search?: string;
+  companyId?: string;
+  code?: string;
+  name?: string;
+  type?: BranchType;
+  isActive?: boolean;
+}
+
+export interface BranchPayload {
+  companyId?: string;
+  code?: string;
+  name?: string;
+  type?: BranchType;
+  description?: string;
+  address?: CompanyAddress;
+  contactInfo?: BranchContactInfo;
+  settings?: BranchSettings;
   isActive?: boolean;
 }
 

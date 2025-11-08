@@ -54,6 +54,7 @@ export default function UsersListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
+  const justEditedRef = useRef(false); // Flag para prevenir recarga después de editar
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -173,6 +174,12 @@ export default function UsersListPage() {
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
+    // No recargar si acabamos de editar exitosamente (actualización local)
+    if (justEditedRef.current) {
+      justEditedRef.current = false;
+      return;
+    }
+    
     if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
       loadUsers(filters);
     }
@@ -287,12 +294,38 @@ export default function UsersListPage() {
   };
 
   /**
-   * Manejar éxito al crear/editar usuario
+   * Manejar éxito al crear usuario
    */
-  const handleFormSuccess = () => {
-    loadUsers(filters);
+  const handleCreateSuccess = useCallback(() => {
     handleCloseModal();
-  };
+    // Solo para creación, recargar la lista completa
+    setTimeout(() => {
+      if (!loadingRef.current) {
+        loadUsers(filters);
+      }
+    }, 100);
+  }, [filters, loadUsers]);
+
+  /**
+   * Manejar éxito al editar usuario
+   * Optimización: actualizar solo el registro editado localmente sin recargar toda la lista
+   */
+  const handleEditSuccess = useCallback((updatedUser?: SecurityUser) => {
+    if (updatedUser) {
+      // Actualizar el usuario en la lista local con los datos ya recibidos
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === updatedUser.id ? updatedUser : user
+        )
+      );
+      
+      // Marcar que acabamos de editar para prevenir recarga automática
+      justEditedRef.current = true;
+    }
+    
+    handleCloseModal();
+    alert.showSuccess(t.security?.users?.edit || 'Usuario actualizado exitosamente');
+  }, [alert, t]);
 
   /**
    * Manejar activar/desactivar usuario
@@ -577,7 +610,7 @@ export default function UsersListPage() {
             {modalMode === 'edit' && selectedUserId ? (
               <UserEditForm
                 userId={selectedUserId}
-                onSuccess={handleFormSuccess}
+                onSuccess={handleEditSuccess}
                 onCancel={handleCloseModal}
                 showHeader={false}
                 showFooter={false}
@@ -586,7 +619,7 @@ export default function UsersListPage() {
             ) : null}
             {modalMode === 'create' ? (
               <UserCreateForm
-                onSuccess={handleFormSuccess}
+                onSuccess={handleCreateSuccess}
                 onCancel={handleCloseModal}
                 showHeader={false}
                 showFooter={false}

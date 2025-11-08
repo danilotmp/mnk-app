@@ -8,38 +8,47 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
-import { RolesService, UsersService } from '@/src/domains/security';
-import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { MultiCompanyService } from '@/src/domains/shared/services';
+import { RolesService, UsersService, useBranchOptions, useCompanyOptions } from '@/src/domains/security';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUserFormStyles } from '@/src/styles/pages/user-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface UserEditFormProps {
   userId: string;
-  onSuccess?: () => void;
+  onSuccess?: (updatedUser?: any) => void; // Pasar el usuario actualizado para optimización
   onCancel?: () => void;
   showHeader?: boolean; // Si false, no muestra el header (útil para modal)
   showFooter?: boolean; // Si false, no muestra los botones (útil para modal con footer fijo)
   onFormReady?: (props: { isLoading: boolean; handleSubmit: () => void; handleCancel: () => void }) => void; // Callback para exponer funciones del formulario
 }
 
+interface UserFormData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  companyId: string;
+  branchIds: string[];
+  roleId: string;
+  isActive: boolean;
+}
+
 export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, showFooter = true, onFormReady }: UserEditFormProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const alert = useAlert();
-  const { company } = useMultiCompany();
   const styles = createUserFormStyles();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserFormData>({
     email: '',
     firstName: '',
     lastName: '',
     phone: '',
     companyId: '',
+    branchIds: [] as string[],
     roleId: '',
     isActive: true,
   });
@@ -48,39 +57,38 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const isInitialLoadRef = useRef(true); // Flag para controlar carga inicial (useRef para evitar re-renders)
+  const loadedCompanyIdRef = useRef<string | null>(null); // Guardar el companyId ya cargado
+  const { companies, loading: companiesLoading } = useCompanyOptions();
+  const {
+    branches,
+    loading: branchesLoading,
+    refresh: refreshBranches,
+  } = useBranchOptions({ autoFetch: false, includeInactive: false, immediate: false });
   const [roles, setRoles] = useState<any[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(true);
 
   /**
    * Cargar opciones (empresas y roles)
    */
   useEffect(() => {
-    const loadOptions = async () => {
+    const loadRoles = async () => {
       try {
-        setLoadingOptions(true);
-        const multiCompanyService = MultiCompanyService.getInstance();
-        const mockCompanies = multiCompanyService.getMockCompanies();
-        setCompanies(mockCompanies);
-
-        try {
-          const rolesResponse = await RolesService.getRoles({
-            page: 1,
-            limit: 100,
-            isActive: true,
-          });
-          setRoles(rolesResponse.data);
-        } catch (error) {
-          setRoles([]);
-        }
+        setRolesLoading(true);
+        const rolesResponse = await RolesService.getRoles({
+          page: 1,
+          limit: 100,
+          isActive: true,
+        });
+        setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
       } catch (error) {
-        // Silenciar errores
+        setRoles([]);
       } finally {
-        setLoadingOptions(false);
+        setRolesLoading(false);
       }
     };
 
-    loadOptions();
+    loadRoles();
   }, []);
 
   /**
@@ -95,16 +103,42 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
       try {
         setLoadingUser(true);
+        isInitialLoadRef.current = true;
         const user = await UsersService.getUserById(userId);
+        
+        // Primero cargar las sucursales si hay companyId
+        if (user.companyId) {
+          await refreshBranches({ companyId: user.companyId });
+          loadedCompanyIdRef.current = user.companyId; // Guardar el companyId cargado
+        }
+        
+        // Extraer branchIds correctamente
+        // El backend puede devolver branchIds (string[]) o availableBranches (objeto[])
+        let userBranchIds: string[] = [];
+        
+        if (Array.isArray(user.branchIds) && user.branchIds.length > 0) {
+          // Si viene branchIds directamente como array de strings
+          userBranchIds = user.branchIds;
+        } else if (Array.isArray((user as any).availableBranches) && (user as any).availableBranches.length > 0) {
+          // Si viene availableBranches como array de objetos, extraer los IDs
+          userBranchIds = (user as any).availableBranches.map((branch: any) => branch.id);
+        }
+        
+        // Luego establecer los datos del formulario, incluyendo branchIds
+        // Esto asegura que las sucursales ya estén cargadas cuando se establezcan los branchIds
         setFormData({
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           phone: user.phone || '',
           companyId: user.companyId,
+          branchIds: userBranchIds,
           roleId: user.roleId || '',
           isActive: user.isActive ?? true,
         });
+        
+        // Marcar como no inicial inmediatamente DESPUÉS de cargar
+        isInitialLoadRef.current = false;
       } catch (error: any) {
         alert.showError(error.message || 'Error al cargar usuario');
       } finally {
@@ -113,7 +147,21 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     };
 
     loadUser();
-  }, [userId, alert]);
+  }, [userId, alert, refreshBranches]);
+
+  /**
+   * Efecto para cargar sucursales cuando el usuario cambia manualmente la empresa
+   * (no durante la carga inicial para evitar llamadas duplicadas)
+   */
+  useEffect(() => {
+    // No ejecutar durante la carga inicial o si el companyId no cambió
+    if (isInitialLoadRef.current || !formData.companyId || loadedCompanyIdRef.current === formData.companyId) {
+      return;
+    }
+    refreshBranches({ companyId: formData.companyId });
+    loadedCompanyIdRef.current = formData.companyId; // Actualizar el companyId cargado
+  }, [formData.companyId, refreshBranches]);
+
 
   /**
    * Validar formulario
@@ -145,6 +193,10 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       newErrors.companyId = 'La empresa es requerida';
     }
 
+    if (!formData.branchIds || formData.branchIds.length === 0) {
+      newErrors.branchIds = 'Selecciona al menos una sucursal';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -153,11 +205,41 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
    * Manejar cambio de campo
    */
   const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      if (field === 'companyId') {
+        if (prev.companyId === value) {
+          return prev;
+        }
+        return { ...prev, companyId: value, branchIds: [] };
+      }
+      return { ...prev, [field]: value };
+    });
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
+
+  const toggleBranchSelection = useCallback(
+    (branchId: string) => {
+      setFormData((prev) => {
+        const exists = prev.branchIds.includes(branchId);
+        const branchIds = exists
+          ? prev.branchIds.filter((id) => id !== branchId)
+          : [...prev.branchIds, branchId];
+        return { ...prev, branchIds };
+      });
+      if (errors.branchIds) {
+        setErrors((prev) => ({ ...prev, branchIds: '' }));
+      }
+    },
+    [errors.branchIds]
+  );
+
+  useEffect(() => {
+    if (errors.branchIds && formData.branchIds.length > 0) {
+      setErrors((prev) => ({ ...prev, branchIds: '' }));
+    }
+  }, [errors.branchIds, formData.branchIds]);
 
   /**
    * Manejar envío del formulario
@@ -181,6 +263,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         phone: formData.phone.trim() || undefined,
         companyId: formData.companyId,
         roleId: formData.roleId || undefined,
+        branchIds: formData.branchIds,
         isActive: formData.isActive,
       };
 
@@ -188,9 +271,10 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         updateData.password = password;
       }
 
-      await UsersService.updateUser(userId, updateData);
-      alert.showSuccess(t.security?.users?.edit || 'Usuario actualizado exitosamente');
-      onSuccess?.();
+      const updatedUser = await UsersService.updateUserComplete(userId, updateData);
+      // No mostrar alert aquí, el componente padre lo maneja
+      // Pasar el usuario actualizado al componente padre para optimización
+      onSuccess?.(updatedUser);
     } catch (error: any) {
       const errorMessage = error.message || 'Error al actualizar usuario';
       const errorDetail = (error as any)?.result?.details || '';
@@ -210,6 +294,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   /**
    * Exponer funciones del formulario cuando está listo (para footer externo)
    */
+  const loadingOptions = companiesLoading || rolesLoading || (formData.companyId ? branchesLoading : false);
+
   useEffect(() => {
     if (onFormReady && !loadingUser && !loadingOptions) {
       onFormReady({
@@ -218,8 +304,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         handleCancel,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onFormReady, loadingUser, loadingOptions, isLoading]);
+  }, [onFormReady, loadingUser, loadingOptions, isLoading, handleSubmit, handleCancel]);
 
   if (loadingUser || loadingOptions) {
     return (
@@ -475,6 +560,58 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             </ThemedText>
           )}
         </View>
+
+        {/* Branches */}
+        {formData.companyId ? (
+          <View style={styles.inputGroup}>
+            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}
+            >Sucursales *</ThemedText>
+            <View
+              style={[
+                styles.selectContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.selectOptions}>
+                  {branches.map((branch) => {
+                    const isSelected = formData.branchIds.includes(branch.id);
+                    return (
+                      <TouchableOpacity
+                        key={branch.id}
+                        style={[
+                          styles.selectOption,
+                          { borderColor: colors.border },
+                          isSelected && {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+                          },
+                        ]}
+                        onPress={() => toggleBranchSelection(branch.id)}
+                        disabled={isLoading}
+                      >
+                        <ThemedText
+                          type="body2"
+                          style={isSelected ? { color: '#FFFFFF' } : { color: colors.text }}
+                        >
+                          {branch.name}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+            {errors.branchIds && (
+              <ThemedText type="caption" variant="error" style={styles.errorText}>
+                {errors.branchIds}
+              </ThemedText>
+            )}
+          </View>
+        ) : null}
 
         {/* Role */}
         {roles.length > 0 && (

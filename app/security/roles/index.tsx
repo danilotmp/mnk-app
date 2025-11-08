@@ -66,6 +66,7 @@ export default function RolesListPage() {
   
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
+  const filtersSignatureRef = useRef<string>('');
 
   /**
    * Cargar roles
@@ -141,9 +142,17 @@ export default function RolesListPage() {
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
-      loadRoles(filters);
+    if (!isScreenFocused || !hasAccess || accessLoading || hasError) {
+      return;
     }
+
+    const signature = JSON.stringify(filters);
+    if (filtersSignatureRef.current === signature) {
+      return;
+    }
+
+    filtersSignatureRef.current = signature;
+    loadRoles(filters);
   }, [accessLoading, hasAccess, hasError, isScreenFocused, loadRoles, filters]);
 
   const handlePageChange = (page: number) => {
@@ -245,6 +254,7 @@ export default function RolesListPage() {
    * Manejar éxito al crear/editar rol
    */
   const handleFormSuccess = () => {
+    filtersSignatureRef.current = JSON.stringify(filters);
     loadRoles(filters);
     handleCloseModal();
   };

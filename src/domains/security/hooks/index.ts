@@ -2,5 +2,6 @@
  * Hooks del dominio de Seguridades
  */
 
-// Por ahora vacío, pero preparado para futuros hooks específicos de seguridad
+export { useBranchOptions } from './use-branch-options.hook';
+export { useCompanyOptions } from './use-company-options.hook';
 

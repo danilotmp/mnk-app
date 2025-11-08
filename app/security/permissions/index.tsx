@@ -67,6 +67,7 @@ export default function PermissionsListPage() {
   
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
+  const filtersSignatureRef = useRef<string>('');
 
   const loadPermissions = useCallback(async (currentFilters: PermissionFilters) => {
     // Prevenir llamadas simultáneas
@@ -139,9 +140,17 @@ export default function PermissionsListPage() {
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
-      loadPermissions(filters);
+    if (!isScreenFocused || !hasAccess || accessLoading || hasError) {
+      return;
     }
+
+    const signature = JSON.stringify(filters);
+    if (filtersSignatureRef.current === signature) {
+      return;
+    }
+
+    filtersSignatureRef.current = signature;
+    loadPermissions(filters);
   }, [accessLoading, hasAccess, hasError, isScreenFocused, loadPermissions, filters]);
 
   const handlePageChange = (page: number) => {
@@ -240,6 +249,7 @@ export default function PermissionsListPage() {
   };
 
   const handleFormSuccess = () => {
+    filtersSignatureRef.current = JSON.stringify(filters);
     loadPermissions(filters);
     handleCloseModal();
   };

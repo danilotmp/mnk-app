@@ -3,9 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
-import { RolesService, UsersService } from '@/src/domains/security';
+import { RolesService, UsersService, useBranchOptions, useCompanyOptions } from '@/src/domains/security';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { MultiCompanyService } from '@/src/domains/shared/services';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUserFormStyles } from '@/src/styles/pages/user-form.styles';
@@ -41,50 +40,57 @@ export function UserCreateForm({
     lastName: '',
     phone: '',
     companyId: currentCompany?.id || '',
+    branchIds: [] as string[],
     roleId: '',
     isActive: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const { companies, loading: companiesLoading } = useCompanyOptions();
+  const {
+    branches,
+    loading: branchesLoading,
+    refresh: refreshBranches,
+  } = useBranchOptions({ autoFetch: false, includeInactive: false, immediate: false });
   const [roles, setRoles] = useState<any[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(true);
 
   const resetErrors = useCallback((field: string) => {
     setErrors((prev) => ({ ...prev, [field]: '' }));
   }, []);
 
   useEffect(() => {
-    const loadOptions = async () => {
+    const loadRoles = async () => {
       try {
-        setLoadingOptions(true);
-        const multiCompanyService = MultiCompanyService.getInstance();
-        const mockCompanies = multiCompanyService.getMockCompanies();
-        setCompanies(mockCompanies);
-
-        try {
-          const rolesResponse = await RolesService.getRoles({
-            page: 1,
-            limit: 100,
-            isActive: true,
-          });
-          setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
-        } catch (error) {
-          setRoles([]);
-        }
-
-        if (currentCompany?.id) {
-          setFormData((prev) => ({ ...prev, companyId: currentCompany.id }));
-        }
+        setRolesLoading(true);
+        const rolesResponse = await RolesService.getRoles({
+          page: 1,
+          limit: 100,
+          isActive: true,
+        });
+        setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
       } catch (error) {
-        // silenciar errores de opciones
+        setRoles([]);
       } finally {
-        setLoadingOptions(false);
+        setRolesLoading(false);
       }
     };
 
-    loadOptions();
-  }, [currentCompany?.id]);
+    loadRoles();
+  }, []);
+
+  useEffect(() => {
+    if (currentCompany?.id && !formData.companyId) {
+      setFormData((prev) => ({ ...prev, companyId: currentCompany.id }));
+    }
+  }, [currentCompany?.id, formData.companyId]);
+
+  useEffect(() => {
+    if (!formData.companyId) {
+      return;
+    }
+    refreshBranches({ companyId: formData.companyId });
+  }, [formData.companyId, refreshBranches]);
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -113,12 +119,25 @@ export function UserCreateForm({
       newErrors.companyId = 'La empresa es requerida';
     }
 
+    if (!formData.branchIds.length) {
+      newErrors.branchIds = 'Selecciona al menos una sucursal';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData, t.auth.emailRequired, t.auth.passwordRequired]);
 
   const handleChange = useCallback((field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      if (field === 'companyId') {
+        return {
+          ...prev,
+          companyId: value,
+          branchIds: [],
+        };
+      }
+      return { ...prev, [field]: value };
+    });
     if (errors[field]) {
       resetErrors(field);
     }
@@ -131,13 +150,14 @@ export function UserCreateForm({
 
     setIsLoading(true);
     try {
-      await UsersService.createUser({
+          await UsersService.createUser({
         email: formData.email.trim(),
         password: formData.password,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phone: formData.phone.trim() || undefined,
         companyId: formData.companyId,
+        branchIds: formData.branchIds,
         roleId: formData.roleId || undefined,
         isActive: formData.isActive,
       });
@@ -157,6 +177,30 @@ export function UserCreateForm({
     onCancel?.();
   }, [onCancel]);
 
+  const loadingOptions = companiesLoading || rolesLoading || (formData.companyId ? branchesLoading : false);
+
+  const toggleBranchSelection = useCallback(
+    (branchId: string) => {
+      setFormData((prev) => {
+        const exists = prev.branchIds.includes(branchId);
+        const branchIds = exists
+          ? prev.branchIds.filter((id) => id !== branchId)
+          : [...prev.branchIds, branchId];
+        return { ...prev, branchIds };
+      });
+      if (errors.branchIds) {
+        resetErrors('branchIds');
+      }
+    },
+    [errors.branchIds, resetErrors]
+  );
+
+  useEffect(() => {
+    if (errors.branchIds && formData.branchIds.length > 0) {
+      resetErrors('branchIds');
+    }
+  }, [errors.branchIds, formData.branchIds, resetErrors]);
+
   useEffect(() => {
     if (onFormReady && !loadingOptions) {
       onFormReady({
@@ -165,7 +209,6 @@ export function UserCreateForm({
         handleCancel,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onFormReady, loadingOptions, isLoading, handleSubmit, handleCancel]);
 
   if (loadingOptions) {
@@ -201,6 +244,7 @@ export function UserCreateForm({
 
   const companiesOptions = companies;
   const rolesOptions = roles;
+  const branchesOptions = branches;
 
   const formContent = (
     <Card variant="flat" style={styles.formCard}>
@@ -364,33 +408,46 @@ export function UserCreateForm({
       </View>
 
       <View style={styles.inputGroup}>
-        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-          {t.security?.users?.company || 'Empresa'} *
-        </ThemedText>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-          <View style={styles.tagList}>
-            {companiesOptions.map((company) => {
-              const isSelected = formData.companyId === company.id;
-              return (
-                <TouchableOpacity
-                  key={company.id}
-                  style={[
-                    styles.tag,
-                    {
-                      backgroundColor: isSelected ? colors.primary : colors.surface,
-                      borderColor: isSelected ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => handleChange('companyId', company.id)}
-                >
-                  <ThemedText type="body2" style={{ color: isSelected ? '#FFFFFF' : colors.text }}>
-                    {company.name}
-                  </ThemedText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
+        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}
+        >{t.security?.users?.company || 'Empresa'} *</ThemedText>
+        <View
+          style={[
+            styles.selectContainer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: errors.companyId ? colors.error : colors.border,
+            },
+          ]}
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectOptions}>
+              {companiesOptions.map((company) => {
+                const isSelected = formData.companyId === company.id;
+                return (
+                  <TouchableOpacity
+                    key={company.id}
+                    style={[
+                      styles.selectOption,
+                      { borderColor: colors.border },
+                      isSelected && {
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
+                    ]}
+                    onPress={() => handleChange('companyId', company.id)}
+                  >
+                    <ThemedText
+                      type="body2"
+                      style={isSelected ? { color: '#FFFFFF' } : { color: colors.text }}
+                    >
+                      {company.name}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
         {errors.companyId ? (
           <ThemedText type="caption" style={{ color: colors.error }}>
             {errors.companyId}
@@ -398,37 +455,117 @@ export function UserCreateForm({
         ) : null}
       </View>
 
+      {formData.companyId ? (
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}
+          >{t.security?.users?.branches || 'Sucursales'} *</ThemedText>
+          {branchesOptions.length > 0 ? (
+            <View
+              style={[
+                styles.selectContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: errors.branchIds ? colors.error : colors.border,
+                },
+              ]}
+            >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.selectOptions}>
+                  {branchesOptions.map((branch) => {
+                    const isSelected = formData.branchIds.includes(branch.id);
+                    return (
+                      <TouchableOpacity
+                        key={branch.id}
+                        style={[
+                          styles.selectOption,
+                          { borderColor: colors.border },
+                          isSelected && {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+                          },
+                        ]}
+                        onPress={() => toggleBranchSelection(branch.id)}
+                      >
+                        <ThemedText
+                          type="body2"
+                          style={isSelected ? { color: '#FFFFFF' } : { color: colors.text }}
+                        >
+                          {branch.name}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+          ) : (
+            <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
+              {t.security?.users?.noBranches || 'No hay sucursales disponibles para la empresa seleccionada'}
+            </ThemedText>
+          )}
+          {errors.branchIds ? (
+            <ThemedText type="caption" style={{ color: colors.error }}>
+              {errors.branchIds}
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={styles.inputGroup}>
-        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-          {t.security?.users?.role || 'Rol'}
-        </ThemedText>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-          <View style={styles.tagList}>
-            {rolesOptions.map((role) => {
-              const isSelected = formData.roleId === role.id;
-              return (
-                <TouchableOpacity
-                  key={role.id}
-                  style={[
-                    styles.tag,
-                    {
-                      backgroundColor: isSelected ? colors.primary : colors.surface,
-                      borderColor: isSelected ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => handleChange('roleId', role.id)}
+        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}
+        >{t.security?.users?.role || 'Rol'}</ThemedText>
+        <View style={[styles.selectContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  !formData.roleId && {
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                  },
+                ]}
+                onPress={() => handleChange('roleId', '')}
+              >
+                <ThemedText
+                  type="body2"
+                  style={!formData.roleId ? { color: '#FFFFFF' } : { color: colors.text }}
                 >
-                  <ThemedText type="body2" style={{ color: isSelected ? '#FFFFFF' : colors.text }}>
-                    {role.name}
-                  </ThemedText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
+                  {t.security?.users?.noRole || 'Sin rol'}
+                </ThemedText>
+              </TouchableOpacity>
+              {rolesOptions.map((role) => {
+                const isSelected = formData.roleId === role.id;
+                return (
+                  <TouchableOpacity
+                    key={role.id}
+                    style={[
+                      styles.selectOption,
+                      { borderColor: colors.border },
+                      isSelected && {
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
+                    ]}
+                    onPress={() => handleChange('roleId', role.id)}
+                  >
+                    <ThemedText
+                      type="body2"
+                      style={isSelected ? { color: '#FFFFFF' } : { color: colors.text }}
+                    >
+                      {role.name}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
       </View>
 
-      <View style={styles.switchRow}>
+      <View style={styles.switchGroup}>
         <View style={styles.switchLabel}>
           <ThemedText type="body2" style={{ color: colors.text }}>
             {t.security?.users?.status || 'Estado'}

@@ -64,6 +64,7 @@ export default function AccessesListPage() {
   
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
+  const filtersSignatureRef = useRef<string>('');
 
   const loadAccesses = useCallback(async (currentFilters: AccessFilters) => {
     // Prevenir llamadas simultáneas
@@ -136,9 +137,17 @@ export default function AccessesListPage() {
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
    */
   useEffect(() => {
-    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
-      loadAccesses(filters);
+    if (!isScreenFocused || !hasAccess || accessLoading || hasError) {
+      return;
     }
+
+    const signature = JSON.stringify(filters);
+    if (filtersSignatureRef.current === signature) {
+      return;
+    }
+
+    filtersSignatureRef.current = signature;
+    loadAccesses(filters);
   }, [accessLoading, hasAccess, hasError, isScreenFocused, loadAccesses, filters]);
 
   const handlePageChange = (page: number) => {
