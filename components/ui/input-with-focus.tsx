@@ -104,7 +104,11 @@ export function InputWithFocus({ children, containerStyle, primaryColor, error }
         },
       ]}
     >
-      {childrenWithFocus}
+      {React.Children.toArray(childrenWithFocus).filter((child) => {
+        // Filtrar solo elementos válidos de React (componentes, no strings ni primitivos)
+        // View no puede tener strings o valores primitivos como hijos directos
+        return React.isValidElement(child);
+      })}
     </View>
   );
 }

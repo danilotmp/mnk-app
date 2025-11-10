@@ -121,7 +121,11 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           userBranchIds = user.branchIds;
         } else if (Array.isArray((user as any).availableBranches) && (user as any).availableBranches.length > 0) {
           // Si viene availableBranches como array de objetos, extraer los IDs
-          userBranchIds = (user as any).availableBranches.map((branch: any) => branch.id);
+          // Manejar ambos formatos: {id: "..."} o {branchId: "..."}
+          userBranchIds = (user as any).availableBranches.map((branch: any) => {
+            // Priorizar branchId, luego id (manejar ambos formatos)
+            return branch.branchId || branch.id;
+          }).filter((id: any) => id); // Filtrar valores nulos/undefined
         }
         
         // Luego establecer los datos del formulario, incluyendo branchIds
@@ -166,17 +170,17 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   /**
    * Validar formulario
    */
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email.trim()) {
-      newErrors.email = t.auth.emailRequired;
+      newErrors.email = t.auth?.emailRequired || 'El email es requerido';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
     }
 
     if (changePassword && !password.trim()) {
-      newErrors.password = t.auth.passwordRequired;
+      newErrors.password = t.auth?.passwordRequired || 'La contraseña es requerida';
     } else if (changePassword && password.length < 6) {
       newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
@@ -199,7 +203,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData, changePassword, password, t.auth]);
 
   /**
    * Manejar cambio de campo
@@ -228,23 +232,16 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           : [...prev.branchIds, branchId];
         return { ...prev, branchIds };
       });
-      if (errors.branchIds) {
-        setErrors((prev) => ({ ...prev, branchIds: '' }));
-      }
-    },
-    [errors.branchIds]
-  );
-
-  useEffect(() => {
-    if (errors.branchIds && formData.branchIds.length > 0) {
+      // Limpiar error de branchIds cuando el usuario selecciona al menos una sucursal
       setErrors((prev) => ({ ...prev, branchIds: '' }));
-    }
-  }, [errors.branchIds, formData.branchIds]);
+    },
+    []
+  );
 
   /**
    * Manejar envío del formulario
    */
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
       return;
     }
@@ -282,20 +279,21 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [validateForm, formData, changePassword, password, userId, alert, onSuccess]);
 
   /**
    * Manejar cancelar
    */
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     onCancel?.();
-  };
+  }, [onCancel]);
 
   /**
    * Exponer funciones del formulario cuando está listo (para footer externo)
    */
   const loadingOptions = companiesLoading || rolesLoading || (formData.companyId ? branchesLoading : false);
 
+  // Llamar onFormReady solo cuando el componente está listo o cuando isLoading cambia
   useEffect(() => {
     if (onFormReady && !loadingUser && !loadingOptions) {
       onFormReady({
@@ -304,7 +302,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         handleCancel,
       });
     }
-  }, [onFormReady, loadingUser, loadingOptions, isLoading, handleSubmit, handleCancel]);
+    // Intencionalmente solo depende de isLoading, loadingUser y loadingOptions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, loadingUser, loadingOptions]);
 
   if (loadingUser || loadingOptions) {
     return (
@@ -325,7 +325,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {/* Email */}
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.auth.email} *
+            {t.auth?.email || 'Email'} *
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -341,7 +341,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder={t.auth.email}
+              placeholder={t.auth?.email || 'Email'}
               placeholderTextColor={colors.textSecondary}
               value={formData.email}
               onChangeText={(text) => handleChange('email', text)}
@@ -379,7 +379,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {changePassword && (
           <View style={styles.inputGroup}>
             <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-              {t.auth.password} *
+              {t.auth?.password || 'Contraseña'} *
             </ThemedText>
             <InputWithFocus
               containerStyle={[
@@ -395,7 +395,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
               <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.text, flex: 1 }]}
-                placeholder={t.auth.password}
+                placeholder={t.auth?.password || 'Contraseña'}
                 placeholderTextColor={colors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
@@ -564,8 +564,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {/* Branches */}
         {formData.companyId ? (
           <View style={styles.inputGroup}>
-            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}
-            >Sucursales *</ThemedText>
+            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+              Sucursales *
+            </ThemedText>
             <View
               style={[
                 styles.selectContainer,
@@ -701,7 +702,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {showFooter && (
           <View style={styles.actions}>
             <Button
-              title={t.common.cancel}
+              title={t.common?.cancel || 'Cancelar'}
               onPress={handleCancel}
               variant="outlined"
               size="md"
@@ -709,7 +710,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
               disabled={isLoading}
             />
             <Button
-              title={t.common.save}
+              title={t.common?.save || 'Guardar'}
               onPress={handleSubmit}
               variant="primary"
               size="md"

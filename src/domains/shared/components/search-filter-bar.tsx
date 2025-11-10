@@ -217,7 +217,7 @@ export function SearchFilterBar({
           <TextInput
             style={[styles.textInput, { color: colors.text }]}
             placeholder={filter.placeholder}
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={colors.textSecondary || '#999'}
             value={value}
             onChangeText={(text) => onAdvancedFilterChange?.(filter.key, text)}
           />
@@ -226,7 +226,7 @@ export function SearchFilterBar({
               onPress={() => onAdvancedFilterChange?.(filter.key, '')}
               style={styles.clearFilterButton}
             >
-              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary || '#999'} />
             </TouchableOpacity>
           )}
         </InputWithFocus>
@@ -317,11 +317,11 @@ export function SearchFilterBar({
             ]}
             primaryColor={colors.primary}
           >
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
+            <Ionicons name="search" size={20} color={colors.textSecondary || '#999'} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
               placeholder={currentPlaceholder}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.textSecondary || '#999'}
               value={filterValue || ''}
               onChangeText={handleMainInputChange}
               returnKeyType="search"
@@ -333,7 +333,7 @@ export function SearchFilterBar({
             />
             {filterValue && filterValue.length > 0 && (
               <TouchableOpacity onPress={() => onFilterChange?.('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                <Ionicons name="close-circle" size={20} color={colors.textSecondary || '#999'} />
               </TouchableOpacity>
             )}
           </InputWithFocus>
@@ -373,9 +373,9 @@ export function SearchFilterBar({
           <View style={styles.hintContainer}>
             <ThemedText 
               type="caption" 
-              style={[styles.hintText, { color: colors.textSecondary }]}
+              style={[styles.hintText, { color: colors.textSecondary || '#999' }]}
             >
-              {t.common.searchHint}
+              {t.common?.searchHint || 'No se encontraron resultados. Prueba usando la búsqueda para consultar más datos.'}
             </ThemedText>
           </View>
         )}
