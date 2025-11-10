@@ -133,8 +133,9 @@ export function RoleCreateForm({
         handleCancel,
       });
     }
+    // Intencionalmente solo depende de isLoading y loadingOptions
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onFormReady, loadingOptions, isLoading, handleSubmit, handleCancel]);
+  }, [isLoading, loadingOptions]);
 
   if (loadingOptions) {
     return (

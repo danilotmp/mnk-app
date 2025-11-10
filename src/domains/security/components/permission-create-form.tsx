@@ -135,8 +135,9 @@ export function PermissionCreateForm({
         handleCancel,
       });
     }
+    // Intencionalmente solo depende de isLoading y loadingInitial
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onFormReady, loadingInitial, isLoading, handleSubmit, handleCancel]);
+  }, [isLoading, loadingInitial]);
 
   if (loadingInitial) {
     return (

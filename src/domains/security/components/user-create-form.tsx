@@ -46,6 +46,7 @@ export function UserCreateForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -188,18 +189,11 @@ export function UserCreateForm({
           : [...prev.branchIds, branchId];
         return { ...prev, branchIds };
       });
-      if (errors.branchIds) {
-        resetErrors('branchIds');
-      }
-    },
-    [errors.branchIds, resetErrors]
-  );
-
-  useEffect(() => {
-    if (errors.branchIds && formData.branchIds.length > 0) {
+      // Limpiar error de branchIds cuando el usuario selecciona al menos una sucursal
       resetErrors('branchIds');
-    }
-  }, [errors.branchIds, formData.branchIds, resetErrors]);
+    },
+    [resetErrors]
+  );
 
   useEffect(() => {
     if (onFormReady && !loadingOptions) {
@@ -209,7 +203,9 @@ export function UserCreateForm({
         handleCancel,
       });
     }
-  }, [onFormReady, loadingOptions, isLoading, handleSubmit, handleCancel]);
+    // Intencionalmente solo depende de isLoading y loadingOptions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, loadingOptions]);
 
   if (loadingOptions) {
     return (
@@ -302,10 +298,21 @@ export function UserCreateForm({
             style={[styles.input, { color: colors.text }]}
             placeholder={t.auth.password}
             placeholderTextColor={colors.textSecondary}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             value={formData.password}
             onChangeText={(value) => handleChange('password', value)}
           />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={{ padding: 8 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons
+              name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
         </InputWithFocus>
         {errors.password ? (
           <ThemedText type="caption" style={{ color: colors.error }}>

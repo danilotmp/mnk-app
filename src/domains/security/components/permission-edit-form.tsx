@@ -175,8 +175,9 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
         handleCancel,
       });
     }
+    // Intencionalmente solo depende de isLoading y loadingPermission
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onFormReady, loadingPermission, isLoading]);
+  }, [isLoading, loadingPermission]);
 
   if (loadingPermission) {
     return (

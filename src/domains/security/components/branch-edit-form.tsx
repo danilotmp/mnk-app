@@ -172,7 +172,9 @@ export function BranchEditForm({
         handleCancel,
       });
     }
-  }, [companiesLoading, handleCancel, handleSubmit, isSubmitting, loadingBranch, onFormReady]);
+    // Intencionalmente solo depende de isSubmitting, loadingBranch y companiesLoading
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitting, loadingBranch, companiesLoading]);
 
   if (loadingBranch || companiesLoading) {
     return (

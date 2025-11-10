@@ -165,7 +165,9 @@ export function CompanyEditForm({
         handleCancel,
       });
     }
-  }, [handleCancel, handleSubmit, isSubmitting, loadingCompany, onFormReady]);
+    // Intencionalmente solo depende de isSubmitting y loadingCompany
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitting, loadingCompany]);
 
   if (loadingCompany) {
     return (

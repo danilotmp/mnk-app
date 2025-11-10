@@ -176,8 +176,9 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         handleCancel,
       });
     }
+    // Intencionalmente solo depende de isLoading, loadingRole y loadingOptions
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onFormReady, loadingRole, loadingOptions, isLoading]);
+  }, [isLoading, loadingRole, loadingOptions]);
 
   if (loadingRole || loadingOptions) {
     return (

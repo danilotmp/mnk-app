@@ -130,7 +130,9 @@ export function CompanyCreateForm({
         handleCancel,
       });
     }
-  }, [handleCancel, handleSubmit, isSubmitting, onFormReady]);
+    // Intencionalmente solo depende de isSubmitting
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitting]);
 
   const header = showHeader ? (
     <View style={styles.header}>

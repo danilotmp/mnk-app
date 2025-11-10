@@ -142,7 +142,9 @@ export function BranchCreateForm({
         handleCancel,
       });
     }
-  }, [companiesLoading, handleCancel, handleSubmit, isSubmitting, onFormReady]);
+    // Intencionalmente solo depende de isSubmitting y companiesLoading
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitting, companiesLoading]);
 
   const companyOptions = useMemo(() => companies, [companies]);
 

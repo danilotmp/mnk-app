@@ -54,6 +54,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   });
   const [password, setPassword] = useState('');
   const [changePassword, setChangePassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -416,12 +417,23 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
                 placeholderTextColor={colors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoComplete="password"
                 textContentType="password"
                 editable={!isLoading}
               />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ padding: 8 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
             </InputWithFocus>
             {errors.password && (
               <ThemedText type="caption" variant="error" style={styles.errorText}>
