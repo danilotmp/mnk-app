@@ -155,7 +155,7 @@ export function UserCreateForm({
         password: formData.password,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        phone: formData.phone.trim() || undefined,
+        phone: formData.phone.trim(), // Enviar siempre, incluso si es cadena vacía
         companyId: formData.companyId,
         branchIds: formData.branchIds,
         roleId: formData.roleId || undefined,
@@ -401,7 +401,11 @@ export function UserCreateForm({
             placeholder={t.security?.users?.phonePlaceholder || 'Teléfono de contacto'}
             placeholderTextColor={colors.textSecondary}
             value={formData.phone}
-            onChangeText={(value) => handleChange('phone', value)}
+            onChangeText={(text) => {
+              // Solo permitir números, espacios y algunos caracteres de teléfono
+              const cleaned = text.replace(/[^\d\s+()-]/g, '');
+              handleChange('phone', cleaned);
+            }}
             keyboardType="phone-pad"
           />
         </InputWithFocus>

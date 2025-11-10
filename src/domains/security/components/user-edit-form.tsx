@@ -59,6 +59,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const [loadingUser, setLoadingUser] = useState(true);
   const isInitialLoadRef = useRef(true); // Flag para controlar carga inicial (useRef para evitar re-renders)
   const loadedCompanyIdRef = useRef<string | null>(null); // Guardar el companyId ya cargado
+  const phoneRef = useRef<string>(''); // Ref para mantener el teléfono actualizado
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -128,6 +129,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           }).filter((id: any) => id); // Filtrar valores nulos/undefined
         }
         
+        // Guardar el phone en la ref
+        phoneRef.current = user.phone || '';
+        
         // Luego establecer los datos del formulario, incluyendo branchIds
         // Esto asegura que las sucursales ya estén cargadas cuando se establezcan los branchIds
         setFormData({
@@ -151,7 +155,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     };
 
     loadUser();
-  }, [userId, alert, refreshBranches]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   /**
    * Efecto para cargar sucursales cuando el usuario cambia manualmente la empresa
@@ -164,7 +169,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     }
     refreshBranches({ companyId: formData.companyId });
     loadedCompanyIdRef.current = formData.companyId; // Actualizar el companyId cargado
-  }, [formData.companyId, refreshBranches]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.companyId]);
 
 
   /**
@@ -208,7 +214,12 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   /**
    * Manejar cambio de campo
    */
-  const handleChange = (field: string, value: any) => {
+  const handleChange = useCallback((field: string, value: any) => {
+    // Si es el campo phone, guardar en la ref también
+    if (field === 'phone') {
+      phoneRef.current = value;
+    }
+    
     setFormData((prev) => {
       if (field === 'companyId') {
         if (prev.companyId === value) {
@@ -218,10 +229,15 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       }
       return { ...prev, [field]: value };
     });
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
-    }
-  };
+    setErrors((prev) => {
+      if (prev[field]) {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      }
+      return prev;
+    });
+  }, []);
 
   const toggleBranchSelection = useCallback(
     (branchId: string) => {
@@ -253,11 +269,12 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
     setIsLoading(true);
     try {
+      // Usar phoneRef.current en lugar de formData.phone para asegurar el último valor
       const updateData: any = {
         email: formData.email.trim(),
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        phone: formData.phone.trim() || undefined,
+        phone: phoneRef.current.trim(),
         companyId: formData.companyId,
         roleId: formData.roleId || undefined,
         branchIds: formData.branchIds,
@@ -497,13 +514,17 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             ]}
             primaryColor={colors.primary}
           >
-            <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <Ionicons name="call-outline" size={20} color={colors.textSecondary || '#999'} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
               placeholder={t.security?.users?.phone || 'Teléfono'}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.textSecondary || '#999'}
               value={formData.phone}
-              onChangeText={(text) => handleChange('phone', text)}
+              onChangeText={(text) => {
+                // Solo permitir números, espacios y algunos caracteres de teléfono
+                const cleaned = text.replace(/[^\d\s+()-]/g, '');
+                handleChange('phone', cleaned);
+              }}
               keyboardType="phone-pad"
               editable={!isLoading}
             />

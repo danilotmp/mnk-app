@@ -6,10 +6,10 @@
 import { apiClient } from '@/src/infrastructure/api/api.client';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import {
-    PaginatedResponse,
-    SecurityUser,
-    UserFilters,
-    UserUpdatePayload,
+  PaginatedResponse,
+  SecurityUser,
+  UserFilters,
+  UserUpdatePayload,
 } from '../types';
 
 export class UsersService {
