@@ -61,6 +61,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const isInitialLoadRef = useRef(true); // Flag para controlar carga inicial (useRef para evitar re-renders)
   const loadedCompanyIdRef = useRef<string | null>(null); // Guardar el companyId ya cargado
   const phoneRef = useRef<string>(''); // Ref para mantener el teléfono actualizado
+  const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
+  const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -133,6 +135,20 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         // Guardar el phone en la ref
         phoneRef.current = user.phone || '';
         
+        // Guardar branchIds en la ref para evitar stale closure
+        branchIdsRef.current = userBranchIds;
+        
+        // Extraer roleId desde el array roles si existe
+        let userRoleId = '';
+        if (user.roles && user.roles.length > 0) {
+          userRoleId = user.roles[0].id;
+        } else if (user.roleId) {
+          userRoleId = user.roleId;
+        }
+        
+        // Guardar roleId en la ref para evitar stale closure
+        roleIdRef.current = userRoleId;
+        
         // Luego establecer los datos del formulario, incluyendo branchIds
         // Esto asegura que las sucursales ya estén cargadas cuando se establezcan los branchIds
         setFormData({
@@ -142,7 +158,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           phone: user.phone || '',
           companyId: user.companyId,
           branchIds: userBranchIds,
-          roleId: user.roleId || '',
+          roleId: userRoleId,
           isActive: user.isActive ?? true,
         });
         
@@ -204,7 +220,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       newErrors.companyId = 'La empresa es requerida';
     }
 
-    if (!formData.branchIds || formData.branchIds.length === 0) {
+    // Usar branchIdsRef.current para evitar stale closure
+    if (!branchIdsRef.current || branchIdsRef.current.length === 0) {
       newErrors.branchIds = 'Selecciona al menos una sucursal';
     }
 
@@ -216,9 +233,12 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
    * Manejar cambio de campo
    */
   const handleChange = useCallback((field: string, value: any) => {
-    // Si es el campo phone, guardar en la ref también
+    // Guardar en refs para evitar stale closure
     if (field === 'phone') {
       phoneRef.current = value;
+    }
+    if (field === 'roleId') {
+      roleIdRef.current = value;
     }
     
     setFormData((prev) => {
@@ -226,6 +246,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         if (prev.companyId === value) {
           return prev;
         }
+        // Resetear branchIds cuando cambia la empresa
+        branchIdsRef.current = [];
         return { ...prev, companyId: value, branchIds: [] };
       }
       return { ...prev, [field]: value };
@@ -247,6 +269,10 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         const branchIds = exists
           ? prev.branchIds.filter((id) => id !== branchId)
           : [...prev.branchIds, branchId];
+        
+        // Actualizar el ref para evitar stale closure
+        branchIdsRef.current = branchIds;
+        
         return { ...prev, branchIds };
       });
       // Limpiar error de branchIds cuando el usuario selecciona al menos una sucursal
@@ -270,17 +296,21 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
     setIsLoading(true);
     try {
-      // Usar phoneRef.current en lugar de formData.phone para asegurar el último valor
+      // Construir payload solo con campos que tienen valores
       const updateData: any = {
         email: formData.email.trim(),
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phone: phoneRef.current.trim(),
         companyId: formData.companyId,
-        roleId: formData.roleId || undefined,
-        branchIds: formData.branchIds,
+        branchIds: branchIdsRef.current,
         isActive: formData.isActive,
       };
+      
+      // Solo incluir roleId si tiene un valor válido
+      if (roleIdRef.current && roleIdRef.current.trim()) {
+        updateData.roleId = roleIdRef.current.trim();
+      }
 
       if (changePassword && password.trim()) {
         updateData.password = password;

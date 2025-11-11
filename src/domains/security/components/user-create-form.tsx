@@ -9,7 +9,7 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUserFormStyles } from '@/src/styles/pages/user-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface UserCreateFormProps {
@@ -47,6 +47,8 @@ export function UserCreateForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
+  const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -120,7 +122,8 @@ export function UserCreateForm({
       newErrors.companyId = 'La empresa es requerida';
     }
 
-    if (!formData.branchIds.length) {
+    // Usar branchIdsRef.current para evitar stale closure
+    if (!branchIdsRef.current.length) {
       newErrors.branchIds = 'Selecciona al menos una sucursal';
     }
 
@@ -129,8 +132,15 @@ export function UserCreateForm({
   }, [formData, t.auth.emailRequired, t.auth.passwordRequired]);
 
   const handleChange = useCallback((field: string, value: any) => {
+    // Guardar en refs para evitar stale closure
+    if (field === 'roleId') {
+      roleIdRef.current = value;
+    }
+    
     setFormData((prev) => {
       if (field === 'companyId') {
+        // Resetear branchIds cuando cambia la empresa
+        branchIdsRef.current = [];
         return {
           ...prev,
           companyId: value,
@@ -151,17 +161,24 @@ export function UserCreateForm({
 
     setIsLoading(true);
     try {
-          await UsersService.createUser({
+      // Construir payload solo con campos que tienen valores
+      const payload: any = {
         email: formData.email.trim(),
         password: formData.password,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        phone: formData.phone.trim(), // Enviar siempre, incluso si es cadena vacía
+        phone: formData.phone.trim(),
         companyId: formData.companyId,
-        branchIds: formData.branchIds,
-        roleId: formData.roleId || undefined,
+        branchIds: branchIdsRef.current,
         isActive: formData.isActive,
-      });
+      };
+      
+      // Solo incluir roleId si tiene un valor válido
+      if (roleIdRef.current && roleIdRef.current.trim()) {
+        payload.roleId = roleIdRef.current.trim();
+      }
+      
+      await UsersService.createUserComplete(payload);
 
       alert.showSuccess(t.security?.users?.create || 'Usuario creado exitosamente');
       onSuccess?.();
@@ -187,6 +204,10 @@ export function UserCreateForm({
         const branchIds = exists
           ? prev.branchIds.filter((id) => id !== branchId)
           : [...prev.branchIds, branchId];
+        
+        // Actualizar el ref para evitar stale closure
+        branchIdsRef.current = branchIds;
+        
         return { ...prev, branchIds };
       });
       // Limpiar error de branchIds cuando el usuario selecciona al menos una sucursal

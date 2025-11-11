@@ -19,9 +19,25 @@ export interface SecurityUser extends BaseEntity {
   isEmailVerified: boolean;
   isActive: boolean;
   lastLoginAt?: Date;
+  lastLogin?: string;
   companyId: string;
-  roleId: string;
-  branchIds?: string[]; // Sucursales a las que tiene acceso
+  roleId?: string; // Para compatibilidad con formularios
+  roles?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+    description?: string;
+    assignedAt: string;
+  }>; // Array de roles que viene del backend
+  branchIds?: string[]; // Sucursales a las que tiene acceso (para formularios)
+  currentBranchId?: string;
+  availableBranches?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    branchId?: string; // Para compatibilidad con algunas respuestas
+    branchCode?: string; // Para compatibilidad con algunas respuestas
+  }>;
 }
 
 export interface UserUpdatePayload {

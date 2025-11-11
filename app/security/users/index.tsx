@@ -393,7 +393,9 @@ export default function UsersListPage() {
       width: '13%',
       render: (user) => (
         <ThemedText type="body2" variant="secondary">
-          {user.roleId || '-'}
+          {user.roles && user.roles.length > 0 
+            ? user.roles[0].displayName 
+            : user.roleId || '-'}
         </ThemedText>
       ),
     },

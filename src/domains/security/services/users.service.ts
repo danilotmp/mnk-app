@@ -175,6 +175,28 @@ export class UsersService {
   }
 
   /**
+   * Crear usuario completo (datos básicos + rol + sucursales)
+   * Usa el endpoint POST /completo para crear el usuario con todas las relaciones en una sola llamada
+   */
+  static async createUserComplete(userData: UserUpdatePayload): Promise<SecurityUser> {
+    try {
+      const response = await apiClient.request<SecurityUser>({
+        endpoint: `${this.BASE_ENDPOINT}/completo`,
+        method: 'POST',
+        body: userData,
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.result?.description || 'Error al crear usuario');
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al crear usuario');
+    }
+  }
+
+  /**
    * Actualizar usuario
    */
   static async updateUser(
