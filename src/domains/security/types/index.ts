@@ -16,8 +16,12 @@ export interface SecurityUser extends BaseEntity {
   lastName: string;
   phone?: string;
   avatar?: string;
-  isEmailVerified: boolean;
-  isActive: boolean;
+  isEmailVerified?: boolean;
+  
+  // Sistema de estados
+  status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
+  statusDescription: string; // Descripción traducida del estado (viene del backend)
+  
   lastLoginAt?: Date;
   lastLogin?: string;
   companyId: string;
@@ -49,7 +53,7 @@ export interface UserUpdatePayload {
   companyId?: string;
   roleId?: string;
   branchIds?: string[];
-  isActive?: boolean;
+  status?: number; // Sistema de estados
 }
 
 /**
@@ -60,7 +64,11 @@ export interface SecurityRole extends BaseEntity {
   code: string;
   description?: string;
   isSystem: boolean; // Roles del sistema no se pueden eliminar
-  isActive: boolean;
+  
+  // Sistema de estados
+  status: number;
+  statusDescription: string;
+  
   permissions: SecurityPermission[];
 }
 
@@ -73,7 +81,10 @@ export interface SecurityPermission extends BaseEntity {
   module: string; // Ej: 'admin', 'users', 'reports'
   action: string; // Ej: 'view', 'create', 'edit', 'delete'
   description?: string;
-  isActive: boolean;
+  
+  // Sistema de estados
+  status: number;
+  statusDescription: string;
 }
 
 /**
@@ -85,7 +96,11 @@ export interface SecurityAccess extends BaseEntity {
   branchId?: string; // Si es null, acceso a toda la empresa
   roleId: string;
   permissions: string[]; // IDs de permisos adicionales
-  isActive: boolean;
+  
+  // Sistema de estados
+  status: number;
+  statusDescription: string;
+  
   grantedBy: string; // Usuario que otorgó el acceso
   grantedAt: Date;
 }
@@ -96,7 +111,10 @@ export interface SecurityAccess extends BaseEntity {
 export interface RolePermission extends BaseEntity {
   roleId: string;
   permissionId: string;
-  isActive: boolean;
+  
+  // Sistema de estados
+  status: number;
+  statusDescription: string;
 }
 
 /**
@@ -104,7 +122,7 @@ export interface RolePermission extends BaseEntity {
  */
 export interface UserFilters extends PaginationParams {
   search?: string;
-  isActive?: boolean;
+  status?: number; // Filtrar por estado: -1, 0, 1, 2, 3
   companyId?: string;
   roleId?: string;
   branchId?: string;
@@ -112,13 +130,13 @@ export interface UserFilters extends PaginationParams {
 
 export interface RoleFilters extends PaginationParams {
   search?: string;
-  isActive?: boolean;
+  status?: number;
   isSystem?: boolean;
 }
 
 export interface PermissionFilters extends PaginationParams {
   search?: string;
-  isActive?: boolean;
+  status?: number;
   module?: string;
   action?: string;
 }
@@ -129,7 +147,7 @@ export interface AccessFilters extends PaginationParams {
   companyId?: string;
   branchId?: string;
   roleId?: string;
-  isActive?: boolean;
+  status?: number;
 }
 
 /**
@@ -144,7 +162,10 @@ export interface SecurityCompany extends BaseEntity {
   address?: CompanyAddress;
   settings?: CompanySettings;
   subscriptionPlan?: CompanySubscriptionPlan;
-  isActive: boolean;
+  
+  // Sistema de estados
+  status: number;
+  statusDescription: string;
 }
 
 export interface CompanyAddress {
@@ -180,7 +201,7 @@ export interface CompanyFilters extends PaginationParams {
   code?: string;
   name?: string;
   email?: string;
-  isActive?: boolean;
+  status?: number;
 }
 
 export interface CompanyPayload {
@@ -209,7 +230,11 @@ export interface SecurityBranch extends BaseEntity {
   address?: CompanyAddress;
   contactInfo?: BranchContactInfo;
   settings?: BranchSettings;
-  isActive: boolean;
+  
+  // Sistema de estados
+  status: number;
+  statusDescription: string;
+  
   company?: Pick<SecurityCompany, 'id' | 'code' | 'name'>;
 }
 
@@ -242,7 +267,7 @@ export interface BranchFilters extends PaginationParams {
   code?: string;
   name?: string;
   type?: BranchType;
-  isActive?: boolean;
+  status?: number;
 }
 
 export interface BranchPayload {

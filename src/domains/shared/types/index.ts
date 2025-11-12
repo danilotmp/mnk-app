@@ -49,3 +49,6 @@ export type ComponentVariant = 'primary' | 'secondary' | 'accent' | 'outlined' |
 // Exportar tipos de multiempresa
 export * from './multi-company.types';
 
+// Exportar tipos de estado
+export * from './status.types';
+

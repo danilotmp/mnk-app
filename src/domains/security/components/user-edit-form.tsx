@@ -33,7 +33,7 @@ interface UserFormData {
   companyId: string;
   branchIds: string[];
   roleId: string;
-  isActive: boolean;
+  status: number; // 1: Activo, 0: Inactivo, 2: Pendiente, 3: Suspendido
 }
 
 export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, showFooter = true, onFormReady }: UserEditFormProps) {
@@ -50,7 +50,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     companyId: '',
     branchIds: [] as string[],
     roleId: '',
-    isActive: true,
+    status: 1, // Default: Activo
   });
   const [password, setPassword] = useState('');
   const [changePassword, setChangePassword] = useState(false);
@@ -63,6 +63,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const phoneRef = useRef<string>(''); // Ref para mantener el teléfono actualizado
   const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
   const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
+  const statusRef = useRef<number>(1); // Ref para mantener el status actualizado
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -82,7 +83,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         const rolesResponse = await RolesService.getRoles({
           page: 1,
           limit: 100,
-          isActive: true,
+          status: 1, // ✅ Solo roles activos
         });
         setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
       } catch (error) {
@@ -146,8 +147,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           userRoleId = user.roleId;
         }
         
-        // Guardar roleId en la ref para evitar stale closure
+        // Guardar roleId y status en las refs para evitar stale closure
         roleIdRef.current = userRoleId;
+        statusRef.current = user.status ?? 1;
         
         // Luego establecer los datos del formulario, incluyendo branchIds
         // Esto asegura que las sucursales ya estén cargadas cuando se establezcan los branchIds
@@ -159,7 +161,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           companyId: user.companyId,
           branchIds: userBranchIds,
           roleId: userRoleId,
-          isActive: user.isActive ?? true,
+          status: user.status ?? 1, // Default: Activo
         });
         
         // Marcar como no inicial inmediatamente DESPUÉS de cargar
@@ -240,6 +242,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     if (field === 'roleId') {
       roleIdRef.current = value;
     }
+    if (field === 'status') {
+      statusRef.current = value;
+    }
     
     setFormData((prev) => {
       if (field === 'companyId') {
@@ -304,7 +309,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         phone: phoneRef.current.trim(),
         companyId: formData.companyId,
         branchIds: branchIdsRef.current,
-        isActive: formData.isActive,
+        status: statusRef.current, // Usar ref para evitar stale closure
       };
       
       // Solo incluir roleId si tiene un valor válido
@@ -317,17 +322,26 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       }
 
       const updatedUser = await UsersService.updateUserComplete(userId, updateData);
-      // No mostrar alert aquí, el componente padre lo maneja
       // Pasar el usuario actualizado al componente padre para optimización
       onSuccess?.(updatedUser);
+      onCancel?.();
     } catch (error: any) {
-      const errorMessage = error.message || 'Error al actualizar usuario';
-      const errorDetail = (error as any)?.result?.details || '';
-      alert.showError(errorMessage, false, undefined, errorDetail);
+      const backendResult = (error as any)?.result;
+      const rawDetails = backendResult?.details ?? error?.details;
+      const detailString =
+        typeof rawDetails === 'string'
+          ? rawDetails
+          : rawDetails?.message
+          ? String(rawDetails.message)
+          : undefined;
+
+      const errorMessage =
+        backendResult?.description || error?.message || 'Error al actualizar usuario';
+      alert.showError(errorMessage, false, undefined, detailString);
     } finally {
       setIsLoading(false);
     }
-  }, [validateForm, formData, changePassword, password, userId, alert, onSuccess]);
+  }, [validateForm, formData, changePassword, password, userId, alert, onSuccess, onCancel]);
 
   /**
    * Manejar cancelar
@@ -743,22 +757,98 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           </View>
         )}
 
-        {/* Is Active */}
-        <View style={styles.switchGroup}>
-          <View style={styles.switchLabel}>
-            <ThemedText type="body2" style={{ color: colors.text }}>
-              {formData.isActive
-                ? t.security?.users?.active || 'Activo'
-                : t.security?.users?.inactive || 'Inactivo'}
-            </ThemedText>
-          </View>
-          <Switch
-            value={formData.isActive}
-            onValueChange={(value) => handleChange('isActive', value)}
-            trackColor={{ false: colors.border, true: colors.primary + '80' }}
-            thumbColor={formData.isActive ? colors.primary : colors.textSecondary}
-            disabled={isLoading}
-          />
+        {/* Estado */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.users?.status || 'Estado'} *
+          </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectOptions}>
+                {/* Activo */}
+                <TouchableOpacity
+                  style={[
+                    styles.selectOption,
+                    { borderColor: colors.border },
+                    formData.status === 1 && {
+                      backgroundColor: '#10b981',
+                      borderColor: '#10b981',
+                    },
+                  ]}
+                  onPress={() => handleChange('status', 1)}
+                  disabled={isLoading}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  >
+                    {t.security?.users?.active || 'Activo'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                {/* Inactivo */}
+                <TouchableOpacity
+                  style={[
+                    styles.selectOption,
+                    { borderColor: colors.border },
+                    formData.status === 0 && {
+                      backgroundColor: '#ef4444',
+                      borderColor: '#ef4444',
+                    },
+                  ]}
+                  onPress={() => handleChange('status', 0)}
+                  disabled={isLoading}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  >
+                    {t.security?.users?.inactive || 'Inactivo'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                {/* Pendiente */}
+                <TouchableOpacity
+                  style={[
+                    styles.selectOption,
+                    { borderColor: colors.border },
+                    formData.status === 2 && {
+                      backgroundColor: '#f59e0b',
+                      borderColor: '#f59e0b',
+                    },
+                  ]}
+                  onPress={() => handleChange('status', 2)}
+                  disabled={isLoading}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  >
+                    {t.security?.users?.pending || 'Pendiente'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                {/* Suspendido */}
+                <TouchableOpacity
+                  style={[
+                    styles.selectOption,
+                    { borderColor: colors.border },
+                    formData.status === 3 && {
+                      backgroundColor: '#f97316',
+                      borderColor: '#f97316',
+                    },
+                  ]}
+                  onPress={() => handleChange('status', 3)}
+                  disabled={isLoading}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  >
+                    {t.security?.users?.suspended || 'Suspendido'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
         </View>
 
         {/* Botones (solo si showFooter es true) */}

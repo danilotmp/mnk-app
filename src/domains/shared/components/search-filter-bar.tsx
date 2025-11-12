@@ -147,9 +147,11 @@ export function SearchFilterBar({
 
     return (
       <View key={filter.key} style={styles.filterItem}>
-        <ThemedText type="body2" style={styles.filterLabel}>
-          {filter.label}
-        </ThemedText>
+        {filter.label ? (
+          <ThemedText type="body2" style={styles.filterLabel}>
+            {filter.label}
+          </ThemedText>
+        ) : null}
         <View
           style={[
             styles.selectContainer,
@@ -159,30 +161,33 @@ export function SearchFilterBar({
           {hasOptions ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.selectOptions}>
-                {filter.options!.map((option) => (
-                  <TouchableOpacity
-                    key={option.key}
-                    style={[
-                      styles.selectOption,
-                      value === option.value && {
-                        backgroundColor: colors.primary,
-                      },
-                      { borderColor: colors.border },
-                    ]}
-                    onPress={() => onAdvancedFilterChange?.(filter.key, option.value)}
-                  >
-                    <ThemedText
-                      type="body2"
-                      style={
-                        value === option.value
-                          ? { color: '#FFFFFF' }
-                          : { color: colors.text }
-                      }
+                {filter.options!.map((option) => {
+                  const isSelected = value === option.value;
+                  const nextValue = isSelected ? '' : option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[
+                        styles.selectOption,
+                        isSelected && {
+                          backgroundColor: colors.primary,
+                        },
+                        { borderColor: colors.border },
+                      ]}
+                      onPress={() => onAdvancedFilterChange?.(filter.key, nextValue)}
                     >
-                      {option.label}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
+                      <ThemedText
+                        type="body2"
+                        style={[
+                          styles.selectOptionText,
+                          isSelected ? { color: '#FFFFFF' } : { color: colors.text },
+                        ]}
+                      >
+                        {option.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
           ) : (

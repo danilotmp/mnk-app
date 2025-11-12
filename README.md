@@ -2,6 +2,15 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+## Project Documentation
+
+A consolidated documentation set lives in the `docs/` directory:
+
+- `Architecture.md` – estructura del proyecto y dependencias clave.
+- `SystemOverview.md` – módulos funcionales y patrones de implementación.
+- `DesignSystem.md` – guía de temas, colores y componentes reutilizables.
+- `ADR.md` – decisiones arquitectónicas relevantes.
+
 ## Get started
 
 1. Install dependencies

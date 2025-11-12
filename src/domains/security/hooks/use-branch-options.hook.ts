@@ -54,7 +54,7 @@ export function useBranchOptions({
         code: filters.code,
         name: filters.name,
         type: filters.type,
-        isActive: includeInactive ? filters.isActive : true,
+        status: includeInactive ? filters.status : 1, // ✅ CAMBIADO: status=1 (Activo) en lugar de isActive=true
       };
       return baseFilters;
     },

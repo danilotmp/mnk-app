@@ -6,10 +6,10 @@
 import { apiClient } from '@/src/infrastructure/api/api.client';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import {
-  PaginatedResponse,
-  SecurityUser,
-  UserFilters,
-  UserUpdatePayload,
+    PaginatedResponse,
+    SecurityUser,
+    UserFilters,
+    UserUpdatePayload,
 } from '../types';
 
 export class UsersService {
@@ -53,8 +53,8 @@ export class UsersService {
       if (filters.search) {
         queryParams.append('search', filters.search);
       }
-      if (filters.isActive !== undefined) {
-        queryParams.append('isActive', filters.isActive.toString());
+      if (filters.status !== undefined) {
+        queryParams.append('status', filters.status.toString());
       }
       // Solo agregar companyId si es un UUID válido
       if (filters.companyId && this.isValidUUID(filters.companyId)) {
@@ -168,33 +168,39 @@ export class UsersService {
         return response.data;
       }
 
-      throw new Error(response.result?.description || 'Error al crear usuario');
+      const errorPayload = new Error(
+        response.result?.description || 'Error al crear usuario'
+      );
+      (errorPayload as any).result = response.result;
+      (errorPayload as any).details = response.result?.details;
+
+      throw errorPayload;
     } catch (error: any) {
-      throw new Error(error.message || 'Error al crear usuario');
+      if (error?.result || error?.details) {
+        throw error;
+      }
+
+      const genericError = new Error(
+        error?.message || error?.result?.description || 'Error al crear usuario'
+      );
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+
+      throw genericError;
     }
   }
 
   /**
-   * Crear usuario completo (datos básicos + rol + sucursales)
-   * Usa el endpoint POST /completo para crear el usuario con todas las relaciones en una sola llamada
+   * ❌ ENDPOINT NO DISPONIBLE
+   * El endpoint POST /completo NO existe en el backend.
+   * Solo existe PUT /:id/completo para actualización.
+   * 
+   * Para crear un usuario con rol y sucursales, usa createUser() 
+   * y envía roleId y branchIds en el payload.
    */
-  static async createUserComplete(userData: UserUpdatePayload): Promise<SecurityUser> {
-    try {
-      const response = await apiClient.request<SecurityUser>({
-        endpoint: `${this.BASE_ENDPOINT}/completo`,
-        method: 'POST',
-        body: userData,
-      });
-
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-        return response.data;
-      }
-
-      throw new Error(response.result?.description || 'Error al crear usuario');
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al crear usuario');
-    }
-  }
+  // static async createUserComplete(userData: UserUpdatePayload): Promise<SecurityUser> {
+  //   throw new Error('Endpoint POST /completo no disponible. Usa createUser() con roleId y branchIds.');
+  // }
 
   /**
    * Actualizar usuario
@@ -214,9 +220,25 @@ export class UsersService {
         return response.data;
       }
 
-      throw new Error(response.result?.description || 'Error al actualizar usuario');
+      const errorPayload = new Error(
+        response.result?.description || 'Error al actualizar usuario'
+      );
+      (errorPayload as any).result = response.result;
+      (errorPayload as any).details = response.result?.details;
+
+      throw errorPayload;
     } catch (error: any) {
-      throw new Error(error.message || 'Error al actualizar usuario');
+      if (error?.result || error?.details) {
+        throw error;
+      }
+
+      const genericError = new Error(
+        error?.message || error?.result?.description || 'Error al actualizar usuario'
+      );
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+
+      throw genericError;
     }
   }
 
@@ -255,10 +277,25 @@ export class UsersService {
       });
 
       if (response.result?.statusCode !== SUCCESS_STATUS_CODE) {
-        throw new Error(response.result?.description || 'Error al eliminar usuario');
+        const errorPayload = new Error(
+          response.result?.description || 'Error al eliminar usuario'
+        );
+        (errorPayload as any).result = response.result;
+        (errorPayload as any).details = response.result?.details;
+        throw errorPayload;
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Error al eliminar usuario');
+      if (error?.result || error?.details) {
+        throw error;
+      }
+
+      const genericError = new Error(
+        error?.message || error?.result?.description || 'Error al eliminar usuario'
+      );
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+
+      throw genericError;
     }
   }
 

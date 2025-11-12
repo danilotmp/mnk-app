@@ -200,6 +200,8 @@ export const en: Translations = {
       status: 'Status',
       active: 'Active',
       inactive: 'Inactive',
+      pending: 'Pending',
+      suspended: 'Suspended',
       filterPlaceholder: 'Filter by email or name...',
       searchPlaceholder: 'Search by email or name...',
       loadError: 'Error loading users',
@@ -207,6 +209,8 @@ export const en: Translations = {
       activated: 'User activated',
       deactivated: 'User deactivated',
       deleted: 'User deleted',
+      deletedFilter: 'Users',
+      deletedUser: 'Deleted',
     },
     roles: {
       title: 'Role Management',

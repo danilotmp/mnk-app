@@ -48,5 +48,13 @@ export const createUsersListStyles = (isMobile: boolean = false) =>
       flex: 1,
       minHeight: 0, // Importante para que el scroll interno funcione
     },
+    footerIconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });
 

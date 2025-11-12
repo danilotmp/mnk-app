@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,6 +30,8 @@ import { useRouteAccessGuard } from '@/src/infrastructure/access';
 export default function UsersListPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const commonTranslations = (t.common as any) || {};
+  const usersTranslations = (t.security?.users as any) || {};
   const pathname = usePathname();
   const alert = useAlert();
   const { currentCompany: company } = useMultiCompany();
@@ -54,10 +57,11 @@ export default function UsersListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
-  const justEditedRef = useRef(false); // Flag para prevenir recarga después de editar
+  const justEditedRef = useRef<number | null>(null); // Timestamp para prevenir recarga inmediata tras edición
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<SecurityUser | null>(null);
   const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -72,7 +76,7 @@ export default function UsersListPage() {
     page: 1,
     limit: 10,
     search: '',
-    isActive: undefined,
+    status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     companyId: company?.id && isValidUUID(company.id) ? company.id : undefined,
   });
   
@@ -176,8 +180,11 @@ export default function UsersListPage() {
   useEffect(() => {
     // No recargar si acabamos de editar exitosamente (actualización local)
     if (justEditedRef.current) {
-      justEditedRef.current = false;
-      return;
+      const elapsed = Date.now() - justEditedRef.current;
+      if (elapsed < 5000) {
+        return;
+      }
+      justEditedRef.current = null;
     }
     
     if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
@@ -220,7 +227,33 @@ export default function UsersListPage() {
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+
+    if (key === 'deleted') {
+      setFilters((prev) => ({
+        ...prev,
+        status: value === 'deleted' ? -1 : undefined,
+        page: 1,
+      }));
+      return;
+    }
+
+    if (key === 'status') {
+      setFilters((prev) => ({
+        ...prev,
+        status: value === '' ? undefined : Number.parseInt(value, 10),
+        page: 1,
+      }));
+      return;
+    }
+
+    const processedValue =
+      key === 'status' && value !== '' ? Number.parseInt(value, 10) : value;
+
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value === '' ? undefined : processedValue,
+      page: 1,
+    }));
   };
 
   /**
@@ -231,7 +264,7 @@ export default function UsersListPage() {
       page: 1,
       limit: 10,
       search: '',
-      isActive: undefined,
+      status: undefined,
       companyId: company?.id && isValidUUID(company.id) ? company.id : undefined,
     });
     setLocalFilter(''); // Limpiar también el filtro local
@@ -279,6 +312,7 @@ export default function UsersListPage() {
   const handleEditUser = (user: SecurityUser) => {
     setFormActions(null);
     setSelectedUserId(user.id);
+    setSelectedUser(user);
     setModalMode('edit');
     setIsModalVisible(true);
   };
@@ -290,6 +324,7 @@ export default function UsersListPage() {
     setIsModalVisible(false);
     setModalMode(null);
     setSelectedUserId(null);
+    setSelectedUser(null);
     setFormActions(null); // Resetear acciones del formulario
   };
 
@@ -320,7 +355,7 @@ export default function UsersListPage() {
       );
       
       // Marcar que acabamos de editar para prevenir recarga automática
-      justEditedRef.current = true;
+      justEditedRef.current = Date.now();
     }
     
     handleCloseModal();
@@ -330,23 +365,6 @@ export default function UsersListPage() {
   /**
    * Manejar activar/desactivar usuario
    */
-  const handleToggleStatus = async (user: SecurityUser) => {
-    try {
-      await UsersService.toggleUserStatus(user.id, !user.isActive);
-      loadUsers(filters);
-      alert.showSuccess(
-        user.isActive
-          ? t.security?.users?.deactivated || 'Usuario desactivado'
-          : t.security?.users?.activated || 'Usuario activado'
-      );
-    } catch (error: any) {
-      if (handleApiError(error)) {
-        return;
-      }
-      alert.showError(error.message || 'Error al cambiar estado del usuario');
-    }
-  };
-
   /**
    * Manejar eliminar usuario
    */
@@ -355,12 +373,40 @@ export default function UsersListPage() {
       await UsersService.deleteUser(user.id);
       loadUsers(filters);
       alert.showSuccess(t.security?.users?.deleted || 'Usuario eliminado');
+      handleCloseModal();
     } catch (error: any) {
       if (handleApiError(error)) {
         return;
       }
-      alert.showError(error.message || 'Error al eliminar usuario');
+      const backendResult = (error as any)?.result;
+      const rawDetails = backendResult?.details ?? error?.details;
+      const detailString =
+        typeof rawDetails === 'string'
+          ? rawDetails
+          : rawDetails?.message
+          ? String(rawDetails.message)
+          : undefined;
+
+      const errorMessage =
+        backendResult?.description || error?.message || 'Error al eliminar usuario';
+
+      alert.showError(errorMessage, false, undefined, detailString);
     }
+  };
+
+  const confirmDeleteUser = (user: SecurityUser) => {
+    const usersTranslations = (t.security?.users as any) || {};
+    const title = usersTranslations.deleteConfirmTitle || commonTranslations.confirm || 'Eliminar usuario';
+    const messageTemplate =
+      usersTranslations.deleteConfirmMessage ||
+      '¿Seguro que deseas eliminar al usuario {email}? Esta acción no se puede deshacer.';
+
+    const identifier = user.email || user.id;
+    const message = messageTemplate.includes('{email}')
+      ? messageTemplate.replace('{email}', identifier)
+      : messageTemplate;
+
+    alert.showConfirm(title, message, () => handleDeleteUser(user));
   };
 
   /**
@@ -405,27 +451,11 @@ export default function UsersListPage() {
       width: '15%',
       align: 'center',
       render: (user) => (
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: user.isActive
-                ? colors.success + '20'
-                : colors.error + '20',
-            },
-          ]}
-        >
-          <ThemedText
-            type="caption"
-            style={{
-              color: user.isActive ? colors.success : colors.error,
-            }}
-          >
-            {user.isActive
-              ? t.security?.users?.active || 'Activo'
-              : t.security?.users?.inactive || 'Inactivo'}
-          </ThemedText>
-        </View>
+        <StatusBadge 
+          status={user.status} 
+          statusDescription={user.statusDescription}
+          size="small"
+        />
       ),
     },
     {
@@ -443,29 +473,10 @@ export default function UsersListPage() {
               <Ionicons name="pencil" size={18} color={colors.primary} />
             </TouchableOpacity>
           </Tooltip>
-          <Tooltip
-            text={
-              user.isActive
-                ? t.security?.users?.deactivateShort || 'Desactivar'
-                : t.security?.users?.activateShort || 'Activar'
-            }
-            position="left"
-          >
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleToggleStatus(user)}
-            >
-              <Ionicons
-                name={user.isActive ? 'eye-off' : 'eye'}
-                size={18}
-                color={colors.primary}
-              />
-            </TouchableOpacity>
-          </Tooltip>
           <Tooltip text={t.security?.users?.deleteShort || 'Eliminar'} position="left">
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => handleDeleteUser(user)}
+              onPress={() => confirmDeleteUser(user)}
             >
               <Ionicons name="trash" size={18} color={colors.primary} />
             </TouchableOpacity>
@@ -480,9 +491,28 @@ export default function UsersListPage() {
    */
   const filterConfigs: FilterConfig[] = [
     {
-      key: 'isActive',
-      label: t.security?.users?.status || 'Estado',
-      type: 'boolean',
+      key: 'status',
+      label: usersTranslations.status || 'Estado',
+      type: 'select',
+      options: [
+        { key: 'all', value: '', label: commonTranslations.all || 'Todos' },
+        { key: 'active', value: '1', label: usersTranslations.active || 'Activo' },
+        { key: 'inactive', value: '0', label: usersTranslations.inactive || 'Inactivo' },
+        { key: 'pending', value: '2', label: usersTranslations.pending || 'Pendiente' },
+        { key: 'suspended', value: '3', label: usersTranslations.suspended || 'Suspendido' },
+      ],
+    },
+    {
+      key: 'deleted',
+      label: usersTranslations.deletedFilter || 'Usuarios',
+      type: 'select',
+      options: [
+        {
+          key: 'deleted',
+          value: 'deleted',
+          label: usersTranslations.deletedUser || 'Eliminados',
+        },
+      ],
     },
   ];
 
@@ -531,7 +561,11 @@ export default function UsersListPage() {
           searchPlaceholder={t.security?.users?.searchPlaceholder || 'Buscar por email o nombre...'}
           filters={filterConfigs}
           activeFilters={{
-            isActive: filters.isActive,
+            status:
+              filters.status !== undefined && filters.status !== -1
+                ? filters.status.toString()
+                : '',
+            deleted: filters.status === -1 ? 'deleted' : '',
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}
           onClearFilters={handleClearFilters}
@@ -587,6 +621,35 @@ export default function UsersListPage() {
             footer={
               formActions ? (
                 <>
+                  {modalMode === 'edit' && selectedUserId ? (
+                    <Tooltip text={t.security?.users?.deleteShort || 'Eliminar'} position="left">
+                      <TouchableOpacity
+                        style={[
+                          styles.footerIconButton,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                            opacity: formActions.isLoading ? 0.5 : 1,
+                          },
+                        ]}
+                        disabled={formActions.isLoading}
+                        onPress={() => {
+                          if (selectedUser) {
+                            confirmDeleteUser(selectedUser);
+                          } else {
+                            const userFromList = users.find((user) => user.id === selectedUserId);
+                            if (userFromList) {
+                              confirmDeleteUser(userFromList);
+                            } else {
+                              alert.showError(t.security?.users?.loadError || 'Usuario no encontrado');
+                            }
+                          }
+                        }}
+                      >
+                        <Ionicons name="trash" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  ) : null}
                   <Button
                     title={t.common.cancel}
                     onPress={formActions.handleCancel}

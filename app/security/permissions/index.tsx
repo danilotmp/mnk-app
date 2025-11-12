@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -60,7 +61,7 @@ export default function PermissionsListPage() {
     page: 1,
     limit: 10,
     search: '',
-    isActive: undefined,
+    status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     module: undefined,
     action: undefined,
   });
@@ -182,7 +183,9 @@ export default function PermissionsListPage() {
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    // Convertir status de string a number si es necesario
+    const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
+    setFilters((prev) => ({ ...prev, [key]: value === '' ? undefined : processedValue, page: 1 }));
   };
 
   const handleClearFilters = () => {
@@ -190,7 +193,7 @@ export default function PermissionsListPage() {
       page: 1,
       limit: 10,
       search: '',
-      isActive: undefined,
+      status: undefined,
       module: undefined,
       action: undefined,
     });
@@ -347,9 +350,17 @@ export default function PermissionsListPage() {
 
   const filterConfigs: FilterConfig[] = [
     {
-      key: 'isActive',
+      key: 'status',
       label: t.security?.users?.status || 'Estado',
-      type: 'boolean',
+      type: 'select',
+      options: [
+        { value: '', label: t.common?.all || 'Todos' },
+        { value: '1', label: t.security?.users?.active || 'Activo' },
+        { value: '0', label: t.security?.users?.inactive || 'Inactivo' },
+        { value: '2', label: 'Pendiente' },
+        { value: '3', label: 'Suspendido' },
+        { value: '-1', label: 'Eliminado' },
+      ],
     },
     {
       key: 'module',
@@ -410,7 +421,7 @@ export default function PermissionsListPage() {
           searchPlaceholder={t.security?.permissions?.searchPlaceholder || 'Buscar por nombre, código, módulo o acción...'}
           filters={filterConfigs}
           activeFilters={{
-            isActive: filters.isActive,
+            status: filters.status?.toString() || '',
             module: filters.module,
             action: filters.action,
           }}

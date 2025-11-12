@@ -13,8 +13,8 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createPermissionFormStyles } from '@/src/styles/pages/permission-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Switch, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface PermissionEditFormProps {
   permissionId: string;
@@ -37,8 +37,11 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
     module: '',
     action: '',
     description: '',
-    isActive: true,
+    status: 1, // Default: Activo
   });
+  
+  // Ref para mantener el status actualizado y evitar stale closure
+  const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPermission, setLoadingPermission] = useState(true);
@@ -56,13 +59,16 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
       try {
         setLoadingPermission(true);
         const permission = await PermissionsService.getPermissionById(permissionId);
+        const permissionStatus = permission.status ?? 1;
+        statusRef.current = permissionStatus;
+        
         setFormData({
           name: permission.name,
           code: permission.code,
           module: permission.module,
           action: permission.action,
           description: permission.description || '',
-          isActive: permission.isActive ?? true,
+          status: permissionStatus,
         });
       } catch (error: any) {
         alert.showError(error.message || 'Error al cargar permiso');
@@ -105,10 +111,15 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
   /**
    * Manejar cambio de campo
    */
-  const handleChange = (field: string, value: any) => {
+  const handleChange = useCallback((field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+    
+    // Actualizar ref para status
+    if (field === 'status') {
+      statusRef.current = value;
     }
 
     // Auto-generar código si se modifica módulo o acción
@@ -120,7 +131,7 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
         setFormData((prev) => ({ ...prev, code: newCode }));
       }
     }
-  };
+  }, [errors, formData.module, formData.action]);
 
   /**
    * Manejar envío del formulario
@@ -143,7 +154,7 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
         module: formData.module.trim(),
         action: formData.action.trim(),
         description: formData.description.trim() || undefined,
-        isActive: formData.isActive,
+        status: statusRef.current, // Usar ref para evitar stale closure
       });
 
       alert.showSuccess(t.security?.permissions?.edit || 'Permiso actualizado exitosamente');
@@ -365,22 +376,91 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
           </InputWithFocus>
         </View>
 
-        {/* Is Active */}
-        <View style={styles.switchGroup}>
-          <View style={styles.switchLabel}>
-            <ThemedText type="body2" style={{ color: colors.text }}>
-              {formData.isActive
-                ? t.security?.users?.active || 'Activo'
-                : t.security?.users?.inactive || 'Inactivo'}
-            </ThemedText>
-          </View>
-          <Switch
-            value={formData.isActive}
-            onValueChange={(value) => handleChange('isActive', value)}
-            trackColor={{ false: colors.border, true: colors.primary + '80' }}
-            thumbColor={formData.isActive ? colors.primary : colors.textSecondary}
-            disabled={isLoading}
-          />
+        {/* Estado */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.users?.status || 'Estado'}
+          </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 1 && {
+                    backgroundColor: '#10b981',
+                    borderColor: '#10b981',
+                  },
+                ]}
+                onPress={() => handleChange('status', 1)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.active || 'Activo'}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 0 && {
+                    backgroundColor: '#ef4444',
+                    borderColor: '#ef4444',
+                  },
+                ]}
+                onPress={() => handleChange('status', 0)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.inactive || 'Inactivo'}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 2 && {
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b',
+                  },
+                ]}
+                onPress={() => handleChange('status', 2)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  Pendiente
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 3 && {
+                    backgroundColor: '#f97316',
+                    borderColor: '#f97316',
+                  },
+                ]}
+                onPress={() => handleChange('status', 3)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  Suspendido
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Botones (solo si showFooter es true) */}

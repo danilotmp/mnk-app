@@ -58,7 +58,7 @@ export const createSearchFilterBarStyles = (isMobile: boolean = false) =>
     },
     filtersContainer: {
       width: '100%',
-      paddingHorizontal: 20,
+      paddingHorizontal: isMobile ? 10 : 20,
     },
     filtersContent: {
       gap: isMobile ? 12 : 16,
@@ -78,6 +78,7 @@ export const createSearchFilterBarStyles = (isMobile: boolean = false) =>
     },
     selectContainer: {
       minHeight: isMobile ? 36 : 40,
+      borderRadius: 6,
     },
     selectOptions: {
       flexDirection: 'row',
@@ -89,6 +90,9 @@ export const createSearchFilterBarStyles = (isMobile: boolean = false) =>
       paddingVertical: isMobile ? 5 : 6,
       borderRadius: 6,
       borderWidth: 1,
+    },
+    selectOptionText: {
+      fontSize: isMobile ? 12 : 14,
     },
     textInputContainer: {
       flexDirection: 'row',
@@ -127,7 +131,7 @@ export const createSearchFilterBarStyles = (isMobile: boolean = false) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: isMobile ? 6 : 8,
-      paddingVertical: isMobile ? 6 : 8,
+      paddingVertical: 0,
     },
     clearText: {
       fontSize: isMobile ? 13 : 14,

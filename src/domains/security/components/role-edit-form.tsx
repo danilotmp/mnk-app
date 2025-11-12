@@ -15,7 +15,7 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createRoleFormStyles } from '@/src/styles/pages/role-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface RoleEditFormProps {
@@ -39,9 +39,12 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
     displayName: '',
     description: '',
     companyId: '',
-    isActive: true,
+    status: 1, // Default: Activo
     isSystem: false,
   });
+  
+  // Ref para mantener el status actualizado y evitar stale closure
+  const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingRole, setLoadingRole] = useState(true);
@@ -81,12 +84,15 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
       try {
         setLoadingRole(true);
         const role = await RolesService.getRoleById(roleId);
+        const roleStatus = role.status ?? 1;
+        statusRef.current = roleStatus;
+        
         setFormData({
           name: role.name,
           displayName: role.code || '',
           description: role.description || '',
           companyId: '', // TODO: Obtener companyId del rol si está disponible
-          isActive: role.isActive ?? true,
+          status: roleStatus,
           isSystem: role.isSystem ?? false,
         });
       } catch (error: any) {
@@ -116,12 +122,17 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
   /**
    * Manejar cambio de campo
    */
-  const handleChange = (field: string, value: any) => {
+  const handleChange = useCallback((field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
-  };
+    
+    // Actualizar ref para status
+    if (field === 'status') {
+      statusRef.current = value;
+    }
+  }, [errors]);
 
   /**
    * Manejar envío del formulario
@@ -143,7 +154,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         displayName: formData.displayName.trim() || undefined,
         description: formData.description.trim() || undefined,
         companyId: formData.companyId || undefined,
-        isActive: formData.isActive,
+        status: statusRef.current, // Usar ref para evitar stale closure
         isSystem: formData.isSystem,
       });
 
@@ -340,22 +351,91 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
           </View>
         )}
 
-        {/* Is Active */}
-        <View style={styles.switchGroup}>
-          <View style={styles.switchLabel}>
-            <ThemedText type="body2" style={{ color: colors.text }}>
-              {formData.isActive
-                ? t.security?.users?.active || 'Activo'
-                : t.security?.users?.inactive || 'Inactivo'}
-            </ThemedText>
-          </View>
-          <Switch
-            value={formData.isActive}
-            onValueChange={(value) => handleChange('isActive', value)}
-            trackColor={{ false: colors.border, true: colors.primary + '80' }}
-            thumbColor={formData.isActive ? colors.primary : colors.textSecondary}
-            disabled={isLoading}
-          />
+        {/* Estado */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.users?.status || 'Estado'}
+          </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 1 && {
+                    backgroundColor: '#10b981',
+                    borderColor: '#10b981',
+                  },
+                ]}
+                onPress={() => handleChange('status', 1)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.active || 'Activo'}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 0 && {
+                    backgroundColor: '#ef4444',
+                    borderColor: '#ef4444',
+                  },
+                ]}
+                onPress={() => handleChange('status', 0)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.inactive || 'Inactivo'}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 2 && {
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b',
+                  },
+                ]}
+                onPress={() => handleChange('status', 2)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  Pendiente
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 3 && {
+                    backgroundColor: '#f97316',
+                    borderColor: '#f97316',
+                  },
+                ]}
+                onPress={() => handleChange('status', 3)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  Suspendido
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Is System */}

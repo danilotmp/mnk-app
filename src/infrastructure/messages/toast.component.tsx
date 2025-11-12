@@ -9,7 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Toast, useToast } from './toast.context';
 
 /**
@@ -185,20 +185,28 @@ export function ToastContainer() {
   }
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
-      {toasts.map((toast, index) => (
-        <ToastItem
-          key={toast.id}
-          toast={toast}
-          onDismiss={() => hideToast(toast.id)}
-          index={index}
-        />
-      ))}
-    </View>
+    <Modal transparent animationType="none" visible pointerEvents="box-none">
+      <View style={styles.modalOverlay} pointerEvents="box-none">
+        <View style={styles.container} pointerEvents="box-none">
+          {toasts.map((toast, index) => (
+            <ToastItem
+              key={toast.id}
+              toast={toast}
+              onDismiss={() => hideToast(toast.id)}
+              index={index}
+            />
+          ))}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    pointerEvents: 'box-none',
+  },
   container: {
     position: 'absolute',
     top: Platform.OS === 'web' ? 80 : 60,

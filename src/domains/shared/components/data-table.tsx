@@ -321,7 +321,11 @@ export function DataTable<T = any>({
           <>
             {/* Información de registros - línea completa */}
             <View style={styles.paginationInfoMobile}>
-              <ThemedText type="body2" variant="secondary" style={{ fontSize: 12 }} numberOfLines={1}>
+              <ThemedText
+                type="body2"
+                style={{ fontSize: 12, color: colors.text }}
+                numberOfLines={1}
+              >
                 Mostrando {start}-{end} de {total}
               </ThemedText>
             </View>
@@ -442,7 +446,7 @@ export function DataTable<T = any>({
           <>
             {/* Información de registros */}
             <View style={styles.paginationInfo}>
-              <ThemedText type="body2" variant="secondary" style={{ fontSize: 14 }}>
+              <ThemedText type="body2" style={{ fontSize: 14, color: colors.text }}>
                 Mostrando {start}-{end} de {total}
               </ThemedText>
             </View>

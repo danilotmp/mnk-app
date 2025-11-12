@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -60,7 +61,7 @@ export default function RolesListPage() {
     page: 1,
     limit: 10,
     search: '',
-    isActive: undefined,
+    status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     isSystem: undefined,
   });
   
@@ -184,7 +185,13 @@ export default function RolesListPage() {
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    // Convertir status de string a number si es necesario
+    const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
+    setFilters((prev) => ({ 
+      ...prev, 
+      [key]: value === '' ? undefined : processedValue, 
+      page: 1 
+    }));
   };
 
   const handleClearFilters = () => {
@@ -192,7 +199,7 @@ export default function RolesListPage() {
       page: 1,
       limit: 10,
       search: '',
-      isActive: undefined,
+      status: undefined,
       isSystem: undefined,
     });
     setLocalFilter(''); // Limpiar también el filtro local
@@ -309,27 +316,11 @@ export default function RolesListPage() {
       width: '15%',
       align: 'center',
       render: (role) => (
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: role.isActive
-                ? colors.success + '20'
-                : colors.error + '20',
-            },
-          ]}
-        >
-          <ThemedText
-            type="caption"
-            style={{
-              color: role.isActive ? colors.success : colors.error,
-            }}
-          >
-            {role.isActive
-              ? t.security?.users?.active || 'Activo'
-              : t.security?.users?.inactive || 'Inactivo'}
-          </ThemedText>
-        </View>
+        <StatusBadge 
+          status={role.status} 
+          statusDescription={role.statusDescription}
+          size="small"
+        />
       ),
     },
     {
@@ -364,9 +355,17 @@ export default function RolesListPage() {
 
   const filterConfigs: FilterConfig[] = [
     {
-      key: 'isActive',
+      key: 'status',
       label: t.security?.users?.status || 'Estado',
-      type: 'boolean',
+      type: 'select',
+      options: [
+        { value: '', label: t.common?.all || 'Todos' },
+        { value: '1', label: t.security?.users?.active || 'Activo' },
+        { value: '0', label: t.security?.users?.inactive || 'Inactivo' },
+        { value: '2', label: t.security?.users?.pending || 'Pendiente' },
+        { value: '3', label: t.security?.users?.suspended || 'Suspendido' },
+        { value: '-1', label: t.security?.users?.deleted || 'Eliminado' },
+      ],
     },
     {
       key: 'isSystem',
@@ -420,7 +419,7 @@ export default function RolesListPage() {
           searchPlaceholder={t.security?.roles?.searchPlaceholder || 'Buscar por nombre o código...'}
           filters={filterConfigs}
           activeFilters={{
-            isActive: filters.isActive,
+            status: filters.status?.toString() || '',
             isSystem: filters.isSystem,
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}

@@ -4,7 +4,7 @@
  * Ahora también soporta notificaciones Toast visuales
  */
 
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useTranslation } from '../i18n';
 import { useToast } from './toast.context';
 
@@ -177,6 +177,18 @@ export function useAlert() {
     ) => {
       const title = getTranslation(titleKey);
       const message = getTranslation(messageKey);
+
+      if (Platform.OS === 'web') {
+        const fullMessage = title ? `${title}\n\n${message}` : message;
+        const confirmed = typeof window !== 'undefined' ? window.confirm(fullMessage) : true;
+        if (confirmed) {
+          onConfirm();
+        } else if (onCancel) {
+          onCancel();
+        }
+        return;
+      }
+
       alertService.showConfirm(title, message, onConfirm, onCancel);
     },
   };

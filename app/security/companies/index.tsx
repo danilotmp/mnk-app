@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -59,7 +60,7 @@ export default function CompaniesListPage() {
     page: 1,
     limit: 10,
     search: '',
-    isActive: undefined,
+    status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     code: undefined,
     name: undefined,
     email: undefined,

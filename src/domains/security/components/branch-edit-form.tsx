@@ -164,6 +164,9 @@ export function BranchEditForm({
     onCancel?.();
   }, [onCancel]);
 
+  // ⚠️ IMPORTANTE: useMemo debe estar ANTES del early return para evitar "Rendered more hooks than during the previous render"
+  const companyOptions = useMemo(() => companies, [companies]);
+
   useEffect(() => {
     if (onFormReady && !loadingBranch && !companiesLoading) {
       onFormReady({
@@ -186,8 +189,6 @@ export function BranchEditForm({
       </View>
     );
   }
-
-  const companyOptions = useMemo(() => companies, [companies]);
 
   const header = showHeader ? (
     <View style={styles.header}>

@@ -48,7 +48,7 @@ export function useCompanyOptions({
       code: filters?.code,
       name: filters?.name,
       email: filters?.email,
-      isActive: includeInactive ? filters?.isActive : true,
+      status: includeInactive ? filters?.status : 1, // ✅ CAMBIADO: status=1 (Activo) en lugar de isActive=true
     };
 
     return baseFilters;

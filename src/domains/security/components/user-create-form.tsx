@@ -10,7 +10,7 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createUserFormStyles } from '@/src/styles/pages/user-form.styles';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface UserCreateFormProps {
   onSuccess?: () => void;
@@ -42,13 +42,14 @@ export function UserCreateForm({
     companyId: currentCompany?.id || '',
     branchIds: [] as string[],
     roleId: '',
-    isActive: true,
+    status: 1, // Default: Activo
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
   const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
+  const statusRef = useRef<number>(1); // Ref para mantener el status actualizado
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -69,7 +70,7 @@ export function UserCreateForm({
         const rolesResponse = await RolesService.getRoles({
           page: 1,
           limit: 100,
-          isActive: true,
+          status: 1, // ✅ Solo roles activos
         });
         setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
       } catch (error) {
@@ -136,6 +137,9 @@ export function UserCreateForm({
     if (field === 'roleId') {
       roleIdRef.current = value;
     }
+    if (field === 'status') {
+      statusRef.current = value;
+    }
     
     setFormData((prev) => {
       if (field === 'companyId') {
@@ -170,7 +174,7 @@ export function UserCreateForm({
         phone: formData.phone.trim(),
         companyId: formData.companyId,
         branchIds: branchIdsRef.current,
-        isActive: formData.isActive,
+        status: statusRef.current, // Usar ref para evitar stale closure
       };
       
       // Solo incluir roleId si tiene un valor válido
@@ -178,18 +182,30 @@ export function UserCreateForm({
         payload.roleId = roleIdRef.current.trim();
       }
       
-      await UsersService.createUserComplete(payload);
+      // ✅ Usar createUser() - el endpoint POST /usuarios acepta roleId y branchIds
+      await UsersService.createUser(payload);
 
       alert.showSuccess(t.security?.users?.create || 'Usuario creado exitosamente');
       onSuccess?.();
+      onCancel?.();
     } catch (error: any) {
-      const errorMessage = error.message || 'Error al crear usuario';
-      const errorDetail = (error as any)?.result?.details || '';
-      alert.showError(errorMessage, false, undefined, errorDetail);
+      const backendResult = (error as any)?.result;
+      const rawDetails = backendResult?.details ?? error?.details;
+      const detailString =
+        typeof rawDetails === 'string'
+          ? rawDetails
+          : rawDetails?.message
+          ? String(rawDetails.message)
+          : undefined;
+
+      const errorMessage =
+        backendResult?.description || error?.message || 'Error al crear usuario';
+
+      alert.showError(errorMessage, false, undefined, detailString);
     } finally {
       setIsLoading(false);
     }
-  }, [alert, formData, onSuccess, t.security?.users?.create, validateForm]);
+  }, [alert, formData, onCancel, onSuccess, t.security?.users?.create, validateForm]);
 
   const handleCancel = useCallback(() => {
     onCancel?.();
@@ -597,21 +613,98 @@ export function UserCreateForm({
         </View>
       </View>
 
-      <View style={styles.switchGroup}>
-        <View style={styles.switchLabel}>
-          <ThemedText type="body2" style={{ color: colors.text }}>
-            {t.security?.users?.status || 'Estado'}
-          </ThemedText>
-          <ThemedText type="caption" variant="secondary">
-            {formData.isActive ? (t.security?.users?.active || 'Activo') : (t.security?.users?.inactive || 'Inactivo')}
-          </ThemedText>
-        </View>
-        <Switch
-          value={formData.isActive}
-          onValueChange={(value) => handleChange('isActive', value)}
-          thumbColor={formData.isActive ? colors.primary : colors.border}
-          trackColor={{ false: colors.border, true: colors.primary }}
-        />
+      {/* Estado */}
+      <View style={styles.inputGroup}>
+        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          {t.security?.users?.status || 'Estado'} *
+        </ThemedText>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.selectOptions}>
+              {/* Activo */}
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 1 && {
+                    backgroundColor: '#10b981',
+                    borderColor: '#10b981',
+                  },
+                ]}
+                onPress={() => handleChange('status', 1)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.active || 'Activo'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* Inactivo */}
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 0 && {
+                    backgroundColor: '#ef4444',
+                    borderColor: '#ef4444',
+                  },
+                ]}
+                onPress={() => handleChange('status', 0)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.inactive || 'Inactivo'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* Pendiente */}
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 2 && {
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b',
+                  },
+                ]}
+                onPress={() => handleChange('status', 2)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.pending || 'Pendiente'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* Suspendido */}
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 3 && {
+                    backgroundColor: '#f97316',
+                    borderColor: '#f97316',
+                  },
+                ]}
+                onPress={() => handleChange('status', 3)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.suspended || 'Suspendido'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
       </View>
     </Card>
   );

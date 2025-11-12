@@ -8,8 +8,8 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createCompanyFormStyles } from '@/src/styles/pages/company-form.styles';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Switch, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface CompanyCreateFormProps {
   onSuccess?: () => void;
@@ -25,7 +25,7 @@ interface CompanyFormData {
   email: string;
   phone: string;
   description: string;
-  isActive: boolean;
+  status: number;
 }
 
 export function CompanyCreateForm({
@@ -46,8 +46,10 @@ export function CompanyCreateForm({
     email: '',
     phone: '',
     description: '',
-    isActive: true,
+    status: 1,
   });
+  
+  const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<Record<keyof CompanyFormData | string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
