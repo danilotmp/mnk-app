@@ -115,22 +115,23 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       fontSize: 14,
     },
     pagination: {
-      flexDirection: isMobile ? 'column' : 'row',
-      justifyContent: isMobile ? 'flex-start' : 'space-between',
-      alignItems: isMobile ? 'stretch' : 'center',
+      flexDirection: 'row',
+      justifyContent: isMobile ? 'space-between' : 'space-between',
+      alignItems: 'center',
+      flexWrap: isMobile ? 'wrap' : 'nowrap',
       padding: isMobile ? 8 : 16,
       paddingHorizontal: isMobile ? 8 : 16,
       borderTopWidth: 1,
-      gap: isMobile ? 12 : 16,
+      gap: isMobile ? 8 : 16,
       flexShrink: 0, // La paginación no se comprime
     },
     paginationInfo: {
-      flex: isMobile ? 0 : 1,
-      minWidth: isMobile ? 100 : 150,
+      flex: 1,
+      minWidth: isMobile ? 140 : 150,
     },
     paginationInfoMobile: {
-      width: '100%',
-      marginBottom: 4,
+      flexGrow: 1,
+      marginBottom: 0,
     },
     paginationControls: {
       flexDirection: 'row',
@@ -140,11 +141,12 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       flexShrink: 1,
     },
     paginationControlsMobile: {
-      width: '100%',
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-end',
       alignItems: 'center',
       gap: 8,
+      flexGrow: 1,
+      flexBasis: 'auto',
     },
     limitSelector: {
       flexDirection: 'row',

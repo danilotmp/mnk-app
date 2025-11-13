@@ -510,6 +510,9 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     if (isMobile) {
       closeMobileMenu();
     }
+
+    // Cerrar cualquier menú desplegado al navegar (desktop/tablet)
+    setActiveSubmenu(null);
     
     // Resetear el flag después de un delay más largo para asegurar que el useEffect no limpie
     setTimeout(() => {
