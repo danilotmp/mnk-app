@@ -131,7 +131,11 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
     },
     paginationInfoMobile: {
       flexGrow: 1,
+      width: '100%',
       marginBottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: 10,
     },
     paginationControls: {
       flexDirection: 'row',

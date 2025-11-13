@@ -32,6 +32,8 @@ export default function RolesListPage() {
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createRolesListStyles(isMobile);
+  const usersTranslations = (t.security?.users as any) || {};
+  const commonTranslations = (t.common as any) || {};
 
   const {
     loading: accessLoading,
@@ -185,12 +187,22 @@ export default function RolesListPage() {
    */
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
+
+    if (key === 'deleted') {
+      setFilters((prev) => ({
+        ...prev,
+        status: value === 'deleted' ? -1 : undefined,
+        page: 1,
+      }));
+      return;
+    }
+
     // Convertir status de string a number si es necesario
     const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
-    setFilters((prev) => ({ 
-      ...prev, 
-      [key]: value === '' ? undefined : processedValue, 
-      page: 1 
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value === '' ? undefined : processedValue,
+      page: 1,
     }));
   };
 
@@ -356,15 +368,26 @@ export default function RolesListPage() {
   const filterConfigs: FilterConfig[] = [
     {
       key: 'status',
-      label: t.security?.users?.status || 'Estado',
+      label: usersTranslations.status || 'Estado',
       type: 'select',
       options: [
-        { value: '', label: t.common?.all || 'Todos' },
-        { value: '1', label: t.security?.users?.active || 'Activo' },
-        { value: '0', label: t.security?.users?.inactive || 'Inactivo' },
-        { value: '2', label: t.security?.users?.pending || 'Pendiente' },
-        { value: '3', label: t.security?.users?.suspended || 'Suspendido' },
-        { value: '-1', label: t.security?.users?.deleted || 'Eliminado' },
+        { key: 'all', value: '', label: commonTranslations.all || 'Todos' },
+        { key: 'active', value: '1', label: usersTranslations.active || 'Activo' },
+        { key: 'inactive', value: '0', label: usersTranslations.inactive || 'Inactivo' },
+        { key: 'pending', value: '2', label: usersTranslations.pending || 'Pendiente' },
+        { key: 'suspended', value: '3', label: usersTranslations.suspended || 'Suspendido' },
+      ],
+    },
+    {
+      key: 'deleted',
+      label: usersTranslations.deletedFilter || 'Usuarios',
+      type: 'select',
+      options: [
+        {
+          key: 'deleted',
+          value: 'deleted',
+          label: usersTranslations.deletedUser || 'Eliminados',
+        },
       ],
     },
     {
@@ -419,7 +442,11 @@ export default function RolesListPage() {
           searchPlaceholder={t.security?.roles?.searchPlaceholder || 'Buscar por nombre o código...'}
           filters={filterConfigs}
           activeFilters={{
-            status: filters.status?.toString() || '',
+            status:
+              filters.status !== undefined && filters.status !== -1
+                ? filters.status.toString()
+                : '',
+            deleted: filters.status === -1 ? 'deleted' : '',
             isSystem: filters.isSystem,
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}

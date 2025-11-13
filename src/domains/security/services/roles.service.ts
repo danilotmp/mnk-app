@@ -44,8 +44,8 @@ export class RolesService {
       if (filters.search) {
         queryParams.append('search', filters.search);
       }
-      if (filters.isActive !== undefined) {
-        queryParams.append('isActive', filters.isActive.toString());
+      if (filters.status !== undefined) {
+        queryParams.append('status', filters.status.toString());
       }
       if (filters.isSystem !== undefined) {
         queryParams.append('isSystem', filters.isSystem.toString());

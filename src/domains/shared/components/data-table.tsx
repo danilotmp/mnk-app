@@ -11,11 +11,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    TouchableOpacity,
-    View,
-    useWindowDimensions
+  ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
+  View,
+  useWindowDimensions
 } from 'react-native';
 import { createDataTableStyles } from '../../../styles/components/data-table.styles';
 
@@ -335,7 +335,10 @@ export function DataTable<T = any>({
               {/* Selector de registros por página - alineado a la izquierda */}
               {onLimitChange && finalLimitOptions && finalLimitOptions.length > 0 && total > minLimitValue && (
                 <View style={styles.limitSelector}>
-                  <ThemedText type="body2" variant="secondary" style={styles.limitLabel}>
+                  <ThemedText
+                    type="body2"
+                    style={[styles.limitLabel, { color: colors.text }]}
+                  >
                     Mostrar:
                   </ThemedText>
                   <View style={styles.limitOptions}>
@@ -358,6 +361,7 @@ export function DataTable<T = any>({
                       </TouchableOpacity>
                     ))}
                   </View>
+                  
                 </View>
               )}
 
@@ -455,10 +459,13 @@ export function DataTable<T = any>({
             <View style={styles.paginationControls}>
               {/* Selector de registros por página */}
               {onLimitChange && finalLimitOptions && finalLimitOptions.length > 0 && total > minLimitValue && (
-                <View style={styles.limitSelector}>
-                  <ThemedText type="body2" variant="secondary" style={styles.limitLabel}>
-                    Mostrar:
-                  </ThemedText>
+                  <View style={styles.limitSelector}>
+                    <ThemedText
+                      type="body2"
+                      style={[styles.limitLabel, { color: colors.text }]}
+                    >
+                      Mostrar:
+                    </ThemedText>
                   <View style={styles.limitOptions}>
                     {finalLimitOptions.map((option) => (
                       <TouchableOpacity

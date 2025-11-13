@@ -357,7 +357,7 @@ export function SearchFilterBar({
             
             {/* Botón expandir/colapsar filtros */}
             {filters.length > 0 && (
-              <Tooltip text={isMobile ? '' : (isCollapsed ? 'Más opciones de búsqueda' : 'Ocultar opciones')} position="top">
+              <Tooltip text={isMobile ? '' : (isCollapsed ? 'Más filtros' : 'Ocultar filtros')} position="top">
                 <TouchableOpacity
                   style={[styles.actionButton, styles.expandButton, { borderColor: colors.border }]}
                   onPress={toggleFilters}
