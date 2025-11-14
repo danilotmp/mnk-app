@@ -8,7 +8,6 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '@/src/domains/security';
@@ -280,6 +279,9 @@ export default function RolesListPage() {
     handleCloseModal();
   };
 
+  /**
+   * Manejar eliminación de rol (llamado después de confirmación)
+   */
   const handleDeleteRole = async (role: SecurityRole) => {
     if (role.isSystem) {
       alert.showError('No se pueden eliminar roles del sistema');
@@ -295,6 +297,34 @@ export default function RolesListPage() {
       }
       alert.showError(error.message || 'Error al eliminar rol');
     }
+  };
+
+  /**
+   * Confirmar eliminación de rol (muestra diálogo de confirmación)
+   * Valida que no sea un rol del sistema y muestra mensaje de confirmación
+   */
+  const confirmDeleteRole = (role: SecurityRole) => {
+    // Validar que no sea un rol del sistema antes de mostrar confirmación
+    // (Aunque el botón no debería mostrarse, esta validación es defensiva)
+    if (role.isSystem) {
+      alert.showError('No se pueden eliminar roles del sistema');
+      return;
+    }
+
+    const rolesTranslations = (t.security?.roles as any) || {};
+    const title = rolesTranslations.deleteConfirmTitle || commonTranslations.confirm || 'Eliminar rol';
+    const messageTemplate =
+      rolesTranslations.deleteConfirmMessage ||
+      '¿Seguro que deseas eliminar el rol {name}? Esta acción no se puede deshacer.';
+
+    // Usar nombre, código o ID como identificador para el mensaje
+    const identifier = role.name || role.code || role.id;
+    const message = messageTemplate.includes('{name}')
+      ? messageTemplate.replace('{name}', identifier)
+      : messageTemplate.replace('{email}', identifier); // Fallback para compatibilidad
+
+    // Mostrar diálogo de confirmación y ejecutar eliminación si se confirma
+    alert.showConfirm(title, message, () => handleDeleteRole(role));
   };
 
   const columns: TableColumn<SecurityRole>[] = [
@@ -350,34 +380,6 @@ export default function RolesListPage() {
         <ThemedText type="body2" variant="secondary">
           {role.permissions?.length || 0}
         </ThemedText>
-      ),
-    },
-    {
-      key: 'actions',
-      label: t.common?.actions || 'Acciones',
-      width: '18%',
-      align: 'center',
-      render: (role) => (
-        <View style={styles.actionsContainer}>
-          <Tooltip text={t.security?.roles?.editShort || 'Editar'} position="left">
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleEditRole(role)}
-            >
-              <Ionicons name="pencil" size={18} color={colors.primary} />
-            </TouchableOpacity>
-          </Tooltip>
-          {!role.isSystem && (
-            <Tooltip text={t.security?.roles?.deleteShort || 'Eliminar'} position="left">
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => handleDeleteRole(role)}
-              >
-                <Ionicons name="trash" size={18} color={colors.primary} />
-              </TouchableOpacity>
-            </Tooltip>
-          )}
-        </View>
       ),
     },
   ];
@@ -498,6 +500,15 @@ export default function RolesListPage() {
               onPageChange: handlePageChange,
               onLimitChange: handleLimitChange,
               limitOptions: [10, 25, 50, 100],
+            }}
+            editAction={{
+              onPress: (role) => handleEditRole(role),
+              tooltip: t.security?.roles?.editShort || 'Editar',
+            }}
+            deleteAction={{
+              onPress: (role) => confirmDeleteRole(role),
+              tooltip: t.security?.roles?.deleteShort || 'Eliminar',
+              visible: (role) => !role.isSystem, // Solo mostrar si NO es del sistema
             }}
           />
         </View>

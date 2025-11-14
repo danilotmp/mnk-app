@@ -6,10 +6,11 @@
 
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -18,7 +19,7 @@ import {
   useWindowDimensions
 } from 'react-native';
 import { createDataTableStyles } from './data-table.styles';
-import { DataTableProps, TableColumn } from './data-table.types';
+import { DataTableProps, TableAction, TableColumn } from './data-table.types';
 
 /**
  * Componente DataTable con paginación
@@ -34,11 +35,127 @@ export function DataTable<T = any>({
   pagination,
   variant = 'bordered',
   size = 'md',
+  actions,
+  editAction,
+  deleteAction,
+  actionsColumnWidth = '18%',
+  actionsColumnLabel = 'Acciones',
 }: DataTableProps<T>) {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { height: windowHeight } = useWindowDimensions();
   const styles = createDataTableStyles(isMobile);
+  
+  /**
+   * Construir lista de acciones ordenadas: personalizadas → editar → eliminar
+   */
+  const orderedActions = useMemo(() => {
+    const actionList: (TableAction<T> | { type: 'edit' | 'delete'; action: any })[] = [];
+    
+    // 1. Acciones personalizadas (en el orden del array, o ordenadas por 'order' si existe)
+    if (actions && actions.length > 0) {
+      const customActions = [...actions];
+      // Ordenar por 'order' si existe, mantener orden del array si no
+      const hasOrder = customActions.some(a => a.order !== undefined);
+      if (hasOrder) {
+        customActions.sort((a, b) => {
+          const orderA = a.order ?? Infinity;
+          const orderB = b.order ?? Infinity;
+          return orderA - orderB;
+        });
+      }
+      actionList.push(...customActions);
+    }
+    
+    // 2. Acción de editar (antes de eliminar)
+    if (editAction) {
+      actionList.push({ type: 'edit', action: editAction });
+    }
+    
+    // 3. Acción de eliminar (al final)
+    if (deleteAction) {
+      actionList.push({ type: 'delete', action: deleteAction });
+    }
+    
+    return actionList;
+  }, [actions, editAction, deleteAction]);
+  
+  /**
+   * Renderizar acciones para un item
+   */
+  const renderActions = useCallback((item: T, index: number) => {
+    return (
+      <View style={styles.actionsContainer}>
+        {orderedActions.map((actionOrConfig) => {
+          // Acción personalizada
+          if ('id' in actionOrConfig) {
+            const action = actionOrConfig as TableAction<T>;
+            const isVisible = action.visible === undefined ? true : action.visible(item);
+            
+            if (!isVisible) {
+              return null;
+            }
+            
+            return (
+              <Tooltip key={action.id} text={action.tooltip} position="left">
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => action.onPress(item)}
+                >
+                  <Ionicons name={action.icon as any} size={18} color={colors.primary} />
+                </TouchableOpacity>
+              </Tooltip>
+            );
+          }
+          
+          // Acción estándar (editar o eliminar)
+          const { type, action } = actionOrConfig as { type: 'edit' | 'delete'; action: any };
+          const isVisible = action.visible === undefined ? true : action.visible(item);
+          
+          if (!isVisible) {
+            return null;
+          }
+          
+          const iconName = type === 'edit' ? 'pencil' : 'trash';
+          const tooltipText = action.tooltip || (type === 'edit' ? 'Editar' : 'Eliminar');
+          
+          return (
+            <Tooltip key={type} text={tooltipText} position="left">
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => action.onPress(item)}
+              >
+                <Ionicons name={iconName as any} size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </Tooltip>
+          );
+        })}
+      </View>
+    );
+  }, [orderedActions, styles, colors]);
+  
+  /**
+   * Construir columnas finales incluyendo la columna de acciones si hay acciones definidas
+   */
+  const finalColumns = useMemo(() => {
+    const hasActions = (actions && actions.length > 0) || editAction || deleteAction;
+    
+    if (!hasActions) {
+      return columns;
+    }
+    
+    // Agregar columna de acciones al final
+    return [
+      ...columns,
+      {
+        key: 'actions',
+        label: actionsColumnLabel,
+        width: actionsColumnWidth,
+        align: 'center' as const,
+        render: (item: T, index: number) => renderActions(item, index),
+      },
+    ];
+  }, [columns, actions, editAction, deleteAction, actionsColumnWidth, actionsColumnLabel, renderActions]);
   
   // Calcular altura máxima para el DataTable
   // Restamos espacio para header de la app, header de la página, búsqueda, padding, y paginación
@@ -165,10 +282,10 @@ export function DataTable<T = any>({
 
     const rowContent = (
       <>
-        {columns.map((column, colIndex) => {
+        {finalColumns.map((column, colIndex) => {
           const columnFlex = getColumnFlex(column, colIndex);
           const columnMinWidth = getColumnMinWidth(column);
-          const isLastColumn = colIndex === columns.length - 1;
+          const isLastColumn = colIndex === finalColumns.length - 1;
           const isFirstColumn = colIndex === 0;
           // Columnas críticas no deben comprimirse tanto
           const isCriticalColumn = column.key === 'email' || column.key === 'phone' || column.key === 'teléfono' || 
@@ -578,10 +695,10 @@ export function DataTable<T = any>({
           {/* Encabezado de la tabla */}
           <View style={[styles.header, { backgroundColor: colors.surfaceVariant, borderBottomColor: colors.border }]}>
                 <View style={styles.headerRow}>
-                  {columns.map((column, colIndex) => {
+                  {finalColumns.map((column, colIndex) => {
                     const columnFlex = getColumnFlex(column, colIndex);
                     const columnMinWidth = getColumnMinWidth(column);
-                    const isLastColumn = colIndex === columns.length - 1;
+                    const isLastColumn = colIndex === finalColumns.length - 1;
                     const isFirstColumn = colIndex === 0;
                     // Columnas críticas no deben comprimirse tanto
                     const isCriticalColumn = column.key === 'email' || column.key === 'phone' || column.key === 'teléfono' || 

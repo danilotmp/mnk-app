@@ -198,5 +198,18 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       minWidth: isMobile ? 80 : 100,
       alignItems: 'center',
     },
+    // Estilos para acciones
+    actionsContainer: {
+      flexDirection: 'row',
+      gap: isMobile ? 4 : 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionButton: {
+      padding: isMobile ? 6 : 8,
+      borderRadius: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });
 
