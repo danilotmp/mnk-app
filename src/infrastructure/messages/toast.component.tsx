@@ -9,7 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Toast, useToast } from './toast.context';
 
 /**
@@ -110,6 +110,7 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
           marginTop: index * 8, // Espaciado entre toasts
         },
       ]}
+      pointerEvents="auto"
     >
       <ThemedView
         style={[
@@ -176,6 +177,7 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
 /**
  * Componente contenedor de Toasts
  * Se renderiza en el layout principal
+ * Usa View absoluto en lugar de Modal para no bloquear la interacción
  */
 export function ToastContainer() {
   const { toasts, hideToast } = useToast();
@@ -185,27 +187,31 @@ export function ToastContainer() {
   }
 
   return (
-    <Modal transparent animationType="none" visible pointerEvents="box-none">
-      <View style={styles.modalOverlay} pointerEvents="box-none">
-        <View style={styles.container} pointerEvents="box-none">
-          {toasts.map((toast, index) => (
+    <View style={styles.modalOverlay} pointerEvents="box-none">
+      <View style={styles.container} pointerEvents="box-none">
+        {toasts.map((toast, index) => (
+          <View key={toast.id} pointerEvents="auto">
             <ToastItem
-              key={toast.id}
               toast={toast}
               onDismiss={() => hideToast(toast.id)}
               index={index}
             />
-          ))}
-        </View>
+          </View>
+        ))}
       </View>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     pointerEvents: 'box-none',
+    zIndex: 9999,
   },
   container: {
     position: 'absolute',

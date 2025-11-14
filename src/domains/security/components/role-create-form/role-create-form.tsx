@@ -9,7 +9,6 @@ import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService, CompaniesService } from '@/src/domains/security';
-import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,15 +27,14 @@ export function RoleCreateForm({
   const { colors } = useTheme();
   const { t } = useTranslation();
   const alert = useAlert();
-  const { currentCompany } = useMultiCompany();
   const styles = createRoleFormStyles();
 
   const [formData, setFormData] = useState({
     name: '',
     code: '',
     description: '',
-    companyId: currentCompany?.id || '',
-    status: 1, // Default: Activo
+    companyId: '', // NO establecer automáticamente, el usuario debe seleccionar
+    status: 2, // Default: Pendiente
     isSystem: false,
   });
   
@@ -44,9 +42,12 @@ export function RoleCreateForm({
   const nameRef = useRef<string>('');
   const codeRef = useRef<string>('');
   const descriptionRef = useRef<string>('');
-  const companyIdRef = useRef<string>(currentCompany?.id || '');
-  const statusRef = useRef<number>(1);
+  const companyIdRef = useRef<string>(''); // NO establecer automáticamente
+  const statusRef = useRef<number>(2); // Default: Pendiente
   const isSystemRef = useRef<boolean>(false);
+  
+  // Ref para rastrear si el nombre fue modificado manualmente (no sincronizado desde código)
+  const nameManuallyEditedRef = useRef<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -64,30 +65,15 @@ export function RoleCreateForm({
           
           if (backendCompanies.length > 0) {
             setCompanies(backendCompanies);
-            
-            // Establecer companyId inicial si hay currentCompany y coincide con alguna empresa del backend
-            if (currentCompany?.id) {
-              const matchingCompany = backendCompanies.find((c) => c.id === currentCompany.id);
-              if (matchingCompany) {
-                companyIdRef.current = currentCompany.id;
-                setFormData((prev) => ({ ...prev, companyId: currentCompany.id }));
-              }
-            }
+            // NO establecer companyId automáticamente, el usuario debe seleccionarlo
           } else {
-            // Fallback: usar currentCompany directamente si está disponible
             setCompanies([]);
-            if (currentCompany?.id) {
-              companyIdRef.current = currentCompany.id;
-              setFormData((prev) => ({ ...prev, companyId: currentCompany.id }));
-            }
+            // NO establecer companyId automáticamente, el usuario debe seleccionarlo
           }
         } catch (backendError) {
-          // Si falla el backend, usar currentCompany directamente si está disponible
+          // Si falla el backend, no cargar empresas
           setCompanies([]);
-          if (currentCompany?.id) {
-            companyIdRef.current = currentCompany.id;
-            setFormData((prev) => ({ ...prev, companyId: currentCompany.id }));
-          }
+          // NO establecer companyId automáticamente, el usuario debe seleccionarlo
         }
       } catch (error) {
         // Silenciar errores - simplemente no cargar empresas
@@ -99,7 +85,7 @@ export function RoleCreateForm({
 
     loadCompanies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentCompany?.id]);
+  }, []); // Cargar empresas solo una vez, sin depender de currentCompany
 
   const resetError = useCallback((field: string) => {
     setErrors((prev) => ({ ...prev, [field]: '' }));
@@ -110,6 +96,8 @@ export function RoleCreateForm({
     // Actualizar refs para evitar stale closures
     if (field === 'name') {
       nameRef.current = value;
+      // Marcar que el nombre fue editado manualmente
+      nameManuallyEditedRef.current = true;
     } else if (field === 'code') {
       codeRef.current = value;
     } else if (field === 'description') {
@@ -132,12 +120,28 @@ export function RoleCreateForm({
     // Validar usando los valores actuales de los refs
     const newErrors: Record<string, string> = {};
     
+    // Validar código (obligatorio)
+    if (!codeRef.current.trim()) {
+      newErrors.code = 'El código es requerido';
+    }
+    
+    // Validar nombre (obligatorio)
     if (!nameRef.current.trim()) {
       newErrors.name = 'El nombre es requerido';
     }
     
-    if (companies.length > 0 && !companyIdRef.current) {
+    // Validar empresa (obligatorio)
+    // Validar que el companyId existe, no está vacío y está en la lista de empresas disponibles
+    const companyIdValue = companyIdRef.current?.trim() || '';
+    
+    if (!companyIdValue) {
       newErrors.companyId = 'La empresa es requerida';
+    } else if (companies.length > 0) {
+      // Verificar que el companyId seleccionado esté en la lista de empresas disponibles
+      const isValidCompany = companies.some((c) => c.id === companyIdValue);
+      if (!isValidCompany) {
+        newErrors.companyId = 'La empresa seleccionada no es válida';
+      }
     }
     
     if (Object.keys(newErrors).length > 0) {
@@ -151,11 +155,32 @@ export function RoleCreateForm({
     setIsLoading(true);
     try {
       // Usar refs para obtener los valores más recientes y evitar stale closures
+      // Obtener el valor del companyId del ref
+      const companyIdValue = companyIdRef.current?.trim() || '';
+      
+      // Validación adicional de seguridad (la validación principal ya lo verificó)
+      if (!companyIdValue) {
+        setErrors({ companyId: 'La empresa es requerida' });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Verificar que el companyId esté en la lista de empresas disponibles
+      if (companies.length > 0) {
+        const isValidCompany = companies.some((c) => c.id === companyIdValue);
+        if (!isValidCompany) {
+          setErrors({ companyId: 'La empresa seleccionada no es válida' });
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Construir payload solo con valores validados
       const createPayload = {
         name: nameRef.current.trim(),
-        code: codeRef.current.trim() || undefined,
+        code: codeRef.current.trim(), // Código es obligatorio
         description: descriptionRef.current.trim() || undefined,
-        companyId: companyIdRef.current || undefined,
+        companyId: companyIdValue, // Solo incluir si está validado y existe en la lista
         status: statusRef.current,
         isSystem: isSystemRef.current,
       };
@@ -171,7 +196,7 @@ export function RoleCreateForm({
     } finally {
       setIsLoading(false);
     }
-  }, [alert, companies.length, onSuccess, t.security?.roles?.create]);
+  }, [alert, companies, onSuccess, t.security?.roles?.create]);
 
   const handleCancel = useCallback(() => {
     onCancel?.();
@@ -240,32 +265,68 @@ export function RoleCreateForm({
       <Card variant="flat" style={styles.formCard}>
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Código
+            Código *
           </ThemedText>
           <InputWithFocus
             containerStyle={[
               styles.inputContainer,
               {
                 backgroundColor: colors.surface,
-                borderColor: colors.border,
+                borderColor: errors.code ? colors.error : colors.border,
               },
             ]}
             primaryColor={colors.primary}
+            error={!!errors.code}
           >
             <Ionicons name="text-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Código (opcional)"
+              placeholder="Código"
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
               onChangeText={(value) => {
-                // Convertir a mayúsculas y reemplazar espacios por guiones bajos
-                const processedValue = value.toUpperCase().replace(/\s+/g, '_');
-                handleChange('code', processedValue);
+                // El valor que recibe onChangeText puede incluir guiones bajos si el campo ya tiene valor
+                // Necesitamos restaurar los espacios desde los guiones bajos para el nombre
+                // pero mantener los guiones bajos para el código
+                
+                // Convertir a mayúsculas y reemplazar espacios por guiones bajos SOLO para código
+                const processedCode = value.toUpperCase().replace(/\s+/g, '_');
+                
+                // Actualizar código con el valor procesado
+                handleChange('code', processedCode);
+                
+                // Limpiar error de código si existe
+                if (errors.code) {
+                  resetError('code');
+                }
+                
+                // Sincronizar nombre solo si no fue editado manualmente
+                if (!nameManuallyEditedRef.current) {
+                  // Para el nombre: convertir guiones bajos a espacios y procesar
+                  // Primero, reemplazar guiones bajos por espacios para obtener el texto original
+                  const textWithSpaces = value.replace(/_/g, ' ');
+                  
+                  // Convertir a formato nombre: primera letra mayúscula, resto minúsculas, espacios preservados
+                  const processedName = textWithSpaces
+                    .toLowerCase()
+                    .trim()
+                    .split(/\s+/)
+                    .filter((word: string) => word.length > 0)
+                    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                  
+                  nameRef.current = processedName;
+                  setFormData((prev) => ({ ...prev, name: processedName }));
+                }
               }}
               autoCapitalize="characters"
             />
           </InputWithFocus>
+          {errors.code ? (
+            <ThemedText type="caption" style={{ color: colors.error }}>
+              {errors.code}
+            </ThemedText>
+          ) : null}
         </View>
 
         <View style={styles.inputGroup}>
@@ -328,11 +389,11 @@ export function RoleCreateForm({
           </InputWithFocus>
         </View>
 
-        {companies.length > 0 && (
-          <View style={styles.inputGroup}>
-            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-              Empresa
-            </ThemedText>
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            Empresa *
+          </ThemedText>
+          {companies.length > 0 ? (
             <View
               style={[
                 styles.selectContainer,
@@ -355,6 +416,7 @@ export function RoleCreateForm({
                           { borderColor: colors.border },
                         ]}
                         onPress={() => handleChange('companyId', company.id)}
+                        disabled={isLoading}
                       >
                         <ThemedText
                           type="body2"
@@ -368,13 +430,28 @@ export function RoleCreateForm({
                 </View>
               </ScrollView>
             </View>
-            {errors.companyId ? (
-              <ThemedText type="caption" style={{ color: colors.error }}>
-                {errors.companyId}
+          ) : (
+            <View
+              style={[
+                styles.selectContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: errors.companyId ? colors.error : colors.border,
+                  padding: 12,
+                },
+              ]}
+            >
+              <ThemedText type="body2" variant="secondary" style={{ textAlign: 'center' }}>
+                {loadingOptions ? 'Cargando empresas...' : 'No hay empresas disponibles'}
               </ThemedText>
-            ) : null}
-          </View>
-        )}
+            </View>
+          )}
+          {errors.companyId ? (
+            <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+              {errors.companyId}
+            </ThemedText>
+          ) : null}
+        </View>
 
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>

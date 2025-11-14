@@ -41,6 +41,9 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
   const companyIdRef = useRef<string>('');
   const statusRef = useRef<number>(1);
   const isSystemRef = useRef<boolean>(false);
+  
+  // Ref para rastrear si el nombre fue modificado manualmente (no sincronizado desde código)
+  const nameManuallyEditedRef = useRef<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingRole, setLoadingRole] = useState(true);
@@ -99,7 +102,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         const roleCode = role.code || '';
         const roleName = role.name || '';
         const roleDescription = role.description || '';
-        const roleCompanyId = ''; // TODO: Obtener companyId del rol si está disponible
+        const roleCompanyId = role.companyId || ''; // Obtener companyId del rol
         const roleIsSystem = role.isSystem ?? false;
         
         // Actualizar refs
@@ -110,14 +113,19 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         statusRef.current = roleStatus;
         isSystemRef.current = roleIsSystem;
         
-        setFormData({
+        // Resetear el flag de edición manual del nombre cuando se carga un rol
+        nameManuallyEditedRef.current = false;
+        
+        // Establecer formData con el companyId del rol
+        // Si hay empresas cargadas y el companyId del rol existe en ellas, se preseleccionará
+        setFormData((prev) => ({
           name: roleName,
           code: roleCode,
           description: roleDescription,
-          companyId: roleCompanyId,
+          companyId: roleCompanyId, // Establecer companyId del rol
           status: roleStatus,
           isSystem: roleIsSystem,
-        });
+        }));
       } catch (error: any) {
         alert.showError(error.message || 'Error al cargar rol');
       } finally {
@@ -152,6 +160,8 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
       codeRef.current = value;
     } else if (field === 'name') {
       nameRef.current = value;
+      // Marcar que el nombre fue editado manualmente
+      nameManuallyEditedRef.current = true;
     } else if (field === 'description') {
       descriptionRef.current = value;
     } else if (field === 'companyId') {
@@ -264,9 +274,34 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
               onChangeText={(text) => {
-                // Convertir a mayúsculas y reemplazar espacios por guiones bajos
-                const processedValue = text.toUpperCase().replace(/\s+/g, '_');
-                handleChange('code', processedValue);
+                // El valor que recibe onChangeText puede incluir guiones bajos si el campo ya tiene valor
+                // Necesitamos restaurar los espacios desde los guiones bajos para el nombre
+                // pero mantener los guiones bajos para el código
+                
+                // Convertir a mayúsculas y reemplazar espacios por guiones bajos SOLO para código
+                const processedCode = text.toUpperCase().replace(/\s+/g, '_');
+                
+                // Actualizar código con el valor procesado
+                handleChange('code', processedCode);
+                
+                // Sincronizar nombre solo si no fue editado manualmente
+                if (!nameManuallyEditedRef.current) {
+                  // Para el nombre: convertir guiones bajos a espacios y procesar
+                  // Primero, reemplazar guiones bajos por espacios para obtener el texto original
+                  const textWithSpaces = text.replace(/_/g, ' ');
+                  
+                  // Convertir a formato nombre: primera letra mayúscula, resto minúsculas, espacios preservados
+                  const processedName = textWithSpaces
+                    .toLowerCase()
+                    .trim()
+                    .split(/\s+/)
+                    .filter((word: string) => word.length > 0)
+                    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                  
+                  nameRef.current = processedName;
+                  setFormData((prev) => ({ ...prev, name: processedName }));
+                }
               }}
               autoCapitalize="characters"
               editable={!isLoading}

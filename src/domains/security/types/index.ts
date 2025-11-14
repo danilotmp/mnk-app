@@ -64,6 +64,7 @@ export interface SecurityRole extends BaseEntity {
   code: string;
   description?: string;
   isSystem: boolean; // Roles del sistema no se pueden eliminar
+  companyId?: string; // ID de la empresa a la que pertenece el rol
   
   // Sistema de estados
   status: number;
