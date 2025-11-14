@@ -1,0 +1,540 @@
+/**
+ * Componente reutilizable para formulario de rol (editar)
+ * Puede usarse tanto en página independiente como en modal
+ */
+
+import { ThemedText } from '@/components/themed-text';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { InputWithFocus } from '@/components/ui/input-with-focus';
+import { useTheme } from '@/hooks/use-theme';
+import { RolesService, CompaniesService } from '@/src/domains/security';
+import { useMultiCompany } from '@/src/domains/shared/hooks';
+import { useTranslation } from '@/src/infrastructure/i18n';
+import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { createRoleFormStyles } from '../role-create-form/role-create-form.styles';
+import { RoleEditFormProps } from './role-edit-form.types';
+
+export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, showFooter = true, onFormReady }: RoleEditFormProps) {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const alert = useAlert();
+  const { company } = useMultiCompany();
+  const styles = createRoleFormStyles();
+
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    description: '',
+    companyId: '',
+    status: 1, // Default: Activo
+    isSystem: false,
+  });
+  
+  // Refs para mantener los valores actualizados y evitar stale closures
+  const codeRef = useRef<string>('');
+  const nameRef = useRef<string>('');
+  const descriptionRef = useRef<string>('');
+  const companyIdRef = useRef<string>('');
+  const statusRef = useRef<number>(1);
+  const isSystemRef = useRef<boolean>(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingRole, setLoadingRole] = useState(true);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  /**
+   * Cargar opciones (empresas)
+   */
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        setLoadingOptions(true);
+        
+        // Intentar cargar empresas del backend
+        try {
+          const response = await CompaniesService.getCompanies({ page: 1, limit: 100, status: 1 });
+          const backendCompanies = response.data || [];
+          
+          if (backendCompanies.length > 0) {
+            setCompanies(backendCompanies);
+          } else {
+            setCompanies([]);
+          }
+        } catch (backendError) {
+          // Si falla el backend, no cargar empresas
+          setCompanies([]);
+        }
+      } catch (error) {
+        // Silenciar errores - simplemente no cargar empresas
+        setCompanies([]);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    loadOptions();
+  }, []);
+
+  /**
+   * Cargar datos del rol
+   */
+  useEffect(() => {
+    const loadRole = async () => {
+      if (!roleId) {
+        alert.showError('ID de rol no válido');
+        return;
+      }
+
+      try {
+        setLoadingRole(true);
+        const role = await RolesService.getRoleById(roleId);
+        const roleStatus = role.status ?? 1;
+        statusRef.current = roleStatus;
+        
+        const roleCode = role.code || '';
+        const roleName = role.name || '';
+        const roleDescription = role.description || '';
+        const roleCompanyId = ''; // TODO: Obtener companyId del rol si está disponible
+        const roleIsSystem = role.isSystem ?? false;
+        
+        // Actualizar refs
+        codeRef.current = roleCode;
+        nameRef.current = roleName;
+        descriptionRef.current = roleDescription;
+        companyIdRef.current = roleCompanyId;
+        statusRef.current = roleStatus;
+        isSystemRef.current = roleIsSystem;
+        
+        setFormData({
+          name: roleName,
+          code: roleCode,
+          description: roleDescription,
+          companyId: roleCompanyId,
+          status: roleStatus,
+          isSystem: roleIsSystem,
+        });
+      } catch (error: any) {
+        alert.showError(error.message || 'Error al cargar rol');
+      } finally {
+        setLoadingRole(false);
+      }
+    };
+
+    loadRole();
+  }, [roleId, alert]);
+
+  /**
+   * Validar formulario
+   */
+  const validateForm = useCallback(() => {
+    const newErrors: Record<string, string> = {};
+
+    // Usar ref para evitar stale closure
+    if (!nameRef.current.trim()) {
+      newErrors.name = 'El nombre es requerido';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, []);
+
+  /**
+   * Manejar cambio de campo
+   */
+  const handleChange = useCallback((field: string, value: any) => {
+    // Actualizar refs para evitar stale closures
+    if (field === 'code') {
+      codeRef.current = value;
+    } else if (field === 'name') {
+      nameRef.current = value;
+    } else if (field === 'description') {
+      descriptionRef.current = value;
+    } else if (field === 'companyId') {
+      companyIdRef.current = value;
+    } else if (field === 'status') {
+      statusRef.current = value;
+    } else if (field === 'isSystem') {
+      isSystemRef.current = value;
+    }
+    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  }, [errors]);
+
+  /**
+   * Manejar envío del formulario
+   */
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    if (!roleId) {
+      alert.showError('ID de rol no válido');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Usar refs para obtener los valores más recientes y evitar stale closures
+      const updatePayload = {
+        name: nameRef.current.trim(),
+        code: codeRef.current.trim() || undefined,
+        description: descriptionRef.current.trim() || undefined,
+        companyId: companyIdRef.current || undefined,
+        status: statusRef.current,
+        isSystem: isSystemRef.current,
+      };
+      
+      await RolesService.updateRole(roleId, updatePayload);
+
+      alert.showSuccess(t.security?.roles?.edit || 'Rol actualizado exitosamente');
+      onSuccess?.();
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error al actualizar rol';
+      const errorDetail = (error as any)?.result?.details || '';
+      alert.showError(errorMessage, false, undefined, errorDetail);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [alert, onSuccess, roleId, t.security?.roles?.edit, validateForm]);
+
+  /**
+   * Manejar cancelar
+   */
+  const handleCancel = useCallback(() => {
+    onCancel?.();
+  }, [onCancel]);
+
+  /**
+   * Exponer funciones del formulario cuando está listo (para footer externo)
+   */
+  useEffect(() => {
+    if (onFormReady && !loadingRole && !loadingOptions) {
+      onFormReady({
+        isLoading,
+        handleSubmit,
+        handleCancel,
+      });
+    }
+  }, [isLoading, loadingRole, loadingOptions, onFormReady, handleSubmit, handleCancel]);
+
+  if (loadingRole || loadingOptions) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
+          Cargando datos...
+        </ThemedText>
+      </View>
+    );
+  }
+
+  // Renderizar contenido del formulario (sin ScrollView si está en modal)
+  const formContent = (
+    <>
+      {/* Formulario */}
+      <Card variant="flat" style={styles.formCard}>
+        {/* Code */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            Código
+          </ThemedText>
+          <InputWithFocus
+            containerStyle={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+            primaryColor={colors.primary}
+          >
+            <Ionicons name="text-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder="Código (opcional)"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.code}
+              onChangeText={(text) => {
+                // Convertir a mayúsculas y reemplazar espacios por guiones bajos
+                const processedValue = text.toUpperCase().replace(/\s+/g, '_');
+                handleChange('code', processedValue);
+              }}
+              autoCapitalize="characters"
+              editable={!isLoading}
+            />
+          </InputWithFocus>
+        </View>
+
+        {/* Name */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.roles?.name || 'Nombre'} *
+          </ThemedText>
+          <InputWithFocus
+            containerStyle={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.name ? colors.error : colors.border,
+              },
+            ]}
+            primaryColor={colors.primary}
+            error={!!errors.name}
+          >
+            <Ionicons name="key-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder={t.security?.roles?.name || 'Nombre'}
+              placeholderTextColor={colors.textSecondary}
+              value={formData.name}
+              onChangeText={(text) => handleChange('name', text)}
+              autoCapitalize="words"
+              editable={!isLoading}
+            />
+          </InputWithFocus>
+          {errors.name && (
+            <ThemedText type="caption" variant="error" style={styles.errorText}>
+              {errors.name}
+            </ThemedText>
+          )}
+        </View>
+
+        {/* Description */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.roles?.description || 'Descripción'}
+          </ThemedText>
+          <InputWithFocus
+            containerStyle={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                minHeight: 100,
+              },
+            ]}
+            primaryColor={colors.primary}
+          >
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                { color: colors.text },
+              ]}
+              placeholder={t.security?.roles?.description || 'Descripción'}
+              placeholderTextColor={colors.textSecondary}
+              value={formData.description}
+              onChangeText={(text) => handleChange('description', text)}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              editable={!isLoading}
+            />
+          </InputWithFocus>
+        </View>
+
+        {/* Company */}
+        {companies.length > 0 && (
+          <View style={styles.inputGroup}>
+            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+              Empresa
+            </ThemedText>
+            <View
+              style={[
+                styles.selectContainer,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.selectOptions}>
+                  {companies.map((comp) => (
+                    <TouchableOpacity
+                      key={comp.id}
+                      style={[
+                        styles.selectOption,
+                        formData.companyId === comp.id && {
+                          backgroundColor: colors.primary,
+                        },
+                        { borderColor: colors.border },
+                      ]}
+                      onPress={() => handleChange('companyId', comp.id)}
+                      disabled={isLoading}
+                    >
+                      <ThemedText
+                        type="body2"
+                        style={
+                          formData.companyId === comp.id
+                            ? { color: '#FFFFFF' }
+                            : { color: colors.text }
+                        }
+                      >
+                        {comp.name}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
+        {/* Estado */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.users?.status || 'Estado'}
+          </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 1 && {
+                    backgroundColor: '#10b981',
+                    borderColor: '#10b981',
+                  },
+                ]}
+                onPress={() => handleChange('status', 1)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.active || 'Activo'}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 0 && {
+                    backgroundColor: '#ef4444',
+                    borderColor: '#ef4444',
+                  },
+                ]}
+                onPress={() => handleChange('status', 0)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  {t.security?.users?.inactive || 'Inactivo'}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 2 && {
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b',
+                  },
+                ]}
+                onPress={() => handleChange('status', 2)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  Pendiente
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.selectOption,
+                  { borderColor: colors.border },
+                  formData.status === 3 && {
+                    backgroundColor: '#f97316',
+                    borderColor: '#f97316',
+                  },
+                ]}
+                onPress={() => handleChange('status', 3)}
+                disabled={isLoading}
+              >
+                <ThemedText
+                  type="caption"
+                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
+                >
+                  Suspendido
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Is System */}
+        <View style={styles.switchGroup}>
+          <View style={styles.switchLabel}>
+            <ThemedText type="body2" style={{ color: colors.text }}>
+              Rol del sistema
+            </ThemedText>
+            <ThemedText type="caption" variant="secondary" style={styles.helpText}>
+              Los roles del sistema no se pueden eliminar
+            </ThemedText>
+          </View>
+          <Switch
+            value={formData.isSystem}
+            onValueChange={(value) => handleChange('isSystem', value)}
+            trackColor={{ false: colors.border, true: colors.primary + '80' }}
+            thumbColor={formData.isSystem ? colors.primary : colors.textSecondary}
+            disabled={isLoading || formData.isSystem} // No permitir desactivar si ya es del sistema
+          />
+        </View>
+
+        {/* Botones (solo si showFooter es true) */}
+        {showFooter && (
+          <View style={styles.actions}>
+            <Button
+              title={t.common.cancel}
+              onPress={handleCancel}
+              variant="outlined"
+              size="md"
+              style={styles.cancelButton}
+              disabled={isLoading}
+            />
+            <Button
+              title={t.common.save}
+              onPress={handleSubmit}
+              variant="primary"
+              size="md"
+              style={styles.submitButton}
+              disabled={isLoading}
+            />
+          </View>
+        )}
+      </Card>
+    </>
+  );
+
+  // Si está en modal (showHeader=false), no usar ScrollView propio (el modal lo maneja)
+  if (!showHeader) {
+    return <>{formContent}</>;
+  }
+
+  // Si está en página independiente, usar ScrollView propio
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {formContent}
+    </ScrollView>
+  );
+}
+

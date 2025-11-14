@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,8 +18,10 @@ import {
   SecurityBranch,
   useCompanyOptions,
 } from '@/src/domains/security';
-import { DataTable, TableColumn } from '@/src/domains/shared/components/data-table';
-import { FilterConfig, SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar';
+import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
+import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
+import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
+import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
@@ -26,7 +29,7 @@ import { createBranchesListStyles } from '@/src/styles/pages/branches-list.style
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 export default function BranchesListPage() {
   const { colors } = useTheme();
@@ -64,7 +67,7 @@ export default function BranchesListPage() {
     search: '',
     companyId: undefined,
     type: undefined,
-    isActive: undefined,
+    status: undefined,
   });
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -153,12 +156,34 @@ export default function BranchesListPage() {
   );
 
   const handleAdvancedFilterChange = useCallback((key: string, value: any) => {
+    setHasError(false);
+
+    if (key === 'deleted') {
+      setFilters((prev) => ({
+        ...prev,
+        status: value === 'deleted' ? -1 : undefined,
+        page: 1,
+      }));
+      return;
+    }
+
+    if (key === 'status') {
+      setFilters((prev) => ({
+        ...prev,
+        status: value === '' ? undefined : Number.parseInt(value, 10),
+        page: 1,
+      }));
+      return;
+    }
+
+    const processedValue =
+      key === 'status' && value !== '' ? Number.parseInt(value, 10) : value;
+
     setFilters((prev) => ({
       ...prev,
-      [key]: value,
+      [key]: value === '' ? undefined : processedValue,
       page: 1,
     }));
-    setHasError(false);
   }, []);
 
   const handleClearFilters = useCallback(() => {
@@ -168,7 +193,7 @@ export default function BranchesListPage() {
       search: '',
       companyId: undefined,
       type: undefined,
-      isActive: undefined,
+      status: undefined,
     });
     setLocalFilter('');
     setHasError(false);
@@ -214,18 +239,9 @@ export default function BranchesListPage() {
         label: 'Nombre',
         minWidth: 200,
         render: (item) => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ThemedText type="body2" style={{ color: colors.text, flexShrink: 1 }}>
-              {item.name}
-            </ThemedText>
-            {!item.isActive ? (
-              <View style={[styles.statusBadge, { backgroundColor: colors.border + '33' }]}>
-                <ThemedText type="caption" variant="secondary">
-                  {t.security?.branches?.inactive || 'Inactiva'}
-                </ThemedText>
-              </View>
-            ) : null}
-          </View>
+          <ThemedText type="body2" style={{ color: colors.text, flexShrink: 1 }}>
+            {item.name}
+          </ThemedText>
         ),
       },
       {
@@ -249,18 +265,41 @@ export default function BranchesListPage() {
         ),
       },
       {
-        key: 'isActive',
-        label: 'Estado',
+        key: 'status',
+        label: t.security?.users?.status || 'Estado',
         width: 120,
         align: 'center',
         render: (item) => (
-          <ThemedText type="body2" style={{ color: item.isActive ? colors.success : colors.error }}>
-            {item.isActive ? (t.security?.users?.active || 'Activa') : (t.security?.users?.inactive || 'Inactiva')}
-          </ThemedText>
+          <StatusBadge 
+            status={item.status} 
+            statusDescription={item.statusDescription}
+            size="small"
+          />
+        ),
+      },
+      {
+        key: 'actions',
+        label: t.common?.actions || 'Acciones',
+        width: 120,
+        align: 'center',
+        render: (item) => (
+          <View style={styles.actionsContainer}>
+            <Tooltip text={t.security?.branches?.editShort || 'Editar'} position="left">
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleEditBranch(item)}
+              >
+                <Ionicons name="pencil" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </Tooltip>
+          </View>
         ),
       },
     ];
-  }, [colors.error, colors.success, colors.text, colors.textSecondary, styles.statusBadge, t.security?.branches?.inactive, t.security?.branches?.types, t.security?.branches?.unknownCompany, t.security?.users?.active, t.security?.users?.inactive]);
+  }, [colors.primary, colors.text, colors.textSecondary, styles.actionButton, styles.actionsContainer, t.common?.actions, t.security?.branches?.editShort, t.security?.branches?.types, t.security?.branches?.unknownCompany, t.security?.users?.status]);
+
+  const usersTranslations = (t.security?.users as any) || {};
+  const commonTranslations = t.common || {};
 
   const filterConfigs = useMemo<FilterConfig[]>(() => {
     return [
@@ -269,8 +308,8 @@ export default function BranchesListPage() {
         label: t.security?.branches?.filters?.company || 'Empresa',
         type: 'select',
         options: [
-          { label: t.security?.branches?.filters?.allCompanies || 'Todas', value: undefined },
-          ...companies.map((company) => ({ label: company.name, value: company.id })),
+          { key: 'all', value: '', label: t.security?.branches?.filters?.allCompanies || 'Todas' },
+          ...companies.map((company) => ({ key: company.id, value: company.id, label: company.name })),
         ],
       },
       {
@@ -278,25 +317,39 @@ export default function BranchesListPage() {
         label: t.security?.branches?.filters?.type || 'Tipo',
         type: 'select',
         options: [
-          { label: t.security?.branches?.filters?.allTypes || 'Todos', value: undefined },
-          { label: 'Casa matriz', value: 'headquarters' },
-          { label: 'Sucursal', value: 'branch' },
-          { label: 'Bodega', value: 'warehouse' },
-          { label: 'Tienda', value: 'store' },
+          { key: 'all', value: '', label: t.security?.branches?.filters?.allTypes || 'Todos' },
+          { key: 'headquarters', value: 'headquarters', label: 'Casa matriz' },
+          { key: 'branch', value: 'branch', label: 'Sucursal' },
+          { key: 'warehouse', value: 'warehouse', label: 'Bodega' },
+          { key: 'store', value: 'store', label: 'Tienda' },
         ],
       },
       {
-        key: 'isActive',
-        label: t.security?.branches?.filters?.status || 'Estado',
+        key: 'status',
+        label: usersTranslations.status || 'Estado',
         type: 'select',
         options: [
-          { label: t.security?.branches?.filters?.allStatus || 'Todos', value: undefined },
-          { label: t.security?.users?.active || 'Activas', value: true },
-          { label: t.security?.users?.inactive || 'Inactivas', value: false },
+          { key: 'all', value: '', label: commonTranslations.all || 'Todos' },
+          { key: 'active', value: '1', label: usersTranslations.active || 'Activo' },
+          { key: 'inactive', value: '0', label: usersTranslations.inactive || 'Inactivo' },
+          { key: 'pending', value: '2', label: usersTranslations.pending || 'Pendiente' },
+          { key: 'suspended', value: '3', label: usersTranslations.suspended || 'Suspendido' },
+        ],
+      },
+      {
+        key: 'deleted',
+        label: usersTranslations.deletedFilter || 'Otros',
+        type: 'select',
+        options: [
+          {
+            key: 'deleted',
+            value: 'deleted',
+            label: usersTranslations.deletedUser || 'Eliminados',
+          },
         ],
       },
     ];
-  }, [companies, t.security?.branches?.filters, t.security?.users?.active, t.security?.users?.inactive]);
+  }, [companies, commonTranslations.all, t.security?.branches?.filters, usersTranslations]);
 
   const handleCreateBranch = useCallback(() => {
     setFormActions(null);
@@ -371,9 +424,13 @@ export default function BranchesListPage() {
           searchPlaceholder={t.security?.branches?.searchPlaceholder || 'Buscar sucursales'}
           filters={filterConfigs}
           activeFilters={{
-            companyId: filters.companyId,
-            type: filters.type,
-            isActive: filters.isActive,
+            companyId: filters.companyId || '',
+            type: filters.type || '',
+            status:
+              filters.status !== undefined && filters.status !== -1
+                ? filters.status.toString()
+                : '',
+            deleted: filters.status === -1 ? 'deleted' : '',
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}
           onClearFilters={handleClearFilters}

@@ -279,6 +279,6 @@ export interface BranchPayload {
   address?: CompanyAddress;
   contactInfo?: BranchContactInfo;
   settings?: BranchSettings;
-  isActive?: boolean;
+  status?: number; // Sistema de estados
 }
 

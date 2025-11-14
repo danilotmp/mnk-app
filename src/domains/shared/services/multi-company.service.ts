@@ -678,5 +678,19 @@ export class MultiCompanyService {
   getMockUsers(): MultiCompanyUser[] {
     return this.mockUsers;
   }
+
+  /**
+   * Método público para obtener empresas mock (útil para testing/demo)
+   */
+  getMockCompanies(): Company[] {
+    return this.mockCompanies;
+  }
+
+  /**
+   * Método público para obtener sucursales mock (útil para testing/demo)
+   */
+  getMockBranches(): Branch[] {
+    return this.mockBranches;
+  }
 }
 

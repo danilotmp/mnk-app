@@ -179,8 +179,8 @@ export class BranchesService {
     if (filters.type) {
       params.append('type', filters.type);
     }
-    if (typeof filters.isActive === 'boolean') {
-      params.append('isActive', String(filters.isActive));
+    if (typeof filters.status === 'number') {
+      params.append('status', String(filters.status));
     }
 
     return params.toString();

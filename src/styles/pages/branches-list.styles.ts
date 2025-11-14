@@ -31,6 +31,13 @@ export const createBranchesListStyles = (isMobile: boolean = false) =>
       flexDirection: 'row',
       gap: isMobile ? 4 : 8,
       alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionButton: {
+      padding: 8,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     dataTableContainer: {
       width: '100%',

@@ -14,8 +14,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '@/src/domains/security';
 import { RoleCreateForm, RoleEditForm } from '@/src/domains/security/components';
 import { RoleFilters, SecurityRole } from '@/src/domains/security/types';
-import { DataTable, TableColumn } from '@/src/domains/shared/components/data-table';
-import { FilterConfig, SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar';
+import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
+import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
+import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
+import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
@@ -297,14 +299,14 @@ export default function RolesListPage() {
 
   const columns: TableColumn<SecurityRole>[] = [
     {
-      key: 'name',
-      label: t.security?.roles?.name || 'Nombre',
-      width: '23%',
-    },
-    {
       key: 'code',
       label: t.security?.roles?.code || 'Código',
       width: '18%',
+    },
+    {
+      key: 'name',
+      label: t.security?.roles?.name || 'Nombre',
+      width: '23%',
     },
     {
       key: 'description',
