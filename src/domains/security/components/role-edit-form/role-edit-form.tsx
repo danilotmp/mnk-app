@@ -519,7 +519,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
               Rol del sistema
             </ThemedText>
             <ThemedText type="caption" variant="secondary" style={styles.helpText}>
-              Los roles del sistema no se pueden eliminar
+              Los roles del sistema están protegidos contra eliminación
             </ThemedText>
           </View>
           <Switch
@@ -527,7 +527,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
             onValueChange={(value) => handleChange('isSystem', value)}
             trackColor={{ false: colors.border, true: colors.primary + '80' }}
             thumbColor={formData.isSystem ? colors.primary : colors.textSecondary}
-            disabled={isLoading || formData.isSystem} // No permitir desactivar si ya es del sistema
+            disabled={isLoading}
           />
         </View>
 

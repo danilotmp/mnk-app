@@ -314,14 +314,18 @@ export default function RolesListPage() {
       width: '26%',
     },
     {
-      key: 'permissions',
-      label: t.security?.roles?.permissions || 'Permisos',
+      key: 'isSystem',
+      label: 'Sistema',
       width: '8%',
       align: 'center',
       render: (role) => (
-        <ThemedText type="body2" variant="secondary">
-          {role.permissions?.length || 0}
-        </ThemedText>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          {role.isSystem ? (
+            <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+          ) : (
+            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+          )}
+        </View>
       ),
     },
     {
@@ -335,6 +339,17 @@ export default function RolesListPage() {
           statusDescription={role.statusDescription}
           size="small"
         />
+      ),
+    },
+    {
+      key: 'permissions',
+      label: t.security?.roles?.permissions || 'Permisos',
+      width: '8%',
+      align: 'center',
+      render: (role) => (
+        <ThemedText type="body2" variant="secondary">
+          {role.permissions?.length || 0}
+        </ThemedText>
       ),
     },
     {

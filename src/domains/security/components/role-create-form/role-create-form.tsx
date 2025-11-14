@@ -541,7 +541,7 @@ export function RoleCreateForm({
               Rol del sistema
             </ThemedText>
             <ThemedText type="caption" variant="secondary" style={styles.helpText}>
-              Los roles del sistema no se pueden eliminar
+              Los roles del sistema están protegidos contra eliminación
             </ThemedText>
           </View>
           <Switch
