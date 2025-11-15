@@ -147,13 +147,13 @@ export function DataTable<T = any>({
     // Agregar columna de acciones al final
     return [
       ...columns,
-      {
-        key: 'actions',
-        label: actionsColumnLabel,
-        width: actionsColumnWidth,
-        align: 'center' as const,
-        render: (item: T, index: number) => renderActions(item, index),
-      },
+        {
+          key: 'actions',
+          label: actionsColumnLabel,
+          width: actionsColumnWidth,
+          align: 'right' as const,
+          render: (item: T, index: number) => renderActions(item, index),
+        },
     ];
   }, [columns, actions, editAction, deleteAction, actionsColumnWidth, actionsColumnLabel, renderActions]);
   

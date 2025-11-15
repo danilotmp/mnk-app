@@ -11,7 +11,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '@/src/domains/security';
-import { RoleCreateForm, RoleEditForm } from '@/src/domains/security/components';
+import { RoleCreateForm, RoleEditForm, RolePermissionsModal } from '@/src/domains/security/components';
 import { RoleFilters, SecurityRole } from '@/src/domains/security/types';
 import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
@@ -51,6 +51,8 @@ export default function RolesListPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
+  const [isPermissionsModalVisible, setIsPermissionsModalVisible] = useState(false);
+  const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState<SecurityRole | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -510,6 +512,17 @@ export default function RolesListPage() {
               tooltip: t.security?.roles?.deleteShort || 'Eliminar',
               visible: (role) => !role.isSystem, // Solo mostrar si NO es del sistema
             }}
+            actions={[
+              {
+                id: 'view-permissions',
+                icon: 'git-network',
+                tooltip: 'Ver permisos',
+                onPress: (role) => {
+                  setSelectedRoleForPermissions(role);
+                  setIsPermissionsModalVisible(true);
+                },
+              },
+            ]}
           />
         </View>
 
@@ -574,6 +587,21 @@ export default function RolesListPage() {
             ) : null}
           </SideModal>
         )}
+
+        {/* Modal de permisos */}
+        <RolePermissionsModal
+          visible={isPermissionsModalVisible}
+          role={selectedRoleForPermissions}
+          onClose={() => {
+            setIsPermissionsModalVisible(false);
+            setSelectedRoleForPermissions(null);
+          }}
+          onEdit={(role) => {
+            setIsPermissionsModalVisible(false);
+            setSelectedRoleForPermissions(null);
+            handleEditRole(role);
+          }}
+        />
       </View>
     </ThemedView>
   );

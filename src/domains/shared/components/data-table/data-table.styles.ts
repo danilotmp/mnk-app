@@ -203,7 +203,7 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       flexDirection: 'row',
       gap: isMobile ? 4 : 8,
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'flex-end',
     },
     actionButton: {
       padding: isMobile ? 6 : 8,

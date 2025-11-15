@@ -18,6 +18,8 @@ export { RoleCreateForm } from './role-create-form/role-create-form';
 export type { RoleCreateFormProps } from './role-create-form/role-create-form.types';
 export { RoleEditForm } from './role-edit-form/role-edit-form';
 export type { RoleEditFormProps } from './role-edit-form/role-edit-form.types';
+export { RolePermissionsModal } from './role-permissions-modal/role-permissions-modal';
+export type { RolePermissionsModalProps } from './role-permissions-modal/role-permissions-modal.types';
 export { UserCreateForm } from './user-create-form/user-create-form';
 export type { UserCreateFormProps } from './user-create-form/user-create-form.types';
 export { UserEditForm } from './user-edit-form/user-edit-form';
