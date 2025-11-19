@@ -356,70 +356,68 @@ export function UserCreateForm({
         ) : null}
       </View>
 
-      <View style={styles.inlineInputs}>
-        <View style={[styles.inlineInput, styles.inlineInputLeft]}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.firstName || 'Nombre'} *
+      <View style={styles.inputGroup}>
+        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          {t.security?.users?.firstName || 'Nombre'} *
+        </ThemedText>
+        <InputWithFocus
+          containerStyle={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: errors.firstName ? colors.error : colors.border,
+            },
+          ]}
+          primaryColor={colors.primary}
+          error={!!errors.firstName}
+        >
+          <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+          <TextInput
+            style={[styles.input, { color: colors.text }]}
+            placeholder={t.security?.users?.firstNamePlaceholder || 'Nombre del usuario'}
+            placeholderTextColor={colors.textSecondary}
+            value={formData.firstName}
+            onChangeText={(value) => handleChange('firstName', value)}
+            autoCapitalize="words"
+          />
+        </InputWithFocus>
+        {errors.firstName ? (
+          <ThemedText type="caption" style={{ color: colors.error }}>
+            {errors.firstName}
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.firstName ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
-            error={!!errors.firstName}
-          >
-            <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.security?.users?.firstNamePlaceholder || 'Nombre del usuario'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.firstName}
-              onChangeText={(value) => handleChange('firstName', value)}
-              autoCapitalize="words"
-            />
-          </InputWithFocus>
-          {errors.firstName ? (
-            <ThemedText type="caption" style={{ color: colors.error }}>
-              {errors.firstName}
-            </ThemedText>
-          ) : null}
-        </View>
+        ) : null}
+      </View>
 
-        <View style={[styles.inlineInput, styles.inlineInputRight]}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.lastName || 'Apellido'} *
+      <View style={styles.inputGroup}>
+        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          {t.security?.users?.lastName || 'Apellido'} *
+        </ThemedText>
+        <InputWithFocus
+          containerStyle={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: errors.lastName ? colors.error : colors.border,
+            },
+          ]}
+          primaryColor={colors.primary}
+          error={!!errors.lastName}
+        >
+          <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+          <TextInput
+            style={[styles.input, { color: colors.text }]}
+            placeholder={t.security?.users?.lastNamePlaceholder || 'Apellido del usuario'}
+            placeholderTextColor={colors.textSecondary}
+            value={formData.lastName}
+            onChangeText={(value) => handleChange('lastName', value)}
+            autoCapitalize="words"
+          />
+        </InputWithFocus>
+        {errors.lastName ? (
+          <ThemedText type="caption" style={{ color: colors.error }}>
+            {errors.lastName}
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.lastName ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
-            error={!!errors.lastName}
-          >
-            <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.security?.users?.lastNamePlaceholder || 'Apellido del usuario'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.lastName}
-              onChangeText={(value) => handleChange('lastName', value)}
-              autoCapitalize="words"
-            />
-          </InputWithFocus>
-          {errors.lastName ? (
-            <ThemedText type="caption" style={{ color: colors.error }}>
-              {errors.lastName}
-            </ThemedText>
-          ) : null}
-        </View>
+        ) : null}
       </View>
 
       <View style={styles.inputGroup}>
