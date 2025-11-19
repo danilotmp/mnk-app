@@ -12,7 +12,7 @@ import {
 } from '../types';
 
 export class PermissionsService {
-  private static readonly BASE_ENDPOINT = '/seguridades/permisos';
+  private static readonly BASE_ENDPOINT = '/security/permissions';
 
   /**
    * Obtener lista de permisos con paginación
@@ -185,7 +185,7 @@ export class PermissionsService {
   static async getPermissionsByModule(): Promise<Record<string, SecurityPermission[]>> {
     try {
       const response = await apiClient.request<Record<string, SecurityPermission[]>>({
-        endpoint: `${this.BASE_ENDPOINT}/por-modulo`,
+        endpoint: `${this.BASE_ENDPOINT}/by-module`,
         method: 'GET',
       });
 

@@ -150,7 +150,7 @@ export class AuthService {
   }
 
   /**
-   * Obtiene el perfil completo del usuario desde /seguridades/profile
+   * Obtiene el perfil completo del usuario desde /security/profile
    */
   async getProfile(): Promise<any> {
     try {

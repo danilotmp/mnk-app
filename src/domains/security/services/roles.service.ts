@@ -12,7 +12,7 @@ import {
 } from '../types';
 
 export class RolesService {
-  private static readonly BASE_ENDPOINT = '/seguridades/roles';
+  private static readonly BASE_ENDPOINT = '/security/roles';
 
   /**
    * Obtener lista de roles con paginación
@@ -183,7 +183,7 @@ export class RolesService {
   ): Promise<SecurityRole> {
     try {
       const response = await apiClient.request<SecurityRole>({
-        endpoint: `${this.BASE_ENDPOINT}/${roleId}/permisos`,
+        endpoint: `${this.BASE_ENDPOINT}/${roleId}/permissions`,
         method: 'POST',
         body: { permissionIds },
       });
@@ -207,7 +207,7 @@ export class RolesService {
   ): Promise<SecurityRole> {
     try {
       const response = await apiClient.request<SecurityRole>({
-        endpoint: `${this.BASE_ENDPOINT}/${roleId}/permisos`,
+        endpoint: `${this.BASE_ENDPOINT}/${roleId}/permissions`,
         method: 'DELETE',
         body: { permissionIds },
       });

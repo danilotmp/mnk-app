@@ -92,10 +92,14 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         isInitialLoadRef.current = true;
         const user = await UsersService.getUserById(userId);
         
-        // Primero cargar las sucursales si hay companyId
+        // Primero cargar las sucursales si hay companyId válido
         if (user.companyId) {
-          await refreshBranches({ companyId: user.companyId });
-          loadedCompanyIdRef.current = user.companyId; // Guardar el companyId cargado
+          // Validar que companyId sea un UUID válido antes de hacer la llamada
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(user.companyId)) {
+            await refreshBranches({ companyId: user.companyId });
+            loadedCompanyIdRef.current = user.companyId; // Guardar el companyId cargado
+          }
         }
         
         // Extraer branchIds correctamente
@@ -167,6 +171,14 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     if (isInitialLoadRef.current || !formData.companyId || loadedCompanyIdRef.current === formData.companyId) {
       return;
     }
+    
+    // Validar que companyId sea un UUID válido antes de hacer la llamada
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(formData.companyId)) {
+      // No hacer la llamada si el ID no es válido (ej: "company-1")
+      return;
+    }
+    
     refreshBranches({ companyId: formData.companyId });
     loadedCompanyIdRef.current = formData.companyId; // Actualizar el companyId cargado
     // eslint-disable-next-line react-hooks/exhaustive-deps

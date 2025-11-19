@@ -35,7 +35,7 @@ interface BackendPaginatedCompanies {
 }
 
 export class CompaniesService {
-  private static readonly BASE_ENDPOINT = '/seguridades/admin/empresas';
+  private static readonly BASE_ENDPOINT = '/security/admin/companies';
   private static readonly CONTEXT_ENDPOINT = '/auth/me/companies';
 
   static async getCompanies(

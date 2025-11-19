@@ -8,6 +8,14 @@ import { BranchFilters, SecurityBranch } from '../types';
 
 const DEFAULT_LIMIT = 100;
 
+/**
+ * Validar si un string es un UUID válido
+ */
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export interface UseBranchOptionsParams {
   companyId?: string;
   autoFetch?: boolean;
@@ -63,6 +71,13 @@ export function useBranchOptions({
 
   const fetchFromApi = useCallback(
     async (targetCompanyId?: string) => {
+      // Validar que targetCompanyId sea un UUID válido si se proporciona
+      if (targetCompanyId && !isValidUUID(targetCompanyId)) {
+        // No hacer la llamada si el ID no es válido
+        setBranches([]);
+        return;
+      }
+
       const cacheKey = targetCompanyId ?? 'all';
 
       if (cacheRef.current.has(cacheKey)) {
@@ -142,11 +157,21 @@ export function useBranchOptions({
     if (!autoFetch) {
       return;
     }
+    
+    // Validar que companyId sea un UUID válido antes de hacer la llamada
+    const targetCompanyId = companyId || filters.companyId;
+    if (targetCompanyId && !isValidUUID(targetCompanyId)) {
+      // No hacer la llamada automática si el ID no es válido
+      return;
+    }
+
     if (!companyId && filters.companyId) {
       fetchBranches(filters.companyId);
       return;
     }
-    fetchBranches(companyId);
+    if (companyId) {
+      fetchBranches(companyId);
+    }
   }, [autoFetch, companyId, fetchBranches, filters.companyId]);
 
   const handleSetFilters = useCallback((newFilters: Partial<BranchFilters>) => {

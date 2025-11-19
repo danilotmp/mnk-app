@@ -2,7 +2,7 @@
  * Servicio para obtener el menú dinámico desde el backend
  * 
  * Estrategia:
- * - Si el usuario está autenticado: Llama a /api/seguridades/menu con token (devuelve público + privado según permisos)
+ * - Si el usuario está autenticado: Llama a /api/security/menu con token (devuelve público + privado según permisos)
  * - Si NO está autenticado: Usa menú por defecto con páginas públicas (no llama al servicio)
  */
 

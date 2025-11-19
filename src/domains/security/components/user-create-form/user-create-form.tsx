@@ -91,6 +91,14 @@ export function UserCreateForm({
     if (!formData.companyId) {
       return;
     }
+    
+    // Validar que companyId sea un UUID válido antes de hacer la llamada
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(formData.companyId)) {
+      // No hacer la llamada si el ID no es válido (ej: "company-1")
+      return;
+    }
+    
     refreshBranches({ companyId: formData.companyId });
   }, [formData.companyId, refreshBranches]);
 
@@ -180,7 +188,7 @@ export function UserCreateForm({
         payload.roleId = roleIdRef.current.trim();
       }
       
-      // ✅ Usar createUser() - el endpoint POST /usuarios acepta roleId y branchIds
+      // ✅ Usar createUser() - el endpoint POST /users acepta roleId y branchIds
       await UsersService.createUser(payload);
 
       alert.showSuccess(t.security?.users?.create || 'Usuario creado exitosamente');

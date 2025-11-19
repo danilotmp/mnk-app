@@ -47,7 +47,7 @@ import { apiClient } from '@/src/infrastructure';
 
 // GET request
 const response = await apiClient.request({
-  endpoint: '/usuarios/me',
+  endpoint: '/users/me',
   method: 'GET',
 });
 
@@ -91,7 +91,7 @@ interface ApiResponse<T> {
 
 // Ejemplo
 const response: ApiResponse<User> = await apiClient.request<User>({
-  endpoint: '/usuarios/me',
+  endpoint: '/users/me',
   method: 'GET',
 });
 
@@ -109,7 +109,7 @@ El cliente maneja automáticamente la expiración de tokens:
 ```typescript
 // 1. Realizas un request
 const response = await apiClient.request({
-  endpoint: '/usuarios/me',
+  endpoint: '/users/me',
   method: 'GET',
 });
 
@@ -129,7 +129,7 @@ const response = await apiClient.request({
 ┌─────────────────────────────────────────────┐
 │ 1. Login                                    │
 ├─────────────────────────────────────────────┤
-│ POST /seguridades/auth/login                │
+│ POST /security/auth/login                │
 │ Body: { email, password }                   │
 │ Response: { accessToken, refreshToken }    │
 │ ↓                                           │
@@ -139,7 +139,7 @@ const response = await apiClient.request({
 ┌─────────────────────────────────────────────┐
 │ 2. Request Normal                           │
 ├─────────────────────────────────────────────┤
-│ GET /usuarios/me                            │
+│ GET /users/me                            │
 │ Header: Authorization: Bearer <accessToken>│
 │ Response: 200 OK ✅                         │
 └─────────────────────────────────────────────┘
@@ -147,17 +147,17 @@ const response = await apiClient.request({
 ┌─────────────────────────────────────────────┐
 │ 3. AccessToken Expira (401)                │
 ├─────────────────────────────────────────────┤
-│ GET /usuarios/me                            │
+│ GET /users/me                            │
 │ Header: Authorization: Bearer <expired>    │
 │ Response: 401 Unauthorized ❌               │
 │ ↓                                           │
-│ POST /seguridades/auth/refresh-token        │
+│ POST /security/auth/refresh-token        │
 │ Body: { refreshToken }                      │
 │ Response: { accessToken, refreshToken }     │
 │ ↓                                           │
 │ Guardar nuevos tokens                       │
 │ ↓                                           │
-│ Reintentar GET /usuarios/me                 │
+│ Reintentar GET /users/me                 │
 │ Response: 200 OK ✅                         │
 └─────────────────────────────────────────────┘
 ```

@@ -29,14 +29,14 @@ export const API_CONFIG = {
   
   // Endpoints
   ENDPOINTS: {
-    LOGIN: '/seguridades/auth/login',
-    REGISTER: '/seguridades/auth/register',
-    REFRESH_TOKEN: '/seguridades/auth/refresh-token',
-    LOGOUT: '/seguridades/auth/logout',
-    PROFILE: '/seguridades/profile',
-    CURRENT_USER: '/usuarios/me',
-    MENU: '/seguridades/menu', // Endpoint único: con token devuelve público+privado, sin token no se llama
-    ACCESS_CHECK: '/seguridades/access',
+    LOGIN: '/security/auth/login',
+    REGISTER: '/security/auth/register',
+    REFRESH_TOKEN: '/security/auth/refresh-token',
+    LOGOUT: '/security/auth/logout',
+    PROFILE: '/security/profile',
+    CURRENT_USER: '/users/me',
+    MENU: '/security/menu', // Endpoint único: con token devuelve público+privado, sin token no se llama
+    ACCESS_CHECK: '/security/access',
   },
 };
 

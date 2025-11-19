@@ -35,9 +35,17 @@ interface BackendPaginatedBranches {
 }
 
 export class BranchesService {
-  private static readonly BASE_ENDPOINT = '/seguridades/admin/sucursales';
+  private static readonly BASE_ENDPOINT = '/security/admin/branches';
   private static readonly CONTEXT_ENDPOINT = '/auth/me/branches';
-  private static readonly BY_COMPANY_ENDPOINT = '/seguridades/admin/sucursales/empresa';
+  private static readonly BY_COMPANY_ENDPOINT = '/security/admin/branches/company';
+
+  /**
+   * Validar si un string es un UUID válido
+   */
+  private static isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  }
 
   static async getBranches(
     filters: BranchFilters = { page: 1, limit: 10 }
@@ -58,6 +66,11 @@ export class BranchesService {
   }
 
   static async getBranchesByCompany(companyId: string): Promise<SecurityBranch[]> {
+    // Validar que companyId sea un UUID válido antes de hacer la llamada
+    if (!this.isValidUUID(companyId)) {
+      throw new Error(`ID de empresa inválido: ${companyId}. Se requiere un UUID válido.`);
+    }
+
     const response = await apiClient.request<SecurityBranch[] | BackendPaginatedBranches>({
       endpoint: `${this.BY_COMPANY_ENDPOINT}/${companyId}`,
       method: 'GET',

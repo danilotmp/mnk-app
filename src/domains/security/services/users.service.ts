@@ -13,7 +13,7 @@ import {
 } from '../types';
 
 export class UsersService {
-  private static readonly BASE_ENDPOINT = '/seguridades/usuarios';
+  private static readonly BASE_ENDPOINT = '/security/users';
 
   /**
    * Validar si un string es un UUID válido
@@ -139,7 +139,7 @@ export class UsersService {
   static async getUserByIdComplete(id: string): Promise<SecurityUser> {
     try {
       const response = await apiClient.request<SecurityUser>({
-        endpoint: `${this.BASE_ENDPOINT}/${id}/completo`,
+        endpoint: `${this.BASE_ENDPOINT}/${id}/complete`,
         method: 'GET',
       });
 
@@ -192,14 +192,14 @@ export class UsersService {
 
   /**
    * ❌ ENDPOINT NO DISPONIBLE
-   * El endpoint POST /completo NO existe en el backend.
-   * Solo existe PUT /:id/completo para actualización.
+   * El endpoint POST /complete NO existe en el backend.
+   * Solo existe PUT /:id/complete para actualización.
    * 
    * Para crear un usuario con rol y sucursales, usa createUser() 
    * y envía roleId y branchIds en el payload.
    */
   // static async createUserComplete(userData: UserUpdatePayload): Promise<SecurityUser> {
-  //   throw new Error('Endpoint POST /completo no disponible. Usa createUser() con roleId y branchIds.');
+   //   throw new Error('Endpoint POST /complete no disponible. Usa createUser() con roleId y branchIds.');
   // }
 
   /**
@@ -251,7 +251,7 @@ export class UsersService {
   ): Promise<SecurityUser> {
     try {
       const response = await apiClient.request<SecurityUser>({
-        endpoint: `${this.BASE_ENDPOINT}/${id}/completo`,
+        endpoint: `${this.BASE_ENDPOINT}/${id}/complete`,
         method: 'PUT',
         body: userData,
       });

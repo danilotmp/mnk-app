@@ -12,7 +12,7 @@ import {
 } from '../types';
 
 export class AccessesService {
-  private static readonly BASE_ENDPOINT = '/seguridades/accesos';
+  private static readonly BASE_ENDPOINT = '/security/accesses';
 
   /**
    * Obtener lista de accesos con paginación
@@ -212,7 +212,7 @@ export class AccessesService {
   ): Promise<SecurityAccess> {
     try {
       const response = await apiClient.request<SecurityAccess>({
-        endpoint: `${this.BASE_ENDPOINT}/${accessId}/permisos`,
+        endpoint: `${this.BASE_ENDPOINT}/${accessId}/permissions`,
         method: 'POST',
         body: { permissionIds },
       });
