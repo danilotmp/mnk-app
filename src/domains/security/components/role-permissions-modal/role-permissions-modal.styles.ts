@@ -1,6 +1,4 @@
-import { Theme } from '@/src/styles/themes';
-
-export const createRolePermissionsModalStyles = (colors: Theme['colors'], isMobile: boolean) => {
+export const createRolePermissionsModalStyles = (colors: any, isMobile: boolean) => {
   return {
     treeContainer: {
       padding: isMobile ? 16 : 20,

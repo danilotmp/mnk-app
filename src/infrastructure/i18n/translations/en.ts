@@ -227,6 +227,7 @@ export const en: Translations = {
       filterPlaceholder: 'Filter by name or code...',
       searchPlaceholder: 'Search by name or code...',
       loadError: 'Error loading roles',
+      defaultOption: 'Default option',
     },
     permissions: {
       title: 'Permission Management',

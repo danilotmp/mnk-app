@@ -224,6 +224,7 @@ export interface Translations {
       filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
+      defaultOption: string;
     };
     permissions?: {
       title: string;

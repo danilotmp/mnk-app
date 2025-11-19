@@ -81,6 +81,7 @@ export interface SecurityPermission extends BaseEntity {
   code: string; // Ej: 'users.view', 'admin.manage'
   module: string; // Ej: 'admin', 'users', 'reports'
   action: string; // Ej: 'view', 'create', 'edit', 'delete'
+  route?: string; // Ruta asociada al permiso (ej: '/security/users') - opcional para retrocompatibilidad
   description?: string;
   
   // Sistema de estados

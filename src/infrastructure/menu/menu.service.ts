@@ -162,4 +162,32 @@ export class MenuService {
       return this.getDefaultMenu();
     }
   }
+
+  /**
+   * Obtener menú para un rol específico
+   * Envía el roleId como query parameter
+   * 
+   * @param roleId ID del rol para el que se quiere obtener el menú
+   * @param language Idioma del menú (es, en, pt)
+   * @returns Array de items del menú del rol
+   */
+  static async getMenuForRole(roleId: string, language: string = 'es'): Promise<MenuItem[]> {
+    try {
+      const response = await apiClient.request<MenuItem[]>({
+        endpoint: `${API_CONFIG.ENDPOINTS.MENU}?roleId=${roleId}`,
+        method: 'GET',
+        skipAuth: false, // Requiere autenticación (token se envía automáticamente por apiClient)
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        // Asegurar que las páginas públicas siempre estén presentes
+        return this.ensurePublicPages(response.data);
+      }
+
+      throw new Error(response.result?.description || 'Error al obtener el menú del rol');
+    } catch (error: any) {
+      // Si falla, retornar menú por defecto como fallback
+      return this.getDefaultMenu();
+    }
+  }
 }

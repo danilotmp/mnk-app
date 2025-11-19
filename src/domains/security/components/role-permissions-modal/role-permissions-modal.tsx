@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { SecurityRole } from '../../types';
-import { RolePermissionsModalProps } from './role-permissions-modal.types';
-import { createRolePermissionsModalStyles } from './role-permissions-modal.styles';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View } from 'react-native';
+import { PermissionFlow } from '../role-permissions-flow';
+import { createRolePermissionsModalStyles } from './role-permissions-modal.styles';
+import { RolePermissionsModalProps } from './role-permissions-modal.types';
 
 export function RolePermissionsModal({
   visible,
@@ -70,8 +70,13 @@ export function RolePermissionsModal({
     >
       {hasPermissions ? (
         <View style={styles.treeContainer}>
-          {/* Contenido con permisos - se agregará después */}
-          <View />
+          <PermissionFlow 
+            permissions={role.permissions} 
+            roleName={role.name}
+            roleCode={role.code}
+            roleId={role.id}
+            companyId={role.companyId}
+          />
         </View>
       ) : (
         <View style={styles.treeContainer}>
