@@ -6,6 +6,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { SideModal } from '@/components/ui/side-modal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -64,7 +65,12 @@ export default function UsersListPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<SecurityUser | null>(null);
-  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
+  const [formActions, setFormActions] = useState<{ 
+    isLoading: boolean; 
+    handleSubmit: () => void; 
+    handleCancel: () => void;
+    generalError?: { message: string; detail?: string } | null;
+  } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -141,7 +147,10 @@ export default function UsersListPage() {
       
       setHasError(false);
     } catch (error: any) {
+      // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
+      // En este caso, establecer hasError para evitar loops infinitos
       if (handleApiError(error)) {
+        setHasError(true);
         return;
       }
 
@@ -178,6 +187,7 @@ export default function UsersListPage() {
   /**
    * Efecto para cargar usuarios cuando cambian los filtros
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
+   * IMPORTANTE: No incluir loadUsers en las dependencias para evitar loops infinitos
    */
   useEffect(() => {
     // No recargar si acabamos de editar exitosamente (actualización local)
@@ -189,10 +199,16 @@ export default function UsersListPage() {
       justEditedRef.current = null;
     }
     
-    if (isScreenFocused && hasAccess && !accessLoading && !hasError) {
+    // No recargar si hay un error activo (evita loops infinitos)
+    if (hasError) {
+      return;
+    }
+    
+    if (isScreenFocused && hasAccess && !accessLoading) {
       loadUsers(filters);
     }
-  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadUsers, filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessLoading, hasAccess, isScreenFocused, filters]);
 
   /**
    * Manejar cambio de página
@@ -619,6 +635,23 @@ export default function UsersListPage() {
               modalMode === 'edit'
                 ? 'Modifica los datos del usuario'
                 : 'Completa los datos para registrar un nuevo usuario'
+            }
+            topAlert={
+              formActions?.generalError ? (
+                <InlineAlert
+                  type="error"
+                  message={formActions.generalError.message}
+                  detail={formActions.generalError.detail}
+                  duration={5000} // 5 segundos, igual que el toast para errores
+                  autoClose={true} // Se cierra automáticamente si no hay interacción
+                  onDismiss={() => {
+                    // Limpiar el error actualizando formActions
+                    if (formActions) {
+                      setFormActions({ ...formActions, generalError: null });
+                    }
+                  }}
+                />
+              ) : undefined
             }
             footer={
               formActions ? (

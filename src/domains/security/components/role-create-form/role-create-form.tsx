@@ -6,6 +6,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService, CompaniesService } from '@/src/domains/security';
@@ -50,6 +51,7 @@ export function RoleCreateForm({
   const nameManuallyEditedRef = useRef<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
@@ -89,7 +91,11 @@ export function RoleCreateForm({
 
   const resetError = useCallback((field: string) => {
     setErrors((prev) => ({ ...prev, [field]: '' }));
-  }, []);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [generalError]);
 
 
   const handleChange = useCallback((field: string, value: any) => {
@@ -192,7 +198,8 @@ export function RoleCreateForm({
     } catch (error: any) {
       const message = error.message || 'Error al crear rol';
       const detail = (error as any)?.result?.details || '';
-      alert.showError(message, false, undefined, detail);
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message, detail });
     } finally {
       setIsLoading(false);
     }
@@ -262,6 +269,15 @@ export function RoleCreateForm({
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: showFooter ? 0 : 24 }}>
       {headerContent}
+      {/* InlineAlert para mostrar errores dentro del modal - debajo del subtítulo */}
+      {generalError && (
+        <InlineAlert
+          type="error"
+          message={generalError.message}
+          detail={generalError.detail}
+          onDismiss={() => setGeneralError(null)}
+        />
+      )}
       <Card variant="flat" style={styles.formCard}>
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>

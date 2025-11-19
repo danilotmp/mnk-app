@@ -6,6 +6,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService, CompaniesService } from '@/src/domains/security';
@@ -47,6 +48,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingRole, setLoadingRole] = useState(true);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
@@ -176,7 +178,11 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
-  }, [errors]);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [errors, generalError]);
 
   /**
    * Manejar envío del formulario
@@ -210,7 +216,8 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
     } catch (error: any) {
       const errorMessage = error.message || 'Error al actualizar rol';
       const errorDetail = (error as any)?.result?.details || '';
-      alert.showError(errorMessage, false, undefined, errorDetail);
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message: errorMessage, detail: errorDetail });
     } finally {
       setIsLoading(false);
     }
@@ -250,6 +257,15 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
   // Renderizar contenido del formulario (sin ScrollView si está en modal)
   const formContent = (
     <>
+      {/* InlineAlert para mostrar errores dentro del modal - debajo del subtítulo */}
+      {generalError && (
+        <InlineAlert
+          type="error"
+          message={generalError.message}
+          detail={generalError.detail}
+          onDismiss={() => setGeneralError(null)}
+        />
+      )}
       {/* Formulario */}
       <Card variant="flat" style={styles.formCard}>
         {/* Code */}

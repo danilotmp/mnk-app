@@ -129,7 +129,10 @@ export default function RolesListPage() {
       
       setHasError(false);
     } catch (error: any) {
+      // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
+      // En este caso, establecer hasError para evitar loops infinitos
       if (handleApiError(error)) {
+        setHasError(true);
         return;
       }
       const errorMessage = error.message || t.security?.roles?.loadError || 'Error al cargar roles';
@@ -146,9 +149,15 @@ export default function RolesListPage() {
   /**
    * Efecto para cargar roles cuando cambian los filtros
    * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
+   * IMPORTANTE: No incluir loadRoles en las dependencias para evitar loops infinitos
    */
   useEffect(() => {
-    if (!isScreenFocused || !hasAccess || accessLoading || hasError) {
+    // No recargar si hay un error activo (evita loops infinitos)
+    if (hasError) {
+      return;
+    }
+    
+    if (!isScreenFocused || !hasAccess || accessLoading) {
       return;
     }
 
@@ -159,7 +168,8 @@ export default function RolesListPage() {
 
     filtersSignatureRef.current = signature;
     loadRoles(filters);
-  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadRoles, filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessLoading, hasAccess, isScreenFocused, filters]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));

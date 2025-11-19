@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG, ApiConfig } from './config';
-import { HTTP_STATUS } from './constants';
+import { HTTP_STATUS, SUCCESS_STATUS_CODE } from './constants';
 import { getStorageAdapter } from './storage.adapter';
 import { ApiResponse, RequestConfig, RequestHeaders, StorageAdapter, Tokens } from './types';
 
@@ -52,14 +52,30 @@ export class ApiClient {
       }
 
       // Parsear respuesta
-      const data = await response.json();
+      let data: ApiResponse<T>;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // Si no se puede parsear el JSON, es un error del servidor
+        throw new ApiError(
+          'Error al procesar la respuesta del servidor',
+          response.status,
+          parseError instanceof Error ? parseError.message : parseError
+        );
+      }
 
-      // Lanzar error si el status code HTTP indica error
-      // Pero permitir que los códigos de estado en result.statusCode sean manejados por el componente
-      if (!response.ok) {
+      // IMPORTANTE: Según el estándar del backend:
+      // - Header HTTP puede ser 200 (OK) o 201 (Created) para operaciones exitosas
+      // - result.statusCode en el body siempre es 200 para éxito
+      // - Solo debemos validar result.statusCode === 200 para determinar éxito
+      // - Los errores tienen result.statusCode diferente a 200 (401, 403, 404, etc.)
+      
+      // Validar si result.statusCode es 200 (éxito)
+      // Si no es 200, es un error y lanzar ApiError
+      if (data.result?.statusCode !== SUCCESS_STATUS_CODE) {
         throw new ApiError(
           data.result?.description || 'Error en la petición',
-          response.status,
+          data.result?.statusCode || response.status,
           data.result?.details
         );
       }
@@ -175,11 +191,19 @@ export class ApiClient {
       body: JSON.stringify({ refreshToken }),
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to refresh token');
+    // Parsear respuesta antes de validar
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      throw new Error('Error al procesar la respuesta del servidor');
     }
 
-    const data = await response.json();
+    // Validar según el estándar: result.statusCode debe ser 200 para éxito
+    // Header HTTP puede ser 200 o 201, pero result.statusCode siempre es 200 para éxito
+    if (data.result?.statusCode !== SUCCESS_STATUS_CODE) {
+      throw new Error(data.result?.description || 'Failed to refresh token');
+    }
 
     // Guardar nuevos tokens
     await this.setTokens(data.data.accessToken, data.data.refreshToken);

@@ -39,6 +39,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
   const isInitialLoadRef = useRef(true); // Flag para controlar carga inicial (useRef para evitar re-renders)
   const loadedCompanyIdRef = useRef<string | null>(null); // Guardar el companyId ya cargado
   const phoneRef = useRef<string>(''); // Ref para mantener el teléfono actualizado
@@ -258,7 +259,11 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       }
       return prev;
     });
-  }, []);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [generalError]);
 
   const toggleBranchSelection = useCallback(
     (branchId: string) => {
@@ -330,7 +335,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
       const errorMessage =
         backendResult?.description || error?.message || 'Error al actualizar usuario';
-      alert.showError(errorMessage, false, undefined, detailString);
+      
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsLoading(false);
     }
@@ -355,11 +362,12 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         isLoading,
         handleSubmit,
         handleCancel,
+        generalError,
       });
     }
-    // Intencionalmente solo depende de isLoading, loadingUser y loadingOptions
+    // Intencionalmente solo depende de isLoading, loadingUser, loadingOptions y generalError
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, loadingUser, loadingOptions]);
+  }, [isLoading, loadingUser, loadingOptions, generalError]);
 
   if (loadingUser || loadingOptions) {
     return (

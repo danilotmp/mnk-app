@@ -31,7 +31,7 @@ export function UserCreateForm({
   const { currentCompany } = useMultiCompany();
   const styles = createUserFormStyles();
 
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     email: '',
     password: '',
     firstName: '',
@@ -41,13 +41,21 @@ export function UserCreateForm({
     branchIds: [] as string[],
     roleId: '',
     status: 1, // Default: Activo
-  });
+  };
+  const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
   const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
   const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
   const statusRef = useRef<number>(1); // Ref para mantener el status actualizado
+  const formDataRef = useRef(initialFormData); // Ref para mantener el formData actualizado y evitar stale closure
+  
+  // Sincronizar el ref cuando cambia el formData desde efectos externos
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
   const { companies, loading: companiesLoading } = useCompanyOptions();
   const {
     branches,
@@ -59,7 +67,11 @@ export function UserCreateForm({
 
   const resetErrors = useCallback((field: string) => {
     setErrors((prev) => ({ ...prev, [field]: '' }));
-  }, []);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [generalError]);
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -148,16 +160,23 @@ export function UserCreateForm({
     }
     
     setFormData((prev) => {
+      const updated = field === 'companyId'
+        ? {
+            ...prev,
+            companyId: value,
+            branchIds: [], // Resetear branchIds cuando cambia la empresa
+          }
+        : { ...prev, [field]: value };
+      
+      // Actualizar el ref con el estado más reciente para evitar stale closure
+      formDataRef.current = updated;
+      
       if (field === 'companyId') {
         // Resetear branchIds cuando cambia la empresa
         branchIdsRef.current = [];
-        return {
-          ...prev,
-          companyId: value,
-          branchIds: [],
-        };
       }
-      return { ...prev, [field]: value };
+      
+      return updated;
     });
     if (errors[field]) {
       resetErrors(field);
@@ -165,20 +184,49 @@ export function UserCreateForm({
   }, [errors, resetErrors]);
 
   const handleSubmit = useCallback(async () => {
-    if (!validateForm()) {
+    // Usar el ref para obtener el estado más reciente y evitar stale closure
+    const currentFormData = formDataRef.current;
+    
+    // Validar con el estado actual
+    const newErrors: Record<string, string> = {};
+    if (!currentFormData.email.trim()) {
+      newErrors.email = t.auth.emailRequired;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentFormData.email)) {
+      newErrors.email = 'Email inválido';
+    }
+    if (!currentFormData.password.trim()) {
+      newErrors.password = t.auth.passwordRequired;
+    } else if (currentFormData.password.length < 6) {
+      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+    }
+    if (!currentFormData.firstName.trim()) {
+      newErrors.firstName = 'El nombre es requerido';
+    }
+    if (!currentFormData.lastName.trim()) {
+      newErrors.lastName = 'El apellido es requerido';
+    }
+    if (!currentFormData.companyId) {
+      newErrors.companyId = 'La empresa es requerida';
+    }
+    if (!branchIdsRef.current.length) {
+      newErrors.branchIds = 'Selecciona al menos una sucursal';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     setIsLoading(true);
     try {
-      // Construir payload solo con campos que tienen valores
+      // Construir payload usando el ref para obtener los valores más recientes
       const payload: any = {
-        email: formData.email.trim(),
-        password: formData.password,
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        phone: formData.phone.trim(),
-        companyId: formData.companyId,
+        email: currentFormData.email.trim(),
+        password: currentFormData.password,
+        firstName: currentFormData.firstName.trim(),
+        lastName: currentFormData.lastName.trim(),
+        phone: currentFormData.phone.trim(),
+        companyId: currentFormData.companyId,
         branchIds: branchIdsRef.current,
         status: statusRef.current, // Usar ref para evitar stale closure
       };
@@ -207,11 +255,12 @@ export function UserCreateForm({
       const errorMessage =
         backendResult?.description || error?.message || 'Error al crear usuario';
 
-      alert.showError(errorMessage, false, undefined, detailString);
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsLoading(false);
     }
-  }, [alert, formData, onCancel, onSuccess, t.security?.users?.create, validateForm]);
+  }, [alert, onCancel, onSuccess, t.auth.emailRequired, t.auth.passwordRequired, t.security?.users?.create]);
 
   const handleCancel = useCallback(() => {
     onCancel?.();
@@ -230,7 +279,11 @@ export function UserCreateForm({
         // Actualizar el ref para evitar stale closure
         branchIdsRef.current = branchIds;
         
-        return { ...prev, branchIds };
+        const updated = { ...prev, branchIds };
+        // Actualizar el ref con el estado más reciente para evitar stale closure
+        formDataRef.current = updated;
+        
+        return updated;
       });
       // Limpiar error de branchIds cuando el usuario selecciona al menos una sucursal
       resetErrors('branchIds');
@@ -244,11 +297,12 @@ export function UserCreateForm({
         isLoading,
         handleSubmit,
         handleCancel,
+        generalError,
       });
     }
-    // Intencionalmente solo depende de isLoading y loadingOptions
+    // Intencionalmente solo depende de isLoading, loadingOptions y generalError
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, loadingOptions]);
+  }, [isLoading, loadingOptions, generalError]);
 
   if (loadingOptions) {
     return (

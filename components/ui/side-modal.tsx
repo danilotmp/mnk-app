@@ -21,9 +21,10 @@ interface SideModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode; // Footer fijo con botones de acción
   width?: number | string; // Porcentaje o número absoluto (default: 33.33% para web, 100% para móvil)
+  topAlert?: React.ReactNode; // Alerta que aparece encima del título del modal
 }
 
-export function SideModal({ visible, onClose, title, subtitle, children, footer, width }: SideModalProps) {
+export function SideModal({ visible, onClose, title, subtitle, children, footer, width, topAlert }: SideModalProps) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -89,6 +90,13 @@ export function SideModal({ visible, onClose, title, subtitle, children, footer,
               },
             ]}
           >
+            {/* Top Alert - aparece encima del título */}
+            {topAlert && (
+              <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+                {topAlert}
+              </View>
+            )}
+
             {/* Header fijo */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
               <View style={styles.headerTitle}>
