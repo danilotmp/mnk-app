@@ -24,7 +24,7 @@ import { createRolesListStyles } from '@/src/styles/pages/roles-list.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function RolesListPage() {
   const { colors } = useTheme();

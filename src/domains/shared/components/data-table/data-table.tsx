@@ -102,7 +102,7 @@ export function DataTable<T = any>({
                   style={styles.actionButton}
                   onPress={() => action.onPress(item)}
                 >
-                  <Ionicons name={action.icon as any} size={18} color={colors.primary} />
+                  <Ionicons name={action.icon as any} size={18} color={colors.primaryDark} />
                 </TouchableOpacity>
               </Tooltip>
             );
@@ -125,7 +125,7 @@ export function DataTable<T = any>({
                 style={styles.actionButton}
                 onPress={() => action.onPress(item)}
               >
-                <Ionicons name={iconName as any} size={18} color={colors.primary} />
+                <Ionicons name={iconName as any} size={18} color={colors.primaryDark} />
               </TouchableOpacity>
             </Tooltip>
           );

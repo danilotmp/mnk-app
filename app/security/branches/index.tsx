@@ -289,7 +289,7 @@ export default function BranchesListPage() {
                 style={styles.actionButton}
                 onPress={() => handleEditBranch(item)}
               >
-                <Ionicons name="pencil" size={18} color={colors.primary} />
+                <Ionicons name="pencil" size={18} color={colors.primaryDark} />
               </TouchableOpacity>
             </Tooltip>
           </View>

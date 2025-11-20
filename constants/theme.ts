@@ -72,7 +72,7 @@ export const BrandColors = {
 export const LightTheme = {
   colors: {
     // Colores principales
-    primary: BrandColors.blue[600],      // Cyan más oscuro para modo claro
+    primary: '#0087FF',      // Mismo color que buttonTheme.brand.primary
     primaryLight: BrandColors.blue[100],
     primaryDark: BrandColors.blue[800],
     secondary: BrandColors.green[600],   // Verde más oscuro para modo claro
@@ -151,7 +151,7 @@ export const LightTheme = {
 export const DarkTheme = {
   colors: {
     // Colores principales - Cyan/Turquesa brillante (estilo Hapi)
-    primary: '#4dd4ff',      // Cyan brillante (botones, links)
+    primary: '#0087FF',      // Mismo color que buttonTheme.brand.primary 
     primaryLight: '#7ee0ff',  // Cyan más claro
     primaryDark: '#00a8cc',   // Cyan oscuro
     secondary: '#00d4aa',     // Verde turquesa

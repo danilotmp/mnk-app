@@ -488,7 +488,7 @@ export default function UsersListPage() {
               style={styles.actionButton}
               onPress={() => handleEditUser(user)}
             >
-              <Ionicons name="pencil" size={18} color={colors.primary} />
+              <Ionicons name="pencil" size={18} color={colors.primaryDark} />
             </TouchableOpacity>
           </Tooltip>
           <Tooltip text={t.security?.users?.deleteShort || 'Eliminar'} position="left">
@@ -496,7 +496,7 @@ export default function UsersListPage() {
               style={styles.actionButton}
               onPress={() => confirmDeleteUser(user)}
             >
-              <Ionicons name="trash" size={18} color={colors.primary} />
+              <Ionicons name="trash" size={18} color={colors.primaryDark} />
             </TouchableOpacity>
           </Tooltip>
         </View>
@@ -681,7 +681,7 @@ export default function UsersListPage() {
                           }
                         }}
                       >
-                        <Ionicons name="trash" size={18} color={colors.primary} />
+                        <Ionicons name="trash" size={18} color={colors.primaryDark} />
                       </TouchableOpacity>
                     </Tooltip>
                   ) : null}

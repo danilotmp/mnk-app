@@ -337,7 +337,7 @@ export default function AccessesListPage() {
               style={styles.actionButton}
               onPress={() => handleEditAccess(access)}
             >
-              <Ionicons name="pencil" size={18} color={colors.primary} />
+              <Ionicons name="pencil" size={18} color={colors.primaryDark} />
             </TouchableOpacity>
           </Tooltip>
           <Tooltip text={t.security?.accesses?.deleteShort || 'Eliminar'} position="left">
@@ -345,7 +345,7 @@ export default function AccessesListPage() {
               style={styles.actionButton}
               onPress={() => handleDeleteAccess(access)}
             >
-              <Ionicons name="trash" size={18} color={colors.primary} />
+              <Ionicons name="trash" size={18} color={colors.primaryDark} />
             </TouchableOpacity>
           </Tooltip>
         </View>

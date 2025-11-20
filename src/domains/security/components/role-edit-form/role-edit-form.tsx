@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
+import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService, CompaniesService } from '@/src/domains/security';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
@@ -396,48 +397,18 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         {/* Company */}
         {companies.length > 0 && (
           <View style={styles.inputGroup}>
-            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-              Empresa
-            </ThemedText>
-            <View
-              style={[
-                styles.selectContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.selectOptions}>
-                  {companies.map((comp) => (
-                    <TouchableOpacity
-                      key={comp.id}
-                      style={[
-                        styles.selectOption,
-                        formData.companyId === comp.id && {
-                          backgroundColor: colors.primary,
-                        },
-                        { borderColor: colors.border },
-                      ]}
-                      onPress={() => handleChange('companyId', comp.id)}
-                      disabled={isLoading}
-                    >
-                      <ThemedText
-                        type="body2"
-                        style={
-                          formData.companyId === comp.id
-                            ? { color: '#FFFFFF' }
-                            : { color: colors.text }
-                        }
-                      >
-                        {comp.name}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
+            <Select
+              label="Empresa"
+              placeholder="Selecciona una empresa"
+              value={formData.companyId || undefined}
+              options={companies.map((comp) => ({
+                value: comp.id,
+                label: comp.name,
+              }))}
+              onSelect={(value) => handleChange('companyId', value as string)}
+              disabled={isLoading}
+              searchable={true}
+            />
           </View>
         )}
 

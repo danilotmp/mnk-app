@@ -2,6 +2,8 @@ export { Button } from './button';
 export { Card } from './card';
 export { Collapsible } from './collapsible';
 export { IconSymbol } from './icon-symbol';
+export { Select } from './select';
+export type { SelectOption } from './select';
 export { SideModal } from './side-modal';
 export { ThemeToggle } from './theme-toggle';
 export { Tooltip } from './tooltip';

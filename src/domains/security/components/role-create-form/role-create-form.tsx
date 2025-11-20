@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
+import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService, CompaniesService } from '@/src/domains/security';
 import { useTranslation } from '@/src/infrastructure/i18n';
@@ -406,67 +407,26 @@ export function RoleCreateForm({
         </View>
 
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Empresa *
-          </ThemedText>
-          {companies.length > 0 ? (
-            <View
-              style={[
-                styles.selectContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: errors.companyId ? colors.error : colors.border,
-                },
-              ]}
-            >
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.selectOptions}>
-                  {companies.map((company) => {
-                    const isSelected = formData.companyId === company.id;
-                    return (
-                      <TouchableOpacity
-                        key={company.id}
-                        style={[
-                          styles.selectOption,
-                          isSelected && { backgroundColor: colors.primary },
-                          { borderColor: colors.border },
-                        ]}
-                        onPress={() => handleChange('companyId', company.id)}
-                        disabled={isLoading}
-                      >
-                        <ThemedText
-                          type="body2"
-                          style={{ color: isSelected ? '#FFFFFF' : colors.text }}
-                        >
-                          {company.name}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.selectContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: errors.companyId ? colors.error : colors.border,
-                  padding: 12,
-                },
-              ]}
-            >
-              <ThemedText type="body2" variant="secondary" style={{ textAlign: 'center' }}>
-                {loadingOptions ? 'Cargando empresas...' : 'No hay empresas disponibles'}
-              </ThemedText>
-            </View>
-          )}
-          {errors.companyId ? (
-            <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
-              {errors.companyId}
+          <Select
+            label="Empresa"
+            placeholder={loadingOptions ? 'Cargando empresas...' : 'Selecciona una empresa'}
+            value={formData.companyId || undefined}
+            options={companies.map((company) => ({
+              value: company.id,
+              label: company.name,
+            }))}
+            onSelect={(value) => handleChange('companyId', value as string)}
+            error={!!errors.companyId}
+            errorMessage={errors.companyId}
+            required
+            disabled={isLoading || loadingOptions || companies.length === 0}
+            searchable={true}
+          />
+          {companies.length === 0 && !loadingOptions && (
+            <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
+              No hay empresas disponibles
             </ThemedText>
-          ) : null}
+          )}
         </View>
 
         <View style={styles.inputGroup}>

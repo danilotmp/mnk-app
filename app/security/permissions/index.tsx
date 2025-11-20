@@ -334,7 +334,7 @@ export default function PermissionsListPage() {
               style={styles.actionButton}
               onPress={() => handleEditPermission(permission)}
             >
-              <Ionicons name="pencil" size={18} color={colors.primary} />
+              <Ionicons name="pencil" size={18} color={colors.primaryDark} />
             </TouchableOpacity>
           </Tooltip>
           <Tooltip text={t.security?.permissions?.deleteShort || 'Eliminar'} position="left">
@@ -342,7 +342,7 @@ export default function PermissionsListPage() {
               style={styles.actionButton}
               onPress={() => handleDeletePermission(permission)}
             >
-              <Ionicons name="trash" size={18} color={colors.primary} />
+              <Ionicons name="trash" size={18} color={colors.primaryDark} />
             </TouchableOpacity>
           </Tooltip>
         </View>
