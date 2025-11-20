@@ -396,7 +396,7 @@ export function DataTable<T = any>({
     const minLimitValue = finalLimitOptions.length > 0 ? Math.min(...finalLimitOptions) : limit;
 
     return (
-      <View style={[styles.pagination, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.pagination, { backgroundColor: colors.surfaceVariant, borderTopColor: colors.border }]}>
         {isMobile ? (
           <>
             {/* Información de registros - línea completa */}
