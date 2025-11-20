@@ -6,19 +6,20 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { SideModal } from '@/components/ui/side-modal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { PermissionsService } from '@/src/domains/security';
+import { PermissionsService, RolesService, useCompanyOptions } from '@/src/domains/security';
 import type { PermissionChange } from '@/src/domains/security/components';
-import { PermissionCreateForm, PermissionEditForm, PermissionsManagementFlow } from '@/src/domains/security/components';
-import { PermissionFilters, SecurityPermission } from '@/src/domains/security/types';
+import { PermissionCreateForm, PermissionEditForm, PermissionsFlowFilters, PermissionsManagementFlow } from '@/src/domains/security/components';
+import { PermissionFilters, RoleFilters, SecurityPermission, SecurityRole } from '@/src/domains/security/types';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
-import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
 import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import { MenuItem } from '@/src/infrastructure/menu/types';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createPermissionsListStyles } from '@/src/styles/pages/permissions-list.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,8 +43,10 @@ export default function PermissionsListPage() {
   } = useRouteAccessGuard(pathname);
 
   const [permissions, setPermissions] = useState<SecurityPermission[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<SecurityPermission[]>([]); // Permisos del rol seleccionado
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingRolePermissions, setLoadingRolePermissions] = useState(false);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
@@ -74,6 +77,21 @@ export default function PermissionsListPage() {
   // Estado para rastrear cambios masivos de permisos
   const [permissionChanges, setPermissionChanges] = useState<PermissionChange[]>([]);
   const [savingChanges, setSavingChanges] = useState(false);
+  
+  // Estados para los selectores dependientes
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(undefined);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | undefined>(undefined);
+  const [roles, setRoles] = useState<SecurityRole[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  
+  // Estados para filtros locales
+  const [searchValue, setSearchValue] = useState('');
+  const [selectedModule, setSelectedModule] = useState('');
+  const [selectedAction, setSelectedAction] = useState('');
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  
+  // Obtener empresas
+  const { companies, loading: companiesLoading } = useCompanyOptions();
 
   const loadPermissions = useCallback(async (currentFilters: PermissionFilters) => {
     // Prevenir llamadas simultáneas
@@ -298,6 +316,85 @@ export default function PermissionsListPage() {
     }
   };
 
+  /**
+   * Cargar roles por empresa
+   */
+  const loadRolesByCompany = useCallback(async (companyId: string | undefined) => {
+    if (!companyId) {
+      setRoles([]);
+      setSelectedRoleId(undefined);
+      return;
+    }
+
+    try {
+      setLoadingRoles(true);
+      const roleFilters: RoleFilters = {
+        page: 1,
+        limit: 100, // Obtener todos los roles de la empresa
+      };
+      const response = await RolesService.getRoles(roleFilters);
+      
+      // Filtrar roles por companyId (ya que RoleFilters no tiene companyId)
+      const companyRoles = (response.data || []).filter(role => role.companyId === companyId);
+      setRoles(companyRoles);
+      
+      // Si había un rol seleccionado que ya no existe, limpiarlo
+      if (selectedRoleId && !companyRoles.find(r => r.id === selectedRoleId)) {
+        setSelectedRoleId(undefined);
+      }
+    } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
+      console.error('Error al cargar roles:', error);
+      setRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
+  }, [selectedRoleId, handleApiError]);
+
+  /**
+   * Manejar cambio de empresa
+   */
+  const handleCompanyChange = (companyId: string | undefined) => {
+    setSelectedCompanyId(companyId);
+    setSelectedRoleId(undefined); // Limpiar rol seleccionado cuando cambia la empresa
+    setPermissionChanges([]); // Limpiar cambios pendientes
+    loadRolesByCompany(companyId);
+  };
+
+  /**
+   * Manejar cambio de rol
+   */
+  const handleRoleChange = async (roleId: string | undefined) => {
+    setSelectedRoleId(roleId);
+    setPermissionChanges([]); // Limpiar cambios pendientes al cambiar de rol
+    
+    // Cargar permisos del rol seleccionado
+    if (roleId) {
+      try {
+        setLoadingRolePermissions(true);
+        const role = await RolesService.getRoleById(roleId);
+        setRolePermissions(role.permissions || []);
+      } catch (error: any) {
+        if (handleApiError(error)) {
+          return;
+        }
+        console.error('Error al cargar permisos del rol:', error);
+        setRolePermissions([]);
+      } finally {
+        setLoadingRolePermissions(false);
+      }
+    } else {
+      setRolePermissions([]);
+    }
+  };
+
+  // Cargar roles cuando cambia la empresa seleccionada
+  useEffect(() => {
+    loadRolesByCompany(selectedCompanyId);
+  }, [selectedCompanyId, loadRolesByCompany]);
+
   const columns: TableColumn<SecurityPermission>[] = [
     {
       key: 'name',
@@ -440,54 +537,108 @@ export default function PermissionsListPage() {
           </Button>
         </View>
 
-        {/* Barra de búsqueda y filtros */}
-        <SearchFilterBar
-          filterValue={localFilter}
-          onFilterChange={handleLocalFilterChange}
-          onSearchSubmit={handleSearchSubmit}
-          filterPlaceholder={t.security?.permissions?.filterPlaceholder || 'Filtrar por nombre, código, módulo o acción...'}
-          searchPlaceholder={t.security?.permissions?.searchPlaceholder || 'Buscar por nombre, código, módulo o acción...'}
-          filters={filterConfigs}
-          activeFilters={{
-            status: filters.status?.toString() || '',
-            module: filters.module,
-            action: filters.action,
-          }}
-          onAdvancedFilterChange={handleAdvancedFilterChange}
-          onClearFilters={handleClearFilters}
-          filteredCount={localFilter.trim() ? filteredPermissions.length : undefined}
-          totalCount={pagination.total}
-        />
-
-        {/* Componente de administración masiva de permisos */}
-        <View style={styles.dataTableContainer}>
-          <PermissionsManagementFlow
-            permissions={permissions}
-            onChanges={(changes) => {
-              setPermissionChanges(changes);
-            }}
-          />
+        {/* Selectores dependientes: Empresa y Rol */}
+        <View style={[styles.selectorsContainer, { gap: 16 }]}>
+          <View style={{ flex: 1 }}>
+            <Select
+              label="Empresa"
+              placeholder="Selecciona una empresa"
+              value={selectedCompanyId}
+              options={companies.map(comp => ({ value: comp.id, label: comp.name }))}
+              onSelect={(value) => handleCompanyChange(value as string)}
+              searchable={companies.length > 5}
+              required
+            />
+          </View>
+          
+          <View style={{ flex: 1 }}>
+            <Select
+              label="Rol"
+              placeholder="Selecciona un rol"
+              value={selectedRoleId}
+              options={roles.map(role => ({ value: role.id, label: role.name }))}
+              onSelect={(value) => handleRoleChange(value as string)}
+              searchable={roles.length > 5}
+              disabled={!selectedCompanyId || loadingRoles}
+              required
+            />
+          </View>
         </View>
 
-        {/* Botón Guardar - solo aparece cuando hay cambios */}
-        {permissionChanges.length > 0 && (
-          <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-            <Button
-              title={t.common?.save || 'Guardar'}
-              onPress={handleSaveChanges}
-              variant="primary"
-              size="md"
-              disabled={savingChanges}
-            >
-              {savingChanges && (
-                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-              )}
-            </Button>
-          </View>
+        {/* Filtros locales para PermissionsManagementFlow - Solo mostrar si hay un rol seleccionado */}
+        {selectedRoleId && menuItems.length > 0 && (
+          <PermissionsFlowFilters
+            menuItems={menuItems}
+            searchValue={searchValue}
+            onSearchChange={setSearchValue}
+            selectedModule={selectedModule}
+            onModuleChange={setSelectedModule}
+            selectedAction={selectedAction}
+            onActionChange={setSelectedAction}
+            onClearFilters={() => {
+              setSearchValue('');
+              setSelectedModule('');
+              setSelectedAction('');
+            }}
+          />
         )}
 
-        {/* Modal de creación/edición */}
-        {modalMode && (
+        {/* Componente de administración masiva de permisos - Solo mostrar si hay un rol seleccionado */}
+        {selectedRoleId ? (
+          <View style={styles.dataTableContainer}>
+            {loadingRolePermissions ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <ThemedText type="body2" variant="secondary" style={{ marginTop: 16, textAlign: 'center' }}>
+                  Cargando permisos del rol...
+                </ThemedText>
+              </View>
+            ) : (
+              <PermissionsManagementFlow
+                permissions={rolePermissions}
+                roleId={selectedRoleId}
+                searchValue={searchValue}
+                selectedModule={selectedModule}
+                selectedAction={selectedAction}
+                onChanges={(changes) => {
+                  setPermissionChanges(changes);
+                }}
+                onMenuItemsLoaded={(items) => {
+                  setMenuItems(items);
+                }}
+              />
+            )}
+          </View>
+        ) : (
+          <View style={[styles.dataTableContainer, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
+            <ThemedText type="body1" variant="secondary" style={{ textAlign: 'center' }}>
+              {!selectedCompanyId 
+                ? 'Selecciona una empresa para comenzar'
+                : 'Selecciona un rol para ver y gestionar sus permisos'}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+
+      {/* Botón Guardar - solo aparece cuando hay cambios, fuera del content para que quede fijo abajo */}
+      {permissionChanges.length > 0 && (
+        <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <Button
+            title={t.common?.save || 'Guardar'}
+            onPress={handleSaveChanges}
+            variant="primary"
+            size="md"
+            disabled={savingChanges}
+          >
+            {savingChanges && (
+              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+            )}
+          </Button>
+        </View>
+      )}
+
+      {/* Modal de creación/edición */}
+      {modalMode && (
           <SideModal
             visible={isModalVisible}
             onClose={handleCloseModal}
@@ -547,7 +698,6 @@ export default function PermissionsListPage() {
             ) : null}
           </SideModal>
         )}
-      </View>
     </ThemedView>
   );
 }

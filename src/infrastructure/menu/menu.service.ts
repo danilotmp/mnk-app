@@ -24,14 +24,24 @@ export class MenuService {
    * incluso si el backend no las devuelve en el menú
    * 
    * @param language Idioma del menú (es, en, pt)
+   * @param showAll Si es true, solicita todas las opciones disponibles del menú (para administración)
    * @returns Array de items del menú (merge del backend + páginas públicas)
    */
-  static async getMenu(language: string = 'es'): Promise<MenuItem[]> {
+  static async getMenu(language: string = 'es', showAll: boolean = false): Promise<MenuItem[]> {
     try {
       // El endpoint NO debe recibir roleId como parámetro.
       // El roleId se extrae del token JWT en el header Authorization por el backend.
+      const queryParams = new URLSearchParams();
+      if (showAll) {
+        queryParams.append('showAll', 'true');
+      }
+      
+      const endpoint = queryParams.toString() 
+        ? `${API_CONFIG.ENDPOINTS.MENU}?${queryParams.toString()}`
+        : API_CONFIG.ENDPOINTS.MENU;
+      
       const response = await apiClient.request<MenuItem[]>({
-        endpoint: API_CONFIG.ENDPOINTS.MENU,
+        endpoint,
         method: 'GET',
         skipAuth: false, // Requiere autenticación (token se envía automáticamente por apiClient)
       });
@@ -94,10 +104,16 @@ export class MenuService {
     processMenu(backendMenu);
 
     // Construir el menú final en el orden correcto:
-    // 1. Home (SIEMPRE al inicio, incluso si el backend lo incluye)
+    // 1. Home (SIEMPRE al inicio, pero preservar los datos del backend si existe)
     const finalMenu: MenuItem[] = [];
     
-    if (homeItem) {
+    // Buscar Home en el backend para preservar sus datos (incluyendo isPublic)
+    const backendHome = backendMenu.find(item => item.route === '/');
+    if (backendHome) {
+      // Si el backend ya tiene Home, usarlo (preserva isPublic y otros campos)
+      finalMenu.push(backendHome);
+    } else if (homeItem) {
+      // Si no está en el backend, usar el por defecto
       finalMenu.push(homeItem);
     }
 
@@ -106,8 +122,10 @@ export class MenuService {
     finalMenu.push(...backendMenuWithoutHome);
 
     // 3. Resto de páginas públicas por defecto (sin Home, solo las que faltan)
+    // Preservar las del backend si existen, usar las por defecto solo si no están
+    const finalMenuRoutes = new Set(finalMenu.map(item => item.route));
     const missingOtherPublicPages = otherPublicItems.filter(
-      item => item.route && !existingPublicRoutes.has(item.route)
+      item => item.route && !finalMenuRoutes.has(item.route)
     );
     finalMenu.push(...missingOtherPublicPages);
 
@@ -129,16 +147,19 @@ export class MenuService {
         id: 'home',
         label: 'Inicio',
         route: '/',
+        isPublic: true, // Página pública
       },
       {
         id: 'explore',
         label: 'Explorar',
         route: '/main/explore',
+        isPublic: true, // Página pública
       },
       {
         id: 'contact',
         label: 'Contacto',
         route: '/main/contact',
+        isPublic: true, // Página pública
       },
     ];
   }
@@ -169,12 +190,19 @@ export class MenuService {
    * 
    * @param roleId ID del rol para el que se quiere obtener el menú
    * @param language Idioma del menú (es, en, pt)
+   * @param showAll Si es true, solicita todas las opciones disponibles del menú (para administración)
    * @returns Array de items del menú del rol
    */
-  static async getMenuForRole(roleId: string, language: string = 'es'): Promise<MenuItem[]> {
+  static async getMenuForRole(roleId: string, language: string = 'es', showAll: boolean = false): Promise<MenuItem[]> {
     try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('roleId', roleId);
+      if (showAll) {
+        queryParams.append('showAll', 'true');
+      }
+      
       const response = await apiClient.request<MenuItem[]>({
-        endpoint: `${API_CONFIG.ENDPOINTS.MENU}?roleId=${roleId}`,
+        endpoint: `${API_CONFIG.ENDPOINTS.MENU}?${queryParams.toString()}`,
         method: 'GET',
         skipAuth: false, // Requiere autenticación (token se envía automáticamente por apiClient)
       });

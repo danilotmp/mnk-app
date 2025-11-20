@@ -22,8 +22,8 @@ export { RolePermissionsModal } from './role-permissions-modal/role-permissions-
 export type { RolePermissionsModalProps } from './role-permissions-modal/role-permissions-modal.types';
 export { PermissionFlow } from './role-permissions-flow';
 export type { PermissionFlowProps } from './role-permissions-flow/role-permissions-flow.types';
-export { PermissionsManagementFlow } from './permissions-management-flow';
-export type { PermissionsManagementFlowProps, PermissionChange } from './permissions-management-flow/permissions-management-flow.types';
+export { PermissionsManagementFlow, PermissionsFlowFilters } from './permissions-management-flow';
+export type { PermissionsManagementFlowProps, PermissionChange, PermissionsFlowFiltersProps } from './permissions-management-flow';
 export { UserCreateForm } from './user-create-form/user-create-form';
 export type { UserCreateFormProps } from './user-create-form/user-create-form.types';
 export { UserEditForm } from './user-edit-form/user-edit-form';

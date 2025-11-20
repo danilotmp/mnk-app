@@ -11,6 +11,7 @@ export interface MenuItem {
   label: string;
   route?: string;
   description?: string;
+  isPublic?: boolean; // Si es true, es una opción pública (opción por defecto)
   columns?: MenuColumn[];
   submenu?: MenuSubItem[];
 }
@@ -31,6 +32,7 @@ export interface MenuSubItem {
   label: string;
   route: string;
   description?: string;
+  isPublic?: boolean; // Si es true, es una opción pública (opción por defecto)
 }
 
 /**

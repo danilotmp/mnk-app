@@ -29,6 +29,11 @@ export const createPermissionsListStyles = (isMobile: boolean = false) =>
     title: {
       marginBottom: 4,
     },
+    selectorsContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      flexShrink: 0,
+    },
     statusBadge: {
       paddingHorizontal: 8,
       paddingVertical: 4,
