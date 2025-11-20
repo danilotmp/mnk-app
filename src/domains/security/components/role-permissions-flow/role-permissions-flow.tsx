@@ -323,7 +323,7 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                         style={styles.chevronIcon}
                       />
                     </View>
-                    <View style={[styles.moduleBadge, { backgroundColor: colors.primary }]}>
+                    <View style={[styles.moduleBadge]}>
                       <ThemedText type="caption" style={{ color: '#fff', fontWeight: '600' }}>
                         {directItems.length + columnGroups.reduce((acc, g) => acc + g.items.length, 0)}
                       </ThemedText>
