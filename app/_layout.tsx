@@ -11,6 +11,7 @@ if (Platform.OS !== 'web') {
 import { MainLayout, MenuItem } from '@/components/layouts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
+import { useScrollbarStyles } from '@/src/hooks/use-scrollbar-styles.hook';
 import { MultiCompanyProvider } from '@/src/domains/shared';
 import { LanguageProvider, useTranslation } from '@/src/infrastructure/i18n';
 import { useMenu } from '@/src/infrastructure/menu';
@@ -64,6 +65,9 @@ function LayoutContent() {
   const segments = useSegments();
   const { isLoading: isSessionLoading } = useSession();
   const { menu, loading: menuLoading } = useMenu();
+  
+  // Aplicar estilos de scrollbar adaptados al tema
+  useScrollbarStyles();
   
   // Determinar si estamos en una ruta de autenticación
   const isAuthRoute = pathname?.startsWith('/auth') || segments[0] === 'auth';
