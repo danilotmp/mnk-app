@@ -48,5 +48,13 @@ export const createPermissionsListStyles = (isMobile: boolean = false) =>
       flex: 1,
       minHeight: 0, // Importante para que el scroll interno funcione
     },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      padding: 16,
+      borderTopWidth: 1,
+      flexShrink: 0,
+    },
   });
 

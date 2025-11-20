@@ -198,5 +198,25 @@ export class PermissionsService {
       throw new Error(error.message || 'Error al obtener permisos por módulo');
     }
   }
+
+  /**
+   * Actualizar permisos masivamente
+   * Recibe una lista de cambios de permisos por ruta
+   */
+  static async updatePermissionsBulk(changes: Array<{ route: string; view: boolean; create: boolean; edit: boolean; delete: boolean }>): Promise<void> {
+    try {
+      const response = await apiClient.request<void>({
+        endpoint: `${this.BASE_ENDPOINT}/bulk`,
+        method: 'PUT',
+        body: { changes },
+      });
+
+      if (response.result?.statusCode !== SUCCESS_STATUS_CODE) {
+        throw new Error(response.result?.description || 'Error al actualizar permisos masivamente');
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar permisos masivamente');
+    }
+  }
 }
 

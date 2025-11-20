@@ -7,14 +7,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { PermissionsService } from '@/src/domains/security';
-import { PermissionCreateForm, PermissionEditForm } from '@/src/domains/security/components';
+import type { PermissionChange } from '@/src/domains/security/components';
+import { PermissionCreateForm, PermissionEditForm, PermissionsManagementFlow } from '@/src/domains/security/components';
 import { PermissionFilters, SecurityPermission } from '@/src/domains/security/types';
-import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
 import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
 import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
@@ -71,6 +70,10 @@ export default function PermissionsListPage() {
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
   const filtersSignatureRef = useRef<string>('');
+  
+  // Estado para rastrear cambios masivos de permisos
+  const [permissionChanges, setPermissionChanges] = useState<PermissionChange[]>([]);
+  const [savingChanges, setSavingChanges] = useState(false);
 
   const loadPermissions = useCallback(async (currentFilters: PermissionFilters) => {
     // Prevenir llamadas simultáneas
@@ -128,7 +131,6 @@ export default function PermissionsListPage() {
         return;
       }
       const errorMessage = error.message || t.security?.permissions?.loadError || 'Error al cargar permisos';
-      setError(errorMessage);
       setHasError(true);
       // Mostrar error con detalles
       alert.showError(errorMessage, error.details || error.response?.result?.details);
@@ -272,6 +274,30 @@ export default function PermissionsListPage() {
     }
   };
 
+  /**
+   * Guardar cambios masivos de permisos
+   */
+  const handleSaveChanges = async () => {
+    if (permissionChanges.length === 0) {
+      return;
+    }
+
+    try {
+      setSavingChanges(true);
+      await PermissionsService.updatePermissionsBulk(permissionChanges);
+      await loadPermissions(filters);
+      setPermissionChanges([]);
+      alert.showSuccess(t.security?.permissions?.saveSuccess || 'Permisos actualizados correctamente');
+    } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
+      alert.showError(error.message || 'Error al guardar permisos');
+    } finally {
+      setSavingChanges(false);
+    }
+  };
+
   const columns: TableColumn<SecurityPermission>[] = [
     {
       key: 'name',
@@ -303,7 +329,7 @@ export default function PermissionsListPage() {
           style={[
             styles.statusBadge,
             {
-              backgroundColor: permission.isActive
+              backgroundColor: permission.status === 1
                 ? colors.success + '20'
                 : colors.error + '20',
             },
@@ -312,10 +338,10 @@ export default function PermissionsListPage() {
           <ThemedText
             type="caption"
             style={{
-              color: permission.isActive ? colors.success : colors.error,
+              color: permission.status === 1 ? colors.success : colors.error,
             }}
           >
-            {permission.isActive
+            {permission.status === 1
               ? t.security?.users?.active || 'Activo'
               : t.security?.users?.inactive || 'Inactivo'}
           </ThemedText>
@@ -433,35 +459,32 @@ export default function PermissionsListPage() {
           totalCount={pagination.total}
         />
 
-        {/* Tabla de permisos con scroll interno */}
+        {/* Componente de administración masiva de permisos */}
         <View style={styles.dataTableContainer}>
-          <DataTable
-            data={filteredPermissions}
-            columns={columns}
-            loading={loading}
-            emptyMessage="No hay permisos disponibles"
-            onRowPress={handleEditPermission}
-            keyExtractor={(permission) => permission.id}
-            showPagination={true}
-            pagination={{
-              page: pagination.page,
-              limit: pagination.limit,
-              total: localFilter.trim() ? filteredPermissions.length : pagination.total, // Si hay filtro local, usar total filtrado
-              totalPages: localFilter.trim() 
-                ? Math.ceil(filteredPermissions.length / pagination.limit)
-                : pagination.totalPages,
-              hasNext: localFilter.trim()
-                ? pagination.page < Math.ceil(filteredPermissions.length / pagination.limit)
-                : pagination.hasNext,
-              hasPrev: localFilter.trim()
-                ? pagination.page > 1
-                : pagination.hasPrev,
-              onPageChange: handlePageChange,
-              onLimitChange: handleLimitChange,
-              limitOptions: [10, 25, 50, 100],
+          <PermissionsManagementFlow
+            permissions={permissions}
+            onChanges={(changes) => {
+              setPermissionChanges(changes);
             }}
           />
         </View>
+
+        {/* Botón Guardar - solo aparece cuando hay cambios */}
+        {permissionChanges.length > 0 && (
+          <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <Button
+              title={t.common?.save || 'Guardar'}
+              onPress={handleSaveChanges}
+              variant="primary"
+              size="md"
+              disabled={savingChanges}
+            >
+              {savingChanges && (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+              )}
+            </Button>
+          </View>
+        )}
 
         {/* Modal de creación/edición */}
         {modalMode && (
