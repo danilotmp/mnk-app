@@ -1,3 +1,4 @@
+import { baseTheme } from '../styles/themes/base.theme';
 // Configuración principal de la aplicación
 export const AppConfig = {
   // Información de la aplicación
@@ -61,6 +62,6 @@ export const PlatformConfig = {
   },
   web: {
     viewport: 'width=device-width, initial-scale=1',
-    themeColor: '#0087FF',
+    themeColor: baseTheme.brand.primary,//'#0087FF',
   },
 };

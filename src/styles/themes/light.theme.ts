@@ -1,4 +1,4 @@
-import { BaseTheme } from './base.theme';
+import { baseTheme, BaseTheme } from './base.theme';
 
 // Tema claro - extiende el tema base
 export interface LightTheme extends BaseTheme {
@@ -43,7 +43,7 @@ export const lightTheme: LightTheme = {
     
     // Colores de navegación
     tabIconDefault: '#9CA3AF',
-    tabIconSelected: '#0087FF',
-    tint: '#0087FF',
+    tabIconSelected: baseTheme.brand.primary,//'#0087FF',
+    tint: baseTheme.brand.primary,//'#0087FF',
   },
 };

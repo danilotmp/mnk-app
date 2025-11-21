@@ -81,7 +81,7 @@ export interface BaseTheme {
 // Tema base por defecto
 export const baseTheme: BaseTheme = {
   brand: {
-    primary: '#0087FF',
+    primary: '#0087FF',//'#0a66c2'
     secondary: '#00AF00',
     accent: '#FF7D00',
     neutral: '#6B7280',

@@ -4,6 +4,7 @@
  */
 
 import { Platform } from 'react-native';
+import { baseTheme } from '../src/styles/themes/base.theme';
 
 // Colores base de la paleta - Estilo Hapi Trade (Dark Finance UI)
 export const BrandColors = {
@@ -72,7 +73,7 @@ export const BrandColors = {
 export const LightTheme = {
   colors: {
     // Colores principales
-    primary: '#0087FF',      // Mismo color que buttonTheme.brand.primary
+    primary: baseTheme.brand.primary,//'#0087FF',      // Mismo color que buttonTheme.brand.primary
     primaryLight: BrandColors.blue[100],
     primaryDark: BrandColors.blue[800],
     secondary: BrandColors.green[600],   // Verde más oscuro para modo claro
@@ -151,7 +152,7 @@ export const LightTheme = {
 export const DarkTheme = {
   colors: {
     // Colores principales - Cyan/Turquesa brillante (estilo Hapi)
-    primary: '#0087FF',      // Mismo color que buttonTheme.brand.primary 
+    primary: baseTheme.brand.primary,//'#0087FF',      // Mismo color que buttonTheme.brand.primary 
     primaryLight: '#7ee0ff',  // Cyan más claro
     primaryDark: '#00a8cc',   // Cyan oscuro
     secondary: '#00d4aa',     // Verde turquesa
