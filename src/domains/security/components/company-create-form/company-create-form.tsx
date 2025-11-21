@@ -71,20 +71,20 @@ export function CompanyCreateForm({
     const newErrors: Record<string, string> = {};
 
     if (!formData.code.trim()) {
-      newErrors.code = 'El código es requerido';
+      newErrors.code = t.security?.companies?.codeRequired || 'El código es requerido';
     }
     if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido';
+      newErrors.name = t.security?.companies?.nameRequired || 'El nombre es requerido';
     }
     if (!formData.email.trim()) {
       newErrors.email = t.auth.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = 'Email inválido';
+      newErrors.email = t.security?.companies?.emailInvalid || 'Email inválido';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, t.auth.emailRequired]);
+  }, [formData, t.auth.emailRequired, t.security?.companies]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
@@ -133,7 +133,7 @@ export function CompanyCreateForm({
     <View style={styles.formHeader}>
       <View style={styles.formHeaderTexts}>
         <ThemedText type="h4" style={{ color: colors.text }}>
-          {t.security?.companies?.createTitle || 'Crear empresa'}
+          {t.security?.companies?.createTitle || 'Crear Empresa'}
         </ThemedText>
         <ThemedText type="body2" variant="secondary">
           {t.security?.companies?.createSubtitle || 'Completa la información para registrar una nueva empresa'}
@@ -169,7 +169,7 @@ export function CompanyCreateForm({
       <Card variant="flat" style={styles.formCard}>
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Código *
+            {t.security?.companies?.code || 'Código'} *
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -185,7 +185,7 @@ export function CompanyCreateForm({
             <Ionicons name="pricetag-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Código único"
+              placeholder={t.security?.companies?.codePlaceholder || 'Código único'}
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
               onChangeText={(value) => handleChange('code', value)}
@@ -201,7 +201,7 @@ export function CompanyCreateForm({
 
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Nombre *
+            {t.security?.companies?.name || 'Nombre'} *
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -217,7 +217,7 @@ export function CompanyCreateForm({
             <Ionicons name="business-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Nombre de la empresa"
+              placeholder={t.security?.companies?.namePlaceholder || 'Nombre de la empresa'}
               placeholderTextColor={colors.textSecondary}
               value={formData.name}
               onChangeText={(value) => handleChange('name', value)}
@@ -230,70 +230,69 @@ export function CompanyCreateForm({
           ) : null}
         </View>
 
-        <View style={styles.inlineInputs}>
-          <View style={styles.inlineInput}>
-            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-              Email *
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.companies?.email || 'Email'} *
+          </ThemedText>
+          <InputWithFocus
+            containerStyle={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.email ? colors.error : colors.border,
+              },
+            ]}
+            primaryColor={colors.primary}
+            error={!!errors.email}
+          >
+            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder={t.security?.companies?.emailPlaceholder || 'Correo de contacto'}
+              placeholderTextColor={colors.textSecondary}
+              value={formData.email}
+              onChangeText={(value) => handleChange('email', value)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </InputWithFocus>
+          {errors.email ? (
+            <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
+              {errors.email}
             </ThemedText>
-            <InputWithFocus
-              containerStyle={[
-                styles.inputContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: errors.email ? colors.error : colors.border,
-                },
-              ]}
-              primaryColor={colors.primary}
-              error={!!errors.email}
-            >
-              <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Correo de contacto"
-                placeholderTextColor={colors.textSecondary}
-                value={formData.email}
-                onChangeText={(value) => handleChange('email', value)}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-            </InputWithFocus>
-            {errors.email ? (
-              <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
-                {errors.email}
-              </ThemedText>
-            ) : null}
-          </View>
-          <View style={styles.inlineInput}>
-            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-              Teléfono
-            </ThemedText>
-            <InputWithFocus
-              containerStyle={[
-                styles.inputContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: errors.phone ? colors.error : colors.border,
-                },
-              ]}
-              primaryColor={colors.primary}
-              error={!!errors.phone}
-            >
-              <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Teléfono de contacto"
-                placeholderTextColor={colors.textSecondary}
-                value={formData.phone}
-                onChangeText={(value) => handleChange('phone', value)}
-                keyboardType="phone-pad"
-              />
-            </InputWithFocus>
-          </View>
+          ) : null}
         </View>
 
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Descripción
+            {t.security?.companies?.phone || 'Teléfono'}
+          </ThemedText>
+          <InputWithFocus
+            containerStyle={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.phone ? colors.error : colors.border,
+              },
+            ]}
+            primaryColor={colors.primary}
+            error={!!errors.phone}
+          >
+            <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder={t.security?.companies?.phonePlaceholder || 'Teléfono de contacto'}
+              placeholderTextColor={colors.textSecondary}
+              value={formData.phone}
+              onChangeText={(value) => handleChange('phone', value)}
+              keyboardType="phone-pad"
+            />
+          </InputWithFocus>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.companies?.description || 'Descripción'}
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -309,7 +308,7 @@ export function CompanyCreateForm({
           >
             <TextInput
               style={[styles.input, { color: colors.text, height: 96 }]}
-              placeholder="Descripción de la empresa"
+              placeholder={t.security?.companies?.descriptionPlaceholder || 'Descripción de la empresa'}
               placeholderTextColor={colors.textSecondary}
               value={formData.description}
               onChangeText={(value) => handleChange('description', value)}

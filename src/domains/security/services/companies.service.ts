@@ -153,8 +153,8 @@ export class CompaniesService {
     if (filters.email?.trim()) {
       params.append('email', filters.email.trim());
     }
-    if (typeof filters.isActive === 'boolean') {
-      params.append('isActive', String(filters.isActive));
+    if (typeof filters.status === 'number') {
+      params.append('status', filters.status.toString());
     }
 
     return params.toString();

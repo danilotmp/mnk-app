@@ -376,7 +376,7 @@ export function SearchFilterBar({
         </View>
       )}
 
-      {filters.length > 0 && !isCollapsed && showClearButton && (
+      {filters.length > 0 && !isCollapsed && showClearButton && hasActiveFilters && (
         <View style={styles.clearContainer}>
           <TouchableOpacity
             style={styles.clearButton}

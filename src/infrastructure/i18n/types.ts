@@ -309,6 +309,46 @@ export interface Translations {
       searchPlaceholder: string;
       loadError: string;
     };
+    companies?: {
+      title: string;
+      subtitle: string;
+      create: string;
+      createTitle: string;
+      edit: string;
+      editTitle: string;
+      editShort: string;
+      delete: string;
+      deleteShort: string;
+      name: string;
+      code: string;
+      email: string;
+      phone: string;
+      description: string;
+      filterPlaceholder: string;
+      searchPlaceholder: string;
+      loadError: string;
+      empty: string;
+      createSubtitle: string;
+      editSubtitle: string;
+      deleteConfirmTitle: string;
+      deleteConfirmMessage: string;
+      deletedFilter: string;
+      deletedUser: string;
+      codePlaceholder: string;
+      namePlaceholder: string;
+      emailPlaceholder: string;
+      phonePlaceholder: string;
+      descriptionPlaceholder: string;
+      codeRequired: string;
+      nameRequired: string;
+      emailInvalid: string;
+      createSuccess: string;
+      editSuccess: string;
+      filters?: {
+        all: string;
+        status: string;
+      };
+    };
   };
 }
 
