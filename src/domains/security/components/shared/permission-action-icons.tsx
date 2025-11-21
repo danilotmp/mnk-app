@@ -120,7 +120,7 @@ export function PermissionActionIcons({
   }
   
   return (
-    <View style={containerStyle}>
+    <View style={[containerStyle, { overflow: 'visible' }]}>
       {filteredActions.map((action) => {
         // Determinar si el permiso está activo
         let isActive = false;
@@ -133,24 +133,34 @@ export function PermissionActionIcons({
         // Verificar si hay un cambio pendiente (no guardado aún)
         const hasPending = hasPendingChange ? hasPendingChange(route, action.name) : false;
         
-        // Color del icono según estado
-        // Si hay un cambio pendiente, mostrar en verde (colors.success)
+        // Color del icono según estado (sin considerar cambios pendientes para el color)
         // Si está activo, usar el color de tema
         // Si no está activo, usar color secundario
-        let iconColor = colors.textSecondary;
-        if (hasPending) {
-          iconColor = colors.success || '#10b981'; // Verde para cambios pendientes
-        } else if (isActive) {
-          iconColor = activeIconColor;
-        }
+        const iconColor = isActive ? activeIconColor : colors.textSecondary;
         
-        // Renderizar icono
+        // Renderizar icono con punto verde debajo si hay cambio pendiente
         const iconElement = (
-          <Ionicons 
-            name={action.icon as any} 
-            size={18} 
-            color={iconColor} 
-          />
+          <View style={{ alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: 28, minWidth: 24, paddingBottom: hasPending ? 6 : 0 }}>
+            <Ionicons 
+              name={action.icon as any} 
+              size={18} 
+              color={iconColor} 
+            />
+            {/* Punto verde debajo del icono si hay cambio pendiente */}
+            {hasPending && (
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  alignSelf: 'center',
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: colors.success || '#10b981',
+                }}
+              />
+            )}
+          </View>
         );
         
         // Si es interactivo, envolver en TouchableOpacity
