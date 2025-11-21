@@ -28,12 +28,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 export default function PermissionsListPage() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const pathname = usePathname();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createPermissionsListStyles(isMobile);
+  
+  // Color para iconos de acción: primaryDark en dark theme, primary en light theme
+  const actionIconColor = isDark ? colors.primaryDark : colors.primary;
 
   const {
     loading: accessLoading,
@@ -88,6 +91,7 @@ export default function PermissionsListPage() {
   const [searchValue, setSearchValue] = useState('');
   const [selectedModule, setSelectedModule] = useState('');
   const [selectedAction, setSelectedAction] = useState('');
+  const [showDefaultOptions, setShowDefaultOptions] = useState(true); // Por defecto mostrar opciones por defecto
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   
   // Obtener empresas
@@ -457,7 +461,7 @@ export default function PermissionsListPage() {
               style={styles.actionButton}
               onPress={() => handleEditPermission(permission)}
             >
-              <Ionicons name="pencil" size={18} color={colors.primaryDark} />
+              <Ionicons name="pencil" size={18} color={actionIconColor} />
             </TouchableOpacity>
           </Tooltip>
           <Tooltip text={t.security?.permissions?.deleteShort || 'Eliminar'} position="left">
@@ -465,7 +469,7 @@ export default function PermissionsListPage() {
               style={styles.actionButton}
               onPress={() => handleDeletePermission(permission)}
             >
-              <Ionicons name="trash" size={18} color={colors.primaryDark} />
+              <Ionicons name="trash" size={18} color={actionIconColor} />
             </TouchableOpacity>
           </Tooltip>
         </View>
@@ -575,10 +579,13 @@ export default function PermissionsListPage() {
             onModuleChange={setSelectedModule}
             selectedAction={selectedAction}
             onActionChange={setSelectedAction}
+            showDefaultOptions={showDefaultOptions}
+            onShowDefaultOptionsChange={setShowDefaultOptions}
             onClearFilters={() => {
               setSearchValue('');
               setSelectedModule('');
               setSelectedAction('');
+              setShowDefaultOptions(true); // Restaurar a mostrar por defecto
             }}
           />
         )}
@@ -600,6 +607,7 @@ export default function PermissionsListPage() {
                 searchValue={searchValue}
                 selectedModule={selectedModule}
                 selectedAction={selectedAction}
+                showDefaultOptions={showDefaultOptions}
                 onChanges={(changes) => {
                   setPermissionChanges(changes);
                 }}

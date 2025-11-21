@@ -50,6 +50,12 @@ export interface PermissionsManagementFlowProps {
   selectedAction?: string;
   
   /**
+   * Si se muestran las opciones por defecto (isPublic = true)
+   * Por defecto true
+   */
+  showDefaultOptions?: boolean;
+  
+  /**
    * Callback para exponer los menuItems cargados (para filtros)
    */
   onMenuItemsLoaded?: (menuItems: MenuItem[]) => void;

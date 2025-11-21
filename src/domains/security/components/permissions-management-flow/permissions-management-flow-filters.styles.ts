@@ -59,9 +59,27 @@ export const createPermissionsFlowFiltersStyles = (
       width: '100%',
       paddingHorizontal: isMobile ? 10 : 20,
       gap: isMobile ? 12 : 16,
+      paddingTop: 0,
+    },
+    defaultOptionsButton: {
+      paddingHorizontal: isMobile ? 12 : 16,
+      paddingVertical: isMobile ? 8 : 10,
+      borderRadius: 6,
+      borderWidth: 1,
+      minHeight: isMobile ? 36 : 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+    },
+    filtersRow: {
+      flexDirection: 'row',
+      gap: isMobile ? 12 : 16,
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
     },
     filterSection: {
       gap: isMobile ? 6 : 8,
+      minWidth: 120, // Ancho mínimo para mantener legibilidad
     },
     filterLabel: {
       fontSize: isMobile ? 13 : 14,
@@ -94,4 +112,3 @@ export const createPermissionsFlowFiltersStyles = (
       fontSize: isMobile ? 13 : 14,
     },
   });
-

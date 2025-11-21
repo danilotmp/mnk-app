@@ -23,6 +23,8 @@ export function PermissionsFlowFilters({
   onModuleChange,
   selectedAction,
   onActionChange,
+  showDefaultOptions,
+  onShowDefaultOptionsChange,
   onClearFilters,
 }: PermissionsFlowFiltersProps) {
   const { colors } = useTheme();
@@ -33,13 +35,24 @@ export function PermissionsFlowFilters({
   const [isCollapsed, setIsCollapsed] = useState(true); // Por defecto colapsado (ocultar filtros)
 
   // Extraer módulos únicos del menú (items padre)
+  // Excluir items con isPublic = true ya que se manejan por separado
   const modules = useMemo(() => {
     const moduleSet = new Set<string>();
+    
     menuItems.forEach((item) => {
       if (item.label) {
-        moduleSet.add(item.label);
+        // Solo agregar si NO es público (isPublic !== true)
+        // Verificar si es público de forma flexible (boolean true, string "true", o número 1)
+        const isPublicValue = item.isPublic;
+        const isPublic = isPublicValue === true || 
+                         (typeof isPublicValue === 'string' && isPublicValue === 'true') || 
+                         (typeof isPublicValue === 'number' && isPublicValue === 1);
+        if (!isPublic) {
+          moduleSet.add(item.label);
+        }
       }
     });
+    
     return Array.from(moduleSet).sort();
   }, [menuItems]);
 
@@ -52,7 +65,7 @@ export function PermissionsFlowFilters({
     { value: 'delete', label: 'Eliminar' },
   ];
 
-  const hasActiveFilters = searchValue.trim() !== '' || selectedModule !== '' || selectedAction !== '';
+  const hasActiveFilters = searchValue.trim() !== '' || selectedModule !== '' || selectedAction !== '' || !showDefaultOptions;
 
   return (
     <View style={styles.container}>
@@ -105,96 +118,127 @@ export function PermissionsFlowFilters({
       {/* Filtros - colapsables */}
       {!isCollapsed && (
         <View style={styles.filtersContainer}>
-          {/* Selector de Módulo */}
-          <View style={styles.filterSection}>
-            <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-              {t.security?.permissions?.module || 'Módulo'}
-            </ThemedText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterOptionsContainer}
-            >
+          {/* Contenedor horizontal para Módulo, Acción y Opciones por defecto */}
+          <View style={styles.filtersRow}>
+            {/* Selector de Módulo */}
+            <View style={styles.filterSection}>
+              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
+                {t.security?.permissions?.module || 'Módulo'}
+              </ThemedText>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterOptionsContainer}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    {
+                      backgroundColor: selectedModule === '' ? colors.primary : colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={() => onModuleChange('')}
+                >
+                  <ThemedText
+                    type="body2"
+                    style={{
+                      color: selectedModule === '' ? '#FFFFFF' : colors.text,
+                      fontWeight: selectedModule === '' ? '600' : '400',
+                    }}
+                  >
+                    {t.common?.all || 'Todos'}
+                  </ThemedText>
+                </TouchableOpacity>
+                {modules.map((module) => (
+                  <TouchableOpacity
+                    key={module}
+                    style={[
+                      styles.filterOption,
+                      {
+                        backgroundColor: selectedModule === module ? colors.primary : colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={() => onModuleChange(module)}
+                  >
+                    <ThemedText
+                      type="body2"
+                      style={{
+                        color: selectedModule === module ? '#FFFFFF' : colors.text,
+                        fontWeight: selectedModule === module ? '600' : '400',
+                      }}
+                    >
+                      {module}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Selector de Acción */}
+            <View style={styles.filterSection}>
+              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
+                {t.security?.permissions?.action || 'Acción'}
+              </ThemedText>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterOptionsContainer}
+              >
+                {actionOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.filterOption,
+                      {
+                        backgroundColor: selectedAction === option.value ? colors.primary : colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={() => onActionChange(option.value)}
+                  >
+                    <ThemedText
+                      type="body2"
+                      style={{
+                        color: selectedAction === option.value ? '#FFFFFF' : colors.text,
+                        fontWeight: selectedAction === option.value ? '600' : '400',
+                      }}
+                    >
+                      {option.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Sección de Opciones por defecto */}
+            <View style={styles.filterSection}>
+              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
+                {t.security?.roles?.defaultOptionsPlural || 'Opciones por defecto'}
+              </ThemedText>
               <TouchableOpacity
                 style={[
-                  styles.filterOption,
+                  styles.defaultOptionsButton,
                   {
-                    backgroundColor: selectedModule === '' ? colors.primary : colors.surface,
+                    backgroundColor: showDefaultOptions ? colors.primary : colors.surface,
                     borderColor: colors.border,
                   },
                 ]}
-                onPress={() => onModuleChange('')}
+                onPress={() => onShowDefaultOptionsChange(!showDefaultOptions)}
+                activeOpacity={0.7}
               >
                 <ThemedText
                   type="body2"
                   style={{
-                    color: selectedModule === '' ? '#FFFFFF' : colors.text,
-                    fontWeight: selectedModule === '' ? '600' : '400',
+                    color: showDefaultOptions ? '#FFFFFF' : colors.text,
+                    fontWeight: showDefaultOptions ? '600' : '400',
                   }}
                 >
-                  {t.common?.all || 'Todos'}
+                  {t.security?.permissions?.show || 'Mostrar'}
                 </ThemedText>
               </TouchableOpacity>
-              {modules.map((module) => (
-                <TouchableOpacity
-                  key={module}
-                  style={[
-                    styles.filterOption,
-                    {
-                      backgroundColor: selectedModule === module ? colors.primary : colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => onModuleChange(module)}
-                >
-                  <ThemedText
-                    type="body2"
-                    style={{
-                      color: selectedModule === module ? '#FFFFFF' : colors.text,
-                      fontWeight: selectedModule === module ? '600' : '400',
-                    }}
-                  >
-                    {module}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Selector de Acción */}
-          <View style={styles.filterSection}>
-            <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-              {t.security?.permissions?.action || 'Acción'}
-            </ThemedText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterOptionsContainer}
-            >
-              {actionOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.filterOption,
-                    {
-                      backgroundColor: selectedAction === option.value ? colors.primary : colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => onActionChange(option.value)}
-                >
-                  <ThemedText
-                    type="body2"
-                    style={{
-                      color: selectedAction === option.value ? '#FFFFFF' : colors.text,
-                      fontWeight: selectedAction === option.value ? '600' : '400',
-                    }}
-                  >
-                    {option.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            </View>
           </View>
 
           {/* Botón limpiar filtros */}
@@ -217,4 +261,3 @@ export function PermissionsFlowFilters({
     </View>
   );
 }
-

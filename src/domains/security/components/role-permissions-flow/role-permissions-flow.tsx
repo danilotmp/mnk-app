@@ -4,7 +4,6 @@
  */
 
 import { ThemedText } from '@/components/themed-text';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
@@ -14,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useCompanyOptions } from '../../hooks';
+import { PermissionMenuItem } from '../shared/permission-menu-item';
 import { createPermissionFlowStyles } from './role-permissions-flow.styles';
 import { PermissionFlowProps } from './role-permissions-flow.types';
 
@@ -192,16 +192,22 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
           <View style={styles.permissionsContainer}>
             {menuItems.map((menuItem, index) => {
               // Estructura jerárquica: items directos y columnas como grupos
-              const directItems: Array<{ id: string; label: string; route?: string; description?: string }> = [];
+              const directItems: Array<{ id: string; label: string; route?: string; description?: string; isPublic?: boolean }> = [];
               if (menuItem.submenu && menuItem.submenu.length > 0) {
-                directItems.push(...menuItem.submenu);
+                directItems.push(...menuItem.submenu.map(sub => ({
+                  ...sub,
+                  isPublic: sub.isPublic,
+                })));
               }
-              const columnGroups: Array<{ title?: string; items: Array<{ id: string; label: string; route?: string; description?: string }> }> = [];
+              const columnGroups: Array<{ title?: string; items: Array<{ id: string; label: string; route?: string; description?: string; isPublic?: boolean }> }> = [];
               if (menuItem.columns && menuItem.columns.length > 0) {
                 for (const column of menuItem.columns) {
                   columnGroups.push({
                     title: column.title,
-                    items: column.items || [],
+                    items: (column.items || []).map(item => ({
+                      ...item,
+                      isPublic: item.isPublic,
+                    })),
                   });
                 }
               }
@@ -232,70 +238,27 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
               if (!hasSubItems) {
                 return (
                   <View key={itemId} style={styles.moduleContainer}>
-                    <View 
-                      style={[
+                    <PermissionMenuItem
+                      item={{
+                        id: menuItem.id || itemId,
+                        label: menuItem.label,
+                        route: menuItem.route,
+                        description: menuItem.description,
+                        isPublic: menuItem.isPublic,
+                      }}
+                      itemStyle={[
                         styles.permissionItem,
                         { 
                           backgroundColor: colors.background,
                           borderColor: colors.border,
                         },
                       ]}
-                    >
-                      <View style={styles.permissionItemLeft}>
-                        <View style={[styles.permissionIcon, { backgroundColor: colors.primary + '15' }]}>
-                          <Ionicons 
-                            name="document-text" 
-                            size={16} 
-                            color={colors.primary} 
-                          />
-                        </View>
-                        <View style={styles.permissionInfo}>
-                          <ThemedText type="body2" style={{ color: colors.text, fontWeight: '500' }}>
-                            {menuItem.label}
-                          </ThemedText>
-                          {menuItem.description && (
-                            <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                              {menuItem.description}
-                            </ThemedText>
-                          )}
-                          {menuItem.route && (
-                            <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                              {menuItem.route}
-                            </ThemedText>
-                          )}
-                        </View>
-                      </View>
-                      <View style={styles.permissionActions}>
-                        {hasAnyPermissionForRoute(menuItem.route) ? (
-                          <>
-                            {hasPermissionForRoute(menuItem.route, 'view') && (
-                              <Tooltip text="Ver" position="top">
-                                <Ionicons name="eye-outline" size={18} color={colors.textSecondary} />
-                              </Tooltip>
-                            )}
-                            {hasPermissionForRoute(menuItem.route, 'create') && (
-                              <Tooltip text="Crear" position="top">
-                                <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-                              </Tooltip>
-                            )}
-                            {hasPermissionForRoute(menuItem.route, 'edit') && (
-                              <Tooltip text="Editar" position="top">
-                                <Ionicons name="pencil-outline" size={18} color={colors.textSecondary} />
-                              </Tooltip>
-                            )}
-                            {hasPermissionForRoute(menuItem.route, 'delete') && (
-                              <Tooltip text="Eliminar" position="top">
-                                <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
-                              </Tooltip>
-                            )}
-                          </>
-                        ) : (
-                          <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                            {t.security.roles.defaultOption}
-                          </ThemedText>
-                        )}
-                      </View>
-                    </View>
+                      actionsContainerStyle={styles.permissionActions}
+                      actionIconsProps={{
+                        interactive: false,
+                        hasPermissionForRoute,
+                      }}
+                    />
                   </View>
                 );
               }
@@ -337,9 +300,16 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                       {directItems.length > 0 && (
                         <View style={styles.permissionsList}>
                           {directItems.map((subItem, subIndex) => (
-                            <View
+                            <PermissionMenuItem
                               key={subItem.id || subIndex}
-                              style={[
+                              item={{
+                                id: subItem.id || `sub-${subIndex}`,
+                                label: subItem.label,
+                                route: subItem.route,
+                                description: subItem.description,
+                                isPublic: subItem.isPublic,
+                              }}
+                              itemStyle={[
                                 styles.permissionItem,
                                 {
                                   backgroundColor: colors.background,
@@ -347,58 +317,12 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                                 },
                                 subIndex < directItems.length - 1 && styles.permissionItemNotLast,
                               ]}
-                            >
-                              <View style={styles.permissionItemLeft}>
-                                <View style={[styles.permissionIcon, { backgroundColor: colors.primary + '15' }]}>
-                                  <Ionicons name="document-text" size={16} color={colors.primary} />
-                                </View>
-                                <View style={styles.permissionInfo}>
-                                  <ThemedText type="body2" style={{ color: colors.text, fontWeight: '500' }}>
-                                    {subItem.label}
-                                  </ThemedText>
-                                  {subItem.description && (
-                                    <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                      {subItem.description}
-                                    </ThemedText>
-                                  )}
-                                  {subItem.route && (
-                                    <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                      {subItem.route}
-                                    </ThemedText>
-                                  )}
-                                </View>
-                              </View>
-                              <View style={styles.permissionActions}>
-                                {hasAnyPermissionForRoute(subItem.route) ? (
-                                  <>
-                                    {hasPermissionForRoute(subItem.route, 'view') && (
-                                      <Tooltip text="Ver" position="top">
-                                        <Ionicons name="eye-outline" size={18} color={colors.textSecondary} />
-                                      </Tooltip>
-                                    )}
-                                    {hasPermissionForRoute(subItem.route, 'create') && (
-                                      <Tooltip text="Crear" position="top">
-                                        <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-                                      </Tooltip>
-                                    )}
-                                    {hasPermissionForRoute(subItem.route, 'edit') && (
-                                      <Tooltip text="Editar" position="top">
-                                        <Ionicons name="pencil-outline" size={18} color={colors.textSecondary} />
-                                      </Tooltip>
-                                    )}
-                                    {hasPermissionForRoute(subItem.route, 'delete') && (
-                                      <Tooltip text="Eliminar" position="top">
-                                        <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
-                                      </Tooltip>
-                                    )}
-                                  </>
-                                ) : (
-                                  <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                                    {t.security.roles.defaultOption}
-                                  </ThemedText>
-                                )}
-                              </View>
-                            </View>
+                              actionsContainerStyle={styles.permissionActions}
+                              actionIconsProps={{
+                                interactive: false,
+                                hasPermissionForRoute,
+                              }}
+                            />
                           ))}
                         </View>
                       )}
@@ -420,9 +344,16 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                           {group.items.length > 0 && (
                             <View style={styles.permissionsList}>
                               {group.items.map((subItem, subIndex) => (
-                                <View
+                                <PermissionMenuItem
                                   key={subItem.id || subIndex}
-                                  style={[
+                                  item={{
+                                    id: subItem.id || `col-${subIndex}`,
+                                    label: subItem.label,
+                                    route: subItem.route,
+                                    description: subItem.description,
+                                    isPublic: subItem.isPublic,
+                                  }}
+                                  itemStyle={[
                                     styles.permissionItem,
                                     {
                                       backgroundColor: colors.background,
@@ -430,58 +361,12 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                                     },
                                     subIndex < group.items.length - 1 && styles.permissionItemNotLast,
                                   ]}
-                                >
-                                  <View style={styles.permissionItemLeft}>
-                                    <View style={[styles.permissionIcon, { backgroundColor: colors.primary + '15' }]}>
-                                      <Ionicons name="document-text" size={16} color={colors.primary} />
-                                    </View>
-                                    <View style={styles.permissionInfo}>
-                                      <ThemedText type="body2" style={{ color: colors.text, fontWeight: '500' }}>
-                                        {subItem.label}
-                                      </ThemedText>
-                                      {subItem.description && (
-                                        <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                          {subItem.description}
-                                        </ThemedText>
-                                      )}
-                                      {subItem.route && (
-                                        <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                          {subItem.route}
-                                        </ThemedText>
-                                      )}
-                                    </View>
-                                  </View>
-                                  <View style={styles.permissionActions}>
-                                    {hasAnyPermissionForRoute(subItem.route) ? (
-                                      <>
-                                        {hasPermissionForRoute(subItem.route, 'view') && (
-                                          <Tooltip text="Ver" position="top">
-                                            <Ionicons name="eye-outline" size={18} color={colors.textSecondary} />
-                                          </Tooltip>
-                                        )}
-                                        {hasPermissionForRoute(subItem.route, 'create') && (
-                                          <Tooltip text="Crear" position="top">
-                                            <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-                                          </Tooltip>
-                                        )}
-                                        {hasPermissionForRoute(subItem.route, 'edit') && (
-                                          <Tooltip text="Editar" position="top">
-                                            <Ionicons name="pencil-outline" size={18} color={colors.textSecondary} />
-                                          </Tooltip>
-                                        )}
-                                        {hasPermissionForRoute(subItem.route, 'delete') && (
-                                          <Tooltip text="Eliminar" position="top">
-                                            <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
-                                          </Tooltip>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                                        {t.security.roles.defaultOption}
-                                      </ThemedText>
-                                    )}
-                                  </View>
-                                </View>
+                                  actionsContainerStyle={styles.permissionActions}
+                                  actionIconsProps={{
+                                    interactive: false,
+                                    hasPermissionForRoute,
+                                  }}
+                                />
                               ))}
                             </View>
                           )}

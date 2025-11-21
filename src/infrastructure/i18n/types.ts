@@ -225,10 +225,12 @@ export interface Translations {
       searchPlaceholder: string;
       loadError: string;
       defaultOption: string;
+      defaultOptionsPlural: string;
     };
     permissions?: {
       title: string;
       subtitle: string;
+      show?: string;
       create: string;
       edit: string;
       editShort: string;

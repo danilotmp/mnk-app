@@ -41,10 +41,13 @@ export function DataTable<T = any>({
   actionsColumnWidth = '18%',
   actionsColumnLabel = 'Acciones',
 }: DataTableProps<T>) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { height: windowHeight } = useWindowDimensions();
   const styles = createDataTableStyles(isMobile);
+  
+  // Color para iconos de acción: primaryDark en dark theme, primary en light theme
+  const actionIconColor = isDark ? colors.primaryDark : colors.primary;
   
   /**
    * Construir lista de acciones ordenadas: personalizadas → editar → eliminar
@@ -102,7 +105,7 @@ export function DataTable<T = any>({
                   style={styles.actionButton}
                   onPress={() => action.onPress(item)}
                 >
-                  <Ionicons name={action.icon as any} size={18} color={colors.primaryDark} />
+                  <Ionicons name={action.icon as any} size={18} color={actionIconColor} />
                 </TouchableOpacity>
               </Tooltip>
             );
@@ -125,7 +128,7 @@ export function DataTable<T = any>({
                 style={styles.actionButton}
                 onPress={() => action.onPress(item)}
               >
-                <Ionicons name={iconName as any} size={18} color={colors.primaryDark} />
+                <Ionicons name={iconName as any} size={18} color={actionIconColor} />
               </TouchableOpacity>
             </Tooltip>
           );

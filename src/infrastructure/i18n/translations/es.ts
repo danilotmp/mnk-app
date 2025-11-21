@@ -228,10 +228,12 @@ export const es: Translations = {
       searchPlaceholder: 'Buscar por nombre o código...',
       loadError: 'Error al cargar roles',
       defaultOption: 'Opción por defecto',
+      defaultOptionsPlural: 'Opciones por defecto',
     },
     permissions: {
       title: 'Administración de Permisos',
       subtitle: 'Gestiona los permisos del sistema',
+      show: 'Mostrar',
       create: 'Crear Permiso',
       edit: 'Editar Permiso',
       editShort: 'Editar',

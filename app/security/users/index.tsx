@@ -31,8 +31,11 @@ import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 
 export default function UsersListPage() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+  
+  // Color para iconos de acción: primaryDark en dark theme, primary en light theme
+  const actionIconColor = isDark ? colors.primaryDark : colors.primary;
   const commonTranslations = (t.common as any) || {};
   const usersTranslations = (t.security?.users as any) || {};
   const pathname = usePathname();
@@ -488,7 +491,7 @@ export default function UsersListPage() {
               style={styles.actionButton}
               onPress={() => handleEditUser(user)}
             >
-              <Ionicons name="pencil" size={18} color={colors.primaryDark} />
+              <Ionicons name="pencil" size={18} color={actionIconColor} />
             </TouchableOpacity>
           </Tooltip>
           <Tooltip text={t.security?.users?.deleteShort || 'Eliminar'} position="left">
@@ -496,7 +499,7 @@ export default function UsersListPage() {
               style={styles.actionButton}
               onPress={() => confirmDeleteUser(user)}
             >
-              <Ionicons name="trash" size={18} color={colors.primaryDark} />
+              <Ionicons name="trash" size={18} color={actionIconColor} />
             </TouchableOpacity>
           </Tooltip>
         </View>
@@ -681,7 +684,7 @@ export default function UsersListPage() {
                           }
                         }}
                       >
-                        <Ionicons name="trash" size={18} color={colors.primaryDark} />
+                        <Ionicons name="trash" size={18} color={actionIconColor} />
                       </TouchableOpacity>
                     </Tooltip>
                   ) : null}

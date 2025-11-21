@@ -228,10 +228,12 @@ export const en: Translations = {
       searchPlaceholder: 'Search by name or code...',
       loadError: 'Error loading roles',
       defaultOption: 'Default option',
+      defaultOptionsPlural: 'Default options',
     },
     permissions: {
       title: 'Permission Management',
       subtitle: 'Manage system permissions',
+      show: 'Show',
       create: 'Create Permission',
       edit: 'Edit Permission',
       editShort: 'Edit',

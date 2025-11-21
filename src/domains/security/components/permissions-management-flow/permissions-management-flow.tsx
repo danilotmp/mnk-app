@@ -4,7 +4,6 @@
  */
 
 import { ThemedText } from '@/components/themed-text';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
@@ -14,7 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { createPermissionFlowStyles } from '../role-permissions-flow/role-permissions-flow.styles';
-import { PermissionsManagementFlowProps, PermissionChange } from './permissions-management-flow.types';
+import { PermissionMenuItem } from '../shared/permission-menu-item';
+import { PermissionChange, PermissionsManagementFlowProps } from './permissions-management-flow.types';
 
 export function PermissionsManagementFlow({ 
   permissions, 
@@ -23,12 +23,16 @@ export function PermissionsManagementFlow({
   searchValue = '',
   selectedModule = '',
   selectedAction = '',
+  showDefaultOptions = true,
   onMenuItemsLoaded,
 }: PermissionsManagementFlowProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const styles = createPermissionFlowStyles(colors, isMobile);
+  
+  // Color para iconos activos: primaryDark en dark theme, primary en light theme
+  const activeIconColor = isDark ? colors.primaryDark : colors.primary;
   
   // Estado para el menú completo
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -252,6 +256,15 @@ export function PermissionsManagementFlow({
 
         // Aplicar filtros a los menuItems
         const filteredMenuItems = menuItems.filter((menuItem) => {
+          // Filtro por opciones por defecto (isPublic = true)
+          const isPublic = menuItem.isPublic === true || 
+                           (typeof menuItem.isPublic === 'string' && menuItem.isPublic === 'true') || 
+                           (typeof menuItem.isPublic === 'number' && menuItem.isPublic === 1);
+          if (isPublic && !showDefaultOptions) {
+            // Si el item es público pero showDefaultOptions está desactivado, ocultarlo
+            return false;
+          }
+
           // Filtro por módulo
           if (selectedModule && menuItem.label !== selectedModule) {
             return false;
@@ -393,86 +406,28 @@ export function PermissionsManagementFlow({
               if (!hasSubItems) {
                 return (
                   <View key={itemId} style={styles.moduleContainer}>
-                    <View 
-                      style={[
+                    <PermissionMenuItem
+                      item={{
+                        id: menuItem.id || itemId,
+                        label: menuItem.label,
+                        route: menuItem.route,
+                        description: menuItem.description,
+                        isPublic: menuItem.isPublic,
+                      }}
+                      itemStyle={[
                         styles.permissionItem,
                         { 
                           backgroundColor: colors.background,
                           borderColor: colors.border,
                         },
                       ]}
-                    >
-                      <View style={styles.permissionItemLeft}>
-                        <View style={[styles.permissionIcon, { backgroundColor: colors.primary + '15' }]}>
-                          <Ionicons 
-                            name="document-text" 
-                            size={16} 
-                            color={colors.primary} 
-                          />
-                        </View>
-                        <View style={styles.permissionInfo}>
-                          <ThemedText type="body2" style={{ color: colors.text, fontWeight: '500' }}>
-                            {menuItem.label}
-                          </ThemedText>
-                          {menuItem.description && (
-                            <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                              {menuItem.description}
-                            </ThemedText>
-                          )}
-                          {menuItem.route && (
-                            <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                              {menuItem.route}
-                            </ThemedText>
-                          )}
-                        </View>
-                      </View>
-                      <View style={styles.permissionActions}>
-                        {menuItem.isPublic === true || menuItem.isPublic === 'true' || menuItem.isPublic === 1 ? (
-                          <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                            {t.security?.roles?.defaultOption || 'Opción por defecto'}
-                          </ThemedText>
-                        ) : (
-                          <>
-                            <Tooltip text="Ver" position="top">
-                              <TouchableOpacity onPress={() => togglePermission(menuItem.route, 'view')}>
-                                <Ionicons 
-                                  name="eye-outline" 
-                                  size={18} 
-                                  color={getPermissionState(menuItem.route, 'view') ? colors.primaryDark : colors.textSecondary} 
-                                />
-                              </TouchableOpacity>
-                            </Tooltip>
-                            <Tooltip text="Crear" position="top">
-                              <TouchableOpacity onPress={() => togglePermission(menuItem.route, 'create')}>
-                                <Ionicons 
-                                  name="create-outline" 
-                                  size={18} 
-                                  color={getPermissionState(menuItem.route, 'create') ? colors.primaryDark : colors.textSecondary} 
-                                />
-                              </TouchableOpacity>
-                            </Tooltip>
-                            <Tooltip text="Editar" position="top">
-                              <TouchableOpacity onPress={() => togglePermission(menuItem.route, 'edit')}>
-                                <Ionicons 
-                                  name="pencil-outline" 
-                                  size={18} 
-                                  color={getPermissionState(menuItem.route, 'edit') ? colors.primaryDark : colors.textSecondary} 
-                                />
-                              </TouchableOpacity>
-                            </Tooltip>
-                            <Tooltip text="Eliminar" position="top">
-                              <TouchableOpacity onPress={() => togglePermission(menuItem.route, 'delete')}>
-                                <Ionicons 
-                                  name="trash-outline" 
-                                  size={18} 
-                                  color={getPermissionState(menuItem.route, 'delete') ? colors.primaryDark : colors.textSecondary} 
-                                />
-                              </TouchableOpacity>
-                            </Tooltip>
-                          </>
-                        )}
-                      </View>
-                    </View>
+                      actionsContainerStyle={styles.permissionActions}
+                      actionIconsProps={{
+                        interactive: true,
+                        onTogglePermission: togglePermission,
+                        getPermissionState,
+                      }}
+                    />
                   </View>
                 );
               }
@@ -514,84 +469,30 @@ export function PermissionsManagementFlow({
                       {filteredDirectItems.length > 0 && (
                         <View style={styles.permissionsList}>
                           {filteredDirectItems.map((subItem, subIndex) => (
-                              <View
-                                key={subItem.id || subIndex}
-                                style={[
-                                  styles.permissionItem,
-                                  {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                  },
-                                  subIndex < filteredDirectItems.length - 1 && styles.permissionItemNotLast,
+                            <PermissionMenuItem
+                              key={subItem.id || subIndex}
+                              item={{
+                                id: subItem.id || `sub-${subIndex}`,
+                                label: subItem.label,
+                                route: subItem.route,
+                                description: subItem.description,
+                                isPublic: subItem.isPublic,
+                              }}
+                              itemStyle={[
+                                styles.permissionItem,
+                                {
+                                  backgroundColor: colors.background,
+                                  borderColor: colors.border,
+                                },
+                                subIndex < filteredDirectItems.length - 1 && styles.permissionItemNotLast,
                               ]}
-                            >
-                              <View style={styles.permissionItemLeft}>
-                                <View style={[styles.permissionIcon, { backgroundColor: colors.primary + '15' }]}>
-                                  <Ionicons name="document-text" size={16} color={colors.primary} />
-                                </View>
-                                <View style={styles.permissionInfo}>
-                                  <ThemedText type="body2" style={{ color: colors.text, fontWeight: '500' }}>
-                                    {subItem.label}
-                                  </ThemedText>
-                                  {subItem.description && (
-                                    <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                      {subItem.description}
-                                    </ThemedText>
-                                  )}
-                                  {subItem.route && (
-                                    <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                      {subItem.route}
-                                    </ThemedText>
-                                  )}
-                                </View>
-                              </View>
-                              <View style={styles.permissionActions}>
-                                {subItem.isPublic === true || subItem.isPublic === 'true' || subItem.isPublic === 1 ? (
-                                  <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                                    {t.security?.roles?.defaultOption || 'Opción por defecto'}
-                                  </ThemedText>
-                                ) : (
-                                  <>
-                                    <Tooltip text="Ver" position="top">
-                                      <TouchableOpacity onPress={() => togglePermission(subItem.route, 'view')}>
-                                        <Ionicons 
-                                          name="eye-outline" 
-                                          size={18} 
-                                          color={getPermissionState(subItem.route, 'view') ? colors.primaryDark : colors.textSecondary} 
-                                        />
-                                      </TouchableOpacity>
-                                    </Tooltip>
-                                    <Tooltip text="Crear" position="top">
-                                      <TouchableOpacity onPress={() => togglePermission(subItem.route, 'create')}>
-                                        <Ionicons 
-                                          name="create-outline" 
-                                          size={18} 
-                                          color={getPermissionState(subItem.route, 'create') ? colors.primaryDark : colors.textSecondary} 
-                                        />
-                                      </TouchableOpacity>
-                                    </Tooltip>
-                                    <Tooltip text="Editar" position="top">
-                                      <TouchableOpacity onPress={() => togglePermission(subItem.route, 'edit')}>
-                                        <Ionicons 
-                                          name="pencil-outline" 
-                                          size={18} 
-                                          color={getPermissionState(subItem.route, 'edit') ? colors.primaryDark : colors.textSecondary} 
-                                        />
-                                      </TouchableOpacity>
-                                    </Tooltip>
-                                    <Tooltip text="Eliminar" position="top">
-                                      <TouchableOpacity onPress={() => togglePermission(subItem.route, 'delete')}>
-                                        <Ionicons 
-                                          name="trash-outline" 
-                                          size={18} 
-                                          color={getPermissionState(subItem.route, 'delete') ? colors.primaryDark : colors.textSecondary} 
-                                        />
-                                      </TouchableOpacity>
-                                    </Tooltip>
-                                  </>
-                                )}
-                              </View>
-                            </View>
+                              actionsContainerStyle={styles.permissionActions}
+                              actionIconsProps={{
+                                interactive: true,
+                                onTogglePermission: togglePermission,
+                                getPermissionState,
+                              }}
+                            />
                           ))}
                         </View>
                       )}
@@ -613,84 +514,30 @@ export function PermissionsManagementFlow({
                           {group.items.length > 0 && (
                             <View style={styles.permissionsList}>
                               {group.items.map((subItem, subIndex) => (
-                                  <View
-                                    key={subItem.id || subIndex}
-                                    style={[
-                                      styles.permissionItem,
-                                      {
-                                        backgroundColor: colors.background,
-                                        borderColor: colors.border,
-                                      },
-                                      subIndex < group.items.length - 1 && styles.permissionItemNotLast,
+                                <PermissionMenuItem
+                                  key={subItem.id || subIndex}
+                                  item={{
+                                    id: subItem.id || `col-${subIndex}`,
+                                    label: subItem.label,
+                                    route: subItem.route,
+                                    description: subItem.description,
+                                    isPublic: subItem.isPublic,
+                                  }}
+                                  itemStyle={[
+                                    styles.permissionItem,
+                                    {
+                                      backgroundColor: colors.background,
+                                      borderColor: colors.border,
+                                    },
+                                    subIndex < group.items.length - 1 && styles.permissionItemNotLast,
                                   ]}
-                                >
-                                  <View style={styles.permissionItemLeft}>
-                                    <View style={[styles.permissionIcon, { backgroundColor: colors.primary + '15' }]}>
-                                      <Ionicons name="document-text" size={16} color={colors.primary} />
-                                    </View>
-                                    <View style={styles.permissionInfo}>
-                                      <ThemedText type="body2" style={{ color: colors.text, fontWeight: '500' }}>
-                                        {subItem.label}
-                                      </ThemedText>
-                                      {subItem.description && (
-                                        <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                          {subItem.description}
-                                        </ThemedText>
-                                      )}
-                                      {subItem.route && (
-                                        <ThemedText type="caption" variant="secondary" style={{ marginTop: 2 }}>
-                                          {subItem.route}
-                                        </ThemedText>
-                                      )}
-                                    </View>
-                                  </View>
-                                  <View style={styles.permissionActions}>
-                                    {subItem.isPublic === true || subItem.isPublic === 'true' || subItem.isPublic === 1 ? (
-                                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                                        {t.security?.roles?.defaultOption || 'Opción por defecto'}
-                                      </ThemedText>
-                                    ) : (
-                                      <>
-                                        <Tooltip text="Ver" position="top">
-                                          <TouchableOpacity onPress={() => togglePermission(subItem.route, 'view')}>
-                                            <Ionicons 
-                                              name="eye-outline" 
-                                              size={18} 
-                                              color={getPermissionState(subItem.route, 'view') ? colors.primaryDark : colors.textSecondary} 
-                                            />
-                                          </TouchableOpacity>
-                                        </Tooltip>
-                                        <Tooltip text="Crear" position="top">
-                                          <TouchableOpacity onPress={() => togglePermission(subItem.route, 'create')}>
-                                            <Ionicons 
-                                              name="create-outline" 
-                                              size={18} 
-                                              color={getPermissionState(subItem.route, 'create') ? colors.primaryDark : colors.textSecondary} 
-                                            />
-                                          </TouchableOpacity>
-                                        </Tooltip>
-                                        <Tooltip text="Editar" position="top">
-                                          <TouchableOpacity onPress={() => togglePermission(subItem.route, 'edit')}>
-                                            <Ionicons 
-                                              name="pencil-outline" 
-                                              size={18} 
-                                              color={getPermissionState(subItem.route, 'edit') ? colors.primaryDark : colors.textSecondary} 
-                                            />
-                                          </TouchableOpacity>
-                                        </Tooltip>
-                                        <Tooltip text="Eliminar" position="top">
-                                          <TouchableOpacity onPress={() => togglePermission(subItem.route, 'delete')}>
-                                            <Ionicons 
-                                              name="trash-outline" 
-                                              size={18} 
-                                              color={getPermissionState(subItem.route, 'delete') ? colors.primaryDark : colors.textSecondary} 
-                                            />
-                                          </TouchableOpacity>
-                                        </Tooltip>
-                                      </>
-                                    )}
-                                  </View>
-                                </View>
+                                  actionsContainerStyle={styles.permissionActions}
+                                  actionIconsProps={{
+                                    interactive: true,
+                                    onTogglePermission: togglePermission,
+                                    getPermissionState,
+                                  }}
+                                />
                               ))}
                             </View>
                           )}
