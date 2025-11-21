@@ -91,6 +91,7 @@ export const createPermissionsFlowFiltersStyles = (
       padding: 4,
     },
     filterOption: {
+      flexDirection: 'row',
       paddingHorizontal: isMobile ? 10 : 12,
       paddingVertical: isMobile ? 5 : 6,
       borderRadius: 6,

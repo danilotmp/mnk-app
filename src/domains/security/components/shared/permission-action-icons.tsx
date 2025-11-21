@@ -86,10 +86,10 @@ export function PermissionActionIcons({
   
   // Si no es público, mostrar iconos de acción
   const actions = [
-    { name: 'view', icon: 'eye-outline', tooltip: 'Ver' },
-    { name: 'create', icon: 'create-outline', tooltip: 'Crear' },
-    { name: 'edit', icon: 'pencil-outline', tooltip: 'Editar' },
-    { name: 'delete', icon: 'trash-outline', tooltip: 'Eliminar' },
+    { name: 'view', icon: 'eye-outline', tooltip: t.common?.view || 'Ver' },
+    { name: 'create', icon: 'create-outline', tooltip: t.common?.create || 'Crear' },
+    { name: 'edit', icon: 'pencil-outline', tooltip: t.common?.edit || 'Editar' },
+    { name: 'delete', icon: 'trash-outline', tooltip: t.common?.delete || 'Eliminar' },
   ];
   
   // Filtrar acciones según el modo

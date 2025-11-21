@@ -22,6 +22,12 @@ export interface Translations {
     filter: string;
     actions: string;
     searchHint: string;
+    all: string;
+    view: string;
+    create: string;
+    showFilters: string;
+    hideFilters: string;
+    clearFilters: string;
   };
   
   navigation: {
@@ -201,6 +207,8 @@ export interface Translations {
       status: string;
       active: string;
       inactive: string;
+      pending: string;
+      suspended: string;
       filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
@@ -208,6 +216,8 @@ export interface Translations {
       activated: string;
       deactivated: string;
       deleted: string;
+      deletedFilter: string;
+      deletedUser: string;
     };
     roles?: {
       title: string;

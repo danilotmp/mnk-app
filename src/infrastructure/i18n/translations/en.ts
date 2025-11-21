@@ -21,6 +21,12 @@ export const en: Translations = {
     filter: 'Filter',
     actions: 'Actions',
     searchHint: '● Press the Search button to query more records.',
+    all: 'All',
+    view: 'View',
+    create: 'Create',
+    showFilters: 'Show filters',
+    hideFilters: 'Hide filters',
+    clearFilters: 'Clear filters',
   },
   
   navigation: {
@@ -228,7 +234,7 @@ export const en: Translations = {
       searchPlaceholder: 'Search by name or code...',
       loadError: 'Error loading roles',
       defaultOption: 'Default option',
-      defaultOptionsPlural: 'Default options',
+      defaultOptionsPlural: 'All',
     },
     permissions: {
       title: 'Permission Management',

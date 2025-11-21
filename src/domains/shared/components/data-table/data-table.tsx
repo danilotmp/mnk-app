@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
 import {
@@ -43,6 +44,7 @@ export function DataTable<T = any>({
 }: DataTableProps<T>) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const styles = createDataTableStyles(isMobile);
   
@@ -120,7 +122,7 @@ export function DataTable<T = any>({
           }
           
           const iconName = type === 'edit' ? 'pencil' : 'trash';
-          const tooltipText = action.tooltip || (type === 'edit' ? 'Editar' : 'Eliminar');
+          const tooltipText = action.tooltip || (type === 'edit' ? (t.common?.edit || 'Editar') : (t.common?.delete || 'Eliminar'));
           
           return (
             <Tooltip key={type} text={tooltipText} position="left">

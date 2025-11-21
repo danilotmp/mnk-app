@@ -21,6 +21,12 @@ export const es: Translations = {
     filter: 'Filtrar',
     actions: 'Acciones',
     searchHint: '● Presiona el botón Buscar para consultar más registros.',
+    all: 'Todos',
+    view: 'Ver',
+    create: 'Crear',
+    showFilters: 'Mostrar filtros',
+    hideFilters: 'Ocultar filtros',
+    clearFilters: 'Limpiar filtros',
   },
   
   navigation: {
@@ -228,7 +234,7 @@ export const es: Translations = {
       searchPlaceholder: 'Buscar por nombre o código...',
       loadError: 'Error al cargar roles',
       defaultOption: 'Opción por defecto',
-      defaultOptionsPlural: 'Opciones por defecto',
+      defaultOptionsPlural: 'Todo',
     },
     permissions: {
       title: 'Administración de Permisos',

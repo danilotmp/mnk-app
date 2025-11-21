@@ -58,11 +58,11 @@ export function PermissionsFlowFilters({
 
   // Opciones de acciones
   const actionOptions = [
-    { value: '', label: t.common?.all || 'Todos' },
-    { value: 'view', label: 'Ver' },
-    { value: 'create', label: 'Crear' },
-    { value: 'edit', label: 'Editar' },
-    { value: 'delete', label: 'Eliminar' },
+    { value: '', label: t.common?.all || 'Todos', icon: null },
+    { value: 'view', label: t.common?.view || 'Ver', icon: 'eye-outline' },
+    { value: 'create', label: t.common?.create || 'Crear', icon: 'create-outline' },
+    { value: 'edit', label: t.common?.edit || 'Editar', icon: 'pencil-outline' },
+    { value: 'delete', label: t.common?.delete || 'Eliminar', icon: 'trash-outline' },
   ];
 
   const hasActiveFilters = searchValue.trim() !== '' || selectedModule !== '' || selectedAction !== '' || !showDefaultOptions;
@@ -120,6 +120,33 @@ export function PermissionsFlowFilters({
         <View style={styles.filtersContainer}>
           {/* Contenedor horizontal para Módulo, Acción y Opciones por defecto */}
           <View style={styles.filtersRow}>
+            {/* Sección de Opciones por defecto */}
+            <View style={styles.filterSection}>
+              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
+                {t.security?.roles?.defaultOptionsPlural || 'Todo'}
+              </ThemedText>
+              <TouchableOpacity
+                style={[
+                  styles.defaultOptionsButton,
+                  {
+                    backgroundColor: showDefaultOptions ? colors.primary : colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => onShowDefaultOptionsChange(!showDefaultOptions)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  type="body2"
+                  style={{
+                    color: showDefaultOptions ? '#FFFFFF' : colors.text,
+                    fontWeight: showDefaultOptions ? '600' : '400',
+                  }}
+                >
+                  {t.security?.permissions?.show || 'Mostrar'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
             {/* Selector de Módulo */}
             <View style={styles.filterSection}>
               <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
@@ -176,8 +203,8 @@ export function PermissionsFlowFilters({
               </ScrollView>
             </View>
 
-            {/* Selector de Acción */}
-            <View style={styles.filterSection}>
+             {/* Selector de Acción */}
+             <View style={styles.filterSection}>
               <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
                 {t.security?.permissions?.action || 'Acción'}
               </ThemedText>
@@ -186,58 +213,80 @@ export function PermissionsFlowFilters({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.filterOptionsContainer}
               >
-                {actionOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.filterOption,
-                      {
-                        backgroundColor: selectedAction === option.value ? colors.primary : colors.surface,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                    onPress={() => onActionChange(option.value)}
-                  >
-                    <ThemedText
-                      type="body2"
-                      style={{
-                        color: selectedAction === option.value ? '#FFFFFF' : colors.text,
-                        fontWeight: selectedAction === option.value ? '600' : '400',
-                      }}
+                {actionOptions.map((option) => {
+                  const isSelected = selectedAction === option.value;
+                  const iconColor = isSelected ? '#FFFFFF' : colors.text;
+                  
+                  // Si es "Todos", mostrar solo texto sin tooltip
+                  if (option.value === '') {
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.filterOption,
+                          {
+                            backgroundColor: isSelected ? colors.primary : colors.surface,
+                            borderColor: colors.border,
+                          },
+                        ]}
+                        onPress={() => onActionChange(option.value)}
+                      >
+                        <ThemedText
+                          type="body2"
+                          style={{
+                            color: isSelected ? '#FFFFFF' : colors.text,
+                            fontWeight: isSelected ? '600' : '400',
+                          }}
+                        >
+                          {option.label}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  }
+                  
+                  // Para los demás botones:
+                  // - Si está seleccionado: mostrar icono + texto
+                  // - Si NO está seleccionado: mostrar solo icono
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.filterOption,
+                        {
+                          backgroundColor: isSelected ? colors.primary : colors.surface,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      onPress={() => onActionChange(option.value)}
                     >
-                      {option.label}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
+                      {isSelected ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons 
+                            name={option.icon as any} 
+                            size={16} 
+                            color={iconColor} 
+                          />
+                          <ThemedText
+                            type="body2"
+                            style={{
+                              color: iconColor,
+                              fontWeight: '600',
+                            }}
+                          >
+                            {option.label}
+                          </ThemedText>
+                        </View>
+                      ) : (
+                        <Ionicons 
+                          name={option.icon as any} 
+                          size={16} 
+                          color={iconColor} 
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
-            </View>
-
-            {/* Sección de Opciones por defecto */}
-            <View style={styles.filterSection}>
-              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-                {t.security?.roles?.defaultOptionsPlural || 'Opciones por defecto'}
-              </ThemedText>
-              <TouchableOpacity
-                style={[
-                  styles.defaultOptionsButton,
-                  {
-                    backgroundColor: showDefaultOptions ? colors.primary : colors.surface,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => onShowDefaultOptionsChange(!showDefaultOptions)}
-                activeOpacity={0.7}
-              >
-                <ThemedText
-                  type="body2"
-                  style={{
-                    color: showDefaultOptions ? '#FFFFFF' : colors.text,
-                    fontWeight: showDefaultOptions ? '600' : '400',
-                  }}
-                >
-                  {t.security?.permissions?.show || 'Mostrar'}
-                </ThemedText>
-              </TouchableOpacity>
             </View>
           </View>
 
