@@ -67,8 +67,11 @@ export function MainLayout({
 
   const finalMenuItems = menuItems.length > 0 ? menuItems : defaultMenuItems;
 
+  const router = useRouter();
+
   const handleLogout = () => {
-    // TODO: Implementar lógica de logout real
+    // Redirigir al Home después del logout
+    router.push('/');
   };
 
   const handleSettings = () => {
@@ -78,8 +81,6 @@ export function MainLayout({
   const handleProfile = () => {
     // TODO: Navegar a pantalla de perfil
   };
-
-  const router = useRouter();
 
   const handleMenuItemPress = (item: MenuItem) => {
     // Navegación real con Expo Router

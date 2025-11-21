@@ -12,6 +12,7 @@ import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { useSession } from '@/src/infrastructure/session';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -42,6 +43,7 @@ export function UserProfileHeader({
   const [switching, setSwitching] = useState(false);
   const { t } = useTranslation();
   const alert = useAlert();
+  const router = useRouter();
   
   // Responsive: Detectar tamaño de pantalla
   const { width } = useWindowDimensions();
@@ -136,7 +138,13 @@ export function UserProfileHeader({
     
     // Limpiar sesión completa (tokens, usuario, etc.)
     await clearSession();
+    
+    // Llamar al callback si existe
     onLogout?.();
+    
+    // Redirigir al Home
+    router.push('/');
+    
     // Toast de confirmación multilenguaje
     alert.showSuccess('auth.logoutSuccess');
   };
