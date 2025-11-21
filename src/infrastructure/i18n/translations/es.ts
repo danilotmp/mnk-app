@@ -29,6 +29,7 @@ export const es: Translations = {
     clearFilters: 'Limpiar filtros',
     showingResults: (start: number, end: number, total: number) => `Mostrando ${start}-${end} de ${total}`,
     pageInfo: (page: number, totalPages: number) => `Página ${page} de ${totalPages}`,
+    show: 'Mostrar:',
   },
   
   navigation: {
@@ -159,6 +160,7 @@ export const es: Translations = {
     invalidCredentials: 'Credenciales inválidas',
     emailRequired: 'El correo electrónico es requerido',
     passwordRequired: 'La contraseña es requerida',
+    changePassword: 'Cambiar contraseña',
     companyCode: 'Código de Empresa',
     companyCodePlaceholder: 'Ingresa el código de tu empresa',
     logoutSuccess: 'Sesión cerrada correctamente',
@@ -203,8 +205,12 @@ export const es: Translations = {
       deactivateShort: 'Desactivar',
       email: 'Email',
       name: 'Nombre',
+      firstName: 'Nombre',
+      lastName: 'Apellido',
       phone: 'Teléfono',
       role: 'Rol',
+      company: 'Empresa',
+      branches: 'Sucursales',
       status: 'Estado',
       active: 'Activo',
       inactive: 'Inactivo',
@@ -219,6 +225,15 @@ export const es: Translations = {
       deleted: 'Usuario eliminado',
       deletedFilter: 'Usuarios',
       deletedUser: 'Eliminados',
+      createSubtitle: 'Completa los datos para registrar un nuevo usuario',
+      editSubtitle: 'Modifica los datos del usuario',
+      firstNamePlaceholder: 'Nombre del usuario',
+      lastNamePlaceholder: 'Apellido del usuario',
+      phonePlaceholder: 'Teléfono de contacto',
+      selectCompany: 'Selecciona una empresa',
+      selectBranches: 'Selecciona una o más sucursales',
+      noBranches: 'No hay sucursales disponibles para la empresa seleccionada',
+      noRole: 'Sin rol',
     },
     roles: {
       title: 'Administración de Roles',
@@ -255,6 +270,7 @@ export const es: Translations = {
       systemRoleDescription: 'Los roles del sistema están protegidos contra eliminación',
       codePlaceholder: 'Código',
       codePlaceholderOptional: 'Código (opcional)',
+      selectRole: 'Selecciona un rol',
     },
     permissions: {
       title: 'Administración de Permisos',
@@ -262,6 +278,9 @@ export const es: Translations = {
       show: 'Mostrar',
       create: 'Crear Permiso',
       edit: 'Editar Permiso',
+      pendingChanges: (count: number) => count === 1 
+        ? '1 permiso pendiente de guardar' 
+        : `${count} permisos pendientes de guardar`,
       editShort: 'Editar',
       delete: 'Eliminar Permiso',
       deleteShort: 'Eliminar',
@@ -272,6 +291,7 @@ export const es: Translations = {
       filterPlaceholder: 'Filtrar por nombre, código, módulo o acción...',
       searchPlaceholder: 'Buscar por nombre, código, módulo o acción...',
       loadError: 'Error al cargar permisos',
+      preview: 'Vista previa',
     },
     accesses: {
       title: 'Administración de Accesos',

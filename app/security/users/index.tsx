@@ -559,7 +559,7 @@ export default function UsersListPage() {
             <ThemedText type="h3" style={styles.title}>
               {t.security?.users?.title || 'Administración de Usuarios'}
             </ThemedText>
-            <ThemedText type="body2" variant="secondary">
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
               {t.security?.users?.subtitle || 'Gestiona los usuarios del sistema'}
             </ThemedText>
           </View>
@@ -636,8 +636,8 @@ export default function UsersListPage() {
             }
             subtitle={
               modalMode === 'edit'
-                ? 'Modifica los datos del usuario'
-                : 'Completa los datos para registrar un nuevo usuario'
+                ? (t.security?.users?.editSubtitle || 'Modifica los datos del usuario')
+                : (t.security?.users?.createSubtitle || 'Completa los datos para registrar un nuevo usuario')
             }
             topAlert={
               formActions?.generalError ? (

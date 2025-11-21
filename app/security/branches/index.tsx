@@ -399,7 +399,7 @@ export default function BranchesListPage() {
             <ThemedText type="h3" style={styles.title}>
               {t.security?.branches?.title || 'Administración de Sucursales'}
             </ThemedText>
-            <ThemedText type="body2" variant="secondary">
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
               {t.security?.branches?.subtitle || 'Gestiona las sucursales registradas en el sistema'}
             </ThemedText>
           </View>

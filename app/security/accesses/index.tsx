@@ -383,7 +383,7 @@ export default function AccessesListPage() {
             <ThemedText type="h3" style={styles.title}>
               {t.security?.accesses?.title || 'Administración de Accesos'}
             </ThemedText>
-            <ThemedText type="body2" variant="secondary">
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
               {t.security?.accesses?.subtitle || 'Gestiona los accesos de usuarios'}
             </ThemedText>
           </View>

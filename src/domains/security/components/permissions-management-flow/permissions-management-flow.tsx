@@ -10,7 +10,7 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
 import { MenuItem } from '@/src/infrastructure/menu/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { createPermissionFlowStyles } from '../role-permissions-flow/role-permissions-flow.styles';
 import { PermissionMenuItem } from '../shared/permission-menu-item';
@@ -24,6 +24,7 @@ export function PermissionsManagementFlow({
   selectedModule = '',
   selectedAction = '',
   showDefaultOptions = true,
+  showAll = false,
   onMenuItemsLoaded,
 }: PermissionsManagementFlowProps) {
   const { colors, isDark } = useTheme();
@@ -38,6 +39,12 @@ export function PermissionsManagementFlow({
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
+  
+  // Ref para mantener la referencia estable del callback y evitar bucles infinitos
+  const onMenuItemsLoadedRef = useRef(onMenuItemsLoaded);
+  useEffect(() => {
+    onMenuItemsLoadedRef.current = onMenuItemsLoaded;
+  }, [onMenuItemsLoaded]);
   
   // Estado para rastrear qué items están expandidos (inicialmente todos colapsados)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -112,6 +119,24 @@ export function PermissionsManagementFlow({
   };
 
   /**
+   * Verifica si hay un cambio pendiente (aún no guardado) para una ruta y acción específica
+   * Retorna true si el estado actual difiere del estado original guardado en el backend
+   */
+  const hasPendingChange = (route: string | undefined, action: string): boolean => {
+    if (!route) return false;
+    
+    // Si hay cambios pendientes en permissionChanges, verificar si difiere del estado original
+    if (permissionChanges[route]) {
+      const currentState = permissionChanges[route][action as keyof typeof permissionChanges[typeof route]];
+      const originalState = hasPermissionForRoute(route, action);
+      // Hay cambio pendiente si el estado actual difiere del original
+      return currentState !== originalState;
+    }
+    
+    return false;
+  };
+
+  /**
    * Toggle de un permiso específico
    */
   const togglePermission = (route: string | undefined, action: string) => {
@@ -179,9 +204,9 @@ export function PermissionsManagementFlow({
         setMenuError(null);
         
         try {
-          const menu = await MenuService.getMenu('es', true); // showAll = true para mostrar todas las opciones
+          const menu = await MenuService.getMenu('es', !showAll); // Invertir: cuando showAll es false (no seleccionado), enviar true
           setMenuItems(menu);
-          onMenuItemsLoaded?.(menu);
+          onMenuItemsLoadedRef.current?.(menu);
         } catch (error: any) {
           console.error('Error al cargar menú:', error);
           setMenuError(error.message || 'Error al cargar el menú');
@@ -200,9 +225,9 @@ export function PermissionsManagementFlow({
       setMenuError(null);
       
         try {
-          const menu = await MenuService.getMenuForRole(roleId, 'es', true); // showAll = true para mostrar todas las opciones
+          const menu = await MenuService.getMenuForRole(roleId, 'es', !showAll); // Invertir: cuando showAll es false (no seleccionado), enviar true
           setMenuItems(menu);
-          onMenuItemsLoaded?.(menu);
+          onMenuItemsLoadedRef.current?.(menu);
         } catch (error: any) {
         console.error('Error al cargar menú del rol:', error);
         setMenuError(error.message || 'Error al cargar el menú del rol');
@@ -212,7 +237,7 @@ export function PermissionsManagementFlow({
     };
 
     loadMenuForRole();
-  }, [roleId]);
+  }, [roleId, showAll]);
 
   return (
     <ScrollView 
@@ -432,6 +457,7 @@ export function PermissionsManagementFlow({
                         interactive: true,
                         onTogglePermission: togglePermission,
                         getPermissionState,
+                        hasPendingChange,
                       }}
                     />
                   </View>

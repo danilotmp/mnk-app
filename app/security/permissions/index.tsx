@@ -92,6 +92,7 @@ export default function PermissionsListPage() {
   const [selectedModule, setSelectedModule] = useState('');
   const [selectedAction, setSelectedAction] = useState('');
   const [showDefaultOptions, setShowDefaultOptions] = useState(true); // Por defecto mostrar opciones por defecto
+  const [showAll, setShowAll] = useState(true); // Por defecto mostrar todas las opciones (vista previa preseleccionada)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   
   // Obtener empresas
@@ -527,7 +528,7 @@ export default function PermissionsListPage() {
             <ThemedText type="h3" style={styles.title}>
               {t.security?.permissions?.title || 'Administración de Permisos'}
             </ThemedText>
-            <ThemedText type="body2" variant="secondary">
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
               {t.security?.permissions?.subtitle || 'Gestiona los permisos del sistema'}
             </ThemedText>
           </View>
@@ -545,8 +546,8 @@ export default function PermissionsListPage() {
         <View style={[styles.selectorsContainer, { gap: 16 }]}>
           <View style={{ flex: 1 }}>
             <Select
-              label="Empresa"
-              placeholder="Selecciona una empresa"
+              label={t.security?.users?.company || 'Empresa'}
+              placeholder={t.security?.users?.selectCompany || 'Selecciona una empresa'}
               value={selectedCompanyId}
               options={companies.map(comp => ({ value: comp.id, label: comp.name }))}
               onSelect={(value) => handleCompanyChange(value as string)}
@@ -557,8 +558,8 @@ export default function PermissionsListPage() {
           
           <View style={{ flex: 1 }}>
             <Select
-              label="Rol"
-              placeholder="Selecciona un rol"
+              label={'Rol'}
+              placeholder={t.security?.roles?.selectRole || 'Selecciona un rol'}
               value={selectedRoleId}
               options={roles.map(role => ({ value: role.id, label: role.name }))}
               onSelect={(value) => handleRoleChange(value as string)}
@@ -569,9 +570,8 @@ export default function PermissionsListPage() {
           </View>
         </View>
 
-        {/* Filtros locales para PermissionsManagementFlow - Solo mostrar si hay un rol seleccionado */}
-        {selectedRoleId && menuItems.length > 0 && (
-          <PermissionsFlowFilters
+        {/* Filtros locales para PermissionsManagementFlow */}
+        <PermissionsFlowFilters
             menuItems={menuItems}
             searchValue={searchValue}
             onSearchChange={setSearchValue}
@@ -581,6 +581,8 @@ export default function PermissionsListPage() {
             onActionChange={setSelectedAction}
             showDefaultOptions={showDefaultOptions}
             onShowDefaultOptionsChange={setShowDefaultOptions}
+            showAll={showAll}
+            onShowAllChange={setShowAll}
             onClearFilters={() => {
               setSearchValue('');
               setSelectedModule('');
@@ -588,7 +590,6 @@ export default function PermissionsListPage() {
               setShowDefaultOptions(true); // Restaurar a mostrar por defecto
             }}
           />
-        )}
 
         {/* Componente de administración masiva de permisos - Solo mostrar si hay un rol seleccionado */}
         {selectedRoleId ? (
@@ -608,6 +609,7 @@ export default function PermissionsListPage() {
                 selectedModule={selectedModule}
                 selectedAction={selectedAction}
                 showDefaultOptions={showDefaultOptions}
+                showAll={showAll}
                 onChanges={(changes) => {
                   setPermissionChanges(changes);
                 }}
@@ -629,21 +631,48 @@ export default function PermissionsListPage() {
       </View>
 
       {/* Botón Guardar - solo aparece cuando hay cambios, fuera del content para que quede fijo abajo */}
-      {permissionChanges.length > 0 && (
-        <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-          <Button
-            title={t.common?.save || 'Guardar'}
-            onPress={handleSaveChanges}
-            variant="primary"
-            size="md"
-            disabled={savingChanges}
-          >
-            {savingChanges && (
-              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-            )}
-          </Button>
-        </View>
-      )}
+      {permissionChanges.length > 0 && (() => {
+        // Calcular la cantidad de permisos pendientes (acciones individuales que difieren del estado original)
+        const pendingCount = permissionChanges.reduce((total, change) => {
+          // Obtener el estado original de cada acción para esta ruta
+          const originalView = rolePermissions.some(p => p.route === change.route && p.action === 'view');
+          const originalCreate = rolePermissions.some(p => p.route === change.route && p.action === 'create');
+          const originalEdit = rolePermissions.some(p => p.route === change.route && p.action === 'edit');
+          const originalDelete = rolePermissions.some(p => p.route === change.route && p.action === 'delete');
+          
+          // Contar cuántas acciones difieren del estado original
+          let count = 0;
+          if (change.view !== originalView) count++;
+          if (change.create !== originalCreate) count++;
+          if (change.edit !== originalEdit) count++;
+          if (change.delete !== originalDelete) count++;
+          
+          return total + count;
+        }, 0);
+
+        const pendingText = typeof t.security?.permissions?.pendingChanges === 'function'
+          ? t.security.permissions.pendingChanges(pendingCount)
+          : (t.security?.permissions?.pendingChanges || `${pendingCount} ${pendingCount === 1 ? 'permiso' : 'permisos'} pendiente${pendingCount === 1 ? '' : 's'} de guardar`);
+
+        return (
+          <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16 }]}>
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+              {pendingText}
+            </ThemedText>
+            <Button
+              title={t.common?.save || 'Guardar'}
+              onPress={handleSaveChanges}
+              variant="primary"
+              size="md"
+              disabled={savingChanges}
+            >
+              {savingChanges && (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+              )}
+            </Button>
+          </View>
+        );
+      })()}
 
       {/* Modal de creación/edición */}
       {modalMode && (

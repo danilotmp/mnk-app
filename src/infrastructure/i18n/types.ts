@@ -30,6 +30,7 @@ export interface Translations {
     clearFilters: string;
     showingResults: (start: number, end: number, total: number) => string;
     pageInfo: (page: number, totalPages: number) => string;
+    show: string;
   };
   
   navigation: {
@@ -158,8 +159,9 @@ export interface Translations {
     loginSuccess: string;
     loginError: string;
     invalidCredentials: string;
-    emailRequired: string;
-    passwordRequired: string;
+      emailRequired: string;
+      passwordRequired: string;
+      changePassword: string;
     companyCode: string;
     companyCodePlaceholder: string;
     logoutSuccess: string;
@@ -204,8 +206,12 @@ export interface Translations {
       deactivateShort: string;
       email: string;
       name: string;
+      firstName: string;
+      lastName: string;
       phone: string;
       role: string;
+      company: string;
+      branches: string;
       status: string;
       active: string;
       inactive: string;
@@ -220,6 +226,15 @@ export interface Translations {
       deleted: string;
       deletedFilter: string;
       deletedUser: string;
+      createSubtitle: string;
+      editSubtitle: string;
+      firstNamePlaceholder: string;
+      lastNamePlaceholder: string;
+      phonePlaceholder: string;
+      selectCompany: string;
+      selectBranches: string;
+      noBranches: string;
+      noRole: string;
     };
     roles?: {
       title: string;
@@ -256,6 +271,7 @@ export interface Translations {
       systemRoleDescription: string;
       codePlaceholder: string;
       codePlaceholderOptional: string;
+      selectRole: string;
     };
     permissions?: {
       title: string;
@@ -268,11 +284,13 @@ export interface Translations {
       deleteShort: string;
       name: string;
       code: string;
+      pendingChanges?: string | ((count: number) => string);
       module: string;
       action: string;
       filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
+      preview: string;
     };
     accesses?: {
       title: string;

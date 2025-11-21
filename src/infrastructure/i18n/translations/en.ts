@@ -29,6 +29,7 @@ export const en: Translations = {
     clearFilters: 'Clear filters',
     showingResults: (start: number, end: number, total: number) => `Showing ${start}-${end} of ${total}`,
     pageInfo: (page: number, totalPages: number) => `Page ${page} of ${totalPages}`,
+    show: 'Show:',
   },
   
   navigation: {
@@ -159,6 +160,7 @@ export const en: Translations = {
     invalidCredentials: 'Invalid credentials',
     emailRequired: 'Email is required',
     passwordRequired: 'Password is required',
+    changePassword: 'Change password',
     companyCode: 'Company Code',
     companyCodePlaceholder: 'Enter your company code',
     logoutSuccess: 'Signed out successfully',
@@ -203,8 +205,12 @@ export const en: Translations = {
       deactivateShort: 'Deactivate',
       email: 'Email',
       name: 'Name',
+      firstName: 'First Name',
+      lastName: 'Last Name',
       phone: 'Phone',
       role: 'Role',
+      company: 'Company',
+      branches: 'Branches',
       status: 'Status',
       active: 'Active',
       inactive: 'Inactive',
@@ -219,6 +225,15 @@ export const en: Translations = {
       deleted: 'User deleted',
       deletedFilter: 'Users',
       deletedUser: 'Deleted',
+      createSubtitle: 'Complete the data to register a new user',
+      editSubtitle: 'Modify the user data',
+      firstNamePlaceholder: 'User\'s first name',
+      lastNamePlaceholder: 'User\'s last name',
+      phonePlaceholder: 'Contact phone',
+      selectCompany: 'Select a company',
+      selectBranches: 'Select one or more branches',
+      noBranches: 'No branches available for the selected company',
+      noRole: 'No role',
     },
     roles: {
       title: 'Role Management',
@@ -255,6 +270,7 @@ export const en: Translations = {
       systemRoleDescription: 'System roles are protected against deletion',
       codePlaceholder: 'Code',
       codePlaceholderOptional: 'Code (optional)',
+      selectRole: 'Select a role',
     },
     permissions: {
       title: 'Permission Management',
@@ -263,6 +279,9 @@ export const en: Translations = {
       create: 'Create Permission',
       edit: 'Edit Permission',
       editShort: 'Edit',
+      pendingChanges: (count: number) => count === 1 
+        ? '1 permission pending to save' 
+        : `${count} permissions pending to save`,
       delete: 'Delete Permission',
       deleteShort: 'Delete',
       name: 'Name',
@@ -272,6 +291,7 @@ export const en: Translations = {
       filterPlaceholder: 'Filter by name, code, module or action...',
       searchPlaceholder: 'Search by name, code, module or action...',
       loadError: 'Error loading permissions',
+      preview: 'Preview',
     },
     accesses: {
       title: 'Access Management',

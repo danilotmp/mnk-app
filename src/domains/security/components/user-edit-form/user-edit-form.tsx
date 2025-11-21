@@ -420,7 +420,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         <View style={styles.switchGroup}>
           <View style={styles.switchLabel}>
             <ThemedText type="body2" style={{ color: colors.text }}>
-              Cambiar contraseña
+              {t.auth?.changePassword || 'Cambiar contraseña'}
             </ThemedText>
           </View>
           <Switch
@@ -501,7 +501,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Nombre"
+              placeholder={t.security?.users?.firstNamePlaceholder || 'Nombre del usuario'}
               placeholderTextColor={colors.textSecondary}
               value={formData.firstName}
               onChangeText={(text) => handleChange('firstName', text)}
@@ -519,7 +519,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {/* Last Name */}
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Apellido *
+            {t.security?.users?.lastName || 'Apellido'} *
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -535,7 +535,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Apellido"
+              placeholder={t.security?.users?.lastNamePlaceholder || 'Apellido del usuario'}
               placeholderTextColor={colors.textSecondary}
               value={formData.lastName}
               onChangeText={(text) => handleChange('lastName', text)}
@@ -585,8 +585,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {/* Company */}
         <View style={styles.inputGroup}>
           <Select
-            label="Empresa"
-            placeholder="Selecciona una empresa"
+            label={t.security?.users?.company || 'Empresa'}
+            placeholder={t.security?.users?.selectCompany || 'Selecciona una empresa'}
             value={formData.companyId}
             options={companies.map((comp) => ({
               value: comp.id,
@@ -605,8 +605,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         {formData.companyId ? (
           <View style={styles.inputGroup}>
             <Select
-              label="Sucursales"
-              placeholder="Selecciona una o más sucursales"
+              label={t.security?.users?.branches || 'Sucursales'}
+              placeholder={t.security?.users?.selectBranches || 'Selecciona una o más sucursales'}
               value={formData.branchIds}
               options={
                 branches.length > 0
@@ -638,7 +638,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             />
             {branches.length === 0 && (
               <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
-                No hay sucursales disponibles para la empresa seleccionada
+                {t.security?.users?.noBranches || 'No hay sucursales disponibles para la empresa seleccionada'}
               </ThemedText>
             )}
           </View>

@@ -1,5 +1,5 @@
-import { SecurityPermission } from '../../types';
 import { MenuItem } from '@/src/infrastructure/menu/types';
+import { SecurityPermission } from '../../types';
 
 /**
  * Cambio de permiso para una ruta específica
@@ -54,6 +54,12 @@ export interface PermissionsManagementFlowProps {
    * Por defecto true
    */
   showDefaultOptions?: boolean;
+  
+  /**
+   * Si mostrar todas las opciones del menú (showAll = true)
+   * Por defecto false
+   */
+  showAll?: boolean;
   
   /**
    * Callback para exponer los menuItems cargados (para filtros)

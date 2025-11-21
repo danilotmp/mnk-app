@@ -44,6 +44,12 @@ export interface PermissionActionIconsProps {
   hasPermissionForRoute?: (route: string | undefined, action: string) => boolean;
   
   /**
+   * Función para verificar si hay un cambio pendiente (aún no guardado) para una ruta y acción específica
+   * Si retorna true, el icono se mostrará en color verde para indicar que hay un cambio pendiente
+   */
+  hasPendingChange?: (route: string | undefined, action: string) => boolean;
+  
+  /**
    * Estilo del contenedor de acciones
    */
   containerStyle?: any;
@@ -60,6 +66,7 @@ export function PermissionActionIcons({
   onTogglePermission,
   getPermissionState,
   hasPermissionForRoute,
+  hasPendingChange,
   containerStyle,
 }: PermissionActionIconsProps) {
   const { colors, isDark } = useTheme();
@@ -123,8 +130,19 @@ export function PermissionActionIcons({
           isActive = hasPermissionForRoute(route, action.name);
         }
         
+        // Verificar si hay un cambio pendiente (no guardado aún)
+        const hasPending = hasPendingChange ? hasPendingChange(route, action.name) : false;
+        
         // Color del icono según estado
-        const iconColor = isActive ? activeIconColor : colors.textSecondary;
+        // Si hay un cambio pendiente, mostrar en verde (colors.success)
+        // Si está activo, usar el color de tema
+        // Si no está activo, usar color secundario
+        let iconColor = colors.textSecondary;
+        if (hasPending) {
+          iconColor = colors.success || '#10b981'; // Verde para cambios pendientes
+        } else if (isActive) {
+          iconColor = activeIconColor;
+        }
         
         // Renderizar icono
         const iconElement = (

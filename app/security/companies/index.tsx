@@ -317,7 +317,7 @@ export default function CompaniesListPage() {
             <ThemedText type="h3" style={styles.title}>
               {t.security?.companies?.title || 'Administración de Empresas'}
             </ThemedText>
-            <ThemedText type="body2" variant="secondary">
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
               {t.security?.companies?.subtitle || 'Gestiona las empresas registradas en el sistema'}
             </ThemedText>
           </View>

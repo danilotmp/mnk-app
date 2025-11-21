@@ -450,7 +450,7 @@ export default function RolesListPage() {
             <ThemedText type="h3" style={styles.title}>
               {t.security?.roles?.title || 'Administración de Roles'}
             </ThemedText>
-            <ThemedText type="body2" variant="secondary">
+            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
               {t.security?.roles?.subtitle || 'Gestiona los roles del sistema'}
             </ThemedText>
           </View>

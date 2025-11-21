@@ -14,5 +14,7 @@ export interface PermissionsFlowFiltersProps {
   onActionChange: (action: string) => void;
   showDefaultOptions: boolean;
   onShowDefaultOptionsChange: (show: boolean) => void;
+  showAll?: boolean;
+  onShowAllChange?: (show: boolean) => void;
   onClearFilters: () => void;
 }

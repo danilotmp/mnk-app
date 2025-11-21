@@ -495,7 +495,7 @@ export function UserCreateForm({
       <View style={styles.inputGroup}>
         <Select
           label={t.security?.users?.company || 'Empresa'}
-          placeholder="Selecciona una empresa"
+          placeholder={t.security?.users?.selectCompany || 'Selecciona una empresa'}
           value={formData.companyId}
           options={companiesOptions.map((company) => ({
             value: company.id,
@@ -513,7 +513,7 @@ export function UserCreateForm({
         <View style={styles.inputGroup}>
           <Select
             label={t.security?.users?.branches || 'Sucursales'}
-            placeholder="Selecciona una o más sucursales"
+            placeholder={t.security?.users?.selectBranches || 'Selecciona una o más sucursales'}
             value={formData.branchIds}
             options={
               branchesOptions.length > 0

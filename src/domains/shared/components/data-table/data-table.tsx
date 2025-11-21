@@ -426,7 +426,7 @@ export function DataTable<T = any>({
                     type="body2"
                     style={[styles.limitLabel, { color: colors.text }]}
                   >
-                    Mostrar:
+                    {t.common?.show || 'Mostrar:'}
                   </ThemedText>
                   <View style={styles.limitOptions}>
                     {finalLimitOptions.map((option) => (
@@ -555,7 +555,7 @@ export function DataTable<T = any>({
                       type="body2"
                       style={[styles.limitLabel, { color: colors.text }]}
                     >
-                      Mostrar:
+                      {t.common?.show || 'Mostrar:'}
                     </ThemedText>
                   <View style={styles.limitOptions}>
                     {finalLimitOptions.map((option) => (

@@ -25,6 +25,8 @@ export function PermissionsFlowFilters({
   onActionChange,
   showDefaultOptions,
   onShowDefaultOptionsChange,
+  showAll = false,
+  onShowAllChange,
   onClearFilters,
 }: PermissionsFlowFiltersProps) {
   const { colors } = useTheme();
@@ -37,6 +39,10 @@ export function PermissionsFlowFilters({
   // Extraer módulos únicos del menú (items padre)
   // Excluir items con isPublic = true ya que se manejan por separado
   const modules = useMemo(() => {
+    if (!menuItems || menuItems.length === 0) {
+      return [];
+    }
+    
     const moduleSet = new Set<string>();
     
     menuItems.forEach((item) => {
@@ -112,6 +118,33 @@ export function PermissionsFlowFilters({
               />
             </TouchableOpacity>
           </Tooltip>
+          
+          {/* Botón Vista previa */}
+          {onShowAllChange && (
+            <Tooltip
+              text={t.security?.permissions?.preview || 'Vista previa'}
+              position="top"
+            >
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.expandButton,
+                  {
+                    borderColor: showAll ? colors.primary : colors.border,
+                    backgroundColor: showAll ? colors.primary : colors.surface,
+                  },
+                ]}
+                onPress={() => onShowAllChange(!showAll)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={showAll ? 'eye' : 'eye-off-outline'}
+                  size={isMobile ? 20 : 18}
+                  color={showAll ? '#FFFFFF' : colors.text}
+                />
+              </TouchableOpacity>
+            </Tooltip>
+          )}
         </View>
       </View>
 
@@ -123,7 +156,7 @@ export function PermissionsFlowFilters({
             {/* Sección de Opciones por defecto */}
             <View style={styles.filterSection}>
               <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-                {t.security?.roles?.defaultOptionsPlural || 'Todo'}
+              {t.security?.permissions?.show || 'Mostrar'}
               </ThemedText>
               <TouchableOpacity
                 style={[
@@ -143,7 +176,7 @@ export function PermissionsFlowFilters({
                     fontWeight: showDefaultOptions ? '600' : '400',
                   }}
                 >
-                  {t.security?.permissions?.show || 'Mostrar'}
+                  {t.security?.roles?.defaultOptionsPlural || 'Todo'}
                 </ThemedText>
               </TouchableOpacity>
             </View>
