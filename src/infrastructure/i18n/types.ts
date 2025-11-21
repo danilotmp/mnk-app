@@ -291,6 +291,8 @@ export interface Translations {
       searchPlaceholder: string;
       loadError: string;
       preview: string;
+      selectCompany: string;
+      selectRole: string;
     };
     accesses?: {
       title: string;

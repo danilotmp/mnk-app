@@ -859,11 +859,25 @@ export default function PermissionsListPage() {
           </View>
         ) : (
           <View style={[styles.dataTableContainer, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
-            <ThemedText type="body1" variant="secondary" style={{ textAlign: 'center' }}>
-              {!selectedCompanyId 
-                ? 'Selecciona una empresa para comenzar'
-                : 'Selecciona un rol para ver y gestionar sus permisos'}
-            </ThemedText>
+            <View style={{ alignItems: 'center', gap: 16 }}>
+              <Ionicons 
+                name="git-branch-outline" 
+                size={64} 
+                color={colors.textSecondary} 
+              />
+              <ThemedText 
+                type="body1" 
+                style={{ 
+                  textAlign: 'center', 
+                  color: colors.textSecondary,
+                  maxWidth: 300,
+                }}
+              >
+                {!selectedCompanyId 
+                  ? t.security?.permissions?.selectCompany || 'Selecciona una empresa para comenzar'
+                  : t.security?.permissions?.selectRole || 'Selecciona un rol para ver y gestionar sus permisos'}
+              </ThemedText>
+            </View>
           </View>
         )}
       </View>

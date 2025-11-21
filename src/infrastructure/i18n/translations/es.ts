@@ -292,6 +292,8 @@ export const es: Translations = {
       searchPlaceholder: 'Buscar por nombre, código, módulo o acción...',
       loadError: 'Error al cargar permisos',
       preview: 'Vista previa',
+      selectCompany: 'Selecciona una empresa para comenzar',
+      selectRole: 'Selecciona un rol para ver y gestionar sus permisos',
     },
     accesses: {
       title: 'Administración de Accesos',

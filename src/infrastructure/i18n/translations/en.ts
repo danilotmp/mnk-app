@@ -292,6 +292,8 @@ export const en: Translations = {
       searchPlaceholder: 'Search by name, code, module or action...',
       loadError: 'Error loading permissions',
       preview: 'Preview',
+      selectCompany: 'Select a company to begin',
+      selectRole: 'Select a role to view and manage its permissions',
     },
     accesses: {
       title: 'Access Management',
