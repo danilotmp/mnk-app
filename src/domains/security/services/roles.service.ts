@@ -221,5 +221,81 @@ export class RolesService {
       throw new Error(error.message || 'Error al remover permisos');
     }
   }
+
+  /**
+   * Actualización masiva de permisos de rol (transaccional)
+   * Permite agregar o remover múltiples permisos de forma atómica
+   * 
+   * @param roleId ID del rol
+   * @param permissions Array de operaciones de permisos
+   * @param companyId ID de la empresa (opcional, si no se envía usa la del usuario)
+   * @returns Respuesta con el rol actualizado y resumen de operaciones
+   */
+  static async bulkUpdateRolePermissions(
+    roleId: string,
+    permissions: PermissionOperation[],
+    companyId?: string
+  ): Promise<BulkUpdateRolePermissionsResponse> {
+    try {
+      const body: BulkUpdateRolePermissionsRequest = {
+        roleId,
+        permissions,
+      };
+
+      // Agregar companyId solo si se proporciona
+      if (companyId) {
+        body.companyId = companyId;
+      }
+
+      const response = await apiClient.request<BulkUpdateRolePermissionsResponse>({
+        endpoint: `${this.BASE_ENDPOINT}/${roleId}/permissions/bulk`,
+        method: 'PUT',
+        body,
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.result?.description || 'Error al actualizar permisos masivamente');
+    } catch (error: any) {
+      // Preservar detalles de error si existen
+      if (error.response?.result?.details) {
+        error.details = error.response.result.details;
+      }
+      throw error;
+    }
+  }
+}
+
+/**
+ * Operación de permiso para actualización masiva
+ */
+export interface PermissionOperation {
+  permissionId: string;  // UUID del permiso genérico (view, create, edit, delete)
+  menuItemId: string;    // UUID del item del menú
+  action: 'add' | 'remove';  // Acción a realizar
+}
+
+/**
+ * Request para actualización masiva de permisos
+ */
+export interface BulkUpdateRolePermissionsRequest {
+  roleId: string;
+  companyId?: string;  // Opcional: si no se envía, usa la empresa del usuario
+  permissions: PermissionOperation[];
+}
+
+/**
+ * Response de actualización masiva de permisos
+ * El servicio retorna response.data directamente, que contiene role y summary
+ */
+export interface BulkUpdateRolePermissionsResponse {
+  role: SecurityRole;  // Rol actualizado con todos sus permisos
+  summary: {
+    total: number;
+    added: number;
+    removed: number;
+  };
 }
 

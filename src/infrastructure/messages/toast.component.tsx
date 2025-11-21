@@ -133,9 +133,27 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
               {toast.title}
             </ThemedText>
           )}
-          <ThemedText style={[styles.message, { color: toastColors.text }]} numberOfLines={3}>
-            {toast.message}
-          </ThemedText>
+          <View style={styles.messageContainer}>
+            {toast.message
+              .split(/\r?\n/) // Manejar tanto \n como \r\n
+              .filter(line => line.trim() !== '' || toast.message.includes('\n')) // Mantener líneas vacías si hay saltos de línea
+              .map((line, index) => {
+                // Usar una combinación de índice y contenido para la key
+                const lineKey = `${line.substring(0, 10)}-${index}`;
+                return (
+                  <ThemedText 
+                    key={lineKey}
+                    style={[
+                      styles.message, 
+                      { color: toastColors.text },
+                      index > 0 && styles.messageLine // Agregar margen superior solo a partir de la segunda línea
+                    ]}
+                  >
+                    {line || ' '} {/* Si la línea está vacía, mostrar un espacio para mantener el salto */}
+                  </ThemedText>
+                );
+              })}
+          </View>
 
           {/* Detalle error */}
           {toast.detail && (
@@ -254,10 +272,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+  messageContainer: {
+    flexDirection: 'column',
+  },
   message: {
     fontSize: 14,
     lineHeight: 20,
-    paddingTop: 5,
+  },
+  messageLine: {
+    marginTop: 4, // Espaciado entre líneas
   },
   detailToggle: {
     marginTop: 8,

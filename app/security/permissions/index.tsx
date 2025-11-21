@@ -14,6 +14,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { PermissionsService, RolesService, useCompanyOptions } from '@/src/domains/security';
 import type { PermissionChange } from '@/src/domains/security/components';
 import { PermissionCreateForm, PermissionEditForm, PermissionsFlowFilters, PermissionsManagementFlow } from '@/src/domains/security/components';
+import type { PermissionOperation } from '@/src/domains/security/services/roles.service';
 import { PermissionFilters, RoleFilters, SecurityPermission, SecurityRole } from '@/src/domains/security/types';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
 import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
@@ -50,6 +51,7 @@ export default function PermissionsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingRolePermissions, setLoadingRolePermissions] = useState(false);
+  const [menuRefreshKey, setMenuRefreshKey] = useState(0); // Key para forzar recarga del menú
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
@@ -298,24 +300,259 @@ export default function PermissionsListPage() {
   };
 
   /**
+   * Validar si un string es un UUID válido
+   */
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
+  /**
+   * Buscar menuItemId por route en menuItems (recursivamente)
+   * Retorna solo si el id es un UUID válido
+   */
+  const findMenuItemIdByRoute = (route: string | undefined, items: MenuItem[]): string | null => {
+    if (!route) return null;
+
+    for (const item of items) {
+      // Buscar en item directo
+      if (item.route === route) {
+        // Validar que el id sea un UUID válido
+        if (isValidUUID(item.id)) {
+          return item.id;
+        }
+        console.warn(`El menuItem con route "${route}" tiene un id inválido: "${item.id}". Debe ser un UUID.`);
+      }
+
+      // Buscar en submenu
+      if (item.submenu) {
+        for (const subItem of item.submenu) {
+          if (subItem.route === route) {
+            // Validar que el id sea un UUID válido
+            if (isValidUUID(subItem.id)) {
+              return subItem.id;
+            }
+            console.warn(`El menuItem del submenu con route "${route}" tiene un id inválido: "${subItem.id}". Debe ser un UUID.`);
+          }
+        }
+      }
+
+      // Buscar en columnas
+      if (item.columns) {
+        for (const column of item.columns) {
+          if (column.items) {
+            for (const columnItem of column.items) {
+              if (columnItem.route === route) {
+                // Validar que el id sea un UUID válido
+                if (isValidUUID(columnItem.id)) {
+                  return columnItem.id;
+                }
+                console.warn(`El menuItem de la columna con route "${route}" tiene un id inválido: "${columnItem.id}". Debe ser un UUID.`);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return null;
+  };
+
+  /**
+   * Convertir PermissionChange[] a PermissionOperation[]
+   * Necesita obtener los IDs de permisos genéricos y menuItems
+   */
+  const convertPermissionChangesToOperations = async (
+    changes: PermissionChange[],
+    menuItems: MenuItem[],
+    rolePermissions: SecurityPermission[]
+  ): Promise<PermissionOperation[]> => {
+    // 1. Obtener permisos genéricos (view, create, edit, delete) desde el backend
+    // Estos permisos tienen action = 'view'/'create'/'edit'/'delete' y route = null o vacío
+    const genericPermissionsResponse = await PermissionsService.getPermissions({
+      page: 1,
+      limit: 100,
+    });
+    
+    const allPermissions = Array.isArray(genericPermissionsResponse.data)
+      ? genericPermissionsResponse.data
+      : (genericPermissionsResponse.data || []);
+
+    // Buscar permisos genéricos (sin route específico)
+    const genericPermissionIds: Record<string, string> = {};
+    const actions = ['view', 'create', 'edit', 'delete'];
+    
+    for (const action of actions) {
+      const genericPermission = allPermissions.find(
+        p => p.action === action && (!p.route || p.route === '')
+      );
+      if (genericPermission) {
+        genericPermissionIds[action] = genericPermission.id;
+      }
+    }
+
+    // Verificar que todos los permisos genéricos existen
+    const missingActions = ['view', 'create', 'edit', 'delete'].filter(
+      action => !genericPermissionIds[action]
+    );
+    if (missingActions.length > 0) {
+      throw new Error(`No se encontraron permisos genéricos para: ${missingActions.join(', ')}`);
+    }
+
+    // 2. Convertir cambios a operaciones
+    const operations: PermissionOperation[] = [];
+
+    for (const change of changes) {
+      // Buscar menuItemId por route (debe ser un UUID válido)
+      const menuItemId = findMenuItemIdByRoute(change.route, menuItems);
+      if (!menuItemId) {
+        console.warn(`No se encontró menuItemId válido (UUID) para la ruta: ${change.route}`);
+        console.warn(`MenuItems disponibles:`, JSON.stringify(menuItems.map(item => ({ id: item.id, route: item.route, label: item.label })), null, 2));
+        continue; // Saltar este cambio si no se encuentra el menuItemId
+      }
+
+      // Obtener estado original de cada acción
+      const originalView = rolePermissions.some(
+        p => p.route === change.route && p.action === 'view'
+      );
+      const originalCreate = rolePermissions.some(
+        p => p.route === change.route && p.action === 'create'
+      );
+      const originalEdit = rolePermissions.some(
+        p => p.route === change.route && p.action === 'edit'
+      );
+      const originalDelete = rolePermissions.some(
+        p => p.route === change.route && p.action === 'delete'
+      );
+
+      // Comparar y agregar operaciones
+      if (change.view !== originalView) {
+        operations.push({
+          permissionId: genericPermissionIds.view,
+          menuItemId,
+          action: change.view ? 'add' : 'remove',
+        });
+      }
+
+      if (change.create !== originalCreate) {
+        operations.push({
+          permissionId: genericPermissionIds.create,
+          menuItemId,
+          action: change.create ? 'add' : 'remove',
+        });
+      }
+
+      if (change.edit !== originalEdit) {
+        operations.push({
+          permissionId: genericPermissionIds.edit,
+          menuItemId,
+          action: change.edit ? 'add' : 'remove',
+        });
+      }
+
+      if (change.delete !== originalDelete) {
+        operations.push({
+          permissionId: genericPermissionIds.delete,
+          menuItemId,
+          action: change.delete ? 'add' : 'remove',
+        });
+      }
+    }
+
+    return operations;
+  };
+
+  /**
    * Guardar cambios masivos de permisos
    */
   const handleSaveChanges = async () => {
-    if (permissionChanges.length === 0) {
+    if (permissionChanges.length === 0 || !selectedRoleId) {
       return;
     }
 
     try {
       setSavingChanges(true);
-      await PermissionsService.updatePermissionsBulk(permissionChanges);
-      await loadPermissions(filters);
+
+      // Convertir PermissionChange[] a PermissionOperation[]
+      const operations = await convertPermissionChangesToOperations(
+        permissionChanges,
+        menuItems,
+        rolePermissions
+      );
+
+      if (operations.length === 0) {
+        alert.showError('No hay cambios válidos para guardar');
+        return;
+      }
+
+      // Llamar al servicio bulk
+      const result = await RolesService.bulkUpdateRolePermissions(
+        selectedRoleId,
+        operations,
+        selectedCompanyId
+      );
+
+      // El servicio retorna response.data directamente, que tiene la estructura:
+      // { role: SecurityRole, summary: { total, added, removed } }
+      // Por lo tanto, result ya contiene role y summary directamente (sin .data)
+      
+      // Mostrar mensaje de éxito con resumen
+      let summaryMessage = '';
+      if (result && 'summary' in result && result.summary) {
+        const summary = result.summary;
+        summaryMessage = `${summary.added > 0 ? `${summary.added} agregado${summary.added > 1 ? 's' : ''}` : ''}${summary.added > 0 && summary.removed > 0 ? ', ' : ''}${summary.removed > 0 ? `${summary.removed} removido${summary.removed > 1 ? 's' : ''}` : ''}`;
+      }
+      
+      alert.showSuccess(
+        `Permisos actualizados correctamente${summaryMessage ? ` (${summaryMessage})` : ''}`
+      );
+
+      // Limpiar cambios pendientes primero
       setPermissionChanges([]);
-      alert.showSuccess(t.security?.permissions?.saveSuccess || 'Permisos actualizados correctamente');
+
+      // Recargar el rol completo para obtener permisos actualizados
+      // Esto asegura que tenemos los permisos más recientes después del bulk update
+      if (selectedRoleId) {
+        try {
+          setLoadingRolePermissions(true);
+          const updatedRole = await RolesService.getRoleById(selectedRoleId);
+          setRolePermissions(updatedRole.permissions || []);
+          
+          // Forzar recarga del menú incrementando el key
+          // Esto hará que PermissionsManagementFlow se remonte y recargue el menú
+          setMenuRefreshKey(prev => prev + 1);
+        } catch (error: any) {
+          console.error('Error al recargar permisos del rol:', error);
+          if (handleApiError(error)) {
+            return;
+          }
+          // Si falla, intentar usar los permisos de la respuesta del bulk
+          if (result && typeof result === 'object' && 'role' in result) {
+            const role = result.role as SecurityRole;
+            if (role?.permissions) {
+              setRolePermissions(role.permissions);
+            }
+          }
+        } finally {
+          setLoadingRolePermissions(false);
+        }
+      }
+
+      // Nota: El menú se recargará automáticamente cuando PermissionsManagementFlow
+      // detecte que rolePermissions cambió, ya que está escuchando los cambios
+      // Las selecciones de empresa, rol y filtros se mantienen porque no las estamos cambiando
     } catch (error: any) {
       if (handleApiError(error)) {
         return;
       }
-      alert.showError(error.message || 'Error al guardar permisos');
+
+      // Mostrar errores específicos si existen
+      if (error.details?.errors && Array.isArray(error.details.errors)) {
+        const errorMessages = error.details.errors.map((e: any) => e.error).join(', ');
+        alert.showError(`Error al guardar permisos: ${errorMessages}`);
+      } else {
+        alert.showError(error.message || 'Error al guardar permisos');
+      }
     } finally {
       setSavingChanges(false);
     }
@@ -603,6 +840,7 @@ export default function PermissionsListPage() {
               </View>
             ) : (
               <PermissionsManagementFlow
+                key={`${selectedRoleId}-${menuRefreshKey}`} // Key para forzar recarga cuando cambie
                 permissions={rolePermissions}
                 roleId={selectedRoleId}
                 searchValue={searchValue}
