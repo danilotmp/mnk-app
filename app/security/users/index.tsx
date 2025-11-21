@@ -458,13 +458,37 @@ export default function UsersListPage() {
       key: 'role',
       label: t.security?.users?.role || 'Rol',
       width: '13%',
-      render: (user) => (
-        <ThemedText type="body2" variant="secondary">
-          {user.roles && user.roles.length > 0 
-            ? user.roles[0].displayName 
-            : user.roleId || '-'}
-        </ThemedText>
-      ),
+      render: (user) => {
+        // Intentar diferentes formas de obtener el nombre del rol
+        const userAny = user as any;
+        let roleName: string | undefined;
+        
+        // 1. Si hay un array de roles, tomar el primero
+        if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+          const firstRole = user.roles[0];
+          roleName = firstRole.displayName || firstRole.name;
+        }
+        // 2. Si hay un objeto role singular (no array)
+        else if (userAny.role) {
+          const role = userAny.role;
+          if (typeof role === 'object' && role !== null) {
+            roleName = role.displayName || role.name;
+          } else if (typeof role === 'string') {
+            roleName = role;
+          }
+        }
+        // 3. Si hay un string directo para roleName
+        else if (userAny.roleName) {
+          roleName = userAny.roleName;
+        }
+        
+        // Si no se encontró el nombre, mostrar guion
+        return (
+          <ThemedText type="body2" variant="secondary">
+            {roleName || '-'}
+          </ThemedText>
+        );
+      },
     },
     {
       key: 'status',
