@@ -33,6 +33,9 @@ export function useCompanyOptions({
   const [loading, setLoading] = useState(immediate);
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef(true);
+  // Bandera para prevenir reintentos cuando hay un error de autenticación
+  const hasAuthErrorRef = useRef(false);
+  const loadingRef = useRef(false); // Para prevenir llamadas simultáneas
 
   useEffect(() => {
     return () => {
@@ -55,6 +58,17 @@ export function useCompanyOptions({
   }, [filters, includeInactive]);
 
   const fetchCompanies = useCallback(async () => {
+    // Prevenir llamadas simultáneas
+    if (loadingRef.current) {
+      return;
+    }
+
+    // Si hay un error de autenticación previo, no intentar de nuevo
+    if (hasAuthErrorRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -64,31 +78,40 @@ export function useCompanyOptions({
       const items = Array.isArray(response.data) ? response.data : [];
       if (isMountedRef.current) {
         setCompanies(items);
+        hasAuthErrorRef.current = false; // Resetear bandera en caso de éxito
       }
     } catch (err: unknown) {
       const apiError = err as ApiError | Error;
 
-      if (apiError instanceof ApiError && apiError.statusCode === HTTP_STATUS.FORBIDDEN) {
-        try {
-          const fallbackCompanies = await CompaniesService.getMyCompanies();
-          if (isMountedRef.current) {
-            setCompanies(fallbackCompanies);
-          }
-        } catch (fallbackError) {
-          if (isMountedRef.current) {
-            const fallbackErr = fallbackError instanceof Error ? fallbackError : new Error('Error al obtener empresas');
-            setError(fallbackErr);
-            alert.showError(fallbackErr.message);
-          }
-        }
-      } else {
-        const finalError = apiError instanceof Error ? apiError : new Error('Error al obtener empresas');
+      // Verificar si es un error de autenticación (401 Unauthorized o 403 Forbidden)
+      const isAuthError = apiError instanceof ApiError && 
+        (apiError.statusCode === HTTP_STATUS.UNAUTHORIZED || 
+         apiError.statusCode === HTTP_STATUS.FORBIDDEN);
+
+      if (isAuthError) {
+        // Marcar que hay un error de autenticación para evitar reintentos
+        hasAuthErrorRef.current = true;
         if (isMountedRef.current) {
-          setError(finalError);
-          alert.showError(finalError.message);
+          const authError = apiError instanceof Error ? apiError : new Error('Token inválido o ausente');
+          setError(authError);
+          // No mostrar error en toast si es de autenticación (el logout ya lo maneja)
+          // alert.showError(authError.message);
         }
+        loadingRef.current = false;
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+        return; // Terminar aquí, no reintentar
+      }
+
+      // Otros errores (no de autenticación)
+      const finalError = apiError instanceof Error ? apiError : new Error('Error al obtener empresas');
+      if (isMountedRef.current) {
+        setError(finalError);
+        alert.showError(finalError.message);
       }
     } finally {
+      loadingRef.current = false;
       if (isMountedRef.current) {
         setLoading(false);
       }
@@ -96,11 +119,17 @@ export function useCompanyOptions({
   }, [alert, buildFilters]);
 
   const refresh = useCallback(async () => {
+    // Resetear bandera de error de autenticación al hacer refresh manual
+    hasAuthErrorRef.current = false;
     await fetchCompanies();
   }, [fetchCompanies]);
 
   useEffect(() => {
     if (!autoFetch) {
+      return;
+    }
+    // No ejecutar si hay un error de autenticación activo
+    if (hasAuthErrorRef.current) {
       return;
     }
     fetchCompanies();

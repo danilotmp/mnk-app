@@ -128,7 +128,7 @@ export function UserProfileHeader({
   const handleLogout = async () => {
     setModalVisible(false);
     
-    // Limpiar tokens de autenticación
+    // Limpiar tokens de autenticación primero
     try {
       const { authService } = await import('@/src/infrastructure/services/auth.service');
       await authService.logout();
@@ -139,14 +139,27 @@ export function UserProfileHeader({
     // Limpiar sesión completa (tokens, usuario, etc.)
     await clearSession();
     
+    // Limpiar contexto multi-company después de limpiar la sesión
+    // Esto actualiza el estado del contexto, lo que causará un re-render
+    clearContext();
+    
     // Llamar al callback si existe
     onLogout?.();
     
-    // Redirigir al Home
-    router.push('/');
-    
     // Toast de confirmación multilenguaje
     alert.showSuccess('auth.logoutSuccess');
+    
+    // Usar requestAnimationFrame para asegurar que React procese el cambio de estado
+    // del contexto antes de redirigir, permitiendo que el componente se re-renderice
+    requestAnimationFrame(() => {
+      // Dar un pequeño delay para asegurar que el re-render se complete
+      // y que el componente muestre el botón de login en lugar del avatar
+      setTimeout(() => {
+        // Redirigir al Home usando replace para reemplazar la ruta actual
+        // Esto evita que el usuario pueda volver atrás a la página anterior
+        router.replace('/');
+      }, 150);
+    });
   };
 
   return (
