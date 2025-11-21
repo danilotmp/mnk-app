@@ -28,6 +28,8 @@ export interface Translations {
     showFilters: string;
     hideFilters: string;
     clearFilters: string;
+    showingResults: (start: number, end: number, total: number) => string;
+    pageInfo: (page: number, totalPages: number) => string;
   };
   
   navigation: {
@@ -236,6 +238,24 @@ export interface Translations {
       loadError: string;
       defaultOption: string;
       defaultOptionsPlural: string;
+      noPermissionsAssigned: string;
+      totalPermissions: string;
+      editPermissions: string;
+      rolePermissions: string;
+      permissionsPrefix: string;
+      viewPermissions: string;
+      empty: string;
+      system: string;
+      createSubtitle: string;
+      editSubtitle: string;
+      company: string;
+      selectCompany: string;
+      loadingCompanies: string;
+      noCompaniesAvailable: string;
+      systemRole: string;
+      systemRoleDescription: string;
+      codePlaceholder: string;
+      codePlaceholderOptional: string;
     };
     permissions?: {
       title: string;

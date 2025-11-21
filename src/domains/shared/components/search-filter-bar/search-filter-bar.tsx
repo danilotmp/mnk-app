@@ -322,7 +322,7 @@ export function SearchFilterBar({
           </InputWithFocus>
 
           <View style={styles.actionButtons}>
-            <Tooltip text="Buscar" position="top">
+            <Tooltip text={t.common?.search || 'Buscar'} position="top">
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.primary }]}
                 onPress={() => onSearchSubmit?.(filterValue)}
@@ -332,7 +332,10 @@ export function SearchFilterBar({
             </Tooltip>
 
             {filters.length > 0 && (
-              <Tooltip text={isMobile ? '' : isCollapsed ? 'Más filtros' : 'Ocultar filtros'} position="top">
+              <Tooltip 
+                text={isMobile ? '' : isCollapsed ? (t.common?.showFilters || 'Mostrar filtros') : (t.common?.hideFilters || 'Ocultar filtros')} 
+                position="top"
+              >
                 <TouchableOpacity
                   style={[styles.actionButton, styles.expandButton, { borderColor: colors.border }]}
                   onPress={toggleFilters}

@@ -40,7 +40,7 @@ export function DataTable<T = any>({
   editAction,
   deleteAction,
   actionsColumnWidth = '18%',
-  actionsColumnLabel = 'Acciones',
+  actionsColumnLabel,
 }: DataTableProps<T>) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
@@ -154,9 +154,9 @@ export function DataTable<T = any>({
       ...columns,
         {
           key: 'actions',
-          label: actionsColumnLabel,
+          label: actionsColumnLabel || t.common?.actions || 'Acciones',
           width: actionsColumnWidth,
-          align: 'right' as const,
+          align: 'center' as const,
           render: (item: T, index: number) => renderActions(item, index),
         },
     ];
@@ -411,7 +411,9 @@ export function DataTable<T = any>({
                 style={{ fontSize: 12, color: colors.text }}
                 numberOfLines={1}
               >
-                Mostrando {start}-{end} de {total}
+                {t.common?.showingResults 
+                  ? t.common.showingResults(start, end, total) 
+                  : `Mostrando ${start}-${end} de ${total}`}
               </ThemedText>
             </View>
 
@@ -490,7 +492,9 @@ export function DataTable<T = any>({
                 {/* Indicador de página actual */}
                 <View style={styles.pageIndicator}>
                   <ThemedText type="body2" style={{ fontSize: 12 }}>
-                    Página {page} de {totalPages}
+                    {t.common?.pageInfo 
+                      ? t.common.pageInfo(page, totalPages) 
+                      : `Página ${page} de ${totalPages}`}
                   </ThemedText>
                 </View>
 
@@ -536,7 +540,9 @@ export function DataTable<T = any>({
             {/* Información de registros */}
             <View style={styles.paginationInfo}>
               <ThemedText type="body2" style={{ fontSize: 14, color: colors.text }}>
-                Mostrando {start}-{end} de {total}
+                {t.common?.showingResults 
+                  ? t.common.showingResults(start, end, total) 
+                  : `Mostrando ${start}-${end} de ${total}`}
               </ThemedText>
             </View>
 
@@ -614,7 +620,9 @@ export function DataTable<T = any>({
                 {/* Indicador de página actual */}
                 <View style={styles.pageIndicator}>
                   <ThemedText type="body2" style={{ fontSize: 14 }}>
-                    Página {page} de {totalPages}
+                    {t.common?.pageInfo 
+                      ? t.common.pageInfo(page, totalPages) 
+                      : `Página ${page} de ${totalPages}`}
                   </ThemedText>
                 </View>
 

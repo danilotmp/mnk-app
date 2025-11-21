@@ -240,7 +240,7 @@ export function RoleCreateForm({
           {t.security?.roles?.create || 'Crear Rol'}
         </ThemedText>
         <ThemedText type="body2" variant="secondary">
-          Completa los datos para registrar un nuevo rol
+          {t.security?.roles?.createSubtitle || 'Completa los datos para registrar un nuevo rol'}
         </ThemedText>
       </View>
     </View>
@@ -282,7 +282,7 @@ export function RoleCreateForm({
       <Card variant="flat" style={styles.formCard}>
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Código *
+            {t.security?.roles?.code || 'Código'} *
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -298,7 +298,7 @@ export function RoleCreateForm({
             <Ionicons name="text-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Código"
+              placeholder={t.security?.roles?.codePlaceholder || 'Código'}
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
               onChangeText={(value) => {
@@ -408,8 +408,8 @@ export function RoleCreateForm({
 
         <View style={styles.inputGroup}>
           <Select
-            label="Empresa"
-            placeholder={loadingOptions ? 'Cargando empresas...' : 'Selecciona una empresa'}
+            label={t.security?.roles?.company || 'Empresa'}
+            placeholder={loadingOptions ? (t.security?.roles?.loadingCompanies || 'Cargando empresas...') : (t.security?.roles?.selectCompany || 'Selecciona una empresa')}
             value={formData.companyId || undefined}
             options={companies.map((company) => ({
               value: company.id,
@@ -424,7 +424,7 @@ export function RoleCreateForm({
           />
           {companies.length === 0 && !loadingOptions && (
             <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
-              No hay empresas disponibles
+              {t.security?.roles?.noCompaniesAvailable || 'No hay empresas disponibles'}
             </ThemedText>
           )}
         </View>
@@ -514,10 +514,10 @@ export function RoleCreateForm({
         <View style={styles.switchGroup}>
           <View style={styles.switchLabel}>
             <ThemedText type="body2" style={{ color: colors.text }}>
-              Rol del sistema
+              {t.security?.roles?.systemRole || 'Rol del sistema'}
             </ThemedText>
             <ThemedText type="caption" variant="secondary" style={styles.helpText}>
-              Los roles del sistema están protegidos contra eliminación
+              {t.security?.roles?.systemRoleDescription || 'Los roles del sistema están protegidos contra eliminación'}
             </ThemedText>
           </View>
           <Switch

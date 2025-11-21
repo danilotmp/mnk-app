@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { SideModal } from '@/components/ui/side-modal';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View } from 'react-native';
@@ -23,11 +24,17 @@ export function RolePermissionsModal({
 }: RolePermissionsModalProps) {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
+  const { t } = useTranslation();
   const styles = createRolePermissionsModalStyles(colors, isMobile);
 
-  const modalTitle = role ? `Permisos: ${role.name}` : 'Permisos del Rol';
-  const subtitle = role ? `Total: ${role.permissions?.length || 0} permisos` : undefined;
-  const hasPermissions = (role?.permissions?.length || 0) > 0;
+  const permissionsCount = role?.permissions?.length || 0;
+  const modalTitle = role 
+    ? `${t.security?.roles?.permissionsPrefix || 'Permisos:'} ${role.name}` 
+    : (t.security?.roles?.rolePermissions || 'Permisos del Rol');
+  const subtitle = role 
+    ? (t.security?.roles?.totalPermissions || 'Total: {count} permisos').replace('{count}', permissionsCount.toString())
+    : undefined;
+  const hasPermissions = permissionsCount > 0;
 
   // Renderizar estado vacío cuando no hay permisos
   const renderEmptyState = () => (
@@ -39,7 +46,7 @@ export function RolePermissionsModal({
         style={styles.emptyStateIcon}
       />
       <ThemedText type="body1" style={styles.emptyStateText}>
-        Este rol no tiene permisos asignados
+        {t.security?.roles?.noPermissionsAssigned || 'Este rol no tiene permisos asignados'}
       </ThemedText>
     </View>
   );
@@ -55,7 +62,7 @@ export function RolePermissionsModal({
         <View style={styles.footerButtons}>
           {onEdit && role && (
             <Button
-              title="Editar Permisos"
+              title={t.security?.roles?.editPermissions || 'Editar Permisos'}
               onPress={() => {
                 onClose();
                 onEdit(role);
@@ -64,7 +71,7 @@ export function RolePermissionsModal({
               size="md"
             />
           )}
-          <Button title="Cerrar" onPress={onClose} variant="primary" size="md" />
+          <Button title={t.common?.close || 'Cerrar'} onPress={onClose} variant="primary" size="md" />
         </View>
       }
     >

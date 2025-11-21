@@ -249,7 +249,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
         <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
-          Cargando datos...
+          {t.common?.loading || 'Cargando datos...'}
         </ThemedText>
       </View>
     );
@@ -272,7 +272,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         {/* Code */}
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            Código
+            {t.security?.roles?.code || 'Código'}
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -287,7 +287,7 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
             <Ionicons name="text-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Código (opcional)"
+              placeholder={t.security?.roles?.codePlaceholderOptional || 'Código (opcional)'}
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
               onChangeText={(text) => {
@@ -398,8 +398,8 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         {companies.length > 0 && (
           <View style={styles.inputGroup}>
             <Select
-              label="Empresa"
-              placeholder="Selecciona una empresa"
+              label={t.security?.roles?.company || 'Empresa'}
+              placeholder={t.security?.roles?.selectCompany || 'Selecciona una empresa'}
               value={formData.companyId || undefined}
               options={companies.map((comp) => ({
                 value: comp.id,
@@ -503,10 +503,10 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         <View style={styles.switchGroup}>
           <View style={styles.switchLabel}>
             <ThemedText type="body2" style={{ color: colors.text }}>
-              Rol del sistema
+              {t.security?.roles?.systemRole || 'Rol del sistema'}
             </ThemedText>
             <ThemedText type="caption" variant="secondary" style={styles.helpText}>
-              Los roles del sistema están protegidos contra eliminación
+              {t.security?.roles?.systemRoleDescription || 'Los roles del sistema están protegidos contra eliminación'}
             </ThemedText>
           </View>
           <Switch

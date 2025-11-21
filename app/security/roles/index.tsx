@@ -357,7 +357,7 @@ export default function RolesListPage() {
     },
     {
       key: 'isSystem',
-      label: 'Sistema',
+      label: t.security?.roles?.system || 'Sistema',
       width: '8%',
       align: 'center',
       render: (role) => (
@@ -423,7 +423,7 @@ export default function RolesListPage() {
     },
     {
       key: 'isSystem',
-      label: 'Sistema',
+      label: t.security?.roles?.system || 'Sistema',
       type: 'boolean',
     },
   ];
@@ -492,10 +492,11 @@ export default function RolesListPage() {
             data={filteredRoles}
             columns={columns}
             loading={loading}
-            emptyMessage="No hay roles disponibles"
+            emptyMessage={t.security?.roles?.empty || 'No hay roles disponibles'}
             onRowPress={handleEditRole}
             keyExtractor={(role) => role.id}
             showPagination={true}
+            actionsColumnLabel={t.common?.actions || 'Acciones'}
             pagination={{
               page: pagination.page,
               limit: pagination.limit,
@@ -526,7 +527,7 @@ export default function RolesListPage() {
               {
                 id: 'view-permissions',
                 icon: 'git-network',
-                tooltip: 'Ver permisos',
+                tooltip: t.security?.roles?.viewPermissions || 'Ver permisos',
                 onPress: (role) => {
                   setSelectedRoleForPermissions(role);
                   setIsPermissionsModalVisible(true);
@@ -548,8 +549,8 @@ export default function RolesListPage() {
             }
             subtitle={
               modalMode === 'edit'
-                ? 'Modifica los datos del rol'
-                : 'Completa los datos para registrar un nuevo rol'
+                ? (t.security?.roles?.editSubtitle || 'Modifica los datos del rol')
+                : (t.security?.roles?.createSubtitle || 'Completa los datos para registrar un nuevo rol')
             }
             footer={
               formActions ? (
