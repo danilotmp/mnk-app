@@ -361,6 +361,11 @@ export function PermissionsManagementFlow({
         return (
           <View style={styles.permissionsContainer}>
             {filteredMenuItems.map((menuItem, index) => {
+              // Verificar si el item original es un módulo (tiene submenu o columns)
+              // Esto NO debe depender de los filtros aplicados
+              const originalHasSubItems = (menuItem.submenu && menuItem.submenu.length > 0) || 
+                                         (menuItem.columns && menuItem.columns.length > 0);
+
               // Estructura jerárquica: items directos y columnas como grupos
               const directItems: Array<{ id: string; label: string; route?: string; description?: string; isPublic?: boolean }> = [];
               if (menuItem.submenu && menuItem.submenu.length > 0) {
@@ -387,7 +392,8 @@ export function PermissionsManagementFlow({
 
               const itemId = menuItem.id || `item-${index}`;
               const isExpanded = expandedItems.has(itemId);
-              const hasSubItems = filteredDirectItems.length > 0 || filteredColumnGroups.length > 0;
+              // Usar hasSubItems original, no filtrado, para determinar si es módulo
+              const hasSubItems = originalHasSubItems;
 
               // Toggle para expandir/colapsar
               const toggleExpand = () => {
