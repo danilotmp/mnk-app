@@ -10,7 +10,7 @@ import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
-import { RolesService, CompaniesService } from '@/src/domains/security';
+import { CompaniesService, RolesService } from '@/src/domains/security';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
