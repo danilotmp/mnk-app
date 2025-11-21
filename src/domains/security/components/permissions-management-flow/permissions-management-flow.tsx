@@ -569,6 +569,7 @@ export function PermissionsManagementFlow({
                                     interactive: true,
                                     onTogglePermission: togglePermission,
                                     getPermissionState,
+                                    hasPendingChange,
                                   }}
                                 />
                               ))}
