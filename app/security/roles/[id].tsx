@@ -4,7 +4,7 @@
  */
 
 import { ThemedView } from '@/components/themed-view';
-import { RoleEditForm } from '@/src/domains/security';
+import { RoleEditForm } from '@/src/features/security/roles';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';

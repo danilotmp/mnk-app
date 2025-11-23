@@ -5,7 +5,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
-import { UserCreateForm } from '@/src/domains/security';
+import { UserCreateForm } from '@/src/features/security/users';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { usePathname, useRouter } from 'expo-router';

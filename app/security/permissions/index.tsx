@@ -11,13 +11,15 @@ import { SideModal } from '@/components/ui/side-modal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { PermissionsService, RolesService, useCompanyOptions } from '@/src/domains/security';
+import { PermissionsService, useCompanyOptions } from '@/src/domains/security';
 import type { PermissionChange } from '@/src/domains/security/components';
 import { PermissionCreateForm, PermissionEditForm, PermissionsFlowFilters, PermissionsManagementFlow } from '@/src/domains/security/components';
-import type { PermissionOperation } from '@/src/domains/security/services/roles.service';
-import { PermissionFilters, RoleFilters, SecurityPermission, SecurityRole } from '@/src/domains/security/types';
+import type { SecurityPermission, SecurityRole } from '@/src/domains/security/types';
+import { PermissionFilters } from '@/src/domains/security/types';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
 import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
+import type { PermissionOperation, RoleFilters } from '@/src/features/security/roles';
+import { RolesService } from '@/src/features/security/roles';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { MenuItem } from '@/src/infrastructure/menu/types';
@@ -721,12 +723,12 @@ export default function PermissionsListPage() {
       label: t.security?.users?.status || 'Estado',
       type: 'select',
       options: [
-        { value: '', label: t.common?.all || 'Todos' },
-        { value: '1', label: t.security?.users?.active || 'Activo' },
-        { value: '0', label: t.security?.users?.inactive || 'Inactivo' },
-        { value: '2', label: 'Pendiente' },
-        { value: '3', label: 'Suspendido' },
-        { value: '-1', label: 'Eliminado' },
+        { key: '', value: '', label: t.common?.all || 'Todos' },
+        { key: '1', value: '1', label: t.security?.users?.active || 'Activo' },
+        { key: '0', value: '0', label: t.security?.users?.inactive || 'Inactivo' },
+        { key: '2', value: '2', label: 'Pendiente' },
+        { key: '3', value: '3', label: 'Suspendido' },
+        { key: '-1', value: '-1', label: 'Eliminado' },
       ],
     },
     {

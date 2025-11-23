@@ -1,0 +1,70 @@
+/**
+ * Tipos de dominio para Usuarios
+ * Modelos de negocio puros, independientes de la API
+ */
+
+import { BaseEntity, PaginationParams } from '@/src/domains/shared/types';
+
+/**
+ * Usuario del sistema (Modelo de Dominio)
+ */
+export interface User extends BaseEntity {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  avatar?: string;
+  isEmailVerified?: boolean;
+  
+  // Sistema de estados
+  status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
+  statusDescription: string; // Descripción traducida del estado (viene del backend)
+  
+  lastLoginAt?: Date;
+  lastLogin?: string;
+  companyId: string;
+  roleId?: string; // Para compatibilidad con formularios
+  roles?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+    description?: string;
+    assignedAt: string;
+  }>; // Array de roles que viene del backend
+  branchIds?: string[]; // Sucursales a las que tiene acceso (para formularios)
+  currentBranchId?: string;
+  availableBranches?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    branchId?: string; // Para compatibilidad con algunas respuestas
+    branchCode?: string; // Para compatibilidad con algunas respuestas
+  }>;
+}
+
+/**
+ * Payload para actualizar usuario
+ */
+export interface UserUpdatePayload {
+  email?: string;
+  password?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  companyId?: string;
+  roleId?: string;
+  branchIds?: string[];
+  status?: number; // Sistema de estados
+}
+
+/**
+ * Filtros para búsqueda de usuarios
+ */
+export interface UserFilters extends PaginationParams {
+  search?: string;
+  status?: number; // Filtrar por estado: -1, 0, 1, 2, 3
+  companyId?: string;
+  roleId?: string;
+  branchId?: string;
+}
+
