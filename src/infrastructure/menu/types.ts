@@ -32,6 +32,7 @@ export interface MenuSubItem {
   label: string;
   route: string;
   description?: string;
+  icon?: string; // Nombre del icono de Ionicons (solo para opciones de último nivel)
   isPublic?: boolean; // Si es true, es una opción pública (opción por defecto)
 }
 

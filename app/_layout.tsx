@@ -91,6 +91,7 @@ function LayoutContent() {
         label: subItem.label,
         route: subItem.route,
         description: subItem.description,
+        icon: subItem.icon,
       }));
     }
 
@@ -103,6 +104,7 @@ function LayoutContent() {
           label: colItem.label,
           route: colItem.route,
           description: colItem.description,
+          icon: colItem.icon,
         })),
       }));
     }

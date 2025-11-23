@@ -3,6 +3,7 @@ import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
+import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
@@ -721,9 +722,18 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                               ]}
                               onPress={() => handleSubmenuItemPress(subitem, item.id)}
                             >
-                              <ThemedText type="body2" style={styles.submenuText}>
-                                {subitem.label}
-                              </ThemedText>
+                              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                {subitem.icon && (
+                                  <Ionicons 
+                                    name={subitem.icon as any} 
+                                    size={16} 
+                                    color={colors.textSecondary} 
+                                  />
+                                )}
+                                <ThemedText type="body2" style={styles.submenuText}>
+                                  {subitem.label}
+                                </ThemedText>
+                              </View>
                             </TouchableOpacity>
                           );
                         })}
@@ -732,20 +742,44 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                             <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
                               {column.title}
                             </ThemedText>
-                            {column.items.map((subitem) => (
-                              <TouchableOpacity
-                                key={subitem.id}
-                                style={[
-                                  styles.submenuItem,
-                                  activeSubmenuItem === subitem.id && styles.activeSubmenuItem
-                                ]}
-                                onPress={() => handleSubmenuItemPress(subitem, item.id)}
-                              >
-                                <ThemedText type="body2" style={styles.submenuText}>
-                                  {subitem.label}
-                                </ThemedText>
-                              </TouchableOpacity>
-                            ))}
+                            {column.items.map((subitem) => {
+                              // Función para comparar rutas de manera flexible
+                              const isRouteMatch = (pathname: string, route: string): boolean => {
+                                if (!route) return false;
+                                const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                                const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                                if (normalizedPath === normalizedRoute) return true;
+                                if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                                if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                                return normalizedPath.includes('/' + normalizedRoute + '/');
+                              };
+                              
+                              const isActive = activeSubmenuItem === subitem.id || 
+                                               (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                              return (
+                                <TouchableOpacity
+                                  key={subitem.id}
+                                  style={[
+                                    styles.submenuItem,
+                                    isActive && styles.activeSubmenuItem
+                                  ]}
+                                  onPress={() => handleSubmenuItemPress(subitem, item.id)}
+                                >
+                                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                    {subitem.icon && (
+                                      <Ionicons 
+                                        name={subitem.icon as any} 
+                                        size={16} 
+                                        color={colors.textSecondary} 
+                                      />
+                                    )}
+                                    <ThemedText type="body2" style={styles.submenuText}>
+                                      {subitem.label}
+                                    </ThemedText>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
                           </View>
                         ))}
                       </View>
@@ -830,21 +864,45 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                     <View
                       style={[styles.megaMenuColumnLine, { backgroundColor: colors.border }]}
                     />
-                    {column.items.map((subitem) => (
-                      <TouchableOpacity
-                        key={subitem.id}
-                        style={[
-                          styles.megaMenuItem, 
-                          { borderBottomColor: colors.border },
-                          activeSubmenuItem === subitem.id && styles.activeMegaMenuItem
-                        ]}
-                        onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
-                      >
-                        <ThemedText type="body2" style={styles.megaMenuItemText}>
-                          {subitem.label}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    ))}
+                    {column.items.map((subitem) => {
+                      const isRouteMatch = (pathname: string, route: string): boolean => {
+                        if (!route) return false;
+                        const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                        const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                        if (normalizedPath === normalizedRoute) return true;
+                        if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                        if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                        return normalizedPath.includes('/' + normalizedRoute + '/');
+                      };
+                      
+                      const isActive = activeSubmenuItem === subitem.id || 
+                                       (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                      
+                      return (
+                        <TouchableOpacity
+                          key={subitem.id}
+                          style={[
+                            styles.megaMenuItem, 
+                            { borderBottomColor: colors.border },
+                            isActive && styles.activeMegaMenuItem
+                          ]}
+                          onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                            {subitem.icon && (
+                              <Ionicons 
+                                name={subitem.icon as any} 
+                                size={16} 
+                                color={colors.textSecondary} 
+                              />
+                            )}
+                            <ThemedText type="body2" style={styles.megaMenuItemText}>
+                              {subitem.label}
+                            </ThemedText>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 ))}
               </View>
@@ -890,14 +948,25 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                     ]}
                     onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
                   >
-                    <ThemedText type="defaultSemiBold" style={styles.submenuItemTitle}>
-                      {subitem.label}
-                    </ThemedText>
-                    {subitem.description && (
-                      <ThemedText type="caption" style={styles.submenuItemDescription}>
-                        {subitem.description}
-                      </ThemedText>
-                    )}
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                      {subitem.icon && (
+                        <Ionicons 
+                          name={subitem.icon as any} 
+                          size={18} 
+                          color={colors.textSecondary} 
+                        />
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <ThemedText type="defaultSemiBold" style={styles.submenuItemTitle}>
+                          {subitem.label}
+                        </ThemedText>
+                        {subitem.description && (
+                          <ThemedText type="caption" style={styles.submenuItemDescription}>
+                            {subitem.description}
+                          </ThemedText>
+                        )}
+                      </View>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
