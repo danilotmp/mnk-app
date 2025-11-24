@@ -3,8 +3,8 @@ import { ApiError } from '@/src/infrastructure/api';
 import { HTTP_STATUS } from '@/src/infrastructure/api/constants';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { CompaniesService } from '../services';
-import { CompanyFilters, SecurityCompany } from '../types';
+import { CompaniesService } from '@/src/features/security/companies';
+import type { Company, CompanyFilters } from '@/src/features/security/companies/types/domain';
 
 const DEFAULT_LIMIT = 100;
 
@@ -16,7 +16,7 @@ export interface UseCompanyOptionsParams {
 }
 
 export interface UseCompanyOptionsResult {
-  companies: SecurityCompany[];
+  companies: Company[];
   loading: boolean;
   error: Error | null;
   refresh: () => Promise<void>;
@@ -29,7 +29,7 @@ export function useCompanyOptions({
   immediate = true,
 }: UseCompanyOptionsParams = {}): UseCompanyOptionsResult {
   const alert = useAlert();
-  const [companies, setCompanies] = useState<SecurityCompany[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(immediate);
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef(true);

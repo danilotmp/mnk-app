@@ -138,7 +138,6 @@ export class MenuService {
    * 
    * Las páginas públicas son:
    * - / (home)
-   * - /main/explore (explorar)
    * - /main/contact (contacto)
    */
   static getDefaultMenu(): MenuItem[] {
@@ -147,12 +146,6 @@ export class MenuService {
         id: 'home',
         label: 'Inicio',
         route: '/',
-        isPublic: true, // Página pública
-      },
-      {
-        id: 'explore',
-        label: 'Explorar',
-        route: '/main/explore',
         isPublic: true, // Página pública
       },
       {

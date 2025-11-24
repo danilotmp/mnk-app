@@ -3,8 +3,8 @@ import { ApiError } from '@/src/infrastructure/api';
 import { HTTP_STATUS } from '@/src/infrastructure/api/constants';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { BranchesService } from '../services';
-import { BranchFilters, SecurityBranch } from '../types';
+import { BranchesService } from '@/src/features/security/branches';
+import type { Branch, BranchFilters } from '@/src/features/security/branches/types/domain';
 
 const DEFAULT_LIMIT = 100;
 
@@ -25,7 +25,7 @@ export interface UseBranchOptionsParams {
 }
 
 export interface UseBranchOptionsResult {
-  branches: SecurityBranch[];
+  branches: Branch[];
   loading: boolean;
   error: Error | null;
   refresh: (params?: { companyId?: string }) => Promise<void>;
@@ -40,12 +40,12 @@ export function useBranchOptions({
   extraFilters,
 }: UseBranchOptionsParams = {}): UseBranchOptionsResult {
   const alert = useAlert();
-  const [branches, setBranches] = useState<SecurityBranch[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(immediate);
   const [error, setError] = useState<Error | null>(null);
   const [filters, setInternalFilters] = useState<Partial<BranchFilters>>(extraFilters ?? {});
   const isMountedRef = useRef(true);
-  const cacheRef = useRef<Map<string, SecurityBranch[]>>(new Map());
+  const cacheRef = useRef<Map<string, Branch[]>>(new Map());
 
   useEffect(() => () => {
     isMountedRef.current = false;
@@ -86,7 +86,7 @@ export function useBranchOptions({
         return;
       }
 
-      let items: SecurityBranch[] = [];
+      let items: Branch[] = [];
       if (targetCompanyId) {
         items = await BranchesService.getBranchesByCompany(targetCompanyId);
       } else {

@@ -92,13 +92,6 @@ export default function HomeScreen() {
         {/* Action Buttons */}
         <ThemedView style={styles.actionsContainer}>
           <Button
-            title={t.pages.home.exploreMore}
-            onPress={() => {}}
-            variant="primary"
-            size="lg"
-            style={styles.actionButton}
-          />
-          <Button
             title={t.pages.home.configuration}
             onPress={() => {}}
             variant="outlined"
