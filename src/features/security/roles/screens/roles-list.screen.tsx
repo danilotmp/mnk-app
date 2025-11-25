@@ -6,12 +6,14 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { CenteredModal } from '@/components/ui/centered-modal';
 import { SideModal } from '@/components/ui/side-modal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService, RoleCreateForm, RoleEditForm } from '@/src/features/security/roles';
 import { RolePermissionsModal } from '@/src/domains/security/components';
+import { PermissionsManagementContent } from '@/src/features/security/permissions/components/permissions-management-content/permissions-management-content';
 import { Role, RoleFilters } from '@/src/features/security/roles/types/domain';
 import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
@@ -21,6 +23,7 @@ import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createRolesListStyles } from '@/src/styles/pages/roles-list.styles';
+import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -30,6 +33,7 @@ export function RolesListScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const pathname = usePathname();
+  const { currentCompany } = useMultiCompany();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createRolesListStyles(isMobile);
@@ -53,6 +57,8 @@ export function RolesListScreen() {
   const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
   const [isPermissionsModalVisible, setIsPermissionsModalVisible] = useState(false);
   const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState<Role | null>(null);
+  const [isEditPermissionsModalVisible, setIsEditPermissionsModalVisible] = useState(false);
+  const [selectedRoleForEditPermissions, setSelectedRoleForEditPermissions] = useState<Role | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -599,7 +605,7 @@ export function RolesListScreen() {
           </SideModal>
         )}
 
-        {/* Modal de permisos */}
+        {/* Modal de permisos (vista) */}
         <RolePermissionsModal
           visible={isPermissionsModalVisible}
           role={selectedRoleForPermissions}
@@ -608,11 +614,37 @@ export function RolesListScreen() {
             setSelectedRoleForPermissions(null);
           }}
           onEdit={(role) => {
+            // Cerrar el modal de vista
             setIsPermissionsModalVisible(false);
             setSelectedRoleForPermissions(null);
-            handleEditRole(role);
+            
+            // Abrir el modal de edición de permisos
+            setSelectedRoleForEditPermissions(role);
+            setIsEditPermissionsModalVisible(true);
           }}
         />
+
+        {/* Modal centrado para editar permisos */}
+        <CenteredModal
+          visible={isEditPermissionsModalVisible}
+          onClose={() => {
+            setIsEditPermissionsModalVisible(false);
+            setSelectedRoleForEditPermissions(null);
+          }}
+          title={t.security?.permissions?.title || 'Administración de Permisos'}
+          subtitle={t.security?.permissions?.subtitle || 'Gestiona los permisos del sistema'}
+          width="90%"
+          height="90%"
+        >
+          <PermissionsManagementContent
+            initialCompanyId={selectedRoleForEditPermissions?.companyId || currentCompany?.id}
+            initialRoleId={selectedRoleForEditPermissions?.id}
+            onClose={() => {
+              setIsEditPermissionsModalVisible(false);
+              setSelectedRoleForEditPermissions(null);
+            }}
+          />
+        </CenteredModal>
       </View>
     </ThemedView>
   );

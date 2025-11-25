@@ -26,7 +26,6 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
   const [formData, setFormData] = useState({
     name: '',
     code: '',
-    module: '',
     action: '',
     description: '',
     status: 1, // Default: Activo
@@ -57,7 +56,6 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
         setFormData({
           name: permission.name,
           code: permission.code,
-          module: permission.module,
           action: permission.action,
           description: permission.description || '',
           status: permissionStatus,
@@ -78,18 +76,12 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido';
-    }
-
     if (!formData.code.trim()) {
       newErrors.code = 'El código es requerido';
-    } else if (!/^[a-z]+\.[a-z]+$/.test(formData.code.trim())) {
-      newErrors.code = 'El código debe tener el formato: módulo.acción (ej: users.view)';
     }
 
-    if (!formData.module.trim()) {
-      newErrors.module = 'El módulo es requerido';
+    if (!formData.name.trim()) {
+      newErrors.name = 'El nombre es requerido';
     }
 
     if (!formData.action.trim()) {
@@ -104,26 +96,10 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
    * Manejar cambio de campo
    */
   const handleChange = useCallback((field: string, value: any) => {
-    setFormData((prev) => {
-      const updated = { ...prev, [field]: value };
-
-      // Auto-generar código si se modifica módulo o acción
-      if (field === 'module' || field === 'action') {
-        const moduleValue = field === 'module' ? value : updated.module;
-        const actionValue = field === 'action' ? value : updated.action;
-        if (moduleValue && actionValue) {
-          updated.code = `${String(moduleValue).toLowerCase()}.${String(actionValue).toLowerCase()}`;
-        }
-      }
-
-      return updated;
-    });
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
-    }
-    if ((field === 'module' || field === 'action') && errors.code) {
-      setErrors((prev) => ({ ...prev, code: '' }));
     }
     
     // Actualizar ref para status
@@ -150,7 +126,6 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
       await PermissionsService.updatePermission(permissionId, {
         name: formData.name.trim(),
         code: formData.code.trim(),
-        module: formData.module.trim(),
         action: formData.action.trim(),
         description: formData.description.trim() || undefined,
         status: statusRef.current, // Usar ref para evitar stale closure
@@ -205,6 +180,40 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
     <>
       {/* Formulario */}
       <Card variant="flat" style={styles.formCard}>
+        {/* Code */}
+        <View style={styles.inputGroup}>
+          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            {t.security?.permissions?.code || 'Código'} *
+          </ThemedText>
+          <InputWithFocus
+            containerStyle={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.code ? colors.error : colors.border,
+              },
+            ]}
+            primaryColor={colors.primary}
+            error={!!errors.code}
+          >
+            <Ionicons name="code-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder={t.security?.permissions?.code || 'Código'}
+              placeholderTextColor={colors.textSecondary}
+              value={formData.code}
+              onChangeText={(text) => handleChange('code', text)}
+              autoCapitalize="none"
+              editable={!isLoading}
+            />
+          </InputWithFocus>
+          {errors.code && (
+            <ThemedText type="caption" variant="error" style={styles.errorText}>
+              {errors.code}
+            </ThemedText>
+          )}
+        </View>
+
         {/* Name */}
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
@@ -239,40 +248,6 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
           )}
         </View>
 
-        {/* Module */}
-        <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.permissions?.module || 'Módulo'} *
-          </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.module ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
-            error={!!errors.module}
-          >
-            <Ionicons name="grid-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.security?.permissions?.module || 'Módulo (ej: users)'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.module}
-              onChangeText={(text) => handleChange('module', text)}
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-          </InputWithFocus>
-          {errors.module && (
-            <ThemedText type="caption" variant="error" style={styles.errorText}>
-              {errors.module}
-            </ThemedText>
-          )}
-        </View>
-
         {/* Action */}
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
@@ -303,40 +278,6 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
           {errors.action && (
             <ThemedText type="caption" variant="error" style={styles.errorText}>
               {errors.action}
-            </ThemedText>
-          )}
-        </View>
-
-        {/* Code */}
-        <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.permissions?.code || 'Código'} *
-          </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.code ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
-            error={!!errors.code}
-          >
-            <Ionicons name="code-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="módulo.acción (ej: users.view)"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.code}
-              onChangeText={(text) => handleChange('code', text)}
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-          </InputWithFocus>
-          {errors.code && (
-            <ThemedText type="caption" variant="error" style={styles.errorText}>
-              {errors.code}
             </ThemedText>
           )}
         </View>

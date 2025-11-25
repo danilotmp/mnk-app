@@ -64,8 +64,12 @@ export function RolePermissionsModal({
             <Button
               title={t.security?.roles?.editPermissions || 'Editar Permisos'}
               onPress={() => {
+                // Cerrar el modal primero
                 onClose();
-                onEdit(role);
+                // Esperar un momento para que el modal se cierre visualmente antes de redirigir
+                setTimeout(() => {
+                  onEdit(role);
+                }, 300);
               }}
               variant="secondary"
               size="md"

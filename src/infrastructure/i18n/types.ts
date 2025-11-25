@@ -278,13 +278,15 @@ export interface Translations {
       subtitle: string;
       show?: string;
       create: string;
+      createSubtitle: string;
       edit: string;
+      editSubtitle: string;
       editShort: string;
+      pendingChanges?: string | ((count: number) => string);
       delete: string;
       deleteShort: string;
       name: string;
       code: string;
-      pendingChanges?: string | ((count: number) => string);
       module: string;
       action: string;
       filterPlaceholder: string;

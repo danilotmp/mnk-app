@@ -6,18 +6,15 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { CenteredModal } from '@/components/ui/centered-modal';
 import { Select } from '@/components/ui/select';
 import { SideModal } from '@/components/ui/side-modal';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { PermissionsService, useCompanyOptions } from '@/src/domains/security';
 import type { PermissionChange } from '@/src/domains/security/components';
-import { PermissionCreateForm, PermissionEditForm, PermissionsFlowFilters, PermissionsManagementFlow } from '@/src/domains/security/components';
+import { PermissionCreateForm, PermissionEditForm, PermissionsCarousel, PermissionsFlowFilters, PermissionsManagementFlow } from '@/src/domains/security/components';
 import type { SecurityPermission, SecurityRole } from '@/src/domains/security/types';
-import { PermissionFilters } from '@/src/domains/security/types';
-import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
-import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
 import type { PermissionOperation, RoleFilters } from '@/src/features/security/roles';
 import { RolesService } from '@/src/features/security/roles';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
@@ -26,68 +23,50 @@ import { MenuItem } from '@/src/infrastructure/menu/types';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createPermissionsListStyles } from '@/src/styles/pages/permissions-list.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams, usePathname } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function PermissionsListPage() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const pathname = usePathname();
+  const searchParams = useLocalSearchParams<{ companyId?: string; roleId?: string }>();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createPermissionsListStyles(isMobile);
-  
-  // Color para iconos de acción: primaryDark en dark theme, primary en light theme
-  const actionIconColor = isDark ? colors.primaryDark : colors.primary;
 
   const {
     loading: accessLoading,
     allowed: hasAccess,
     handleApiError,
-    isScreenFocused,
   } = useRouteAccessGuard(pathname);
 
-  const [permissions, setPermissions] = useState<SecurityPermission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<SecurityPermission[]>([]); // Permisos del rol seleccionado
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [loadingRolePermissions, setLoadingRolePermissions] = useState(false);
   const [menuRefreshKey, setMenuRefreshKey] = useState(0); // Key para forzar recarga del menú
-  const loadingRef = useRef(false); // Para evitar llamadas simultáneas
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
-  const [selectedPermissionId, setSelectedPermissionId] = useState<string | null>(null);
-  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
-  const [localFilter, setLocalFilter] = useState(''); // Filtro local para la tabla
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrev: false,
-  });
-  const [filters, setFilters] = useState<PermissionFilters>({
-    page: 1,
-    limit: 10,
-    search: '',
-    status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
-    module: undefined,
-    action: undefined,
-  });
-  
-  // Flag para prevenir llamadas infinitas cuando hay un error activo
-  const [hasError, setHasError] = useState(false);
-  const filtersSignatureRef = useRef<string>('');
   
   // Estado para rastrear cambios masivos de permisos
   const [permissionChanges, setPermissionChanges] = useState<PermissionChange[]>([]);
   const [savingChanges, setSavingChanges] = useState(false);
   
+  // Estados para modales de permisos
+  const [isCarouselModalVisible, setIsCarouselModalVisible] = useState(false);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [selectedPermissionId, setSelectedPermissionId] = useState<string | null>(null);
+  const [allPermissions, setAllPermissions] = useState<SecurityPermission[]>([]);
+  const [loadingAllPermissions, setLoadingAllPermissions] = useState(false);
+  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
+  
   // Estados para los selectores dependientes
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(undefined);
-  const [selectedRoleId, setSelectedRoleId] = useState<string | undefined>(undefined);
+  // Inicializar con query params si existen (para redirección desde roles)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(
+    searchParams.companyId || undefined
+  );
+  const [selectedRoleId, setSelectedRoleId] = useState<string | undefined>(
+    searchParams.roleId || undefined
+  );
   const [roles, setRoles] = useState<SecurityRole[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   
@@ -100,205 +79,78 @@ export default function PermissionsListPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   
   // Obtener empresas
-  const { companies, loading: companiesLoading } = useCompanyOptions();
+  const { companies } = useCompanyOptions();
 
-  const loadPermissions = useCallback(async (currentFilters: PermissionFilters) => {
-    // Prevenir llamadas simultáneas
-    if (loadingRef.current) {
-      return;
-    }
-
+  /**
+   * Cargar todos los permisos para el carrusel
+   */
+  const loadAllPermissions = useCallback(async () => {
     try {
-      loadingRef.current = true;
-      setLoading(true);
-      setError(null);
+      setLoadingAllPermissions(true);
+      const response = await PermissionsService.getPermissions({
+        page: 1,
+        limit: 1000, // Cargar muchos permisos para el carrusel
+      });
       
-      const response = await PermissionsService.getPermissions(currentFilters);
-      
-      // Asegurar que la respuesta tenga la estructura correcta
       if (response && response.data) {
-        setPermissions(Array.isArray(response.data) ? response.data : []);
-        
-        // Usar meta de la respuesta del backend
-        if (response.meta) {
-          setPagination({
-            page: response.meta.page || currentFilters.page || 1,
-            limit: response.meta.limit || currentFilters.limit || 10,
-            total: response.meta.total || 0,
-            totalPages: response.meta.totalPages || 0,
-            hasNext: response.meta.hasNext || false,
-            hasPrev: response.meta.hasPrev || false,
-          });
-        } else {
-          setPagination({
-            page: currentFilters.page || 1,
-            limit: currentFilters.limit || 10,
-            total: Array.isArray(response.data) ? response.data.length : 0,
-            totalPages: 1,
-            hasNext: false,
-            hasPrev: false,
-          });
-        }
+        setAllPermissions(Array.isArray(response.data) ? response.data : []);
       } else {
-        setPermissions([]);
-        setPagination({
-          page: currentFilters.page || 1,
-          limit: currentFilters.limit || 10,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        });
+        setAllPermissions([]);
       }
-      
-      setHasError(false);
     } catch (error: any) {
-      if (handleApiError(error)) {
-        setHasError(true);
-        return;
-      }
-      const errorMessage = error.message || t.security?.permissions?.loadError || 'Error al cargar permisos';
-      setHasError(true);
-      // Mostrar error con detalles
-      alert.showError(errorMessage, error.details || error.response?.result?.details);
+      console.error('Error al cargar permisos:', error);
+      setAllPermissions([]);
     } finally {
-      setLoading(false);
-      loadingRef.current = false;
+      setLoadingAllPermissions(false);
     }
-  }, [alert, handleApiError, t]);
-
-  /**
-   * Efecto para cargar permisos cuando cambian los filtros
-   * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
-   */
-  useEffect(() => {
-    if (!isScreenFocused || !hasAccess || accessLoading || hasError) {
-      return;
-    }
-
-    const signature = JSON.stringify(filters);
-    if (filtersSignatureRef.current === signature) {
-      return;
-    }
-
-    filtersSignatureRef.current = signature;
-    loadPermissions(filters);
-  }, [accessLoading, hasAccess, hasError, isScreenFocused, loadPermissions, filters]);
-
-  const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
-  };
-
-  const handleLimitChange = (limit: number) => {
-    setFilters((prev) => ({ ...prev, limit, page: 1 }));
-  };
-
-  /**
-   * Manejar cambio de filtro local (sin API, solo filtra en la tabla)
-   */
-  const handleLocalFilterChange = useCallback((value: string) => {
-    setLocalFilter(value);
-    setHasError(false);
   }, []);
 
   /**
-   * Manejar búsqueda API (consulta al backend)
+   * Abrir modal de carrusel de permisos
    */
-  const handleSearchSubmit = (search: string) => {
-    setHasError(false);
-    setFilters((prev) => ({ ...prev, search, page: 1 }));
+  const handleOpenCarousel = () => {
+    loadAllPermissions();
+    setIsCarouselModalVisible(true);
   };
 
   /**
-   * Manejar cambio de filtros avanzados (consulta API)
+   * Manejar selección de permiso del carrusel (editar)
    */
-  const handleAdvancedFilterChange = (key: string, value: any) => {
-    setHasError(false);
-    // Convertir status de string a number si es necesario
-    const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
-    setFilters((prev) => ({ ...prev, [key]: value === '' ? undefined : processedValue, page: 1 }));
-  };
-
-  const handleClearFilters = () => {
-    setFilters({
-      page: 1,
-      limit: 10,
-      search: '',
-      status: undefined,
-      module: undefined,
-      action: undefined,
-    });
-    setLocalFilter(''); // Limpiar también el filtro local
-    setHasError(false);
-  };
-
-  /**
-   * Filtrar permisos localmente según el filtro local
-   */
-  const filteredPermissions = useMemo(() => {
-    if (!localFilter.trim()) {
-      return permissions;
-    }
-    
-    const filterLower = localFilter.toLowerCase().trim();
-    return permissions.filter((permission) => {
-      const name = (permission.name || '').toLowerCase();
-      const code = (permission.code || '').toLowerCase();
-      const module = (permission.module || '').toLowerCase();
-      const action = (permission.action || '').toLowerCase();
-      
-      return (
-        name.includes(filterLower) ||
-        code.includes(filterLower) ||
-        module.includes(filterLower) ||
-        action.includes(filterLower)
-      );
-    });
-  }, [permissions, localFilter]);
-
-  const handleCreatePermission = () => {
-    setFormActions(null);
-    setSelectedPermissionId(null);
-    setModalMode('create');
-    setIsModalVisible(true);
-  };
-
-  /**
-   * Navegar a editar permiso
-   * En web: abre modal lateral (1/3 del ancho)
-   * En móvil: abre modal lateral (100% del ancho)
-   */
-  const handleEditPermission = (permission: SecurityPermission) => {
-    setFormActions(null);
+  const handlePermissionSelect = (permission: SecurityPermission) => {
+    setIsCarouselModalVisible(false);
     setSelectedPermissionId(permission.id);
-    setModalMode('edit');
-    setIsModalVisible(true);
+    setIsEditModalVisible(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalVisible(false);
-    setModalMode(null);
+  /**
+   * Manejar creación de nuevo permiso desde el carrusel
+   */
+  const handleCreateFromCarousel = () => {
+    setIsCarouselModalVisible(false);
+    setIsCreateModalVisible(true);
+  };
+
+  /**
+   * Cerrar modales
+   */
+  const handleCloseCreateModal = () => {
+    setIsCreateModalVisible(false);
+    setFormActions(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalVisible(false);
     setSelectedPermissionId(null);
     setFormActions(null);
   };
 
+  /**
+   * Manejar éxito al crear/editar permiso
+   */
   const handleFormSuccess = () => {
-    filtersSignatureRef.current = JSON.stringify(filters);
-    loadPermissions(filters);
-    handleCloseModal();
-  };
-
-  const handleDeletePermission = async (permission: SecurityPermission) => {
-    try {
-      await PermissionsService.deletePermission(permission.id);
-      await loadPermissions(filters);
-      alert.showSuccess(t.security?.permissions?.delete || 'Permiso eliminado');
-    } catch (error: any) {
-      if (handleApiError(error)) {
-        return;
-      }
-      alert.showError(error.message || 'Error al eliminar permiso');
-    }
+    loadAllPermissions(); // Recargar permisos del carrusel
+    handleCloseCreateModal();
+    handleCloseEditModal();
   };
 
   /**
@@ -386,7 +238,7 @@ export default function PermissionsListPage() {
     
     for (const action of actions) {
       const genericPermission = allPermissions.find(
-        p => p.action === action && (!p.route || p.route === '')
+        (p: SecurityPermission) => p.action === action && (!p.route || p.route === '')
       );
       if (genericPermission) {
         genericPermissionIds[action] = genericPermission.id;
@@ -586,6 +438,11 @@ export default function PermissionsListPage() {
       if (selectedRoleId && !companyRoles.find(r => r.id === selectedRoleId)) {
         setSelectedRoleId(undefined);
       }
+      
+      // Si hay un roleId en los query params y está en los roles cargados, seleccionarlo automáticamente
+      if (searchParams.roleId && companyRoles.find(r => r.id === searchParams.roleId)) {
+        setSelectedRoleId(searchParams.roleId);
+      }
     } catch (error: any) {
       if (handleApiError(error)) {
         return;
@@ -595,7 +452,7 @@ export default function PermissionsListPage() {
     } finally {
       setLoadingRoles(false);
     }
-  }, [selectedRoleId, handleApiError]);
+  }, [selectedRoleId, handleApiError, searchParams.roleId]);
 
   /**
    * Manejar cambio de empresa
@@ -609,29 +466,13 @@ export default function PermissionsListPage() {
 
   /**
    * Manejar cambio de rol
+   * Nota: La carga de permisos se maneja automáticamente en el useEffect
+   * que observa selectedRoleId, por lo que aquí solo actualizamos el estado
    */
-  const handleRoleChange = async (roleId: string | undefined) => {
+  const handleRoleChange = (roleId: string | undefined) => {
     setSelectedRoleId(roleId);
     setPermissionChanges([]); // Limpiar cambios pendientes al cambiar de rol
-    
-    // Cargar permisos del rol seleccionado
-    if (roleId) {
-      try {
-        setLoadingRolePermissions(true);
-        const role = await RolesService.getRoleById(roleId);
-        setRolePermissions(role.permissions || []);
-      } catch (error: any) {
-        if (handleApiError(error)) {
-          return;
-        }
-        console.error('Error al cargar permisos del rol:', error);
-        setRolePermissions([]);
-      } finally {
-        setLoadingRolePermissions(false);
-      }
-    } else {
-      setRolePermissions([]);
-    }
+    // Los permisos se cargarán automáticamente en el useEffect que observa selectedRoleId
   };
 
   // Cargar roles cuando cambia la empresa seleccionada
@@ -639,111 +480,51 @@ export default function PermissionsListPage() {
     loadRolesByCompany(selectedCompanyId);
   }, [selectedCompanyId, loadRolesByCompany]);
 
-  const columns: TableColumn<SecurityPermission>[] = [
-    {
-      key: 'name',
-      label: t.security?.permissions?.name || 'Nombre',
-      width: '23%',
-    },
-    {
-      key: 'code',
-      label: t.security?.permissions?.code || 'Código',
-      width: '18%',
-    },
-    {
-      key: 'module',
-      label: t.security?.permissions?.module || 'Módulo',
-      width: '13%',
-    },
-    {
-      key: 'action',
-      label: t.security?.permissions?.action || 'Acción',
-      width: '13%',
-    },
-    {
-      key: 'status',
-      label: t.security?.users?.status || 'Estado',
-      width: '15%',
-      align: 'center',
-      render: (permission) => (
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: permission.status === 1
-                ? colors.success + '20'
-                : colors.error + '20',
-            },
-          ]}
-        >
-          <ThemedText
-            type="caption"
-            style={{
-              color: permission.status === 1 ? colors.success : colors.error,
-            }}
-          >
-            {permission.status === 1
-              ? t.security?.users?.active || 'Activo'
-              : t.security?.users?.inactive || 'Inactivo'}
-          </ThemedText>
-        </View>
-      ),
-    },
-    {
-      key: 'actions',
-      label: t.common?.actions || 'Acciones',
-      width: '18%',
-      align: 'center',
-      render: (permission) => (
-        <View style={styles.actionsContainer}>
-          <Tooltip text={t.security?.permissions?.editShort || 'Editar'} position="left">
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleEditPermission(permission)}
-            >
-              <Ionicons name="pencil" size={18} color={actionIconColor} />
-            </TouchableOpacity>
-          </Tooltip>
-          <Tooltip text={t.security?.permissions?.deleteShort || 'Eliminar'} position="left">
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleDeletePermission(permission)}
-            >
-              <Ionicons name="trash" size={18} color={actionIconColor} />
-            </TouchableOpacity>
-          </Tooltip>
-        </View>
-      ),
-    },
-  ];
+  // Cargar permisos del rol cuando cambia selectedRoleId
+  // Esto se ejecuta tanto cuando el usuario cambia manualmente el selector
+  // como cuando se establece desde los query params
+  useEffect(() => {
+    if (selectedRoleId) {
+      // Limpiar permisos anteriores y cambios pendientes al cambiar de rol
+      setPermissionChanges([]);
+      
+      // Cargar permisos del rol seleccionado
+      const loadRolePermissions = async () => {
+        try {
+          setLoadingRolePermissions(true);
+          const role = await RolesService.getRoleById(selectedRoleId);
+          // Asegurar que los permisos se actualicen correctamente
+          setRolePermissions(role.permissions || []);
+        } catch (error: any) {
+          if (handleApiError(error)) {
+            return;
+          }
+          console.error('Error al cargar permisos del rol:', error);
+          setRolePermissions([]);
+        } finally {
+          setLoadingRolePermissions(false);
+        }
+      };
+      
+      loadRolePermissions();
+    } else {
+      setRolePermissions([]);
+      setPermissionChanges([]);
+    }
+  }, [selectedRoleId, handleApiError]);
 
-  const filterConfigs: FilterConfig[] = [
-    {
-      key: 'status',
-      label: t.security?.users?.status || 'Estado',
-      type: 'select',
-      options: [
-        { key: '', value: '', label: t.common?.all || 'Todos' },
-        { key: '1', value: '1', label: t.security?.users?.active || 'Activo' },
-        { key: '0', value: '0', label: t.security?.users?.inactive || 'Inactivo' },
-        { key: '2', value: '2', label: 'Pendiente' },
-        { key: '3', value: '3', label: 'Suspendido' },
-        { key: '-1', value: '-1', label: 'Eliminado' },
-      ],
-    },
-    {
-      key: 'module',
-      label: t.security?.permissions?.module || 'Módulo',
-      type: 'text',
-      placeholder: 'Filtrar por módulo...',
-    },
-    {
-      key: 'action',
-      label: t.security?.permissions?.action || 'Acción',
-      type: 'text',
-      placeholder: 'Filtrar por acción...',
-    },
-  ];
+  // Aplicar query params al cargar la página (si vienen de redirección desde roles)
+  // Esto permite que cuando se redirija desde la pantalla de roles, se seleccionen automáticamente
+  // la empresa y el rol correspondientes
+  useEffect(() => {
+    // Si hay companyId en los query params y no está seleccionado, seleccionarlo
+    if (searchParams.companyId && searchParams.companyId !== selectedCompanyId) {
+      setSelectedCompanyId(searchParams.companyId);
+    }
+    // El roleId se manejará automáticamente cuando se carguen los roles en loadRolesByCompany
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.companyId, searchParams.roleId]);
+
 
   if (accessLoading) {
     return (
@@ -773,7 +554,7 @@ export default function PermissionsListPage() {
           </View>
           <Button
             title={isMobile ? '' : (t.security?.permissions?.create || 'Crear Permiso')}
-            onPress={handleCreatePermission}
+            onPress={handleOpenCarousel}
             variant="primary"
             size="md"
           >
@@ -831,33 +612,33 @@ export default function PermissionsListPage() {
           />
 
         {/* Componente de administración masiva de permisos - Solo mostrar si hay un rol seleccionado */}
-        {selectedRoleId ? (
+        {selectedRoleId && !loadingRolePermissions ? (
           <View style={styles.dataTableContainer}>
-            {loadingRolePermissions ? (
-              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <ThemedText type="body2" variant="secondary" style={{ marginTop: 16, textAlign: 'center' }}>
-                  Cargando permisos del rol...
-                </ThemedText>
-              </View>
-            ) : (
-              <PermissionsManagementFlow
-                key={`${selectedRoleId}-${menuRefreshKey}`} // Key para forzar recarga cuando cambie
-                permissions={rolePermissions}
-                roleId={selectedRoleId}
-                searchValue={searchValue}
-                selectedModule={selectedModule}
-                selectedAction={selectedAction}
-                showDefaultOptions={showDefaultOptions}
-                showAll={showAll}
-                onChanges={(changes) => {
-                  setPermissionChanges(changes);
-                }}
-                onMenuItemsLoaded={(items) => {
-                  setMenuItems(items);
-                }}
-              />
-            )}
+            <PermissionsManagementFlow
+              key={`${selectedRoleId}-${menuRefreshKey}-${rolePermissions.length}`} // Key incluye selectedRoleId, menuRefreshKey y length de permisos para forzar recarga
+              permissions={rolePermissions}
+              roleId={selectedRoleId}
+              searchValue={searchValue}
+              selectedModule={selectedModule}
+              selectedAction={selectedAction}
+              showDefaultOptions={showDefaultOptions}
+              showAll={showAll}
+              onChanges={(changes) => {
+                setPermissionChanges(changes);
+              }}
+              onMenuItemsLoaded={(items) => {
+                setMenuItems(items);
+              }}
+            />
+          </View>
+        ) : selectedRoleId && loadingRolePermissions ? (
+          <View style={styles.dataTableContainer}>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText type="body2" variant="secondary" style={{ marginTop: 16, textAlign: 'center' }}>
+                Cargando permisos del rol...
+              </ThemedText>
+            </View>
           </View>
         ) : (
           <View style={[styles.dataTableContainer, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
@@ -928,67 +709,108 @@ export default function PermissionsListPage() {
         );
       })()}
 
-      {/* Modal de creación/edición */}
-      {modalMode && (
-          <SideModal
-            visible={isModalVisible}
-            onClose={handleCloseModal}
-            title={
-              modalMode === 'edit'
-                ? t.security?.permissions?.edit || 'Editar Permiso'
-                : t.security?.permissions?.create || 'Crear Permiso'
-            }
-            subtitle={
-              modalMode === 'edit'
-                ? 'Modifica los datos del permiso'
-                : 'Completa los datos del nuevo permiso'
-            }
-            footer={
-              formActions ? (
-                <>
-                  <Button
-                    title={t.common.cancel}
-                    onPress={formActions.handleCancel}
-                    variant="outlined"
-                    size="md"
-                    disabled={formActions.isLoading}
-                  />
-                  <Button
-                    title={
-                      modalMode === 'edit'
-                        ? t.common.save
-                        : t.security?.permissions?.create || 'Crear Permiso'
-                    }
-                    onPress={formActions.handleSubmit}
-                    variant="primary"
-                    size="md"
-                    disabled={formActions.isLoading}
-                  />
-                </>
-              ) : null
-            }
-          >
-            {modalMode === 'edit' && selectedPermissionId ? (
-              <PermissionEditForm
-                permissionId={selectedPermissionId}
-                onSuccess={handleFormSuccess}
-                onCancel={handleCloseModal}
-                showHeader={false}
-                showFooter={false}
-                onFormReady={setFormActions}
-              />
-            ) : null}
-            {modalMode === 'create' ? (
-              <PermissionCreateForm
-                onSuccess={handleFormSuccess}
-                onCancel={handleCloseModal}
-                showHeader={false}
-                showFooter={false}
-                onFormReady={setFormActions}
-              />
-            ) : null}
-          </SideModal>
+      {/* Modal de carrusel de permisos */}
+      <CenteredModal
+        visible={isCarouselModalVisible}
+        onClose={() => setIsCarouselModalVisible(false)}
+        title={t.security?.permissions?.title || 'Seleccionar Permiso'}
+        subtitle={t.security?.permissions?.subtitle || 'Selecciona un permiso para editar o crea uno nuevo'}
+        width="90%"
+        height="60%"
+      >
+        {loadingAllPermissions ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <ThemedText type="body2" variant="secondary" style={{ marginTop: 16 }}>
+              Cargando permisos...
+            </ThemedText>
+          </View>
+        ) : (
+          <PermissionsCarousel
+            permissions={allPermissions}
+            onPermissionSelect={handlePermissionSelect}
+            onCreateNew={handleCreateFromCarousel}
+          />
         )}
+      </CenteredModal>
+
+      {/* Modal de creación de permiso */}
+      {isCreateModalVisible && (
+        <SideModal
+          visible={isCreateModalVisible}
+          onClose={handleCloseCreateModal}
+          title={t.security?.permissions?.create || 'Crear Permiso'}
+          subtitle={t.security?.permissions?.createSubtitle || 'Completa los datos para registrar un nuevo permiso'}
+          footer={
+            formActions ? (
+              <>
+                <Button
+                  title={t.common?.cancel || 'Cancelar'}
+                  onPress={formActions.handleCancel}
+                  variant="outlined"
+                  size="md"
+                  disabled={formActions.isLoading}
+                />
+                <Button
+                  title={t.security?.permissions?.create || 'Crear Permiso'}
+                  onPress={formActions.handleSubmit}
+                  variant="primary"
+                  size="md"
+                  disabled={formActions.isLoading}
+                />
+              </>
+            ) : null
+          }
+        >
+          <PermissionCreateForm
+            onSuccess={handleFormSuccess}
+            onCancel={handleCloseCreateModal}
+            showHeader={false}
+            showFooter={false}
+            onFormReady={setFormActions}
+          />
+        </SideModal>
+      )}
+
+      {/* Modal de edición de permiso */}
+      {isEditModalVisible && selectedPermissionId && (
+        <SideModal
+          visible={isEditModalVisible}
+          onClose={handleCloseEditModal}
+          title={t.security?.permissions?.edit || 'Editar Permiso'}
+          subtitle={t.security?.permissions?.editSubtitle || 'Modifica los datos del permiso'}
+          footer={
+            formActions ? (
+              <>
+                <Button
+                  title={t.common?.cancel || 'Cancelar'}
+                  onPress={formActions.handleCancel}
+                  variant="outlined"
+                  size="md"
+                  disabled={formActions.isLoading}
+                />
+                <Button
+                  title={t.common?.save || 'Guardar'}
+                  onPress={formActions.handleSubmit}
+                  variant="primary"
+                  size="md"
+                  disabled={formActions.isLoading}
+                />
+              </>
+            ) : null
+          }
+        >
+          <PermissionEditForm
+            permissionId={selectedPermissionId}
+            onSuccess={handleFormSuccess}
+            onCancel={handleCloseEditModal}
+            showHeader={false}
+            showFooter={false}
+            onFormReady={setFormActions}
+          />
+        </SideModal>
+      )}
+
     </ThemedView>
   );
 }

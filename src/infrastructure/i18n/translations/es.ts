@@ -277,7 +277,9 @@ export const es: Translations = {
       subtitle: 'Gestiona los permisos del sistema',
       show: 'Mostrar',
       create: 'Crear Permiso',
+      createSubtitle: 'Completa los datos para registrar un nuevo permiso',
       edit: 'Editar Permiso',
+      editSubtitle: 'Modifica los datos del permiso',
       pendingChanges: (count: number) => count === 1 
         ? '1 permiso pendiente de guardar' 
         : `${count} permisos pendientes de guardar`,

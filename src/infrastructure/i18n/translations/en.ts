@@ -277,7 +277,9 @@ export const en: Translations = {
       subtitle: 'Manage system permissions',
       show: 'Show',
       create: 'Create Permission',
+      createSubtitle: 'Complete the data to register a new permission',
       edit: 'Edit Permission',
+      editSubtitle: 'Modify the permission data',
       editShort: 'Edit',
       pendingChanges: (count: number) => count === 1 
         ? '1 permission pending to save' 

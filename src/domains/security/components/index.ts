@@ -17,6 +17,7 @@ export { PermissionFlow } from './role-permissions-flow';
 export type { PermissionFlowProps } from './role-permissions-flow/role-permissions-flow.types';
 export { PermissionsManagementFlow, PermissionsFlowFilters } from './permissions-management-flow';
 export type { PermissionsManagementFlowProps, PermissionChange, PermissionsFlowFiltersProps } from './permissions-management-flow';
+export { PermissionsCarousel } from './permissions-carousel/permissions-carousel';
 
 // Los siguientes componentes han sido migrados a src/features/security/
 // export { CompanyCreateForm } from './company-create-form/company-create-form'; // → src/features/security/companies
