@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { CenteredModal } from '@/components/ui/centered-modal';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { SideModal } from '@/components/ui/side-modal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -54,11 +55,18 @@ export function RolesListScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
-  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
+  const [formActions, setFormActions] = useState<{ 
+    isLoading: boolean; 
+    handleSubmit: () => void; 
+    handleCancel: () => void;
+    generalError?: { message: string; detail?: string } | null;
+  } | null>(null);
   const [isPermissionsModalVisible, setIsPermissionsModalVisible] = useState(false);
   const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState<Role | null>(null);
   const [isEditPermissionsModalVisible, setIsEditPermissionsModalVisible] = useState(false);
   const [selectedRoleForEditPermissions, setSelectedRoleForEditPermissions] = useState<Role | null>(null);
+  const [permissionsModalError, setPermissionsModalError] = useState<{ message: string; detail?: string } | null>(null);
+  const [permissionsModalSuccess, setPermissionsModalSuccess] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -558,6 +566,22 @@ export function RolesListScreen() {
                 ? (t.security?.roles?.editSubtitle || 'Modifica los datos del rol')
                 : (t.security?.roles?.createSubtitle || 'Completa los datos para registrar un nuevo rol')
             }
+            topAlert={
+              formActions?.generalError ? (
+                <InlineAlert
+                  type="error"
+                  message={formActions.generalError.message}
+                  detail={formActions.generalError.detail}
+                  duration={5000}
+                  autoClose={true}
+                  onDismiss={() => {
+                    if (formActions) {
+                      setFormActions({ ...formActions, generalError: null });
+                    }
+                  }}
+                />
+              ) : undefined
+            }
             footer={
               formActions ? (
                 <>
@@ -630,11 +654,33 @@ export function RolesListScreen() {
           onClose={() => {
             setIsEditPermissionsModalVisible(false);
             setSelectedRoleForEditPermissions(null);
+            setPermissionsModalError(null);
+            setPermissionsModalSuccess(null);
           }}
           title={t.security?.permissions?.title || 'Administración de Permisos'}
           subtitle={t.security?.permissions?.subtitle || 'Gestiona los permisos del sistema'}
           width="90%"
           height="90%"
+          topAlert={
+            permissionsModalError ? (
+              <InlineAlert
+                type="error"
+                message={permissionsModalError.message}
+                detail={permissionsModalError.detail}
+                duration={5000}
+                autoClose={true}
+                onDismiss={() => setPermissionsModalError(null)}
+              />
+            ) : permissionsModalSuccess ? (
+              <InlineAlert
+                type="success"
+                message={permissionsModalSuccess}
+                duration={3000}
+                autoClose={true}
+                onDismiss={() => setPermissionsModalSuccess(null)}
+              />
+            ) : undefined
+          }
         >
           <PermissionsManagementContent
             initialCompanyId={selectedRoleForEditPermissions?.companyId || currentCompany?.id}
@@ -642,6 +688,16 @@ export function RolesListScreen() {
             onClose={() => {
               setIsEditPermissionsModalVisible(false);
               setSelectedRoleForEditPermissions(null);
+              setPermissionsModalError(null);
+              setPermissionsModalSuccess(null);
+            }}
+            onError={(error) => {
+              setPermissionsModalError(error);
+              setPermissionsModalSuccess(null);
+            }}
+            onSuccess={(message) => {
+              setPermissionsModalSuccess(message);
+              setPermissionsModalError(null);
             }}
           />
         </CenteredModal>

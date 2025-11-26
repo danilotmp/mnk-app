@@ -7,7 +7,12 @@ export interface CompanyCreateFormProps {
   onCancel?: () => void;
   showHeader?: boolean;
   showFooter?: boolean;
-  onFormReady?: (props: { isLoading: boolean; handleSubmit: () => void; handleCancel: () => void }) => void;
+  onFormReady?: (props: { 
+    isLoading: boolean; 
+    handleSubmit: () => void; 
+    handleCancel: () => void;
+    generalError?: { message: string; detail?: string } | null;
+  }) => void;
 }
 
 export interface CompanyFormData {

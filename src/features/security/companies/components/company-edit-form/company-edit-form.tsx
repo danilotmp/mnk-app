@@ -42,6 +42,7 @@ export function CompanyEditForm({
   const [errors, setErrors] = useState<Record<keyof CompanyFormData | string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingCompany, setLoadingCompany] = useState(true);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
 
   const resetError = useCallback((field: keyof CompanyFormData) => {
     setErrors((prev) => {
@@ -52,7 +53,11 @@ export function CompanyEditForm({
       delete next[field];
       return next;
     });
-  }, []);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [generalError]);
 
   const handleChange = useCallback(
     (field: keyof CompanyFormData, value: string | number) => {
@@ -140,9 +145,20 @@ export function CompanyEditForm({
       alert.showSuccess(t.security?.companies?.editSuccess || 'Empresa actualizada exitosamente');
       onSuccess?.();
     } catch (error: any) {
-      const message = error?.message || 'Error al actualizar la empresa';
-      const detail = (error as any)?.result?.details || '';
-      alert.showError(message, false, undefined, detail);
+      const backendResult = error?.result || error?.response?.data || error;
+      const rawDetails = backendResult?.details ?? error?.details;
+      const detailString =
+        typeof rawDetails === 'string'
+          ? rawDetails
+          : rawDetails?.message
+          ? String(rawDetails.message)
+          : undefined;
+
+      const errorMessage =
+        backendResult?.description || error?.message || 'Error al actualizar la empresa';
+
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsSubmitting(false);
     }
@@ -158,11 +174,12 @@ export function CompanyEditForm({
         isLoading: isSubmitting,
         handleSubmit,
         handleCancel,
+        generalError,
       });
     }
-    // Intencionalmente solo depende de isSubmitting y loadingCompany
+    // Intencionalmente solo depende de isSubmitting, loadingCompany y generalError
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubmitting, loadingCompany]);
+  }, [isSubmitting, loadingCompany, generalError]);
 
   if (loadingCompany) {
     return (

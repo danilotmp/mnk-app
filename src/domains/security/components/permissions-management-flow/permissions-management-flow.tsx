@@ -26,6 +26,7 @@ export function PermissionsManagementFlow({
   showDefaultOptions = true,
   showAll = false,
   onMenuItemsLoaded,
+  customPermissions = [],
 }: PermissionsManagementFlowProps) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
@@ -50,21 +51,43 @@ export function PermissionsManagementFlow({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   
   // Estado para rastrear cambios de permisos
-  // Estructura: { [route]: { view: boolean, create: boolean, edit: boolean, delete: boolean } }
+  // Estructura: { [route]: { view: boolean, create: boolean, edit: boolean, delete: boolean, [customPermissionId]: boolean } }
   const [permissionChanges, setPermissionChanges] = useState<Record<string, {
     view: boolean;
     create: boolean;
     edit: boolean;
     delete: boolean;
+    [key: string]: boolean; // Permite permisos personalizados dinámicos
   }>>({});
 
   /**
    * Verifica si existe un permiso para una ruta y acción específica
+   * También maneja permisos personalizados (cuando action es un ID de permiso personalizado)
    */
   const hasPermissionForRoute = (route: string | undefined, action: string): boolean => {
     if (!route) return false;
 
-    // Buscar permiso por ruta exacta
+    // Si action es un ID de permiso personalizado (UUID), buscar en customPermissions
+    const isCustomPermissionId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(action);
+    if (isCustomPermissionId) {
+      // Buscar el permiso personalizado por ID
+      const customPerm = customPermissions.find(perm => perm.id === action || perm.code === action);
+      if (!customPerm) return false;
+      
+      // Verificar si el permiso personalizado está asignado al rol para esta ruta
+      // Buscar en los permisos del rol si existe este permiso personalizado asignado
+      // Nota: permissions puede tener permissionId (RolePermission) o id (SecurityPermission)
+      const roleHasCustomPerm = permissions.some(perm => {
+        const permId = (perm as any).permissionId || perm.id;
+        return permId === customPerm.id && 
+               perm.route === route &&
+               (perm.status === 1 || (perm as any).status === 1);
+      });
+      
+      return roleHasCustomPerm;
+    }
+
+    // Buscar permiso estándar por ruta exacta
     const routePermission = permissions.find(perm => 
       perm.route && 
       perm.route === route && 
@@ -105,13 +128,14 @@ export function PermissionsManagementFlow({
 
   /**
    * Obtiene el estado actual de un permiso (considerando cambios pendientes)
+   * Maneja tanto acciones estándar como permisos personalizados
    */
   const getPermissionState = (route: string | undefined, action: string): boolean => {
     if (!route) return false;
     
     // Si hay cambios pendientes, usar esos
     if (permissionChanges[route]) {
-      return permissionChanges[route][action as keyof typeof permissionChanges[typeof route]] || false;
+      return permissionChanges[route][action] || false;
     }
     
     // Si no, usar el estado actual
@@ -121,13 +145,14 @@ export function PermissionsManagementFlow({
   /**
    * Verifica si hay un cambio pendiente (aún no guardado) para una ruta y acción específica
    * Retorna true si el estado actual difiere del estado original guardado en el backend
+   * Maneja tanto acciones estándar como permisos personalizados
    */
   const hasPendingChange = (route: string | undefined, action: string): boolean => {
     if (!route) return false;
     
     // Si hay cambios pendientes en permissionChanges, verificar si difiere del estado original
     if (permissionChanges[route]) {
-      const currentState = permissionChanges[route][action as keyof typeof permissionChanges[typeof route]];
+      const currentState = permissionChanges[route][action];
       const originalState = hasPermissionForRoute(route, action);
       // Hay cambio pendiente si el estado actual difiere del original
       return currentState !== originalState;
@@ -138,6 +163,7 @@ export function PermissionsManagementFlow({
 
   /**
    * Toggle de un permiso específico
+   * Maneja tanto acciones estándar como permisos personalizados
    */
   const togglePermission = (route: string | undefined, action: string) => {
     if (!route) return;
@@ -149,7 +175,7 @@ export function PermissionsManagementFlow({
       const newChanges = { ...prev };
       
       if (!newChanges[route]) {
-        // Inicializar con el estado actual
+        // Inicializar con el estado actual de acciones estándar
         newChanges[route] = {
           view: hasPermissionForRoute(route, 'view'),
           create: hasPermissionForRoute(route, 'create'),
@@ -158,36 +184,64 @@ export function PermissionsManagementFlow({
         };
       }
       
-      // Aplicar el cambio
+      // Aplicar el cambio (puede ser una acción estándar o un permiso personalizado)
       newChanges[route] = {
         ...newChanges[route],
         [action]: newState,
       };
       
-      // Si todos los valores coinciden con el estado original, eliminar el cambio
+      // Verificar si todos los valores coinciden con el estado original
+      // Para acciones estándar
       const originalView = hasPermissionForRoute(route, 'view');
       const originalCreate = hasPermissionForRoute(route, 'create');
       const originalEdit = hasPermissionForRoute(route, 'edit');
       const originalDelete = hasPermissionForRoute(route, 'delete');
       
-      if (
+      // Verificar acciones estándar
+      const standardActionsMatch = 
         newChanges[route].view === originalView &&
         newChanges[route].create === originalCreate &&
         newChanges[route].edit === originalEdit &&
-        newChanges[route].delete === originalDelete
-      ) {
+        newChanges[route].delete === originalDelete;
+      
+      // Verificar permisos personalizados
+      // Obtener todos los permisos personalizados que podrían estar en cambios
+      const customPermKeys = Object.keys(newChanges[route]).filter(
+        key => key !== 'view' && key !== 'create' && key !== 'edit' && key !== 'delete'
+      );
+      
+      // Verificar si todos los permisos personalizados coinciden con el estado original
+      const customPermsMatch = customPermKeys.every(key => {
+        const originalState = hasPermissionForRoute(route, key);
+        return newChanges[route][key] === originalState;
+      });
+      
+      // Si todos los valores (estándar y personalizados) coinciden, eliminar el cambio
+      if (standardActionsMatch && customPermsMatch) {
         delete newChanges[route];
       }
       
       // Notificar cambios al padre
       if (onChanges) {
-        const changes: PermissionChange[] = Object.entries(newChanges).map(([route, actions]) => ({
-          route,
-          view: actions.view,
-          create: actions.create,
-          edit: actions.edit,
-          delete: actions.delete,
-        }));
+        const changes: PermissionChange[] = Object.entries(newChanges).map(([route, actions]) => {
+          const change: PermissionChange = {
+            route,
+            view: actions.view,
+            create: actions.create,
+            edit: actions.edit,
+            delete: actions.delete,
+          };
+          // Agregar permisos personalizados como propiedades adicionales
+          // Los permisos personalizados tienen sus IDs como keys en actions
+          const customPermKeys = Object.keys(actions).filter(
+            key => key !== 'view' && key !== 'create' && key !== 'edit' && key !== 'delete'
+          );
+          // Agregar cada permiso personalizado al objeto change
+          for (const customPermKey of customPermKeys) {
+            (change as any)[customPermKey] = actions[customPermKey];
+          }
+          return change;
+        });
         onChanges(changes);
       }
       
@@ -458,6 +512,8 @@ export function PermissionsManagementFlow({
                         onTogglePermission: togglePermission,
                         getPermissionState,
                         hasPendingChange,
+                        customPermissions,
+                        menuItemId: menuItem.id || itemId,
                       }}
                     />
                   </View>
@@ -524,6 +580,8 @@ export function PermissionsManagementFlow({
                                 onTogglePermission: togglePermission,
                                 getPermissionState,
                                 hasPendingChange,
+                                customPermissions,
+                                menuItemId: subItem.id || `sub-${subIndex}`,
                               }}
                             />
                           ))}
@@ -570,6 +628,8 @@ export function PermissionsManagementFlow({
                                     onTogglePermission: togglePermission,
                                     getPermissionState,
                                     hasPendingChange,
+                                    customPermissions,
+                                    menuItemId: subItem.id || `col-${subIndex}`,
                                   }}
                                 />
                               ))}

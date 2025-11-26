@@ -104,7 +104,7 @@ export function SideModal({ visible, onClose, title, subtitle, children, footer,
                   {title}
                 </ThemedText>
                 {subtitle && (
-                  <ThemedText type="body2" variant="secondary">
+                  <ThemedText type="body2" style={{ color: (colors as any).subtitle || colors.textSecondary }}>
                     {subtitle}
                   </ThemedText>
                 )}

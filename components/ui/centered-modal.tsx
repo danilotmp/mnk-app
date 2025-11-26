@@ -126,7 +126,7 @@ export function CenteredModal({
                   {title}
                 </ThemedText>
                 {subtitle && (
-                  <ThemedText type="body2" variant="secondary">
+                  <ThemedText type="body2" style={{ color: (colors as any).subtitle || colors.textSecondary }}>
                     {subtitle}
                   </ThemedText>
                 )}

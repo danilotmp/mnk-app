@@ -19,12 +19,3 @@ export { PermissionsManagementFlow, PermissionsFlowFilters } from './permissions
 export type { PermissionsManagementFlowProps, PermissionChange, PermissionsFlowFiltersProps } from './permissions-management-flow';
 export { PermissionsCarousel } from './permissions-carousel/permissions-carousel';
 
-// Los siguientes componentes han sido migrados a src/features/security/
-// export { CompanyCreateForm } from './company-create-form/company-create-form'; // → src/features/security/companies
-// export { CompanyEditForm } from './company-edit-form/company-edit-form'; // → src/features/security/companies
-// export { BranchCreateForm } from './branch-create-form/branch-create-form'; // → src/features/security/branches
-// export { BranchEditForm } from './branch-edit-form/branch-edit-form'; // → src/features/security/branches
-// export { RoleCreateForm } from './role-create-form/role-create-form'; // → src/features/security/roles
-// export { RoleEditForm } from './role-edit-form/role-edit-form'; // → src/features/security/roles
-// export { UserCreateForm } from './user-create-form/user-create-form'; // → src/features/security/users
-// export { UserEditForm } from './user-edit-form/user-edit-form'; // → src/features/security/users

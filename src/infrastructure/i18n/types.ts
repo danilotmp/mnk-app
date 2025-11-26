@@ -278,6 +278,7 @@ export interface Translations {
       subtitle: string;
       show?: string;
       create: string;
+      createOrEdit: string;
       createSubtitle: string;
       edit: string;
       editSubtitle: string;
@@ -289,12 +290,20 @@ export interface Translations {
       code: string;
       module: string;
       action: string;
+      icon: string;
+      iconPlaceholder: string;
+      menuItems: string;
+      selectMenuItems: string;
+      selectMenuItemsSubtitle: string;
+      showOnlySelected: string;
       filterPlaceholder: string;
       searchPlaceholder: string;
       loadError: string;
       preview: string;
       selectCompany: string;
       selectRole: string;
+      systemPermissions: string;
+      customPermissions: string;
     };
     accesses?: {
       title: string;

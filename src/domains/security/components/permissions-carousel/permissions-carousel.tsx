@@ -6,9 +6,11 @@
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { SecurityPermission } from '@/src/domains/security/types';
+import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { createPermissionsCarouselStyles } from './permissions-carousel.styles';
 
 interface PermissionsCarouselProps {
@@ -18,9 +20,16 @@ interface PermissionsCarouselProps {
 }
 
 /**
- * Obtener icono según el módulo o acción del permiso
+ * Obtener icono según el permiso
+ * Prioriza el icono del permiso si existe, sino usa lógica de fallback
  */
 const getPermissionIcon = (permission: SecurityPermission): string => {
+  // Si el permiso tiene un icono definido, usarlo directamente
+  if (permission.icon && permission.icon.trim()) {
+    return permission.icon.trim();
+  }
+
+  // Fallback: usar lógica basada en módulo o acción
   const module = permission.module?.toLowerCase() || '';
   const action = permission.action?.toLowerCase() || '';
 
@@ -48,64 +57,121 @@ export function PermissionsCarousel({
   onCreateNew,
 }: PermissionsCarouselProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = createPermissionsCarouselStyles(colors);
 
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.carouselContainer}
-      style={styles.carousel}
-    >
-      {/* Permisos existentes */}
-      {permissions.map((permission) => {
-        const iconName = getPermissionIcon(permission);
-        return (
-          <TouchableOpacity
-            key={permission.id}
-            style={styles.card}
-            onPress={() => onPermissionSelect(permission)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name={iconName as any}
-                size={48}
-                color={colors.primary}
-              />
-            </View>
-            <ThemedText
-              type="body2"
-              style={styles.cardName}
-              numberOfLines={2}
-            >
-              {permission.name || permission.code}
-            </ThemedText>
-          </TouchableOpacity>
-        );
-      })}
+  // Separar permisos del sistema y permisos normales, ordenados por el campo 'order'
+  const systemPermissions = permissions
+    .filter(p => p.isSystem === true)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const normalPermissions = permissions
+    .filter(p => !p.isSystem || p.isSystem === false)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-      {/* Botón para crear nuevo permiso */}
-      <TouchableOpacity
-        style={[styles.card, styles.createCard]}
-        onPress={onCreateNew}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.iconContainer, styles.createIconContainer]}>
-          <Ionicons
-            name="add"
-            size={48}
-            color={colors.primary}
-          />
+  return (
+    <View style={styles.container}>
+      {/* Sección de permisos del sistema (solo visuales, más pequeños) */}
+      {systemPermissions.length > 0 && (
+        <View style={styles.systemSection}>
+          <ThemedText type="body2" style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+            {t.security?.permissions?.systemPermissions || 'Permisos del sistema'}
+          </ThemedText>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.systemCarouselContainer}
+            style={styles.systemCarousel}
+          >
+            {systemPermissions.map((permission) => {
+              const iconName = getPermissionIcon(permission);
+              return (
+                <View
+                  key={permission.id}
+                  style={styles.systemCard}
+                >
+                  <View style={styles.systemIconContainer}>
+                    <DynamicIcon
+                      name={permission.icon || iconName}
+                      size={32}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <ThemedText
+                    type="caption"
+                    style={styles.systemCardName}
+                    numberOfLines={2}
+                  >
+                    {permission.name || permission.code}
+                  </ThemedText>
+                </View>
+              );
+            })}
+          </ScrollView>
         </View>
-        <ThemedText
-          type="body2"
-          style={styles.cardName}
-        >
-          Crear nuevo permiso
+      )}
+
+      {/* Sección de permisos normales (con acciones) */}
+      <View style={styles.normalSection}>
+        <ThemedText type="body2" style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          {t.security?.permissions?.customPermissions || 'Permisos personalizados'}
         </ThemedText>
-      </TouchableOpacity>
-    </ScrollView>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselContainer}
+          style={styles.carousel}
+        >
+        {/* Permisos normales */}
+        {normalPermissions.map((permission) => {
+          const iconName = getPermissionIcon(permission);
+          return (
+            <TouchableOpacity
+              key={permission.id}
+              style={styles.card}
+              onPress={() => onPermissionSelect(permission)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconContainer}>
+                <DynamicIcon
+                  name={permission.icon || iconName}
+                  size={48}
+                  color={colors.primary}
+                />
+              </View>
+              <ThemedText
+                type="body2"
+                style={styles.cardName}
+                numberOfLines={2}
+              >
+                {permission.name || permission.code}
+              </ThemedText>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Botón para crear nuevo permiso */}
+        <TouchableOpacity
+          style={[styles.card, styles.createCard]}
+          onPress={onCreateNew}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconContainer, styles.createIconContainer]}>
+            <Ionicons
+              name="add"
+              size={48}
+              color={colors.primary}
+            />
+          </View>
+          <ThemedText
+            type="body2"
+            style={styles.cardName}
+          >
+            Crear nuevo permiso
+          </ThemedText>
+        </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 

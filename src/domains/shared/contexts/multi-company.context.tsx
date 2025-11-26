@@ -44,10 +44,16 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
       const response = await service.setUserContext(user);
       const context = response.data;
 
+      // Convertir BranchAccess[] a Branch[] para el estado
+      // Filtrar elementos que no tengan branch válido
+      const branches = context.availableBranches
+        .map(access => access.branch)
+        .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
+
       setState({
         currentCompany: context.company,
         currentBranch: context.currentBranch,
-        availableBranches: context.availableBranches,
+        availableBranches: branches,
         user: context.user,
         permissions: context.permissions,
         isLoading: false,

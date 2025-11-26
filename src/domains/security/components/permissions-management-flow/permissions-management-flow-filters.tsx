@@ -9,6 +9,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
@@ -27,6 +28,7 @@ export function PermissionsFlowFilters({
   onShowDefaultOptionsChange,
   showAll = false,
   onShowAllChange,
+  customPermissions = [],
   onClearFilters,
 }: PermissionsFlowFiltersProps) {
   const { colors } = useTheme();
@@ -62,14 +64,38 @@ export function PermissionsFlowFilters({
     return Array.from(moduleSet).sort();
   }, [menuItems]);
 
-  // Opciones de acciones
-  const actionOptions = [
+  // Opciones de acciones estándar
+  const standardActionOptions = [
     { value: '', label: t.common?.all || 'Todos', icon: null },
     { value: 'view', label: t.common?.view || 'Ver', icon: 'eye-outline' },
     { value: 'create', label: t.common?.create || 'Crear', icon: 'create-outline' },
     { value: 'edit', label: t.common?.edit || 'Editar', icon: 'pencil-outline' },
     { value: 'delete', label: t.common?.delete || 'Eliminar', icon: 'trash-outline' },
   ];
+
+  // Agregar permisos personalizados a las opciones de acción
+  // Ordenar por el campo `order` antes de mapear
+  const customActionOptions = customPermissions
+    .sort((a, b) => {
+      // Si ambos tienen order, ordenar por order
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
+      // Si solo uno tiene order, el que tiene order va primero
+      if (a.order !== undefined) return -1;
+      if (b.order !== undefined) return 1;
+      // Si ninguno tiene order, mantener el orden original
+      return 0;
+    })
+    .map((perm) => ({
+      value: perm.code || perm.id, // Usar code como identificador único
+      label: perm.name,
+      icon: perm.icon || null, // Usar el icono del permiso si existe
+      permission: perm, // Guardar referencia al permiso completo
+    }));
+
+  // Combinar opciones estándar con permisos personalizados
+  const actionOptions = [...standardActionOptions, ...customActionOptions];
 
   const hasActiveFilters = searchValue.trim() !== '' || selectedModule !== '' || selectedAction !== '' || !showDefaultOptions;
 
@@ -280,6 +306,10 @@ export function PermissionsFlowFilters({
                   // Para los demás botones:
                   // - Si está seleccionado: mostrar icono + texto
                   // - Si NO está seleccionado: mostrar solo icono
+                  // Si es un permiso personalizado, usar DynamicIcon
+                  const isCustomPermission = (option as any).permission;
+                  const hasIcon = option.icon !== null && option.icon !== undefined;
+                  
                   return (
                     <TouchableOpacity
                       key={option.value}
@@ -294,11 +324,17 @@ export function PermissionsFlowFilters({
                     >
                       {isSelected ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons 
-                            name={option.icon as any} 
-                            size={16} 
-                            color={iconColor} 
-                          />
+                          {hasIcon && (
+                            isCustomPermission ? (
+                              <DynamicIcon name={option.icon!} size={16} color={iconColor} />
+                            ) : (
+                              <Ionicons 
+                                name={option.icon as any} 
+                                size={16} 
+                                color={iconColor} 
+                              />
+                            )
+                          )}
                           <ThemedText
                             type="body2"
                             style={{
@@ -310,11 +346,17 @@ export function PermissionsFlowFilters({
                           </ThemedText>
                         </View>
                       ) : (
-                        <Ionicons 
-                          name={option.icon as any} 
-                          size={16} 
-                          color={iconColor} 
-                        />
+                        hasIcon && (
+                          isCustomPermission ? (
+                            <DynamicIcon name={option.icon!} size={16} color={iconColor} />
+                          ) : (
+                            <Ionicons 
+                              name={option.icon as any} 
+                              size={16} 
+                              color={iconColor} 
+                            />
+                          )
+                        )
                       )}
                     </TouchableOpacity>
                   );

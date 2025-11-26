@@ -26,12 +26,16 @@ interface PermissionsManagementContentProps {
   initialCompanyId?: string;
   initialRoleId?: string;
   onClose?: () => void;
+  onError?: (error: { message: string; detail?: string }) => void;
+  onSuccess?: (message: string) => void;
 }
 
 export function PermissionsManagementContent({
   initialCompanyId,
   initialRoleId,
   onClose,
+  onError,
+  onSuccess,
 }: PermissionsManagementContentProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -121,10 +125,7 @@ export function PermissionsManagementContent({
     menuItems: MenuItem[],
     rolePermissions: SecurityPermission[]
   ): Promise<PermissionOperation[]> => {
-    const genericPermissionsResponse = await PermissionsService.getPermissions({
-      page: 1,
-      limit: 100,
-    });
+    const genericPermissionsResponse = await PermissionsService.getPermissions({});
     
     const allPermissions = Array.isArray(genericPermissionsResponse.data)
       ? genericPermissionsResponse.data
@@ -307,7 +308,12 @@ export function PermissionsManagementContent({
       );
 
       if (operations.length === 0) {
-        alert.showError('No hay cambios válidos para guardar');
+        const errorMessage = 'No hay cambios válidos para guardar';
+        if (onError) {
+          onError({ message: errorMessage });
+        } else {
+          alert.showError(errorMessage);
+        }
         return;
       }
 
@@ -320,9 +326,19 @@ export function PermissionsManagementContent({
       if (result && 'summary' in result && result.summary) {
         const summary = result.summary;
         const summaryMessage = `${summary.added > 0 ? `${summary.added} agregado${summary.added > 1 ? 's' : ''}` : ''}${summary.added > 0 && summary.removed > 0 ? ', ' : ''}${summary.removed > 0 ? `${summary.removed} removido${summary.removed > 1 ? 's' : ''}` : ''}`;
-        alert.showSuccess(`Permisos actualizados correctamente${summaryMessage ? ` (${summaryMessage})` : ''}`);
+        const successMessage = `Permisos actualizados correctamente${summaryMessage ? ` (${summaryMessage})` : ''}`;
+        if (onSuccess) {
+          onSuccess(successMessage);
+        } else {
+          alert.showSuccess(successMessage);
+        }
       } else {
-        alert.showSuccess('Permisos actualizados correctamente');
+        const successMessage = 'Permisos actualizados correctamente';
+        if (onSuccess) {
+          onSuccess(successMessage);
+        } else {
+          alert.showSuccess(successMessage);
+        }
       }
 
       setPermissionChanges([]);
@@ -340,7 +356,23 @@ export function PermissionsManagementContent({
         }
       }
     } catch (error: any) {
-      alert.showError(error.message || 'Error al guardar permisos');
+      const backendResult = error?.result || error?.response?.data || error;
+      const rawDetails = backendResult?.details ?? error?.details;
+      const detailString =
+        typeof rawDetails === 'string'
+          ? rawDetails
+          : rawDetails?.message
+          ? String(rawDetails.message)
+          : undefined;
+
+      const errorMessage =
+        backendResult?.description || error?.message || 'Error al guardar permisos';
+
+      if (onError) {
+        onError({ message: errorMessage, detail: detailString });
+      } else {
+        alert.showError(errorMessage, false, undefined, detailString);
+      }
     } finally {
       setSavingChanges(false);
     }

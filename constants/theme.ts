@@ -90,6 +90,7 @@ export const LightTheme = {
     text: '#1e2538',          // rgb(30, 41, 59) - Color oscuro para modo claro
     textSecondary: BrandColors.gray[700],
     textTertiary: BrandColors.gray[500],
+    subtitle: BrandColors.gray[700], // Color estándar para subtítulos (gris)
     
     // Colores de borde
     border: BrandColors.gray[200],
@@ -169,6 +170,7 @@ export const DarkTheme = {
     text: '#ffffff',          // Blanco puro para texto principal
     textSecondary: '#a0a8c1', // Gris azulado claro para texto secundario
     textTertiary: '#6b7588',  // Gris azulado medio
+    subtitle: '#a0a8c1', // Color estándar para subtítulos (gris)
     
     // Colores de borde - Sutiles
     border: '#1e2538',        // Bordes sutiles

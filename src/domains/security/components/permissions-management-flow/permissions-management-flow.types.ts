@@ -65,5 +65,10 @@ export interface PermissionsManagementFlowProps {
    * Callback para exponer los menuItems cargados (para filtros)
    */
   onMenuItemsLoaded?: (menuItems: MenuItem[]) => void;
+  
+  /**
+   * Permisos personalizados (isSystem = false) para mostrar iconos adicionales
+   */
+  customPermissions?: SecurityPermission[];
 }
 

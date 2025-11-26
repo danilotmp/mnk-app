@@ -22,18 +22,21 @@ export class PermissionsService {
    * por defecto (page=1, limit=10). El límite máximo es 100.
    */
   static async getPermissions(
-    filters: PermissionFilters = { page: 1, limit: 10 }
+    filters: PermissionFilters = {}
   ): Promise<PaginatedResponse<SecurityPermission>> {
     try {
       const queryParams = new URLSearchParams();
       
-      // Agregar parámetros de paginación (el backend los transforma automáticamente)
-      // Validar límite máximo de 100
-      const page = Math.max(1, filters.page || 1);
-      const limit = Math.min(100, Math.max(1, filters.limit || 10));
-      
-      queryParams.append('page', page.toString());
-      queryParams.append('limit', limit.toString());
+      // Agregar parámetros de paginación solo si se proporcionan
+      // Si no se proporcionan, el backend usará valores por defecto
+      if (filters.page !== undefined) {
+        const page = Math.max(1, filters.page);
+        queryParams.append('page', page.toString());
+      }
+      if (filters.limit !== undefined) {
+        const limit = Math.min(100, Math.max(1, filters.limit));
+        queryParams.append('limit', limit.toString());
+      }
       
       if (filters.sortBy) {
         queryParams.append('sortBy', filters.sortBy);
@@ -64,13 +67,43 @@ export class PermissionsService {
       if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
         const paginatedData = response.data as any;
         
+        // Función helper para normalizar menuItemIds
+        const normalizePermission = (permission: any): SecurityPermission => {
+          // Normalizar menuItemIds - el backend puede devolverlo con diferentes nombres o estructuras
+          // Siempre intentar normalizar, incluso si ya existe menuItemIds
+          if (permission.menuItems && Array.isArray(permission.menuItems) && permission.menuItems.length > 0) {
+            // Si viene como array de objetos, extraer los IDs
+            const extractedIds = permission.menuItems.map((item: any) => item.id || item).filter((id: any) => id != null);
+            if (extractedIds.length > 0) {
+              permission.menuItemIds = extractedIds;
+            }
+          } else if (permission.MenuItemIds && Array.isArray(permission.MenuItemIds) && permission.MenuItemIds.length > 0) {
+            // Si viene como MenuItemIds (con mayúscula)
+            permission.menuItemIds = permission.MenuItemIds;
+          } else if (!permission.menuItemIds || !Array.isArray(permission.menuItemIds)) {
+            // Si no hay ninguna variante, usar array vacío
+            permission.menuItemIds = [];
+          }
+          
+          // Asegurar que menuItemIds sea un array válido
+          if (!Array.isArray(permission.menuItemIds)) {
+            permission.menuItemIds = [];
+          }
+          
+          return permission as SecurityPermission;
+        };
+        
         if (paginatedData.data && paginatedData.meta) {
+          // Normalizar cada permiso en la lista
+          paginatedData.data = paginatedData.data.map(normalizePermission);
           return paginatedData as PaginatedResponse<SecurityPermission>;
         }
         
         if (Array.isArray(paginatedData)) {
+          // Normalizar cada permiso en la lista
+          const normalizedData = paginatedData.map(normalizePermission);
           return {
-            data: paginatedData,
+            data: normalizedData,
             meta: {
               page: filters.page || 1,
               limit: filters.limit || 10,
@@ -105,7 +138,28 @@ export class PermissionsService {
       });
 
       if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-        return response.data;
+        const permission = response.data as any;
+        
+        // Normalizar menuItemIds - el backend puede devolverlo con diferentes nombres o estructuras
+        if (!permission.menuItemIds || (Array.isArray(permission.menuItemIds) && permission.menuItemIds.length === 0)) {
+          // Intentar diferentes variantes del nombre
+          if (permission.MenuItemIds && Array.isArray(permission.MenuItemIds) && permission.MenuItemIds.length > 0) {
+            permission.menuItemIds = permission.MenuItemIds;
+          } else if (permission.menuItems && Array.isArray(permission.menuItems)) {
+            // Si viene como array de objetos, extraer los IDs
+            permission.menuItemIds = permission.menuItems.map((item: any) => item.id || item).filter((id: any) => id != null);
+          } else {
+            // Si no hay ninguna variante, usar array vacío
+            permission.menuItemIds = [];
+          }
+        }
+        
+        // Asegurar que menuItemIds sea un array válido
+        if (!Array.isArray(permission.menuItemIds)) {
+          permission.menuItemIds = [];
+        }
+        
+        return permission as SecurityPermission;
       }
 
       throw new Error(response.result?.description || 'Error al obtener permiso');

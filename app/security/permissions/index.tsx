@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { CenteredModal } from '@/components/ui/centered-modal';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { Select } from '@/components/ui/select';
 import { SideModal } from '@/components/ui/side-modal';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -20,11 +21,12 @@ import { RolesService } from '@/src/features/security/roles';
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { MenuItem } from '@/src/infrastructure/menu/types';
+import { useToast } from '@/src/infrastructure/messages';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createPermissionsListStyles } from '@/src/styles/pages/permissions-list.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function PermissionsListPage() {
@@ -33,6 +35,7 @@ export default function PermissionsListPage() {
   const pathname = usePathname();
   const searchParams = useLocalSearchParams<{ companyId?: string; roleId?: string }>();
   const alert = useAlert();
+  const toast = useToast();
   const { isMobile } = useResponsive();
   const styles = createPermissionsListStyles(isMobile);
 
@@ -57,7 +60,12 @@ export default function PermissionsListPage() {
   const [selectedPermissionId, setSelectedPermissionId] = useState<string | null>(null);
   const [allPermissions, setAllPermissions] = useState<SecurityPermission[]>([]);
   const [loadingAllPermissions, setLoadingAllPermissions] = useState(false);
-  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
+  const [formActions, setFormActions] = useState<{ 
+    isLoading: boolean; 
+    handleSubmit: () => void; 
+    handleCancel: () => void;
+    generalError?: { message: string; detail?: string } | null;
+  } | null>(null);
   
   // Estados para los selectores dependientes
   // Inicializar con query params si existen (para redirección desde roles)
@@ -77,9 +85,102 @@ export default function PermissionsListPage() {
   const [showDefaultOptions, setShowDefaultOptions] = useState(true); // Por defecto mostrar opciones por defecto
   const [showAll, setShowAll] = useState(true); // Por defecto mostrar todas las opciones (vista previa preseleccionada)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [customPermissions, setCustomPermissions] = useState<SecurityPermission[]>([]);
+  const customPermissionsRef = useRef<SecurityPermission[]>([]); // Ref para comparar cambios // Permisos personalizados (isSystem = false)
   
   // Obtener empresas
   const { companies } = useCompanyOptions();
+
+  /**
+   * Cargar permisos personalizados (isSystem = false) para los filtros
+   */
+  /**
+   * Comparar dos arrays de permisos para detectar cambios
+   */
+  const comparePermissions = (oldPerms: SecurityPermission[], newPerms: SecurityPermission[]): boolean => {
+    // Comparar por cantidad
+    if (oldPerms.length !== newPerms.length) {
+      return true; // Hubo cambios
+    }
+    
+    // Crear mapas de IDs para comparación rápida
+    const oldIds = new Set(oldPerms.map(p => p.id));
+    const newIds = new Set(newPerms.map(p => p.id));
+    
+    // Verificar si hay IDs nuevos o eliminados
+    if (oldIds.size !== newIds.size) {
+      return true; // Hubo cambios
+    }
+    
+    for (const id of oldIds) {
+      if (!newIds.has(id)) {
+        return true; // Se eliminó un permiso
+      }
+    }
+    
+    for (const id of newIds) {
+      if (!oldIds.has(id)) {
+        return true; // Se agregó un permiso
+      }
+    }
+    
+    // Comparar contenido de cada permiso (menuItemIds, icon, name, etc.)
+    for (const newPerm of newPerms) {
+      const oldPerm = oldPerms.find(p => p.id === newPerm.id);
+      if (!oldPerm) {
+        return true; // Permiso nuevo
+      }
+      
+      // Comparar menuItemIds (normalizar arrays para comparación)
+      const oldMenuItemIds = JSON.stringify((oldPerm.menuItemIds || []).sort());
+      const newMenuItemIds = JSON.stringify((newPerm.menuItemIds || []).sort());
+      if (oldMenuItemIds !== newMenuItemIds) {
+        return true; // Cambió menuItemIds
+      }
+      
+      // Comparar otros campos relevantes
+      if (oldPerm.icon !== newPerm.icon || 
+          oldPerm.name !== newPerm.name || 
+          oldPerm.code !== newPerm.code ||
+          oldPerm.isSystem !== newPerm.isSystem) {
+        return true; // Cambió algún campo relevante
+      }
+    }
+    
+    return false; // No hubo cambios
+  };
+
+  const loadCustomPermissions = useCallback(async () => {
+    try {
+      const response = await PermissionsService.getPermissions({});
+      
+      if (response && response.data) {
+        const allPerms = Array.isArray(response.data) ? response.data : [];
+        // Filtrar solo los permisos con isSystem = false
+        const customPerms = allPerms.filter((perm: SecurityPermission) => !perm.isSystem);
+        
+        // Comparar con los permisos anteriores
+        const previousPerms = customPermissionsRef.current;
+        const hasChanges = previousPerms.length === 0 || comparePermissions(previousPerms, customPerms);
+        
+        // Siempre actualizar el ref y estado (incluso si no hay cambios, para inicializar correctamente)
+        customPermissionsRef.current = customPerms;
+        setCustomPermissions(customPerms);
+        
+        if (hasChanges && previousPerms.length > 0) {
+          // Debug temporal: verificar que los permisos se carguen correctamente
+          console.log('[loadCustomPermissions] Permisos personalizados actualizados (hubo cambios):', customPerms.length);
+        } else if (previousPerms.length === 0) {
+          // Primera carga
+          console.log('[loadCustomPermissions] Permisos personalizados cargados inicialmente:', customPerms.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar permisos personalizados:', error);
+      setCustomPermissions([]);
+      customPermissionsRef.current = [];
+    }
+  }, []);
 
   /**
    * Cargar todos los permisos para el carrusel
@@ -87,10 +188,7 @@ export default function PermissionsListPage() {
   const loadAllPermissions = useCallback(async () => {
     try {
       setLoadingAllPermissions(true);
-      const response = await PermissionsService.getPermissions({
-        page: 1,
-        limit: 1000, // Cargar muchos permisos para el carrusel
-      });
+      const response = await PermissionsService.getPermissions({});
       
       if (response && response.data) {
         setAllPermissions(Array.isArray(response.data) ? response.data : []);
@@ -147,8 +245,9 @@ export default function PermissionsListPage() {
   /**
    * Manejar éxito al crear/editar permiso
    */
-  const handleFormSuccess = () => {
+  const handleFormSuccess = async () => {
     loadAllPermissions(); // Recargar permisos del carrusel
+    await loadCustomPermissions(); // Recargar permisos personalizados para actualizar filtros e iconos
     handleCloseCreateModal();
     handleCloseEditModal();
   };
@@ -215,18 +314,17 @@ export default function PermissionsListPage() {
   /**
    * Convertir PermissionChange[] a PermissionOperation[]
    * Necesita obtener los IDs de permisos genéricos y menuItems
+   * También procesa permisos personalizados
    */
   const convertPermissionChangesToOperations = async (
     changes: PermissionChange[],
     menuItems: MenuItem[],
-    rolePermissions: SecurityPermission[]
+    rolePermissions: SecurityPermission[],
+    customPermissions: SecurityPermission[] = []
   ): Promise<PermissionOperation[]> => {
     // 1. Obtener permisos genéricos (view, create, edit, delete) desde el backend
     // Estos permisos tienen action = 'view'/'create'/'edit'/'delete' y route = null o vacío
-    const genericPermissionsResponse = await PermissionsService.getPermissions({
-      page: 1,
-      limit: 100,
-    });
+    const genericPermissionsResponse = await PermissionsService.getPermissions({});
     
     const allPermissions = Array.isArray(genericPermissionsResponse.data)
       ? genericPermissionsResponse.data
@@ -279,7 +377,7 @@ export default function PermissionsListPage() {
         p => p.route === change.route && p.action === 'delete'
       );
 
-      // Comparar y agregar operaciones
+      // Comparar y agregar operaciones para acciones estándar
       if (change.view !== originalView) {
         operations.push({
           permissionId: genericPermissionIds.view,
@@ -313,6 +411,45 @@ export default function PermissionsListPage() {
       }
     }
 
+    // 3. Procesar permisos personalizados
+    // Los permisos personalizados están en el objeto change como propiedades adicionales
+    for (const change of changes) {
+      const changeAny = change as any;
+      const customPermKeys = Object.keys(changeAny).filter(
+        key => key !== 'route' && key !== 'view' && key !== 'create' && key !== 'edit' && key !== 'delete'
+      );
+
+      for (const customPermKey of customPermKeys) {
+        // Buscar el permiso personalizado por ID o código
+        const customPerm = customPermissions.find(p => p.id === customPermKey || p.code === customPermKey);
+        if (!customPerm) continue;
+
+        // Buscar menuItemId por route
+        const menuItemId = findMenuItemIdByRoute(change.route, menuItems);
+        if (!menuItemId) continue;
+
+        // Obtener estado original del permiso personalizado
+        // rolePermissions puede tener permissionId (si viene de RolePermission) o id (si viene de SecurityPermission)
+        const originalCustomPerm = rolePermissions.some((p: any) => {
+          const permId = p.permissionId || p.id;
+          return (permId === customPerm.id || permId === customPerm.code) &&
+                 p.route === change.route &&
+                 (p.status === 1 || p.status === '1' || p.status === true);
+        });
+
+        const newState = changeAny[customPermKey];
+        
+        // Si el estado cambió, agregar operación
+        if (newState !== originalCustomPerm) {
+          operations.push({
+            permissionId: customPerm.id,
+            menuItemId,
+            action: newState ? 'add' : 'remove',
+          });
+        }
+      }
+    }
+    
     return operations;
   };
 
@@ -331,11 +468,13 @@ export default function PermissionsListPage() {
       const operations = await convertPermissionChangesToOperations(
         permissionChanges,
         menuItems,
-        rolePermissions
+        rolePermissions,
+        customPermissions
       );
 
       if (operations.length === 0) {
-        alert.showError('No hay cambios válidos para guardar');
+        // Usar showInfo para mensaje informativo (azul), no error
+        toast.showInfo('No hay cambios válidos para guardar');
         return;
       }
 
@@ -375,6 +514,9 @@ export default function PermissionsListPage() {
           // Forzar recarga del menú incrementando el key
           // Esto hará que PermissionsManagementFlow se remonte y recargue el menú
           setMenuRefreshKey(prev => prev + 1);
+          
+          // Recargar permisos personalizados por si hubo cambios
+          await loadCustomPermissions();
         } catch (error: any) {
           console.error('Error al recargar permisos del rol:', error);
           if (handleApiError(error)) {
@@ -475,6 +617,12 @@ export default function PermissionsListPage() {
     // Los permisos se cargarán automáticamente en el useEffect que observa selectedRoleId
   };
 
+  // Cargar permisos personalizados al montar la página
+  useEffect(() => {
+    loadCustomPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo al montar, no depende de loadCustomPermissions para evitar loops
+
   // Cargar roles cuando cambia la empresa seleccionada
   useEffect(() => {
     loadRolesByCompany(selectedCompanyId);
@@ -495,10 +643,10 @@ export default function PermissionsListPage() {
           const role = await RolesService.getRoleById(selectedRoleId);
           // Asegurar que los permisos se actualicen correctamente
           setRolePermissions(role.permissions || []);
-        } catch (error: any) {
-          if (handleApiError(error)) {
-            return;
-          }
+    } catch (error: any) {
+      if (handleApiError(error)) {
+        return;
+      }
           console.error('Error al cargar permisos del rol:', error);
           setRolePermissions([]);
         } finally {
@@ -553,7 +701,7 @@ export default function PermissionsListPage() {
             </ThemedText>
           </View>
           <Button
-            title={isMobile ? '' : (t.security?.permissions?.create || 'Crear Permiso')}
+            title={isMobile ? '' : (t.security?.permissions?.createOrEdit || 'Permisos')}
             onPress={handleOpenCarousel}
             variant="primary"
             size="md"
@@ -603,6 +751,7 @@ export default function PermissionsListPage() {
             onShowDefaultOptionsChange={setShowDefaultOptions}
             showAll={showAll}
             onShowAllChange={setShowAll}
+            customPermissions={customPermissions}
             onClearFilters={() => {
               setSearchValue('');
               setSelectedModule('');
@@ -613,7 +762,7 @@ export default function PermissionsListPage() {
 
         {/* Componente de administración masiva de permisos - Solo mostrar si hay un rol seleccionado */}
         {selectedRoleId && !loadingRolePermissions ? (
-          <View style={styles.dataTableContainer}>
+        <View style={styles.dataTableContainer}>
             <PermissionsManagementFlow
               key={`${selectedRoleId}-${menuRefreshKey}-${rolePermissions.length}`} // Key incluye selectedRoleId, menuRefreshKey y length de permisos para forzar recarga
               permissions={rolePermissions}
@@ -623,14 +772,15 @@ export default function PermissionsListPage() {
               selectedAction={selectedAction}
               showDefaultOptions={showDefaultOptions}
               showAll={showAll}
+              customPermissions={customPermissions}
               onChanges={(changes) => {
                 setPermissionChanges(changes);
               }}
               onMenuItemsLoaded={(items) => {
                 setMenuItems(items);
-              }}
-            />
-          </View>
+            }}
+          />
+        </View>
         ) : selectedRoleId && loadingRolePermissions ? (
           <View style={styles.dataTableContainer}>
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
@@ -736,39 +886,55 @@ export default function PermissionsListPage() {
 
       {/* Modal de creación de permiso */}
       {isCreateModalVisible && (
-        <SideModal
+          <SideModal
           visible={isCreateModalVisible}
           onClose={handleCloseCreateModal}
           title={t.security?.permissions?.create || 'Crear Permiso'}
           subtitle={t.security?.permissions?.createSubtitle || 'Completa los datos para registrar un nuevo permiso'}
-          footer={
-            formActions ? (
-              <>
-                <Button
+          topAlert={
+            formActions?.generalError ? (
+              <InlineAlert
+                type="error"
+                message={formActions.generalError.message}
+                detail={formActions.generalError.detail}
+                duration={5000}
+                autoClose={true}
+                onDismiss={() => {
+                  if (formActions) {
+                    setFormActions({ ...formActions, generalError: null });
+                  }
+                }}
+              />
+            ) : undefined
+            }
+            footer={
+              formActions ? (
+                <>
+                  <Button
                   title={t.common?.cancel || 'Cancelar'}
-                  onPress={formActions.handleCancel}
-                  variant="outlined"
-                  size="md"
-                  disabled={formActions.isLoading}
-                />
-                <Button
+                    onPress={formActions.handleCancel}
+                    variant="outlined"
+                    size="md"
+                    disabled={formActions.isLoading}
+                  />
+                  <Button
                   title={t.security?.permissions?.create || 'Crear Permiso'}
-                  onPress={formActions.handleSubmit}
-                  variant="primary"
-                  size="md"
-                  disabled={formActions.isLoading}
-                />
-              </>
-            ) : null
-          }
-        >
+                    onPress={formActions.handleSubmit}
+                    variant="primary"
+                    size="md"
+                    disabled={formActions.isLoading}
+                  />
+                </>
+              ) : null
+            }
+          >
           <PermissionCreateForm
-            onSuccess={handleFormSuccess}
+                onSuccess={handleFormSuccess}
             onCancel={handleCloseCreateModal}
-            showHeader={false}
-            showFooter={false}
-            onFormReady={setFormActions}
-          />
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
         </SideModal>
       )}
 
@@ -779,6 +945,22 @@ export default function PermissionsListPage() {
           onClose={handleCloseEditModal}
           title={t.security?.permissions?.edit || 'Editar Permiso'}
           subtitle={t.security?.permissions?.editSubtitle || 'Modifica los datos del permiso'}
+          topAlert={
+            formActions?.generalError ? (
+              <InlineAlert
+                type="error"
+                message={formActions.generalError.message}
+                detail={formActions.generalError.detail}
+                duration={5000}
+                autoClose={true}
+                onDismiss={() => {
+                  if (formActions) {
+                    setFormActions({ ...formActions, generalError: null });
+                  }
+                }}
+              />
+            ) : undefined
+          }
           footer={
             formActions ? (
               <>
@@ -802,14 +984,14 @@ export default function PermissionsListPage() {
         >
           <PermissionEditForm
             permissionId={selectedPermissionId}
-            onSuccess={handleFormSuccess}
+                onSuccess={handleFormSuccess}
             onCancel={handleCloseEditModal}
-            showHeader={false}
-            showFooter={false}
-            onFormReady={setFormActions}
-          />
-        </SideModal>
-      )}
+                showHeader={false}
+                showFooter={false}
+                onFormReady={setFormActions}
+              />
+          </SideModal>
+        )}
 
     </ThemedView>
   );

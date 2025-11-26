@@ -5,12 +5,10 @@
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { MenuItem, MenuSubItem } from '@/src/infrastructure/menu/types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View } from 'react-native';
-import { PermissionActionIcons } from './permission-action-icons';
-import { PermissionActionIconsProps } from './permission-action-icons';
+import { PermissionActionIcons, PermissionActionIconsProps } from './permission-action-icons';
 
 export interface PermissionMenuItemProps {
   /**
@@ -38,6 +36,11 @@ export interface PermissionMenuItemProps {
    * Props para los iconos de acción
    */
   actionIconsProps: Omit<PermissionActionIconsProps, 'route' | 'isPublic' | 'containerStyle'>;
+  
+  /**
+   * ID del item del menú (se pasa automáticamente a actionIconsProps)
+   */
+  menuItemId?: string;
 }
 
 /**
@@ -48,8 +51,12 @@ export function PermissionMenuItem({
   itemStyle,
   actionsContainerStyle,
   actionIconsProps,
+  menuItemId,
 }: PermissionMenuItemProps) {
   const { colors } = useTheme();
+  
+  // Usar menuItemId del prop o del item.id
+  const finalMenuItemId = menuItemId || item.id;
   
   return (
     <View style={itemStyle}>
@@ -81,6 +88,7 @@ export function PermissionMenuItem({
         route={item.route}
         isPublic={item.isPublic}
         containerStyle={actionsContainerStyle}
+        menuItemId={finalMenuItemId}
         {...actionIconsProps}
       />
     </View>

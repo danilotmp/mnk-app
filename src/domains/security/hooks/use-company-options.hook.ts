@@ -35,6 +35,8 @@ export function useCompanyOptions({
   const isMountedRef = useRef(true);
   // Bandera para prevenir reintentos cuando hay un error de autenticación
   const hasAuthErrorRef = useRef(false);
+  // Bandera para prevenir reintentos cuando hay cualquier error
+  const hasErrorRef = useRef(false);
   const loadingRef = useRef(false); // Para prevenir llamadas simultáneas
 
   useEffect(() => {
@@ -68,9 +70,15 @@ export function useCompanyOptions({
       return;
     }
 
+    // Si hay un error previo (no de autenticación), no intentar de nuevo automáticamente
+    if (hasErrorRef.current) {
+      return;
+    }
+
     loadingRef.current = true;
     setLoading(true);
     setError(null);
+    hasErrorRef.current = false; // Resetear bandera de error al iniciar nueva llamada
 
     try {
       const currentFilters = buildFilters();
@@ -79,6 +87,7 @@ export function useCompanyOptions({
       if (isMountedRef.current) {
         setCompanies(items);
         hasAuthErrorRef.current = false; // Resetear bandera en caso de éxito
+        hasErrorRef.current = false; // Resetear bandera de error en caso de éxito
       }
     } catch (err: unknown) {
       const apiError = err as ApiError | Error;
@@ -91,6 +100,7 @@ export function useCompanyOptions({
       if (isAuthError) {
         // Marcar que hay un error de autenticación para evitar reintentos
         hasAuthErrorRef.current = true;
+        hasErrorRef.current = true; // También marcar error general
         if (isMountedRef.current) {
           const authError = apiError instanceof Error ? apiError : new Error('Token inválido o ausente');
           setError(authError);
@@ -105,9 +115,11 @@ export function useCompanyOptions({
       }
 
       // Otros errores (no de autenticación)
+      hasErrorRef.current = true; // Marcar que hay un error para evitar reintentos
       const finalError = apiError instanceof Error ? apiError : new Error('Error al obtener empresas');
       if (isMountedRef.current) {
         setError(finalError);
+        // Mostrar error solo una vez
         alert.showError(finalError.message);
       }
     } finally {
@@ -119,8 +131,9 @@ export function useCompanyOptions({
   }, [alert, buildFilters]);
 
   const refresh = useCallback(async () => {
-    // Resetear bandera de error de autenticación al hacer refresh manual
+    // Resetear banderas de error al hacer refresh manual
     hasAuthErrorRef.current = false;
+    hasErrorRef.current = false;
     await fetchCompanies();
   }, [fetchCompanies]);
 
@@ -132,8 +145,13 @@ export function useCompanyOptions({
     if (hasAuthErrorRef.current) {
       return;
     }
+    // No ejecutar si hay un error activo (para evitar bucles infinitos)
+    if (hasErrorRef.current) {
+      return;
+    }
     fetchCompanies();
-  }, [autoFetch, fetchCompanies]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch]); // Remover fetchCompanies de las dependencias para evitar bucles
 
   return useMemo(
     () => ({

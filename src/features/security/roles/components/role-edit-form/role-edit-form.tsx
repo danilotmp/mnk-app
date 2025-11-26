@@ -15,6 +15,7 @@ import { CompaniesService } from '@/src/features/security/companies';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { processCodeAndName } from '@/src/infrastructure/utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
@@ -241,9 +242,12 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
         isLoading,
         handleSubmit,
         handleCancel,
+        generalError,
       });
     }
-  }, [isLoading, loadingRole, loadingOptions, onFormReady, handleSubmit, handleCancel]);
+    // Intencionalmente solo depende de isLoading, loadingRole, loadingOptions y generalError
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, loadingRole, loadingOptions, generalError]);
 
   if (loadingRole || loadingOptions) {
     return (
@@ -292,31 +296,14 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
               onChangeText={(text) => {
-                // El valor que recibe onChangeText puede incluir guiones bajos si el campo ya tiene valor
-                // Necesitamos restaurar los espacios desde los guiones bajos para el nombre
-                // pero mantener los guiones bajos para el código
-                
-                // Convertir a mayúsculas y reemplazar espacios por guiones bajos SOLO para código
-                const processedCode = text.toUpperCase().replace(/\s+/g, '_');
+                // Usar utilidades centralizadas para formatear código y nombre
+                const { code: processedCode, name: processedName } = processCodeAndName(text);
                 
                 // Actualizar código con el valor procesado
                 handleChange('code', processedCode);
                 
                 // Sincronizar nombre solo si no fue editado manualmente
                 if (!nameManuallyEditedRef.current) {
-                  // Para el nombre: convertir guiones bajos a espacios y procesar
-                  // Primero, reemplazar guiones bajos por espacios para obtener el texto original
-                  const textWithSpaces = text.replace(/_/g, ' ');
-                  
-                  // Convertir a formato nombre: primera letra mayúscula, resto minúsculas, espacios preservados
-                  const processedName = textWithSpaces
-                    .toLowerCase()
-                    .trim()
-                    .split(/\s+/)
-                    .filter((word: string) => word.length > 0)
-                    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ');
-                  
                   nameRef.current = processedName;
                   setFormData((prev) => ({ ...prev, name: processedName }));
                 }

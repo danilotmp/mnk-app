@@ -2,6 +2,7 @@
  * Adaptadores de almacenamiento para React Native y Web
  */
 
+import { Platform } from 'react-native';
 import { StorageAdapter } from './types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -55,7 +56,11 @@ export class LocalStorageAdapter implements StorageAdapter {
  * Factory para obtener el adaptador correcto según la plataforma
  */
 export function getStorageAdapter(): StorageAdapter {
-  // React Native por defecto
+  // En web, usar localStorage directamente
+  if (Platform.OS === 'web') {
+    return new LocalStorageAdapter();
+  }
+  // En React Native (iOS/Android), usar AsyncStorage
   return new AsyncStorageAdapter();
 }
 

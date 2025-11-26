@@ -132,9 +132,31 @@ export function InlineAlert({
               {title}
             </ThemedText>
           )}
-          <ThemedText type="body2" style={[styles.message, { color: colorsForType.text }]}>
-            {message}
-          </ThemedText>
+          {message.includes('\n') || message.includes('\r\n') ? (
+            // Si hay saltos de línea, dividir y mostrar cada línea
+            <View style={styles.messageContainer}>
+              {message
+                .split(/\r?\n/) // Manejar tanto \n como \r\n
+                .map((line, index) => (
+                  <ThemedText
+                    key={`line-${index}`}
+                    type="body2"
+                    style={[
+                      styles.message,
+                      { color: colorsForType.text },
+                      index > 0 && styles.messageLine // Agregar margen superior solo a partir de la segunda línea
+                    ]}
+                  >
+                    {line || ' '} {/* Si la línea está vacía, mostrar un espacio para mantener el salto */}
+                  </ThemedText>
+                ))}
+            </View>
+          ) : (
+            // Si no hay saltos de línea, mostrar el mensaje completo
+            <ThemedText type="body2" style={[styles.message, { color: colorsForType.text }]}>
+              {message}
+            </ThemedText>
+          )}
 
           {/* Detalle error */}
           {detail && (
@@ -211,8 +233,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+  messageContainer: {
+    flexDirection: 'column',
+  },
   message: {
     lineHeight: 20,
+  },
+  messageLine: {
+    marginTop: 4, // Espaciado entre líneas
   },
   detailToggle: {
     marginTop: 8,

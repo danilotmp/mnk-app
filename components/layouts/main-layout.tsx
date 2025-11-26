@@ -3,7 +3,7 @@ import { HorizontalMenu, MenuItem } from '@/components/navigation';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { UserProfileHeader } from '@/src/domains/shared';
+import { useCompany, UserProfileHeader } from '@/src/domains/shared';
 import { createMainLayoutStyles } from '@/src/styles/components/main-layout.styles';
 import { useRouter } from 'expo-router';
 import React, { ReactNode } from 'react';
@@ -33,7 +33,11 @@ export function MainLayout({
 }: MainLayoutProps) {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
+  const { company } = useCompany();
   const styles = createMainLayoutStyles();
+  
+  // Usar el nombre de la empresa si está autenticado, sino usar "MNK" por defecto
+  const displayTitle = company?.name || title;
 
   // Menú por defecto si no se proporciona
   const defaultMenuItems: MenuItem[] = [
@@ -117,7 +121,7 @@ export function MainLayout({
             <>
               {/* Logo alineado a la izquierda */}
               <View style={styles.mobileLogoSection}>
-                <Header title={title} inline={true} logoSize="small" />
+                <Header title={displayTitle} inline={true} logoSize="small" />
               </View>
               
               {/* UserProfile y Hamburger a la derecha */}
@@ -144,7 +148,7 @@ export function MainLayout({
             <>
               {/* Logo */}
               <View style={styles.logoSection}>
-                <Header title={title} inline={true} />
+                <Header title={displayTitle} inline={true} />
               </View>
 
               {/* Menú de navegación horizontal en el centro */}

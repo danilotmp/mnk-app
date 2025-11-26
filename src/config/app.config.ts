@@ -53,6 +53,14 @@ export const APP_CONFIG = {
     VERSION: Constants.expoConfig?.version || '1.0.0',
     ENVIRONMENT: process.env.NODE_ENV || 'development',
   },
+
+  // External URLs
+  EXTERNAL_URLS: {
+    // URL de la documentación de iconos de Expo
+    ICONS_DOCUMENTATION: process.env.EXPO_PUBLIC_ICONS_DOCUMENTATION_URL || 
+                        Constants.expoConfig?.extra?.iconsDocumentationUrl || 
+                        'https://icons.expo.fyi/Index',
+  },
 };
 
 /**

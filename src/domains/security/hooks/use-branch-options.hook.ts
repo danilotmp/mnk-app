@@ -46,6 +46,9 @@ export function useBranchOptions({
   const [filters, setInternalFilters] = useState<Partial<BranchFilters>>(extraFilters ?? {});
   const isMountedRef = useRef(true);
   const cacheRef = useRef<Map<string, Branch[]>>(new Map());
+  // Bandera para prevenir reintentos cuando hay un error
+  const hasErrorRef = useRef(false);
+  const loadingRef = useRef(false); // Para prevenir llamadas simultáneas
 
   useEffect(() => () => {
     isMountedRef.current = false;
@@ -108,8 +111,20 @@ export function useBranchOptions({
 
   const fetchBranches = useCallback(
     async (targetCompanyId?: string) => {
+      // Prevenir llamadas simultáneas
+      if (loadingRef.current) {
+        return;
+      }
+
+      // Si hay un error previo, no intentar de nuevo automáticamente
+      if (hasErrorRef.current) {
+        return;
+      }
+
+      loadingRef.current = true;
       setLoading(true);
       setError(null);
+      hasErrorRef.current = false; // Resetear bandera de error al iniciar nueva llamada
 
       try {
         if (targetCompanyId) {
@@ -117,25 +132,35 @@ export function useBranchOptions({
         } else {
           await fetchFromApi();
         }
+        hasErrorRef.current = false; // Resetear bandera en caso de éxito
       } catch (err: unknown) {
+        hasErrorRef.current = true; // Marcar que hay un error para evitar reintentos
         const apiError = err as ApiError | Error;
         if (apiError instanceof ApiError && apiError.statusCode === HTTP_STATUS.FORBIDDEN) {
           try {
             await fetchFromContext();
+            hasErrorRef.current = false; // Resetear si el fallback tiene éxito
           } catch (fallbackError) {
             const finalError =
               fallbackError instanceof Error
                 ? fallbackError
                 : new Error('Error al obtener sucursales');
-            setError(finalError);
-            alert.showError(finalError.message);
+            if (isMountedRef.current) {
+              setError(finalError);
+              // Mostrar error solo una vez
+              alert.showError(finalError.message);
+            }
           }
         } else {
           const finalError = apiError instanceof Error ? apiError : new Error('Error al obtener sucursales');
-          setError(finalError);
-          alert.showError(finalError.message);
+          if (isMountedRef.current) {
+            setError(finalError);
+            // Mostrar error solo una vez
+            alert.showError(finalError.message);
+          }
         }
       } finally {
+        loadingRef.current = false;
         if (isMountedRef.current) {
           setLoading(false);
         }
@@ -146,6 +171,8 @@ export function useBranchOptions({
 
   const refresh = useCallback(
     async ({ companyId: nextCompanyId }: { companyId?: string } = {}) => {
+      // Resetear bandera de error al hacer refresh manual
+      hasErrorRef.current = false;
       const key = nextCompanyId ?? companyId ?? 'all';
       cacheRef.current.delete(key);
       await fetchBranches(nextCompanyId ?? companyId);
@@ -155,6 +182,11 @@ export function useBranchOptions({
 
   useEffect(() => {
     if (!autoFetch) {
+      return;
+    }
+    
+    // No ejecutar si hay un error activo (para evitar bucles infinitos)
+    if (hasErrorRef.current) {
       return;
     }
     
@@ -172,7 +204,8 @@ export function useBranchOptions({
     if (companyId) {
       fetchBranches(companyId);
     }
-  }, [autoFetch, companyId, fetchBranches, filters.companyId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch, companyId, filters.companyId]); // Remover fetchBranches de las dependencias para evitar bucles
 
   const handleSetFilters = useCallback((newFilters: Partial<BranchFilters>) => {
     setInternalFilters((prev) => ({ ...prev, ...newFilters }));

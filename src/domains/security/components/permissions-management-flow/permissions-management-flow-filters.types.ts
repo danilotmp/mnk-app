@@ -3,6 +3,7 @@
  */
 
 import { MenuItem } from '@/src/infrastructure/menu/types';
+import { SecurityPermission } from '@/src/domains/security/types';
 
 export interface PermissionsFlowFiltersProps {
   menuItems: MenuItem[];
@@ -16,5 +17,6 @@ export interface PermissionsFlowFiltersProps {
   onShowDefaultOptionsChange: (show: boolean) => void;
   showAll?: boolean;
   onShowAllChange?: (show: boolean) => void;
+  customPermissions?: SecurityPermission[]; // Permisos personalizados (isSystem = false)
   onClearFilters: () => void;
 }

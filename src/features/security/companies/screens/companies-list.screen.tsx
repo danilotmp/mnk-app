@@ -6,6 +6,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { SideModal } from '@/components/ui/side-modal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -49,7 +50,12 @@ export function CompaniesListScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(null);
+  const [formActions, setFormActions] = useState<{ 
+    isLoading: boolean; 
+    handleSubmit: () => void; 
+    handleCancel: () => void;
+    generalError?: { message: string; detail?: string } | null;
+  } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -529,6 +535,22 @@ export function CompaniesListScreen() {
               modalMode === 'edit'
                 ? (t.security?.companies?.editSubtitle || 'Modifica los datos de la empresa')
                 : (t.security?.companies?.createSubtitle || 'Completa los datos para registrar una nueva empresa')
+            }
+            topAlert={
+              formActions?.generalError ? (
+                <InlineAlert
+                  type="error"
+                  message={formActions.generalError.message}
+                  detail={formActions.generalError.detail}
+                  duration={5000}
+                  autoClose={true}
+                  onDismiss={() => {
+                    if (formActions) {
+                      setFormActions({ ...formActions, generalError: null });
+                    }
+                  }}
+                />
+              ) : undefined
             }
             footer={
               formActions ? (

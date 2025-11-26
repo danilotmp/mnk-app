@@ -134,15 +134,13 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
             </ThemedText>
           )}
           <View style={styles.messageContainer}>
-            {toast.message
-              .split(/\r?\n/) // Manejar tanto \n como \r\n
-              .filter(line => line.trim() !== '' || toast.message.includes('\n')) // Mantener líneas vacías si hay saltos de línea
-              .map((line, index) => {
-                // Usar una combinación de índice y contenido para la key
-                const lineKey = `${line.substring(0, 10)}-${index}`;
-                return (
+            {toast.message.includes('\n') || toast.message.includes('\r\n') ? (
+              // Si hay saltos de línea, dividir y mostrar cada línea
+              toast.message
+                .split(/\r?\n/) // Manejar tanto \n como \r\n
+                .map((line, index) => (
                   <ThemedText 
-                    key={lineKey}
+                    key={`line-${index}`}
                     style={[
                       styles.message, 
                       { color: toastColors.text },
@@ -151,8 +149,13 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
                   >
                     {line || ' '} {/* Si la línea está vacía, mostrar un espacio para mantener el salto */}
                   </ThemedText>
-                );
-              })}
+                ))
+            ) : (
+              // Si no hay saltos de línea, mostrar el mensaje completo
+              <ThemedText style={[styles.message, { color: toastColors.text }]}>
+                {toast.message}
+              </ThemedText>
+            )}
           </View>
 
           {/* Detalle error */}

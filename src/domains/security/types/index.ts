@@ -83,6 +83,10 @@ export interface SecurityPermission extends BaseEntity {
   action: string; // Ej: 'view', 'create', 'edit', 'delete'
   route?: string; // Ruta asociada al permiso (ej: '/security/users') - opcional para retrocompatibilidad
   description?: string;
+  icon?: string; // Nombre del icono de Ionicons (ej: 'home-outline', 'person-outline')
+  menuItemIds?: string[]; // IDs de los items del menú asociados a este permiso
+  isSystem?: boolean; // Permisos del sistema (solo visuales, no editables)
+  order?: number; // Orden de presentación del permiso
   
   // Sistema de estados
   status: number;
@@ -136,7 +140,11 @@ export interface RoleFilters extends PaginationParams {
   isSystem?: boolean;
 }
 
-export interface PermissionFilters extends PaginationParams {
+export interface PermissionFilters {
+  page?: number; // Opcional: si no se proporciona, el backend usa valores por defecto
+  limit?: number; // Opcional: si no se proporciona, el backend usa valores por defecto
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
   search?: string;
   status?: number;
   module?: string;

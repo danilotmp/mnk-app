@@ -3,6 +3,58 @@ import type { ThemeColors } from '@/src/styles/themes/theme.types';
 
 export const createPermissionsCarouselStyles = (colors: ThemeColors) => {
   return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    // Título de sección
+    sectionTitle: {
+      paddingHorizontal: 16,
+      marginBottom: 8,
+      fontWeight: '600',
+    },
+    // Sección de permisos del sistema (más pequeños, solo visuales)
+    systemSection: {
+      marginBottom: 20,
+    },
+    // Sección de permisos normales
+    normalSection: {
+      flex: 1,
+    },
+    systemCarousel: {
+      maxHeight: 100,
+    },
+    systemCarouselContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      gap: 12,
+    },
+    systemCard: {
+      width: 80,
+      height: 90,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      padding: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      opacity: 0.7, // Más sutil para indicar que son solo visuales
+    },
+    systemIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primary + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    systemCardName: {
+      textAlign: 'center',
+      fontSize: 11,
+      marginTop: 2,
+    },
+    // Sección de permisos normales (con acciones)
     carousel: {
       maxHeight: 200,
     },

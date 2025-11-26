@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { useSession } from '@/src/infrastructure/session';
@@ -38,6 +39,7 @@ export function UserProfileHeader({
   const { branches, switchBranch } = useBranches();
   const { clearContext } = useMultiCompany();
   const { clearSession } = useSession();
+  const { setThemeMode, isDark } = useThemeMode();
   const [modalVisible, setModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -118,6 +120,10 @@ export function UserProfileHeader({
     try {
       setSwitching(true);
       await switchBranch(newBranch.id);
+      
+      // Cambiar tema: alternar entre dark y light
+      const newTheme = isDark ? 'light' : 'dark';
+      setThemeMode(newTheme);
     } catch (error) {
       // console.error('Error al cambiar sucursal:', error);
     } finally {
@@ -258,7 +264,7 @@ export function UserProfileHeader({
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
                 {/* Selector de sucursales */}
-                {branches.length > 1 && (
+                {branches && branches.length > 0 && (
                   <>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
                     <View style={styles.section}>
@@ -274,25 +280,25 @@ export function UserProfileHeader({
                         </View>
                       ) : (
                         <>
-                          {branches.map((branchItem) => (
+                          {branches.filter(b => b && b.id).map((branchItem) => (
                             <TouchableOpacity
                               key={branchItem.id}
                               style={[
                                 styles.branchOption,
                                 {
                                   backgroundColor:
-                                    branchItem.id === branch.id
+                                    branchItem.id === branch?.id
                                       ? colors.surface  // Activa usa estilo de inactiva
                                       : 'transparent',  // Inactiva usa fondo transparente
                                 },
                               ]}
                               onPress={() => handleBranchSwitch(branchItem)}
-                              disabled={branchItem.id === branch.id}
+                              disabled={branchItem.id === branch?.id}
                             >
                               <View style={styles.branchOptionInfo}>
                                 <ThemedText
                                   type="defaultSemiBold"
-                                  variant={branchItem.id === branch.id ? undefined : 'primary'}  // Invertido
+                                  variant={branchItem.id === branch?.id ? undefined : 'primary'}  // Invertido
                                 >
                                   {branchItem.name}
                                 </ThemedText>
@@ -300,7 +306,7 @@ export function UserProfileHeader({
                                   {branchItem.address?.city || branchItem.code || ''}
                                 </ThemedText>
                               </View>
-                              {branchItem.id === branch.id && (
+                              {branchItem.id === branch?.id && (
                                 <ThemedText style={{ color: colors.text }}>✓</ThemedText>  // Usar color normal
                               )}
                             </TouchableOpacity>
