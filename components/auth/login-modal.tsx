@@ -157,16 +157,20 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
           let mappedUser = mapApiUserToMultiCompanyUser({
             ...response.data.user,
             ...userData,
-            companyId: userData?.companyId || response.data.user.companyId || '',
+            companyIdDefault: userData?.companyIdDefault || response.data.user.companyIdDefault || userData?.companyId || response.data.user.companyId || '',
+            companies: userData?.companies || response.data.user.companies || undefined,
+            currentBranchId: userData?.currentBranchId || response.data.user.currentBranchId || '',
+            availableBranches: userData?.availableBranches || response.data.user.availableBranches || [],
           });
           const multiCompanyService = MultiCompanyService.getInstance();
           const mockUsers = multiCompanyService.getMockUsers();
-          if (!mappedUser.companyId || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
+          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
             if (mockUser) {
               mappedUser = {
                 ...mappedUser,
-                companyId: mappedUser.companyId || mockUser.companyId,
+                companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
+                companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
                 currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
                 availableBranches: mappedUser.availableBranches.length > 0 
                   ? mappedUser.availableBranches 
@@ -188,15 +192,20 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
           onLoginSuccess?.();
         } catch (profileError) {
           // Si falla obtener el perfil, usar solo info del login
-          let mappedUser = mapApiUserToMultiCompanyUser(response.data.user);
-          if (!mappedUser.companyId || !mappedUser.currentBranchId) {
+          let mappedUser = mapApiUserToMultiCompanyUser({
+            ...response.data.user,
+            currentBranchId: response.data.user.currentBranchId || '',
+            availableBranches: response.data.user.availableBranches || [],
+          });
+          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId) {
             const multiCompanyService = MultiCompanyService.getInstance();
             const mockUsers = multiCompanyService.getMockUsers();
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
             if (mockUser) {
               mappedUser = {
                 ...mappedUser,
-                companyId: mappedUser.companyId || mockUser.companyId,
+                companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
+                companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
                 currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
                 availableBranches: mappedUser.availableBranches.length > 0 
                   ? mappedUser.availableBranches 

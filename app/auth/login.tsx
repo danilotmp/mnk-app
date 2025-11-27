@@ -18,14 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 export default function LoginPage() {
@@ -82,18 +82,22 @@ export default function LoginPage() {
           let mappedUser = mapApiUserToMultiCompanyUser({
             ...response.data.user,
             ...userData,
-            companyId: userData?.companyId || response.data.user.companyId || '',
+            companyIdDefault: userData?.companyIdDefault || (response.data.user as any).companyIdDefault || '',
+            companies: userData?.companies || (response.data.user as any).companies || undefined,
+            currentBranchId: userData?.currentBranchId || (response.data.user as any).currentBranchId || '',
+            availableBranches: userData?.availableBranches || (response.data.user as any).availableBranches || [],
           });
           
           const multiCompanyService = MultiCompanyService.getInstance();
           const mockUsers = multiCompanyService.getMockUsers();
           
-          if (!mappedUser.companyId || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
+          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
             if (mockUser) {
               mappedUser = {
                 ...mappedUser,
-                companyId: mappedUser.companyId || mockUser.companyId,
+                companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
+                companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
                 currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
                 availableBranches: mappedUser.availableBranches.length > 0 
                   ? mappedUser.availableBranches 
@@ -108,15 +112,20 @@ export default function LoginPage() {
           router.replace('/');
         } catch (profileError) {
           try {
-            let mappedUser = mapApiUserToMultiCompanyUser(response.data.user);
-            if (!mappedUser.companyId || !mappedUser.currentBranchId) {
+            let mappedUser = mapApiUserToMultiCompanyUser({
+              ...response.data.user,
+              currentBranchId: (response.data.user as any).currentBranchId || '',
+              availableBranches: (response.data.user as any).availableBranches || [],
+            });
+            if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId) {
               const multiCompanyService = MultiCompanyService.getInstance();
               const mockUsers = multiCompanyService.getMockUsers();
               const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
               if (mockUser) {
                 mappedUser = {
                   ...mappedUser,
-                  companyId: mappedUser.companyId || mockUser.companyId,
+                  companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
+                  companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
                   currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
                   availableBranches: mappedUser.availableBranches.length > 0 
                     ? mappedUser.availableBranches 

@@ -1,14 +1,15 @@
+import { sessionManager } from '@/src/infrastructure/session';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import { MultiCompanyService } from '../services/multi-company.service';
 import {
-    BranchSwitchRequest,
-    MultiCompanyState,
-    MultiCompanyUser
+  Branch,
+  MultiCompanyState,
+  MultiCompanyUser
 } from '../types';
 
 interface MultiCompanyContextType extends MultiCompanyState {
   setUserContext: (user: MultiCompanyUser) => Promise<void>;
-  switchBranch: (branchId: string) => Promise<void>;
+  switchBranch: (newBranch: Branch) => void;
   hasPermission: (permissionCode: string) => boolean;
   hasModuleAccess: (module: string, action: string) => boolean;
   canSwitchBranch: () => boolean;
@@ -50,11 +51,17 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
         .map(access => access.branch)
         .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
 
+      // Actualizar el usuario con las sucursales disponibles si no las tenía
+      const updatedUser = {
+        ...context.user,
+        availableBranches: context.availableBranches, // Preservar BranchAccess[] completo en el usuario
+      };
+
       setState({
         currentCompany: context.company,
         currentBranch: context.currentBranch,
-        availableBranches: branches,
-        user: context.user,
+        availableBranches: branches, // Branch[] para el estado
+        user: updatedUser,
         permissions: context.permissions,
         isLoading: false,
         error: null,
@@ -72,39 +79,35 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
 
   /**
    * Cambia la sucursal activa del usuario
+   * IMPORTANTE: Persiste silenciosamente sin disparar eventos de storage
+   * para evitar bucles infinitos y recargas de página
    */
-  const switchBranch = async (branchId: string): Promise<void> => {
+  const switchBranch = (newBranch: Branch): void => {
     if (!state.user) {
-      throw new Error('Usuario no autenticado');
+      return;
     }
 
-    try {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    // Actualizar el usuario con el nuevo currentBranchId
+    const updatedUser = {
+      ...state.user,
+      currentBranchId: newBranch.id,
+    };
 
-      const request: BranchSwitchRequest = {
-        branchId,
-        userId: state.user!.id,
-      };
+    // PRIMERO: Actualizar el estado inmediatamente (sin bloquear)
+    setState((prev) => ({
+      ...prev,
+      currentBranch: newBranch,
+      user: updatedUser,
+    }));
 
-      const response = await service.switchBranch(request);
-      const switchResponse = response.data;
-
-      setState((prev) => ({
-        ...prev,
-        currentBranch: switchResponse.newBranch,
-        permissions: switchResponse.permissions,
-        isLoading: false,
-        error: null,
-      }));
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al cambiar sucursal';
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }));
-      throw error;
-    }
+    // DESPUÉS: Persistir silenciosamente en SessionManager sin disparar eventos
+    // skipBroadcast evita que se dispare el evento que causa re-renders y bucles
+    sessionManager.setItem('user', 'current', updatedUser, {
+      ttl: 30 * 60 * 1000, // 30 minutos
+      skipBroadcast: true, // No disparar evento para evitar bucles infinitos
+    }).catch(() => {
+      // Si falla, no afecta la UI, solo no persistirá al recargar
+    });
   };
 
   /**

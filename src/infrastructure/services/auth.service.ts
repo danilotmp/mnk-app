@@ -28,8 +28,17 @@ interface AuthResponse {
     email: string;
     firstName: string;
     lastName: string;
-    companyId?: string;
-    companyCode?: string;
+    companyIdDefault?: string; // Renombrado de companyId
+    companies?: Array<{ // Array de empresas del usuario
+      id: string;
+      code: string;
+      name: string;
+      status: number;
+      isDefault: boolean;
+    }>;
+    companyCode?: string; // Mantener por compatibilidad temporal
+    currentBranchId?: string; // ID de la sucursal actual
+    availableBranches?: Array<any>; // Array de sucursales disponibles (puede ser Branch[] o BranchAccess[])
   };
 }
 
@@ -62,14 +71,18 @@ export class AuthService {
       }
 
       // Configurar contexto de usuario si está disponible
-      // Solo los campos básicos vienen en el login: id, email, firstName, lastName, companyId
+      // Solo los campos básicos vienen en el login: id, email, firstName, lastName, companyIdDefault
       // companyCode y otros campos vienen del perfil
       if (response.data.user) {
+        // Obtener companyCode desde companies array si está disponible
+        const defaultCompany = response.data.user.companies?.find(c => c.isDefault);
+        const companyCode = defaultCompany?.code || response.data.user.companyCode;
+        
         this.config.setUserContext({
           userId: response.data.user.id,
           // companyCode puede no venir del login, solo del perfil
-          companyCode: response.data.user.companyCode,
-          companyId: response.data.user.companyId,
+          companyCode: companyCode,
+          companyId: response.data.user.companyIdDefault || response.data.user.companyId, // Mantener compatibilidad temporal
         });
       }
 
@@ -96,13 +109,17 @@ export class AuthService {
     }
 
     // Configurar contexto de usuario
-    // El register puede retornar diferentes campos, pero siempre incluye id y companyId
+    // El register puede retornar diferentes campos, pero siempre incluye id y companyIdDefault
     if (response.data.user) {
+      // Obtener companyCode desde companies array si está disponible
+      const defaultCompany = response.data.user.companies?.find(c => c.isDefault);
+      const companyCode = defaultCompany?.code || response.data.user.companyCode;
+      
       this.config.setUserContext({
         userId: response.data.user.id,
         // companyCode puede no venir del register, solo se usa si existe
-        companyCode: response.data.user.companyCode,
-        companyId: response.data.user.companyId,
+        companyCode: companyCode,
+        companyId: response.data.user.companyIdDefault || response.data.user.companyId, // Mantener compatibilidad temporal
       });
     }
 
@@ -136,10 +153,14 @@ export class AuthService {
 
       // Configurar contexto de usuario
       if (response.data) {
+        // Obtener companyCode desde companies array si está disponible
+        const defaultCompany = response.data.companies?.find((c: any) => c.isDefault);
+        const companyCode = defaultCompany?.code || response.data.companyCode;
+        
         this.config.setUserContext({
           userId: response.data.id,
-          companyCode: response.data.companyCode,
-          companyId: response.data.companyId,
+          companyCode: companyCode,
+          companyId: response.data.companyIdDefault || response.data.companyId, // Mantener compatibilidad temporal
         });
       }
 
@@ -160,10 +181,14 @@ export class AuthService {
       });
 
       if (response.data) {
+        // Obtener companyCode desde companies array si está disponible
+        const defaultCompany = response.data.companies?.find((c: any) => c.isDefault);
+        const companyCode = defaultCompany?.code || response.data.companyCode;
+        
         this.config.setUserContext({
           userId: response.data.id,
-          companyCode: response.data.companyCode,
-          companyId: response.data.companyId,
+          companyCode: companyCode,
+          companyId: response.data.companyIdDefault || response.data.companyId, // Mantener compatibilidad temporal
         });
       }
 

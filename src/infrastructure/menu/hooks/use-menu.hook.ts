@@ -5,7 +5,7 @@
 
 import { useLanguage } from '@/src/infrastructure/i18n/language.context';
 import { useSession } from '@/src/infrastructure/session';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MenuService } from '../menu.service';
 import { MenuItem } from '../types';
 
@@ -18,31 +18,15 @@ export function useMenu() {
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  /**
-   * Cargar menú desde el backend o usar menú por defecto
-   */
-  const fetchMenu = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Obtener menú según estado de autenticación
-      // Si está autenticado: llama al servicio /api/security/menu (devuelve público + privado según permisos)
-      // Si NO está autenticado: usa menú por defecto con páginas públicas (no llama al servicio)
-      const menuItems = await MenuService.getMenuForUser(
-        currentLanguage,
-        isAuthenticated
-      );
-
-      setMenu(menuItems);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar el menú');
-      // En caso de error, usar menú por defecto
-      setMenu(MenuService.getDefaultMenu());
-    } finally {
-      setLoading(false);
-    }
+  
+  // Usar refs para evitar bucles infinitos
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  const currentLanguageRef = useRef(currentLanguage);
+  
+  // Actualizar refs cuando cambian los valores
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+    currentLanguageRef.current = currentLanguage;
   }, [isAuthenticated, currentLanguage]);
 
   /**
@@ -54,15 +38,65 @@ export function useMenu() {
       return;
     }
 
+    let cancelled = false;
+
+    const fetchMenu = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Obtener menú según estado de autenticación
+        // Si está autenticado: llama al servicio /api/security/menu (devuelve público + privado según permisos)
+        // Si NO está autenticado: usa menú por defecto con páginas públicas (no llama al servicio)
+        const menuItems = await MenuService.getMenuForUser(
+          currentLanguageRef.current,
+          isAuthenticatedRef.current
+        );
+
+        if (!cancelled) {
+          setMenu(menuItems);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Error al cargar el menú');
+          // En caso de error, usar menú por defecto
+          setMenu(MenuService.getDefaultMenu());
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchMenu();
-  }, [isAuthenticated, currentLanguage, isSessionLoading, fetchMenu]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, currentLanguage, isSessionLoading]);
 
   /**
    * Refrescar el menú manualmente
    */
-  const refetch = useCallback(() => {
-    fetchMenu();
-  }, [fetchMenu]);
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const menuItems = await MenuService.getMenuForUser(
+        currentLanguageRef.current,
+        isAuthenticatedRef.current
+      );
+
+      setMenu(menuItems);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar el menú');
+      setMenu(MenuService.getDefaultMenu());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return {
     menu,

@@ -86,7 +86,7 @@ export class SessionManager {
     namespace: SessionNamespace,
     key: string,
     value: T,
-    options: SessionOptions = {}
+    options: SessionOptions & { skipBroadcast?: boolean } = {}
   ): Promise<void> {
     const fullKey = this.buildKey(namespace, key, options.secure);
     const storedData: StoredData<T> = {
@@ -99,7 +99,8 @@ export class SessionManager {
       await this.storage.setItem(fullKey, JSON.stringify(storedData));
       
       // En web, sincronizar con otras pestañas para cambios críticos
-      if (Platform.OS === 'web' && (namespace === 'auth' || namespace === 'user')) {
+      // PERO solo si no se solicita skipBroadcast (para evitar bucles infinitos)
+      if (Platform.OS === 'web' && (namespace === 'auth' || namespace === 'user') && !options.skipBroadcast) {
         this.broadcastStorageChange(namespace, key);
       }
     } catch (error) {

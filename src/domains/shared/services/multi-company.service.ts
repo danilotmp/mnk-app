@@ -56,57 +56,81 @@ export class MultiCompanyService {
       // Simular delay de red
       await this.simulateNetworkDelay();
 
-      // Obtener empresa del usuario
-      let company = await this.getCompanyById(user.companyId);
+      // Obtener empresa del usuario desde el array companies
+      // Prioridad: 1) Buscar en companies array por companyIdDefault, 2) Buscar por isDefault, 3) Primera empresa
+      let company: Company | null = null;
+      
+      if (user.companies && user.companies.length > 0) {
+        // Opción 1: Buscar por companyIdDefault
+        const defaultCompanyInfo = user.companies.find(c => c.id === user.companyIdDefault);
+        if (defaultCompanyInfo) {
+          company = await this.getCompanyById(defaultCompanyInfo.id);
+        }
+        
+        // Opción 2: Si no se encontró, buscar por isDefault
+        if (!company) {
+          const defaultByFlag = user.companies.find(c => c.isDefault);
+          if (defaultByFlag) {
+            company = await this.getCompanyById(defaultByFlag.id);
+          }
+        }
+        
+        // Opción 3: Si aún no se encontró, usar la primera empresa del array
+        if (!company && user.companies.length > 0) {
+          company = await this.getCompanyById(user.companies[0].id);
+        }
+      }
+      
+      // Si aún no se encontró, intentar obtener por companyIdDefault directamente (compatibilidad)
+      if (!company && user.companyIdDefault) {
+        company = await this.getCompanyById(user.companyIdDefault);
+      }
       
       // Si no se encuentra la empresa (por ejemplo, viene un UUID del API que no existe en mock),
       // usar la primera empresa disponible de los datos mock
       if (!company) {
-        // Se eliminan console.warn innecesarios; mantener flujo por defecto/fallback sin logs
         if (this.mockCompanies.length > 0) {
           company = this.mockCompanies[0];
-          // Actualizar el companyId del usuario para que sea consistente
-          user.companyId = company.id;
+          // Actualizar el companyIdDefault del usuario para que sea consistente
+          user.companyIdDefault = company.id;
         } else {
           throw new Error('No hay empresas disponibles en el sistema');
         }
       }
 
-      // Obtener sucursal actual
-      // Si el usuario no tiene currentBranchId, usar la primera sucursal disponible o una por defecto
-      let currentBranch = user.currentBranchId 
-        ? await this.getBranchById(user.currentBranchId)
-        : null;
+      // Obtener sucursales disponibles PRIMERO
+      // IMPORTANTE: Preservar los datos originales del backend antes de cualquier conversión
+      const originalAvailableBranches = user.availableBranches || [];
       
-      // Si no se encontró la sucursal, intentar usar la primera disponible del usuario
-      if (!currentBranch && user.availableBranches && user.availableBranches.length > 0) {
-        const firstBranchId = user.availableBranches[0]?.branchId;
-        if (firstBranchId) {
-          currentBranch = await this.getBranchById(firstBranchId);
-        }
-      }
-      
-      // Si aún no hay sucursal, usar la primera sucursal de la empresa (buscando en mockBranches)
-      if (!currentBranch) {
-        const companyBranches = this.mockBranches.filter(b => b.companyId === company.id);
-        if (companyBranches.length > 0) {
-          currentBranch = companyBranches[0];
-          // Actualizar el currentBranchId del usuario
-          user.currentBranchId = currentBranch.id;
-        }
-      }
-      
-      if (!currentBranch) {
-        // Se eliminan console.warn innecesarios; mantener flujo por defecto/fallback sin logs
-      }
-
-      // Obtener sucursales disponibles
       let availableBranches: BranchAccess[] = [];
       const userAvailableBranches = user.availableBranches || [];
       
       if (userAvailableBranches.length > 0) {
-        // Usar las sucursales disponibles del usuario
-        availableBranches = userAvailableBranches;
+        // Convertir Branch[] a BranchAccess[] si es necesario
+        // El backend puede devolver Branch[] directamente o BranchAccess[]
+        const firstItem = userAvailableBranches[0];
+        const isBranchArray = firstItem && 
+          typeof firstItem === 'object' && 
+          'id' in firstItem && 
+          'name' in firstItem && 
+          !('branchId' in firstItem) && 
+          !('branch' in firstItem);
+        
+        if (isBranchArray) {
+          // Es Branch[], convertir a BranchAccess[]
+          availableBranches = userAvailableBranches.map((branch: any) => ({
+            branchId: branch.id,
+            branch: branch,
+            role: 'user',
+            permissions: [],
+            grantedAt: new Date(),
+            grantedBy: 'system',
+            isActive: true,
+          }));
+        } else {
+          // Ya es BranchAccess[]
+          availableBranches = userAvailableBranches;
+        }
       } else {
         // Si no hay sucursales disponibles pero hay sucursales en la empresa, usar esas
         const companyBranches = this.mockBranches.filter(b => b.companyId === company.id);
@@ -119,6 +143,41 @@ export class MultiCompanyService {
           grantedBy: 'system',
           isActive: true,
         }));
+        // Actualizar el usuario con las sucursales creadas para que se preserven en la sesión
+        user.availableBranches = availableBranches;
+      }
+
+      // Obtener sucursal actual desde availableBranches usando currentBranchId
+      let currentBranch: Branch | null = null;
+      
+      if (user.currentBranchId && availableBranches.length > 0) {
+        // Buscar la sucursal en availableBranches usando currentBranchId
+        const branchAccess = availableBranches.find(
+          access => access.branchId === user.currentBranchId || access.branch?.id === user.currentBranchId
+        );
+        if (branchAccess?.branch) {
+          currentBranch = branchAccess.branch;
+        }
+      }
+      
+      // Si no se encontró la sucursal, usar la primera disponible del usuario
+      if (!currentBranch && availableBranches.length > 0) {
+        const firstBranchAccess = availableBranches[0];
+        if (firstBranchAccess?.branch) {
+          currentBranch = firstBranchAccess.branch;
+          // Actualizar el currentBranchId del usuario
+          user.currentBranchId = currentBranch.id;
+        }
+      }
+      
+      // Si aún no hay sucursal, usar la primera sucursal de la empresa (buscando en mockBranches)
+      if (!currentBranch) {
+        const companyBranches = this.mockBranches.filter(b => b.companyId === company.id);
+        if (companyBranches.length > 0) {
+          currentBranch = companyBranches[0];
+          // Actualizar el currentBranchId del usuario
+          user.currentBranchId = currentBranch.id;
+        }
       }
 
       // Obtener permisos del usuario para la sucursal actual
@@ -150,6 +209,9 @@ export class MultiCompanyService {
         user: {
           ...user,
           currentBranchId: currentBranch?.id || user.currentBranchId || '',
+          // Preservar los availableBranches originales del backend (Branch[])
+          // para que el componente pueda usarlos directamente sin conversiones
+          availableBranches: originalAvailableBranches,
         },
         permissions,
         canSwitchBranch: availableBranches.length > 1,
@@ -536,7 +598,16 @@ export class MultiCompanyService {
       firstName: 'Danilo',
       lastName: 'Administrador',
       isEmailVerified: true,
-      companyId: 'company-1',
+      companyIdDefault: 'company-1',
+      companies: [
+        {
+          id: 'company-1',
+          code: 'MNK-DEMO',
+          name: 'MNK Empresa Demo',
+          status: 1,
+          isDefault: true,
+        },
+      ],
       currentBranchId: 'branch-quito',
       availableBranches: [
         {
@@ -586,7 +657,16 @@ export class MultiCompanyService {
       firstName: 'Juan',
       lastName: 'Usuario',
       isEmailVerified: true,
-      companyId: 'company-1',
+      companyIdDefault: 'company-1',
+      companies: [
+        {
+          id: 'company-1',
+          code: 'MNK-DEMO',
+          name: 'MNK Empresa Demo',
+          status: 1,
+          isDefault: true,
+        },
+      ],
       currentBranchId: 'branch-loja',
       availableBranches: [
         {
@@ -627,7 +707,16 @@ export class MultiCompanyService {
       firstName: 'Sebastian',
       lastName: 'Multi',
       isEmailVerified: true,
-      companyId: 'company-1',
+      companyIdDefault: 'company-1',
+      companies: [
+        {
+          id: 'company-1',
+          code: 'MNK-DEMO',
+          name: 'MNK Empresa Demo',
+          status: 1,
+          isDefault: true,
+        },
+      ],
       currentBranchId: 'branch-quito',
       availableBranches: [
         {

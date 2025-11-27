@@ -8,7 +8,6 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
-import { useThemeMode } from '@/hooks/use-theme-mode';
 import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { useSession } from '@/src/infrastructure/session';
@@ -16,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   ScrollView,
   TouchableOpacity,
@@ -24,7 +22,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useBranches, useCompany, useMultiCompany } from '../../hooks/use-multi-company.hook';
-import { Branch } from '../../types';
+import { Branch, BranchAccess } from '../../types';
 import { createUserProfileHeaderStyles } from './user-profile-header.styles';
 import { UserProfileHeaderProps } from './user-profile-header.types';
 
@@ -35,14 +33,18 @@ export function UserProfileHeader({
 }: UserProfileHeaderProps) {
   const { colors } = useTheme();
   const styles = createUserProfileHeaderStyles();
-  const { user, company, branch } = useCompany();
-  const { branches, switchBranch } = useBranches();
+  const { user, company, branch: currentBranch } = useCompany();
+  const { switchBranch } = useBranches();
+  
+  // user.availableBranches es BranchAccess[] según el tipo
+  const branches: BranchAccess[] = user?.availableBranches || []; 
+  // Debug: Verificar que branches tenga datos
+  // console.log('UserProfileHeader - branches:', branches);
+  // console.log('UserProfileHeader - branch:', branch);
   const { clearContext } = useMultiCompany();
   const { clearSession } = useSession();
-  const { setThemeMode, isDark } = useThemeMode();
   const [modalVisible, setModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const { t } = useTranslation();
   const alert = useAlert();
   const router = useRouter();
@@ -53,7 +55,7 @@ export function UserProfileHeader({
   const isDesktop = isDesktopDevice(width);
 
   // Si no hay usuario autenticado, mostrar botón de login
-  if (!user || !company || !branch) {
+  if (!user || !company || !currentBranch) {
     return (
       <>
         <View style={styles.profileContainer}>
@@ -112,23 +114,12 @@ export function UserProfileHeader({
     return `${firstInitial}${lastInitial}`;
   };
 
-  const handleBranchSwitch = async (newBranch: Branch) => {
-    if (newBranch.id === branch.id) {
-      return; // Ya está en esta sucursal
+  const handleBranchSwitch = (newBranch: Branch) => {
+    if (currentBranch && newBranch.id === currentBranch.id) {
+      return; // Ya está seleccionada
     }
-
-    try {
-      setSwitching(true);
-      await switchBranch(newBranch.id);
-      
-      // Cambiar tema: alternar entre dark y light
-      const newTheme = isDark ? 'light' : 'dark';
-      setThemeMode(newTheme);
-    } catch (error) {
-      // console.error('Error al cambiar sucursal:', error);
-    } finally {
-      setSwitching(false);
-    }
+    // Simplemente actualizar el branch seleccionado
+    switchBranch(newBranch);
   };
 
   const handleLogout = async () => {
@@ -197,9 +188,9 @@ export function UserProfileHeader({
                 {user.firstName} {isDesktop ? user.lastName : ''}
               </ThemedText>
               {/* Sucursal solo visible en Desktop */}
-              {isDesktop && (
+              {isDesktop && currentBranch && (
                 <ThemedText type="caption" variant="secondary" numberOfLines={1}>
-                  {branch.name}
+                  {currentBranch.name}
                 </ThemedText>
               )}
             </View>
@@ -264,58 +255,49 @@ export function UserProfileHeader({
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
                 {/* Selector de sucursales */}
-                {branches && branches.length > 0 && (
-                  <>
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                    <View style={styles.section}>
-                      <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                        {t.user.changeBranch}
-                      </ThemedText>
-                      {switching ? (
-                        <View style={styles.loadingContainer}>
-                          <ActivityIndicator size="small" color={colors.primary} />
-                          <ThemedText type="caption" style={{ marginLeft: 8 }}>
-                            {t.user.changing}
-                          </ThemedText>
-                        </View>
-                      ) : (
-                        <>
-                          {branches.filter(b => b && b.id).map((branchItem) => (
-                            <TouchableOpacity
-                              key={branchItem.id}
-                              style={[
-                                styles.branchOption,
-                                {
-                                  backgroundColor:
-                                    branchItem.id === branch?.id
-                                      ? colors.surface  // Activa usa estilo de inactiva
-                                      : 'transparent',  // Inactiva usa fondo transparente
-                                },
-                              ]}
-                              onPress={() => handleBranchSwitch(branchItem)}
-                              disabled={branchItem.id === branch?.id}
+                <View style={styles.section}>
+                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                    {t.user.changeBranch || 'Sucursales'}
+                  </ThemedText>
+                  {branches && branches.length > 0 ? (
+                    branches.map((branchAccess, index) => {
+                      const branchItem = branchAccess.branch;
+                      const isSelected = currentBranch && branchItem.id === currentBranch.id;
+                      return (
+                        <TouchableOpacity
+                          key={branchItem.id || index}
+                          style={[
+                            styles.branchOption,
+                            {
+                              backgroundColor: isSelected
+                                ? colors.surface
+                                : 'transparent',
+                            },
+                          ]}
+                          onPress={() => handleBranchSwitch(branchItem)}
+                          disabled={isSelected}
+                        >
+                          <View style={styles.branchOptionInfo}>
+                            <ThemedText
+                              type="defaultSemiBold"
+                              variant={isSelected ? undefined : 'primary'}
                             >
-                              <View style={styles.branchOptionInfo}>
-                                <ThemedText
-                                  type="defaultSemiBold"
-                                  variant={branchItem.id === branch?.id ? undefined : 'primary'}  // Invertido
-                                >
-                                  {branchItem.name}
-                                </ThemedText>
-                                <ThemedText type="caption" variant="secondary">
-                                  {branchItem.address?.city || branchItem.code || ''}
-                                </ThemedText>
-                              </View>
-                              {branchItem.id === branch?.id && (
-                                <ThemedText style={{ color: colors.text }}>✓</ThemedText>  // Usar color normal
-                              )}
-                            </TouchableOpacity>
-                          ))}
-                        </>
-                      )}
-                    </View>
-                  </>
-                )}
+                              {branchItem.name || `OPCIÓN ${index + 1}`}
+                            </ThemedText>
+                          </View>
+                          {isSelected && (
+                            <ThemedText style={{ color: colors.text }}>✓</ThemedText>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })
+                  ) : (
+                    <ThemedText type="body2" variant="secondary">
+                      No hay sucursales disponibles
+                    </ThemedText>
+                  )}
+                </View>
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
 

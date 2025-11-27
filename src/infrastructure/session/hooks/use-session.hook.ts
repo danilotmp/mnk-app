@@ -96,7 +96,9 @@ export function useSession() {
     // Rehidratar al montar
     rehydrateSession();
 
-    // Escuchar cambios de storage en otras pestañas
+    // Escuchar cambios de storage en otras pestañas SOLAMENTE
+    // IMPORTANTE: Los cambios con skipBroadcast no disparan este evento,
+    // así que solo recibimos cambios de otras pestañas
     const cleanup = sessionManager.onStorageChange((namespace, key, action) => {
       if (namespace === 'auth' && (key === 'accessToken' || key === 'refreshToken')) {
         if (action === 'remove') {
@@ -108,11 +110,22 @@ export function useSession() {
         }
       }
       
+      // IMPORTANTE: Solo actualizar si el usuario realmente cambió
+      // Comparar con el usuario actual para evitar actualizaciones innecesarias
       if (namespace === 'user' && key === 'current' && action === 'set') {
-        // Usuario actualizado en otra pestaña
         sessionManager.getItem<MultiCompanyUser>('user', 'current').then((savedUser) => {
           if (savedUser) {
-            setUserContext(savedUser);
+            // Solo actualizar si es diferente al usuario actual
+            // Esto evita bucles infinitos cuando se guarda desde la misma pestaña
+            const currentUserId = user?.id;
+            const currentBranchId = user?.currentBranchId;
+            const savedUserId = savedUser.id;
+            const savedBranchId = savedUser.currentBranchId;
+            
+            // Solo actualizar si realmente cambió algo
+            if (currentUserId !== savedUserId || currentBranchId !== savedBranchId) {
+              setUserContext(savedUser);
+            }
           }
         });
       }

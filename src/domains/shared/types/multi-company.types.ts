@@ -81,6 +81,15 @@ export interface DaySchedule {
   closeTime?: string;
 }
 
+// ===== Company Info Type (para array companies en User) =====
+export interface CompanyInfo {
+  id: string;
+  code: string;
+  name: string;
+  status: number;
+  isDefault: boolean; // true si es la empresa por defecto
+}
+
 // ===== User Types =====
 export interface MultiCompanyUser extends BaseEntity {
   email: string;
@@ -89,7 +98,8 @@ export interface MultiCompanyUser extends BaseEntity {
   phone?: string;
   avatar?: string;
   isEmailVerified: boolean;
-  companyId: string;
+  companyIdDefault: string; // Empresa por defecto del usuario (renombrado de companyId)
+  companies: CompanyInfo[]; // Lista de todas las empresas a las que pertenece el usuario
   currentBranchId: string;
   availableBranches: BranchAccess[];
   roles: Role[];
