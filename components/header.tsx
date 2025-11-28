@@ -1,6 +1,7 @@
 import { useTheme } from '@/hooks/use-theme';
 import React from 'react';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import { SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Logo } from './logo';
 import { ThemedText } from './themed-text';
 
@@ -10,9 +11,13 @@ interface HeaderProps {
   children?: React.ReactNode;
   inline?: boolean; // Nuevo: para usar en header unificado
   logoSize?: 'small' | 'medium' | 'large'; // Nuevo: tamaño del logo
+  onTitlePress?: () => void; // Callback cuando se hace click en el título
+  titleClickable?: boolean; // Si el título es clickeable
+  onTitleLayout?: (width: number, x: number) => void; // Callback para obtener el ancho y posición X del título
+  renderDropdown?: React.ReactNode; // Dropdown a renderizar dentro del contenedor del título
 }
 
-export function Header({ title, showLogo = true, children, inline = false, logoSize = 'medium' }: HeaderProps) {
+export function Header({ title, showLogo = true, children, inline = false, logoSize = 'medium', onTitlePress, titleClickable = false, onTitleLayout, renderDropdown }: HeaderProps) {
   const { colors, spacing, shadows } = useTheme();
 
   // Versión inline: sin SafeAreaView, sin padding, sin borde (para header unificado)
@@ -21,12 +26,40 @@ export function Header({ title, showLogo = true, children, inline = false, logoS
       <View style={styles.inlineContent}>
         {showLogo && <Logo size={logoSize} />}
         {title && (
-          <ThemedText 
-            type={logoSize === 'small' ? 'h3' : 'title'} 
-            style={[styles.inlineTitle, { color: colors.text }]}
-          >
-            {title}
-          </ThemedText>
+          <View style={{ position: 'relative' }}>
+            {titleClickable && onTitlePress ? (
+              <TouchableOpacity 
+                onPress={onTitlePress} 
+                activeOpacity={0.7}
+                style={styles.clickableTitleContainer}
+                onLayout={(event) => {
+                  const { width, x } = event.nativeEvent.layout;
+                  onTitleLayout?.(width, x);
+                }}
+              >
+                <ThemedText 
+                  type={logoSize === 'small' ? 'body1' : 'subtitle'} 
+                  style={[styles.inlineTitle, { color: colors.text }]}
+                >
+                  {title}
+                </ThemedText>
+                <Ionicons 
+                  name="chevron-down" 
+                  size={16} 
+                  color={colors.text} 
+                  style={styles.dropdownIcon}
+                />
+              </TouchableOpacity>
+            ) : (
+              <ThemedText 
+                type={logoSize === 'small' ? 'body1' : 'subtitle'} 
+                style={[styles.inlineTitle, { color: colors.text }]}
+              >
+                {title}
+              </ThemedText>
+            )}
+            {renderDropdown}
+          </View>
         )}
       </View>
     );
@@ -81,5 +114,13 @@ const styles = StyleSheet.create({
   },
   inlineTitle: {
     marginLeft: 4,
+  },
+  clickableTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dropdownIcon: {
+    marginLeft: 2,
   },
 });

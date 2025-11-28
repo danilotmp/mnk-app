@@ -53,6 +53,10 @@ export class MultiCompanyService {
       this.currentState.isLoading = true;
       this.currentState.error = null;
 
+      // IMPORTANTE: Crear una copia del usuario para no modificar el original
+      // Esto preserva el companyIdDefault original del API
+      const userCopy = { ...user };
+
       // Simular delay de red
       await this.simulateNetworkDelay();
 
@@ -60,39 +64,40 @@ export class MultiCompanyService {
       // Prioridad: 1) Buscar en companies array por companyIdDefault, 2) Buscar por isDefault, 3) Primera empresa
       let company: Company | null = null;
       
-      if (user.companies && user.companies.length > 0) {
+      if (userCopy.companies && userCopy.companies.length > 0) {
         // Opción 1: Buscar por companyIdDefault
-        const defaultCompanyInfo = user.companies.find(c => c.id === user.companyIdDefault);
+        const defaultCompanyInfo = userCopy.companies.find(c => c.id === userCopy.companyIdDefault);
         if (defaultCompanyInfo) {
           company = await this.getCompanyById(defaultCompanyInfo.id);
         }
         
         // Opción 2: Si no se encontró, buscar por isDefault
         if (!company) {
-          const defaultByFlag = user.companies.find(c => c.isDefault);
+          const defaultByFlag = userCopy.companies.find(c => c.isDefault);
           if (defaultByFlag) {
             company = await this.getCompanyById(defaultByFlag.id);
           }
         }
         
         // Opción 3: Si aún no se encontró, usar la primera empresa del array
-        if (!company && user.companies.length > 0) {
-          company = await this.getCompanyById(user.companies[0].id);
+        if (!company && userCopy.companies.length > 0) {
+          company = await this.getCompanyById(userCopy.companies[0].id);
         }
       }
       
       // Si aún no se encontró, intentar obtener por companyIdDefault directamente (compatibilidad)
-      if (!company && user.companyIdDefault) {
-        company = await this.getCompanyById(user.companyIdDefault);
+      if (!company && userCopy.companyIdDefault) {
+        company = await this.getCompanyById(userCopy.companyIdDefault);
       }
       
       // Si no se encuentra la empresa (por ejemplo, viene un UUID del API que no existe en mock),
       // usar la primera empresa disponible de los datos mock
+      // IMPORTANTE: NO modificar user.companyIdDefault, preservar el valor original del API
       if (!company) {
         if (this.mockCompanies.length > 0) {
           company = this.mockCompanies[0];
-          // Actualizar el companyIdDefault del usuario para que sea consistente
-          user.companyIdDefault = company.id;
+          // NO actualizar user.companyIdDefault - preservar el valor original del API
+          // El companyIdDefault debe mantenerse tal como viene del backend
         } else {
           throw new Error('No hay empresas disponibles en el sistema');
         }
@@ -100,10 +105,10 @@ export class MultiCompanyService {
 
       // Obtener sucursales disponibles PRIMERO
       // IMPORTANTE: Preservar los datos originales del backend antes de cualquier conversión
-      const originalAvailableBranches = user.availableBranches || [];
+      const originalAvailableBranches = userCopy.availableBranches || [];
       
       let availableBranches: BranchAccess[] = [];
-      const userAvailableBranches = user.availableBranches || [];
+      const userAvailableBranches = userCopy.availableBranches || [];
       
       if (userAvailableBranches.length > 0) {
         // Convertir Branch[] a BranchAccess[] si es necesario
@@ -129,7 +134,22 @@ export class MultiCompanyService {
           }));
         } else {
           // Ya es BranchAccess[]
-          availableBranches = userAvailableBranches;
+          // IMPORTANTE: Filtrar solo las sucursales que pertenecen a la empresa actual
+          // para evitar mostrar sucursales de otras empresas cuando se cambia de empresa
+          availableBranches = userAvailableBranches.filter((access: any) => {
+            // Si tiene branch completo, verificar companyId
+            if (access.branch?.companyId) {
+              return access.branch.companyId === company.id;
+            }
+            // Si no tiene branch completo pero tiene branchId, buscar en mockBranches
+            if (access.branchId && !access.branch) {
+              const branch = this.mockBranches.find(b => b.id === access.branchId);
+              return branch?.companyId === company.id;
+            }
+            // Si no se puede determinar, incluir por defecto (compatibilidad)
+            // Esto puede pasar si el API no envía companyId en los branches
+            return true;
+          });
         }
       } else {
         // Si no hay sucursales disponibles pero hay sucursales en la empresa, usar esas
@@ -143,9 +163,12 @@ export class MultiCompanyService {
           grantedBy: 'system',
           isActive: true,
         }));
-        // Actualizar el usuario con las sucursales creadas para que se preserven en la sesión
-        user.availableBranches = availableBranches;
       }
+      
+      // Actualizar el usuario con las sucursales (filtradas por empresa) para que se preserven en la sesión
+      userCopy.availableBranches = availableBranches;
+      // Preservar los roles del usuario (vienen como userRoles del API)
+      userCopy.roles = userCopy.roles || [];
 
       // Obtener sucursal actual desde availableBranches usando currentBranchId
       let currentBranch: Branch | null = null;
@@ -175,16 +198,16 @@ export class MultiCompanyService {
         const companyBranches = this.mockBranches.filter(b => b.companyId === company.id);
         if (companyBranches.length > 0) {
           currentBranch = companyBranches[0];
-          // Actualizar el currentBranchId del usuario
-          user.currentBranchId = currentBranch.id;
+          // Actualizar el currentBranchId del usuario (en la copia, no en el original)
+          userCopy.currentBranchId = currentBranch.id;
         }
       }
 
       // Obtener permisos del usuario para la sucursal actual
       // Si no hay sucursal actual, usar permisos vacíos
-      const branchIdForPermissions = currentBranch?.id || user.currentBranchId || '';
+      const branchIdForPermissions = currentBranch?.id || userCopy.currentBranchId || '';
       const permissions = branchIdForPermissions 
-        ? await this.getUserPermissions(user.id, branchIdForPermissions)
+        ? await this.getUserPermissions(userCopy.id, branchIdForPermissions)
         : [];
 
       // Actualizar estado
@@ -196,7 +219,7 @@ export class MultiCompanyService {
         currentCompany: company,
         currentBranch: currentBranch,
         availableBranches: branchesForState,
-        user: user,
+        user: userCopy, // Usar la copia, no el original
         permissions: permissions,
         isLoading: false,
         error: null,
@@ -207,11 +230,13 @@ export class MultiCompanyService {
         currentBranch: currentBranch || null,
         availableBranches,
         user: {
-          ...user,
-          currentBranchId: currentBranch?.id || user.currentBranchId || '',
-          // Preservar los availableBranches originales del backend (Branch[])
+          ...userCopy, // Usar la copia para preservar companyIdDefault original
+          currentBranchId: currentBranch?.id || userCopy.currentBranchId || '',
+          // Preservar los availableBranches filtrados por empresa actual
           // para que el componente pueda usarlos directamente sin conversiones
-          availableBranches: originalAvailableBranches,
+          availableBranches: availableBranches,
+          // Preservar los roles del usuario (vienen como userRoles del API)
+          roles: userCopy.roles || [],
         },
         permissions,
         canSwitchBranch: availableBranches.length > 1,
@@ -356,7 +381,11 @@ export class MultiCompanyService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  private async getCompanyById(companyId: string): Promise<Company | null> {
+  /**
+   * Obtiene una empresa por su ID
+   * Público para permitir que los componentes obtengan información completa de la empresa
+   */
+  async getCompanyById(companyId: string): Promise<Company | null> {
     // En producción, esto haría una llamada HTTP: GET /api/companies/{id}
     return this.mockCompanies.find((c) => c.id === companyId) || null;
   }

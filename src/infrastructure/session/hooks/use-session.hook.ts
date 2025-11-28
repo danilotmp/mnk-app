@@ -119,11 +119,16 @@ export function useSession() {
             // Esto evita bucles infinitos cuando se guarda desde la misma pestaña
             const currentUserId = user?.id;
             const currentBranchId = user?.currentBranchId;
+            const currentCompanyId = user?.companyIdDefault;
             const savedUserId = savedUser.id;
             const savedBranchId = savedUser.currentBranchId;
+            const savedCompanyId = savedUser.companyIdDefault;
             
-            // Solo actualizar si realmente cambió algo
-            if (currentUserId !== savedUserId || currentBranchId !== savedBranchId) {
+            // Solo actualizar si realmente cambió algo importante
+            // Verificar id, branch y company para evitar bucles
+            if (currentUserId !== savedUserId || 
+                currentBranchId !== savedBranchId || 
+                currentCompanyId !== savedCompanyId) {
               setUserContext(savedUser);
             }
           }

@@ -98,11 +98,34 @@ export function useMenu() {
     }
   };
 
+  /**
+   * Actualizar el menú para un rol específico
+   */
+  const refetchForRole = async (roleId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const menuItems = await MenuService.getMenuForRole(
+        roleId,
+        currentLanguageRef.current
+      );
+
+      setMenu(menuItems);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar el menú del rol');
+      setMenu(MenuService.getDefaultMenu());
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     menu,
     loading,
     error,
     refetch,
+    refetchForRole,
   };
 }
 

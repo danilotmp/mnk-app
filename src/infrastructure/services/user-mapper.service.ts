@@ -30,7 +30,8 @@ export interface ApiLoginUserResponse {
   companyCode?: string; // Mantener por compatibilidad temporal
   currentBranchId?: string;
   availableBranches?: any[];
-  roles?: any[];
+  roles?: any[]; // Mantener por compatibilidad
+  userRoles?: any[]; // Campo del API /security/profile
   permissions?: any[];
   preferences?: any;
   createdAt?: string | Date;
@@ -81,7 +82,8 @@ export function mapApiUserToMultiCompanyUser(
     // Estos campos NO vienen del login, solo del perfil
     currentBranchId: apiUser.currentBranchId || '',
     availableBranches: apiUser.availableBranches || [],
-    roles: apiUser.roles || [],
+    // Usar userRoles del API si está disponible, sino usar roles (compatibilidad)
+    roles: apiUser.userRoles || apiUser.roles || [],
     permissions: apiUser.permissions || [],
     preferences: apiUser.preferences || getDefaultUserPreferences(),
     createdAt: apiUser.createdAt ? new Date(apiUser.createdAt) : now,

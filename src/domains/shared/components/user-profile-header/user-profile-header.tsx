@@ -260,37 +260,43 @@ export function UserProfileHeader({
                     {t.user.changeBranch || 'Sucursales'}
                   </ThemedText>
                   {branches && branches.length > 0 ? (
-                    branches.map((branchAccess, index) => {
-                      const branchItem = branchAccess.branch;
-                      const isSelected = currentBranch && branchItem.id === currentBranch.id;
-                      return (
-                        <TouchableOpacity
-                          key={branchItem.id || index}
-                          style={[
-                            styles.branchOption,
-                            {
-                              backgroundColor: isSelected
-                                ? colors.surface
-                                : 'transparent',
-                            },
-                          ]}
-                          onPress={() => handleBranchSwitch(branchItem)}
-                          disabled={isSelected}
-                        >
-                          <View style={styles.branchOptionInfo}>
-                            <ThemedText
-                              type="defaultSemiBold"
-                              variant={isSelected ? undefined : 'primary'}
-                            >
-                              {branchItem.name || `OPCIÓN ${index + 1}`}
-                            </ThemedText>
-                          </View>
-                          {isSelected && (
-                            <ThemedText style={{ color: colors.text }}>✓</ThemedText>
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })
+                    branches
+                      .filter((branchAccess) => branchAccess?.branch != null) // Filtrar elementos sin branch válido
+                      .map((branchAccess, index) => {
+                        const branchItem = branchAccess.branch;
+                        if (!branchItem || !branchItem.id) {
+                          return null; // No renderizar si no hay branch válido
+                        }
+                        const isSelected = currentBranch && branchItem.id === currentBranch.id;
+                        return (
+                          <TouchableOpacity
+                            key={branchItem.id || index}
+                            style={[
+                              styles.branchOption,
+                              {
+                                backgroundColor: isSelected
+                                  ? colors.surface
+                                  : 'transparent',
+                              },
+                            ]}
+                            onPress={() => handleBranchSwitch(branchItem)}
+                            disabled={isSelected}
+                          >
+                            <View style={styles.branchOptionInfo}>
+                              <ThemedText
+                                type="defaultSemiBold"
+                                variant={isSelected ? undefined : 'primary'}
+                              >
+                                {branchItem.name || `OPCIÓN ${index + 1}`}
+                              </ThemedText>
+                            </View>
+                            {isSelected && (
+                              <ThemedText style={{ color: colors.text }}>✓</ThemedText>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })
+                      .filter((item) => item !== null) // Eliminar nulls del array
                   ) : (
                     <ThemedText type="body2" variant="secondary">
                       No hay sucursales disponibles

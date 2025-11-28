@@ -11,8 +11,8 @@ if (Platform.OS !== 'web') {
 import { MainLayout, MenuItem } from '@/components/layouts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
-import { useScrollbarStyles } from '@/src/hooks/use-scrollbar-styles.hook';
 import { MultiCompanyProvider } from '@/src/domains/shared';
+import { useScrollbarStyles } from '@/src/hooks/use-scrollbar-styles.hook';
 import { LanguageProvider, useTranslation } from '@/src/infrastructure/i18n';
 import { useMenu } from '@/src/infrastructure/menu';
 import { ToastContainer, ToastProvider } from '@/src/infrastructure/messages';
@@ -138,7 +138,6 @@ function LayoutContent() {
       </ThemeProvider>
     );
   }
-
   // Para otras rutas, usar MainLayout
   // Usar menuItemsToUse que puede estar vacío durante la carga inicial
   // Esto permite que la página actual se renderice mientras el menú carga
