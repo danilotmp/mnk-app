@@ -7,6 +7,7 @@
 import { Alert, Platform } from 'react-native';
 import { useTranslation } from '../i18n';
 import { useToast } from './toast.context';
+import { extractErrorDetail, extractErrorMessage } from './error-utils';
 
 /**
  * Opciones para mostrar alertas
@@ -129,13 +130,34 @@ export function useAlert() {
     /**
      * Muestra un mensaje de error como Toast (notificación visual)
      * También muestra el diálogo modal como fallback en móvil si se necesita
-     * detail: si se proporciona, el toast mostrará un botón para desplegar el detalle y no se auto-cerrará
+     * 
+     * @param messageKey - Clave de traducción o mensaje directo
+     * @param showModal - Si true, también muestra un modal (default: false)
+     * @param onPress - Callback cuando se presiona OK
+     * @param detail - Detalle opcional del error. Si no se proporciona, se intentará extraer del error si se pasa un objeto
+     * @param error - Objeto de error opcional del cual extraer el detalle automáticamente
      */
-    showError: (messageKey: string, showModal: boolean = false, onPress?: () => void, detail?: string) => {
-      const message = getTranslation(messageKey);
+    showError: (messageKey: string | any, showModal: boolean = false, onPress?: () => void, detail?: string, error?: any) => {
+      // Si messageKey es un objeto de error, extraer el mensaje y el detalle
+      let message: string;
+      let errorDetail: string | undefined = detail;
+      
+      if (typeof messageKey === 'object' && messageKey !== null) {
+        // Es un objeto de error, extraer mensaje y detalle
+        message = extractErrorMessage(messageKey);
+        errorDetail = errorDetail || extractErrorDetail(messageKey);
+      } else {
+        // Es una clave de traducción o mensaje directo
+        message = getTranslation(messageKey);
+        // Si se proporciona un objeto error, extraer el detalle
+        if (error) {
+          errorDetail = errorDetail || extractErrorDetail(error);
+        }
+      }
+      
       if (toast) {
-        // title y duration se dejan undefined; el contexto gestionará no autocerrar si hay detail
-        toast.showError(message, undefined, undefined, detail);
+        // Si hay detalle, el toast no se auto-cerrará
+        toast.showError(message, undefined, undefined, errorDetail);
       }
       if (showModal || !toast) {
         alertService.showError(message, onPress);

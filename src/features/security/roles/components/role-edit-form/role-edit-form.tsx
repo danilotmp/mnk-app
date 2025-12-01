@@ -15,6 +15,7 @@ import { CompaniesService } from '@/src/features/security/companies';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { processCodeAndName } from '@/src/infrastructure/utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -132,7 +133,8 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
           isSystem: roleIsSystem,
         }));
       } catch (error: any) {
-        alert.showError(error.message || 'Error al cargar rol');
+        const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al cargar rol');
+        alert.showError(errorMessage, false, undefined, detailString, error);
       } finally {
         setLoadingRole(false);
       }
@@ -217,10 +219,13 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
       alert.showSuccess(t.security?.roles?.edit || 'Rol actualizado exitosamente');
       onSuccess?.();
     } catch (error: any) {
-      const errorMessage = error.message || 'Error al actualizar rol';
-      const errorDetail = (error as any)?.result?.details || '';
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al actualizar rol');
+      
+      // Mostrar error en Toast con detalle si existe
+      alert.showError(errorMessage, false, undefined, detailString, error);
+      
       // Mostrar error en InlineAlert dentro del modal
-      setGeneralError({ message: errorMessage, detail: errorDetail });
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsLoading(false);
     }

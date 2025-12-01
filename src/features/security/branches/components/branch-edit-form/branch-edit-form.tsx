@@ -12,6 +12,7 @@ import { BranchesService } from '../../services';
 import { useCompanyOptions } from '@/src/domains/security/hooks';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
@@ -108,7 +109,8 @@ export function BranchEditForm({
         status: branchStatus,
       });
     } catch (error: any) {
-      alert.showError(error?.message || 'Error al cargar la sucursal');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al cargar la sucursal');
+      alert.showError(errorMessage, false, undefined, detailString, error);
     } finally {
       setLoadingBranch(false);
     }
@@ -141,9 +143,8 @@ export function BranchEditForm({
       alert.showSuccess(t.security?.branches?.editSuccess || 'Sucursal actualizada exitosamente');
       onSuccess?.();
     } catch (error: any) {
-      const message = error?.message || 'Error al actualizar la sucursal';
-      const detail = (error as any)?.result?.details || '';
-      alert.showError(message, false, undefined, detail);
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al actualizar la sucursal');
+      alert.showError(errorMessage, false, undefined, detailString, error);
     } finally {
       setIsSubmitting(false);
     }

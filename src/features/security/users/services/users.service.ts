@@ -4,7 +4,7 @@
  * Usa adaptadores para transformar datos de API a modelos de dominio
  */
 
-import { apiClient } from '@/src/infrastructure/api/api.client';
+import { apiClient, ApiError } from '@/src/infrastructure/api/api.client';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { PaginatedResponse } from '@/src/domains/shared/types';
 import { userAdapter, usersAdapter } from '../adapters';
@@ -134,7 +134,16 @@ export class UsersService {
 
       throw new Error(response.result?.description || 'Error al obtener usuario');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al obtener usuario');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al obtener usuario');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -154,7 +163,16 @@ export class UsersService {
 
       throw new Error(response.result?.description || 'Error al obtener usuario');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al obtener usuario');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al obtener usuario');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -255,7 +273,21 @@ export class UsersService {
 
       throw new Error(response.result?.description || 'Error al actualizar usuario');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al actualizar usuario');
+      // Si es un ApiError, preservarlo tal cual (tiene details y statusCode)
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      
+      // Si el error ya tiene result o details, preservarlo
+      if (error?.result || error?.details) {
+        throw error;
+      }
+
+      // Crear un error genérico solo si no tiene estructura
+      const genericError = new Error(error?.message || 'Error al actualizar usuario');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -309,7 +341,16 @@ export class UsersService {
 
       throw new Error(response.result?.description || 'Error al cambiar estado del usuario');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al cambiar estado del usuario');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al cambiar estado del usuario');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 }

@@ -23,6 +23,7 @@ import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { createRolesListStyles } from '@/src/styles/pages/roles-list.styles';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { Ionicons } from '@expo/vector-icons';
@@ -149,11 +150,11 @@ export function RolesListScreen() {
         setHasError(true);
         return;
       }
-      const errorMessage = error.message || t.security?.roles?.loadError || 'Error al cargar roles';
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.roles?.loadError || 'Error al cargar roles');
       setError(errorMessage);
       setHasError(true);
       // Mostrar error con detalles
-      alert.showError(errorMessage, error.details || error.response?.result?.details);
+      alert.showError(errorMessage, false, undefined, detailString, error);
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -321,7 +322,8 @@ export function RolesListScreen() {
       if (handleApiError(error)) {
         return;
       }
-      alert.showError(error.message || 'Error al eliminar rol');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al eliminar rol');
+      alert.showError(errorMessage, false, undefined, detailString, error);
     }
   };
 

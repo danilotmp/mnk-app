@@ -20,6 +20,7 @@ import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { createBranchesListStyles } from '@/src/styles/pages/branches-list.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
@@ -112,9 +113,9 @@ export function BranchesListScreen() {
           setHasError(true);
           return;
         }
-        const message = error?.message || t.security?.branches?.loadError || 'Error al cargar sucursales';
+        const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.branches?.loadError || 'Error al cargar sucursales');
         setHasError(true);
-        alert.showError(message, false, undefined, (error as any)?.result?.details || '');
+        alert.showError(errorMessage, false, undefined, detailString, error);
       } finally {
         setLoading(false);
         loadingRef.current = false;

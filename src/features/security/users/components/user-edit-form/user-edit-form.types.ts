@@ -21,8 +21,9 @@ export interface UserFormData {
   firstName: string;
   lastName: string;
   phone: string;
-  companyId: string;
-  branchIds: string[];
+  companyId: string; // Mantener para compatibilidad
+  branchIds: string[]; // Mantener para compatibilidad
+  companyBranches?: Record<string, string[]>; // Nueva estructura: { [companyId]: [branchIds] }
   roleId: string;
   status: number; // 1: Activo, 0: Inactivo, 2: Pendiente, 3: Suspendido
 }

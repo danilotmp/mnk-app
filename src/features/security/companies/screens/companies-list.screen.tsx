@@ -20,6 +20,7 @@ import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/
 import { useRouteAccessGuard } from '@/src/infrastructure/access';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { createCompaniesListStyles } from '@/src/styles/pages/companies-list.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
@@ -141,11 +142,11 @@ export function CompaniesListScreen() {
         setHasError(true);
         return;
       }
-      const errorMessage = error.message || t.security?.companies?.loadError || 'Error al cargar empresas';
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.companies?.loadError || 'Error al cargar empresas');
       setError(errorMessage);
       setHasError(true);
       // Mostrar error con detalles
-      alert.showError(errorMessage, error.details || error.response?.result?.details);
+      alert.showError(errorMessage, false, undefined, detailString, error);
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -343,7 +344,8 @@ export function CompaniesListScreen() {
       if (handleApiError(error)) {
         return;
       }
-      alert.showError(error.message || 'Error al eliminar empresa');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al eliminar empresa');
+      alert.showError(errorMessage, false, undefined, detailString, error);
     }
   };
 

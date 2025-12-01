@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { CompaniesService } from '../../services';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
@@ -111,7 +112,8 @@ export function CompanyEditForm({
         status: companyStatus,
       });
     } catch (error: any) {
-      alert.showError(error?.message || 'Error al cargar la empresa');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al cargar la empresa');
+      alert.showError(errorMessage, false, undefined, detailString, error);
     } finally {
       setLoadingCompany(false);
     }
@@ -145,18 +147,11 @@ export function CompanyEditForm({
       alert.showSuccess(t.security?.companies?.editSuccess || 'Empresa actualizada exitosamente');
       onSuccess?.();
     } catch (error: any) {
-      const backendResult = error?.result || error?.response?.data || error;
-      const rawDetails = backendResult?.details ?? error?.details;
-      const detailString =
-        typeof rawDetails === 'string'
-          ? rawDetails
-          : rawDetails?.message
-          ? String(rawDetails.message)
-          : undefined;
-
-      const errorMessage =
-        backendResult?.description || error?.message || 'Error al actualizar la empresa';
-
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al actualizar la empresa');
+      
+      // Mostrar error en Toast con detalle si existe
+      alert.showError(errorMessage, false, undefined, detailString, error);
+      
       // Mostrar error en InlineAlert dentro del modal
       setGeneralError({ message: errorMessage, detail: detailString });
     } finally {

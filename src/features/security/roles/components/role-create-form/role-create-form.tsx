@@ -14,6 +14,7 @@ import { RolesService } from '../../services';
 import { CompaniesService } from '@/src/features/security/companies';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { processCodeAndName } from '@/src/infrastructure/utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -199,10 +200,13 @@ export function RoleCreateForm({
       alert.showSuccess(t.security?.roles?.create || 'Rol creado exitosamente');
       onSuccess?.();
     } catch (error: any) {
-      const message = error.message || 'Error al crear rol';
-      const detail = (error as any)?.result?.details || '';
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al crear rol');
+      
+      // Mostrar error en Toast con detalle si existe
+      alert.showError(errorMessage, false, undefined, detailString, error);
+      
       // Mostrar error en InlineAlert dentro del modal
-      setGeneralError({ message, detail });
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsLoading(false);
     }

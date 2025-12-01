@@ -3,7 +3,7 @@
  * Consume endpoints del backend para CRUD de roles
  */
 
-import { apiClient } from '@/src/infrastructure/api/api.client';
+import { apiClient, ApiError } from '@/src/infrastructure/api/api.client';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { PaginatedResponse } from '@/src/domains/shared/types';
 import { roleAdapter, rolesAdapter } from '../adapters';
@@ -119,7 +119,16 @@ export class RolesService {
 
       throw new Error(response.result?.description || 'Error al obtener rol');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al obtener rol');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al obtener rol');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -140,7 +149,16 @@ export class RolesService {
 
       throw new Error(response.result?.description || 'Error al crear rol');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al crear rol');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al crear rol');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -164,7 +182,16 @@ export class RolesService {
 
       throw new Error(response.result?.description || 'Error al actualizar rol');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al actualizar rol');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al actualizar rol');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -182,7 +209,16 @@ export class RolesService {
         throw new Error(response.result?.description || 'Error al eliminar rol');
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Error al eliminar rol');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al eliminar rol');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -206,7 +242,16 @@ export class RolesService {
 
       throw new Error(response.result?.description || 'Error al asignar permisos');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al asignar permisos');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al asignar permisos');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 
@@ -230,7 +275,16 @@ export class RolesService {
 
       throw new Error(response.result?.description || 'Error al remover permisos');
     } catch (error: any) {
-      throw new Error(error.message || 'Error al remover permisos');
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al remover permisos');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 

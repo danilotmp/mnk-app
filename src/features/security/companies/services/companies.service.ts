@@ -3,7 +3,7 @@
  * Incluye endpoints administrativos y de contexto (auth/me)
  */
 
-import { apiClient } from '@/src/infrastructure/api/api.client';
+import { apiClient, ApiError } from '@/src/infrastructure/api/api.client';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 
 import { PaginatedResponse } from '@/src/domains/shared/types';
@@ -60,54 +60,106 @@ export class CompaniesService {
   }
 
   static async getCompanyById(id: string): Promise<Company> {
-    const response = await apiClient.request<CompanyApi>({
-      endpoint: `${this.BASE_ENDPOINT}/${id}`,
-      method: 'GET',
-    });
+    try {
+      const response = await apiClient.request<CompanyApi>({
+        endpoint: `${this.BASE_ENDPOINT}/${id}`,
+        method: 'GET',
+      });
 
-    if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-      return companyAdapter(response.data);
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return companyAdapter(response.data);
+      }
+
+      throw new Error(response.result?.description || 'Error al obtener la empresa');
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al obtener la empresa');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
-
-    throw new Error(response.result?.description || 'Error al obtener la empresa');
   }
 
   static async createCompany(payload: CompanyPayload): Promise<Company> {
-    const response = await apiClient.request<CompanyApi>({
-      endpoint: this.BASE_ENDPOINT,
-      method: 'POST',
-      body: payload,
-    });
+    try {
+      const response = await apiClient.request<CompanyApi>({
+        endpoint: this.BASE_ENDPOINT,
+        method: 'POST',
+        body: payload,
+      });
 
-    if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-      return companyAdapter(response.data);
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return companyAdapter(response.data);
+      }
+
+      throw new Error(response.result?.description || 'Error al crear la empresa');
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al crear la empresa');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
-
-    throw new Error(response.result?.description || 'Error al crear la empresa');
   }
 
   static async updateCompany(id: string, payload: CompanyPayload): Promise<Company> {
-    const response = await apiClient.request<CompanyApi>({
-      endpoint: `${this.BASE_ENDPOINT}/${id}`,
-      method: 'PUT',
-      body: payload,
-    });
+    try {
+      const response = await apiClient.request<CompanyApi>({
+        endpoint: `${this.BASE_ENDPOINT}/${id}`,
+        method: 'PUT',
+        body: payload,
+      });
 
-    if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-      return companyAdapter(response.data);
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return companyAdapter(response.data);
+      }
+
+      throw new Error(response.result?.description || 'Error al actualizar la empresa');
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al actualizar la empresa');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
-
-    throw new Error(response.result?.description || 'Error al actualizar la empresa');
   }
 
   static async deleteCompany(id: string): Promise<void> {
-    const response = await apiClient.request<void>({
-      endpoint: `${this.BASE_ENDPOINT}/${id}`,
-      method: 'DELETE',
-    });
+    try {
+      const response = await apiClient.request<void>({
+        endpoint: `${this.BASE_ENDPOINT}/${id}`,
+        method: 'DELETE',
+      });
 
-    if (response.result?.statusCode !== SUCCESS_STATUS_CODE) {
-      throw new Error(response.result?.description || 'Error al eliminar la empresa');
+      if (response.result?.statusCode !== SUCCESS_STATUS_CODE) {
+        throw new Error(response.result?.description || 'Error al eliminar la empresa');
+      }
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error?.result || error?.details) {
+        throw error;
+      }
+      const genericError = new Error(error?.message || 'Error al eliminar la empresa');
+      (genericError as any).result = error?.result;
+      (genericError as any).details = error?.details;
+      throw genericError;
     }
   }
 

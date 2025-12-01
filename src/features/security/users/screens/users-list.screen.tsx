@@ -21,6 +21,7 @@ import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { createUsersListStyles } from '@/src/styles/pages/users-list.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
@@ -156,11 +157,11 @@ export function UsersListScreen() {
         return;
       }
 
-      const errorMessage = error.message || t.security?.users?.loadError || 'Error al cargar usuarios';
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.users?.loadError || 'Error al cargar usuarios');
       setError(errorMessage);
       setHasError(true);
       // Mostrar error con detalles
-      alert.showError(errorMessage, error.details || error.response?.result?.details);
+      alert.showError(errorMessage, false, undefined, detailString, error);
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -398,19 +399,8 @@ export function UsersListScreen() {
       if (handleApiError(error)) {
         return;
       }
-      const backendResult = (error as any)?.result;
-      const rawDetails = backendResult?.details ?? error?.details;
-      const detailString =
-        typeof rawDetails === 'string'
-          ? rawDetails
-          : rawDetails?.message
-          ? String(rawDetails.message)
-          : undefined;
-
-      const errorMessage =
-        backendResult?.description || error?.message || 'Error al eliminar usuario';
-
-      alert.showError(errorMessage, false, undefined, detailString);
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al eliminar usuario');
+      alert.showError(errorMessage, false, undefined, detailString, error);
     }
   };
 
