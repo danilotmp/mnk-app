@@ -2,7 +2,7 @@
  * Estilos para el componente UserProfileHeader
  */
 
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const createUserProfileHeaderStyles = () =>
   StyleSheet.create({
@@ -124,11 +124,18 @@ export const createUserProfileHeaderStyles = () =>
       borderRadius: 16,
       padding: 24,
       position: 'relative',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
-      elevation: 5,
+      ...Platform.select({
+        web: {
+          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.25)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          elevation: 5,
+        },
+      }),
     },
     modalHeader: {
       alignItems: 'center',

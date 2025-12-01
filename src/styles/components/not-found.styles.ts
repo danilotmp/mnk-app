@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const createNotFoundStyles = (screenWidth: number = 400) => {
   let fontSize = 64;
@@ -40,11 +40,18 @@ export const createNotFoundStyles = (screenWidth: number = 400) => {
       borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',
-      elevation: 3,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.2,
-      shadowRadius: 6,
+      ...Platform.select({
+        web: {
+          boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.2)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.2,
+          shadowRadius: 6,
+          elevation: 3,
+        },
+      }),
       zIndex: 3,
     },
     questionMark: { fontSize: 120, fontWeight: 'bold', opacity: 0.9 },

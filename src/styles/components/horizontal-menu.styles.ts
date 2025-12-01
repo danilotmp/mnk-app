@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const createHorizontalMenuStyles = () =>
   StyleSheet.create({
@@ -29,11 +29,18 @@ export const createHorizontalMenuStyles = () =>
       width: '80%',
       maxWidth: 320,
       height: '100%',
-      shadowColor: '#000',
-      shadowOffset: { width: 2, height: 0 },
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
-      elevation: 5,
+      ...Platform.select({
+        web: {
+          boxShadow: '2px 0px 8px rgba(0, 0, 0, 0.25)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 2, height: 0 },
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          elevation: 5,
+        },
+      }),
     },
     mobileMenuHeader: {
       flexDirection: 'row',
@@ -87,10 +94,18 @@ export const createHorizontalMenuStyles = () =>
       maxWidth: 1200,
       borderWidth: 1,
       borderRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      ...Platform.select({
+        web: {
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+          elevation: 8,
+        },
+      }),
       zIndex: 10000,
       padding: 24,
     },
@@ -114,10 +129,18 @@ export const createHorizontalMenuStyles = () =>
       maxWidth: 320,
       borderWidth: 1,
       borderRadius: 12,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 5,
+      ...Platform.select({
+        web: {
+          boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 5,
+        },
+      }),
       zIndex: 10000,
       padding: 12,
     },

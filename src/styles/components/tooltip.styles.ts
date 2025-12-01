@@ -2,7 +2,7 @@
  * Estilos para el componente Tooltip
  */
 
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const createTooltipStyles = () =>
   StyleSheet.create({
@@ -16,11 +16,18 @@ export const createTooltipStyles = () =>
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 4,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 10, // Elevación alta para Android
+      ...Platform.select({
+        web: {
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 10,
+        },
+      }),
       minWidth: 60,
       maxWidth: 600, // Aumentado significativamente para permitir crecimiento horizontal y mostrar texto completo en 2 líneas
     },

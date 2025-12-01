@@ -9,7 +9,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { TouchableOpacitySafe } from '@/components/ui/touchable-opacity-safe';
 import { Toast, useToast } from './toast.context';
 
 /**
@@ -108,9 +109,9 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
           transform: [{ translateX: slideAnim }],
           opacity: opacityAnim,
           marginTop: index * 8, // Espaciado entre toasts
+          pointerEvents: 'auto',
         },
       ]}
-      pointerEvents="auto"
     >
       <ThemedView
         style={[
@@ -160,7 +161,7 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
 
           {/* Detalle error */}
           {toast.detail && (
-            <TouchableOpacity
+            <TouchableOpacitySafe
               style={styles.detailToggle}
               onPress={() => setShowDetail((prev) => !prev)}
               activeOpacity={0.7}
@@ -175,7 +176,7 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
                   {detailLabel}
                 </ThemedText>
               </View>
-            </TouchableOpacity>
+            </TouchableOpacitySafe>
           )}
           {toast.detail && showDetail && (
             <View style={styles.detailContainer}>
@@ -187,9 +188,9 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
         </View>
 
         {/* Botón de cierre */}
-        <TouchableOpacity onPress={handleDismiss} style={styles.closeButton}>
+        <TouchableOpacitySafe onPress={handleDismiss} style={styles.closeButton}>
           <Ionicons name="close" size={20} color={toastColors.text} />
-        </TouchableOpacity>
+        </TouchableOpacitySafe>
       </ThemedView>
     </Animated.View>
   );
@@ -208,10 +209,10 @@ export function ToastContainer() {
   }
 
   return (
-    <View style={styles.modalOverlay} pointerEvents="box-none">
-      <View style={styles.container} pointerEvents="box-none">
+    <View style={styles.modalOverlay}>
+      <View style={styles.container}>
         {toasts.map((toast, index) => (
-          <View key={toast.id} pointerEvents="auto">
+          <View key={toast.id} style={{ pointerEvents: 'auto' }}>
             <ToastItem
               toast={toast}
               onDismiss={() => hideToast(toast.id)}
@@ -254,10 +255,17 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingRight: 44, // espacio para la X
     borderRadius: 12,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.25)',
+      },
+      default: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 5,
+      },
+    }),
     minHeight: 60,
   },
   iconContainer: {

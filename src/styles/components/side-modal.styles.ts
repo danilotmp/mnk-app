@@ -3,7 +3,7 @@
  */
 
 import { BaseTheme } from '@/constants/theme';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const createSideModalStyles = (colors: BaseTheme['colors'], isMobile: boolean = false) =>
   StyleSheet.create({
@@ -15,14 +15,21 @@ export const createSideModalStyles = (colors: BaseTheme['colors'], isMobile: boo
     },
     modalContainer: {
       backgroundColor: colors.surfaceVariant || colors.surface || '#1E293B', // Usar surfaceVariant en modo dark para evitar transparencia
-      shadowColor: '#000',
-      shadowOffset: {
-        width: -2,
-        height: 0,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 10,
-      elevation: 10,
+      ...Platform.select({
+        web: {
+          boxShadow: '-2px 0px 10px rgba(0, 0, 0, 0.25)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: {
+            width: -2,
+            height: 0,
+          },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+          elevation: 10,
+        },
+      }),
       // Bordes redondeados siempre en el lado izquierdo
       borderTopLeftRadius: 12,
       borderBottomLeftRadius: 12,

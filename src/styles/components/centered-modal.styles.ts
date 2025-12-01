@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import type { ThemeColors } from '@/src/styles/themes/theme.types';
 
 export const createCenteredModalStyles = (colors: ThemeColors, isMobile: boolean) => {
@@ -12,14 +12,21 @@ export const createCenteredModalStyles = (colors: ThemeColors, isMobile: boolean
     modalContainer: {
       borderRadius: 16,
       overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      ...Platform.select({
+        web: {
+          boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+        },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: 4,
+          },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        },
+      }),
     },
     header: {
       flexDirection: 'row',

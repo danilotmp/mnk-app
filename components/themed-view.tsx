@@ -42,5 +42,13 @@ export function ThemedView({
 
   const backgroundColor = getBackgroundColor();
 
-  return <View style={[{ backgroundColor }, style]} {...otherProps} />;
+  // Extraer pointerEvents de otherProps si existe y moverlo a style
+  const { pointerEvents, ...restProps } = otherProps as any;
+  const finalStyle = [
+    { backgroundColor },
+    pointerEvents ? { pointerEvents } : null,
+    style,
+  ].filter(Boolean);
+
+  return <View style={finalStyle} {...restProps} />;
 }

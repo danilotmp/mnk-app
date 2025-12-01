@@ -6,7 +6,8 @@
 import { useTheme } from '@/hooks/use-theme';
 import { createTooltipStyles } from '@/src/styles/components/tooltip.styles';
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Platform, View, ViewStyle } from 'react-native';
+import { TouchableOpacitySafe } from './touchable-opacity-safe';
 import { ThemedText } from '../themed-text';
 
 export interface TooltipProps {
@@ -121,9 +122,9 @@ export function Tooltip({
       {Platform.OS === 'web' ? (
         <View>{children}</View>
       ) : (
-        <TouchableOpacity activeOpacity={1} {...mobileProps}>
+        <TouchableOpacitySafe activeOpacity={1} {...mobileProps}>
           {children}
-        </TouchableOpacity>
+        </TouchableOpacitySafe>
       )}
       {visible && (
         <View style={[getTooltipStyle(), { flexWrap: 'wrap' }]}>
