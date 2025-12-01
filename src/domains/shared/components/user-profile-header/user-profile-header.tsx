@@ -36,11 +36,25 @@ export function UserProfileHeader({
   const { user, company, branch: currentBranch } = useCompany();
   const { switchBranch } = useBranches();
   
-  // user.availableBranches es BranchAccess[] según el tipo
-  const branches: BranchAccess[] = user?.availableBranches || []; 
-  // Debug: Verificar que branches tenga datos
-  // console.log('UserProfileHeader - branches:', branches);
-  // console.log('UserProfileHeader - branch:', branch);
+  // Filtrar sucursales por la empresa actual
+  // user.branches es BranchAccess[] con TODAS las sucursales del usuario
+  const allBranches: BranchAccess[] = user?.branches || [];
+  
+  // Filtrar por la empresa actual
+  const branches: BranchAccess[] = React.useMemo(() => {
+    if (!company || !allBranches.length) {
+      return [];
+    }
+    
+    const filtered = allBranches.filter(access => {
+      const branch = access.branch;
+      if (!branch) return false;
+      // Filtrar por companyId de la empresa actual
+      return branch.companyId === company.id;
+    });
+    
+    return filtered;
+  }, [allBranches, company?.id]); 
   const { clearContext } = useMultiCompany();
   const { clearSession } = useSession();
   const [modalVisible, setModalVisible] = useState(false);
@@ -53,6 +67,7 @@ export function UserProfileHeader({
   const { width } = useWindowDimensions();
   const isMobile = isMobileDevice(width);
   const isDesktop = isDesktopDevice(width);
+
 
   // Si no hay usuario autenticado, mostrar botón de login
   if (!user || !company || !currentBranch) {
@@ -109,9 +124,52 @@ export function UserProfileHeader({
 
   // Obtener iniciales del nombre para el avatar
   const getInitials = () => {
-    const firstInitial = user.firstName.charAt(0).toUpperCase();
-    const lastInitial = user.lastName.charAt(0).toUpperCase();
-    return `${firstInitial}${lastInitial}`;
+    const firstName = user?.firstName?.trim() || '';
+    const lastName = user?.lastName?.trim() || '';
+    
+    // Si hay firstName y lastName, usar sus iniciales
+    if (firstName && lastName) {
+      return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
+    }
+    
+    // Si solo hay firstName, usar su inicial
+    if (firstName) {
+      return firstName.charAt(0).toUpperCase();
+    }
+    
+    // Si solo hay lastName, usar su inicial
+    if (lastName) {
+      return lastName.charAt(0).toUpperCase();
+    }
+    
+    // Si no hay nombre, usar la primera letra del email
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    
+    // Fallback final
+    return 'U';
+  };
+  
+  // Obtener nombre completo para mostrar
+  const getDisplayName = () => {
+    const firstName = user?.firstName?.trim() || '';
+    const lastName = user?.lastName?.trim() || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    
+    if (firstName) {
+      return firstName;
+    }
+    
+    if (lastName) {
+      return lastName;
+    }
+    
+    // Si no hay nombre, usar el email como fallback
+    return user?.email || 'Usuario';
   };
 
   const handleBranchSwitch = (newBranch: Branch) => {
@@ -185,7 +243,7 @@ export function UserProfileHeader({
           {!isMobile && (
             <View style={styles.userInfo}>
               <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
-                {user.firstName} {isDesktop ? user.lastName : ''}
+                {getDisplayName()}
               </ThemedText>
               {/* Sucursal solo visible en Desktop */}
               {isDesktop && currentBranch && (
@@ -240,7 +298,7 @@ export function UserProfileHeader({
                     </ThemedText>
                   </View>
                   <ThemedText type="h3" style={styles.modalUserName}>
-                    {user.firstName} {user.lastName}
+                    {getDisplayName()}
                   </ThemedText>
                   <ThemedText type="body2" variant="secondary">
                     {user.email}

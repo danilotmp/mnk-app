@@ -172,6 +172,8 @@ export class AuthService {
 
   /**
    * Obtiene el perfil completo del usuario desde /security/profile
+   * El backend devuelve: { data: { user: {...} }, result: {...} }
+   * Necesitamos extraer response.data.user
    */
   async getProfile(): Promise<any> {
     try {
@@ -180,19 +182,25 @@ export class AuthService {
         method: 'GET',
       });
 
-      if (response.data) {
+      // El backend devuelve { data: { user: {...} }, result: {...} }
+      // response.data es { user: {...} }, necesitamos response.data.user
+      const userProfile = response.data?.user || response.data;
+      
+      // LOGS SESSION STORAGE: Aquí se agregará el log de la respuesta del servicio profile
+
+      if (userProfile) {
         // Obtener companyCode desde companies array si está disponible
-        const defaultCompany = response.data.companies?.find((c: any) => c.isDefault);
-        const companyCode = defaultCompany?.code || response.data.companyCode;
+        const defaultCompany = userProfile.companies?.find((c: any) => c.isDefault);
+        const companyCode = defaultCompany?.code || userProfile.companyCode;
         
         this.config.setUserContext({
-          userId: response.data.id,
+          userId: userProfile.id,
           companyCode: companyCode,
-          companyId: response.data.companyIdDefault || response.data.companyId, // Mantener compatibilidad temporal
+          companyId: userProfile.companyIdDefault || userProfile.companyId, // Mantener compatibilidad temporal
         });
       }
 
-      return response.data;
+      return userProfile;
     } catch (error) {
       return null;
     }

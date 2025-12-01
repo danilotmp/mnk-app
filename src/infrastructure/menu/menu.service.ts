@@ -166,26 +166,19 @@ export class MenuService {
    */
   static async getMenuForUser(
     language: string = 'es',
-    isAuthenticated: boolean
+    isAuthenticated: boolean,
+    companyId?: string
   ): Promise<MenuItem[]> {
     if (isAuthenticated) {
-      // Usuario autenticado: llamar al servicio (devuelve público + privado según permisos)
-      return await this.getMenu(language);
+      if (companyId) {
+        return await this.getMenuForCompany(companyId, language);
+      }
+      return this.getDefaultMenu();
     } else {
-      // Usuario no autenticado: usar menú por defecto (no llamar al servicio)
       return this.getDefaultMenu();
     }
   }
 
-  /**
-   * Obtener menú para un rol específico
-   * Envía el roleId como query parameter
-   * 
-   * @param roleId ID del rol para el que se quiere obtener el menú
-   * @param language Idioma del menú (es, en, pt)
-   * @param showAll Si es true, solicita todas las opciones disponibles del menú (para administración)
-   * @returns Array de items del menú del rol
-   */
   static async getMenuForRole(roleId: string, language: string = 'es', showAll: boolean = false): Promise<MenuItem[]> {
     try {
       const queryParams = new URLSearchParams();
@@ -197,17 +190,51 @@ export class MenuService {
       const response = await apiClient.request<MenuItem[]>({
         endpoint: `${API_CONFIG.ENDPOINTS.MENU}?${queryParams.toString()}`,
         method: 'GET',
-        skipAuth: false, // Requiere autenticación (token se envía automáticamente por apiClient)
+        skipAuth: false,
       });
 
       if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-        // Asegurar que las páginas públicas siempre estén presentes
         return this.ensurePublicPages(response.data);
       }
 
       throw new Error(response.result?.description || 'Error al obtener el menú del rol');
     } catch (error: any) {
-      // Si falla, retornar menú por defecto como fallback
+      return this.getDefaultMenu();
+    }
+  }
+
+  static async getMenuForCompany(companyId: string, language: string = 'es', showAll: boolean = false): Promise<MenuItem[]> {
+    try {
+      if (!companyId) {
+        throw new Error('companyId es requerido');
+      }
+
+      // LOGS SESSION STORAGE: Aquí se agregará el log del companyId a enviar
+
+      const queryParams = new URLSearchParams();
+      queryParams.append('companyId', companyId);
+      if (showAll) {
+        queryParams.append('showAll', 'true');
+      }
+      
+      const response = await apiClient.request<MenuItem[]>({
+        endpoint: `${API_CONFIG.ENDPOINTS.MENU}?${queryParams.toString()}`,
+        method: 'GET',
+        skipAuth: false,
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return this.ensurePublicPages(response.data);
+      }
+
+      throw new Error(response.result?.description || 'Error al obtener el menú de la empresa');
+    } catch (error: any) {
+      // Si es un error 401 (token no disponible), lanzar el error en lugar de devolver menú por defecto
+      if (error?.statusCode === 401 || error?.message?.includes('Token') || error?.message?.includes('auth token')) {
+        console.error('Error de autenticación al obtener el menú:', error);
+        throw error;
+      }
+      // Para otros errores, devolver menú por defecto
       return this.getDefaultMenu();
     }
   }

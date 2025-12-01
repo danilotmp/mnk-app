@@ -107,9 +107,10 @@ export class ApiClient {
     // Agregar Authorization si no se omite la autenticación
     if (!skipAuth) {
       const accessToken = await this.storage.getItem(API_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
+      if (!accessToken) {
+        throw new ApiError('Token de autenticación no disponible', 401, 'No auth token');
       }
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
     // Agregar información de multiempresa

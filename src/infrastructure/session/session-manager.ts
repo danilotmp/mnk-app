@@ -37,12 +37,13 @@ interface StoredData<T> {
  * Namespaces disponibles para organizar datos
  */
 export type SessionNamespace = 
-  | 'auth'        // Tokens y credenciales
-  | 'user'        // Información del usuario
-  | 'prefs'       // Preferencias de usuario
-  | 'cache'       // Datos en cache con TTL
-  | 'ui'          // Estado de UI (filtros, selecciones)
-  | 'feature';    // Datos específicos de features
+  | 'auth'
+  | 'user'
+  | 'menu'
+  | 'prefs'
+  | 'cache'
+  | 'ui'
+  | 'feature';
 
 /**
  * Gestor de sesión centralizado

@@ -1,5 +1,5 @@
 import { useTheme } from '@/hooks/use-theme';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
 interface LogoProps {
@@ -10,7 +10,7 @@ interface LogoProps {
 export function Logo({ size = 'medium', style }: LogoProps) {
   const { spacing } = useTheme();
 
-  const getSize = () => {
+  const logoSize = useMemo(() => {
     switch (size) {
       case 'small':
         return { width: 40, height: 40 };
@@ -19,9 +19,7 @@ export function Logo({ size = 'medium', style }: LogoProps) {
       default:
         return { width: 60, height: 60 };
     }
-  };
-
-  const logoSize = getSize();
+  }, [size]);
 
   return (
     <View style={[styles.container, { marginRight: spacing.md }, style]}>

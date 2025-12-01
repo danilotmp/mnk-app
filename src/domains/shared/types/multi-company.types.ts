@@ -101,7 +101,7 @@ export interface MultiCompanyUser extends BaseEntity {
   companyIdDefault: string; // Empresa por defecto del usuario (renombrado de companyId)
   companies: CompanyInfo[]; // Lista de todas las empresas a las que pertenece el usuario
   currentBranchId: string;
-  availableBranches: BranchAccess[];
+  branches: BranchAccess[]; // Renombrado de availableBranches para mantener consistencia con el backend
   roles: Role[];
   permissions: Permission[];
   preferences: UserPreferences;
@@ -110,11 +110,8 @@ export interface MultiCompanyUser extends BaseEntity {
 export interface BranchAccess {
   branchId: string;
   branch: Branch;
-  role: string;
-  permissions: Permission[];
-  grantedAt: Date;
-  grantedBy: string;
-  isActive: boolean;
+  // Eliminados: role, permissions, grantedAt, grantedBy, isActive
+  // Los permisos se manejan a nivel de usuario/rol-empresa, no a nivel de branch
 }
 
 export interface Role extends BaseEntity {
@@ -158,7 +155,7 @@ export interface NotificationPreferences {
 export interface MultiCompanyState {
   currentCompany: Company | null;
   currentBranch: Branch | null;
-  availableBranches: Branch[];
+  availableBranches: Branch[]; // Mantener para compatibilidad con el contexto (Branch[] filtradas por empresa)
   user: MultiCompanyUser | null;
   permissions: Permission[];
   isLoading: boolean;

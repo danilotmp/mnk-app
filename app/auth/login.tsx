@@ -8,12 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { MultiCompanyService } from '@/src/domains/shared/services';
+import { UserSessionService, UserContextService } from '@/src/domains/shared/services';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { authService } from '@/src/infrastructure/services/auth.service';
-import { mapApiUserToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
+import { mapUserResponseToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
+import { useSession } from '@/src/infrastructure/session';
+import { UserResponse } from '@/src/domains/shared/types/api/user-response.types';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -33,7 +35,10 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { setUserContext } = useMultiCompany();
+  const { saveSession } = useSession();
   const alert = useAlert();
+  const userSessionService = UserSessionService.getInstance();
+  const userContextService = UserContextService.getInstance();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -75,78 +80,69 @@ export default function LoginPage() {
 
       const isSuccess = response.result?.statusCode === SUCCESS_STATUS_CODE;
       if (isSuccess && response.data && response.data.user) {
+        alert.showSuccess(t.api.loginSuccess || 'Inicio de sesión exitoso');
+        
         try {
-          const userProfile = await authService.getProfile();
-          const userData = userProfile || response.data.user;
+          // Verificar que el token esté guardado después del login
+          const { apiClient } = await import('@/src/infrastructure/api/api.client');
+          let tokens = await apiClient.getTokens();
           
-          let mappedUser = mapApiUserToMultiCompanyUser({
-            ...response.data.user,
-            ...userData,
-            companyIdDefault: userData?.companyIdDefault || (response.data.user as any).companyIdDefault || '',
-            companies: userData?.companies || (response.data.user as any).companies || undefined,
-            currentBranchId: userData?.currentBranchId || (response.data.user as any).currentBranchId || '',
-            availableBranches: userData?.availableBranches || (response.data.user as any).availableBranches || [],
-          });
-          
-          const multiCompanyService = MultiCompanyService.getInstance();
-          const mockUsers = multiCompanyService.getMockUsers();
-          
-          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
-            const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
-            if (mockUser) {
-              mappedUser = {
-                ...mappedUser,
-                companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
-                companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
-                currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
-                availableBranches: mappedUser.availableBranches.length > 0 
-                  ? mappedUser.availableBranches 
-                  : mockUser.availableBranches,
-                roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
-                permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
-              };
+          // Si no hay token, esperar un momento y verificar de nuevo (puede ser un problema de timing)
+          if (!tokens || !tokens.accessToken) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            tokens = await apiClient.getTokens();
+            if (!tokens || !tokens.accessToken) {
+              throw new Error('Token de autenticación no disponible después del login');
             }
           }
           
+          const userProfile = await authService.getProfile() as UserResponse;
+          
+          if (!userProfile || !userProfile.id) {
+            throw new Error('No se pudo obtener el perfil del usuario');
+          }
+          
+          if (!userProfile.companies || userProfile.companies.length === 0) {
+            throw new Error('El usuario no tiene empresas asignadas');
+          }
+          
+          if (!userProfile.companyIdDefault) {
+            throw new Error('El usuario no tiene una empresa por defecto');
+          }
+          
+          await userSessionService.saveUser(userProfile);
+          
+          await userSessionService.setCurrentCompany(userProfile.companyIdDefault, true);
+          
+          if (userProfile.branchIdDefault) {
+            await userSessionService.setCurrentBranch(userProfile.branchIdDefault, true);
+          }
+          
+          // Verificar nuevamente el token antes de inicializar contexto (que llama al menú)
+          tokens = await apiClient.getTokens();
+          if (!tokens || !tokens.accessToken) {
+            throw new Error('Token de autenticación no disponible para obtener el menú');
+          }
+          
+          // Inicializar contexto después de asegurar que el token está disponible
+          await userContextService.initializeContext();
+          
+          const mappedUser = mapUserResponseToMultiCompanyUser(userProfile);
           await setUserContext(mappedUser);
+          
+          setIsLoading(false);
           router.replace('/');
-        } catch (profileError) {
-          try {
-            let mappedUser = mapApiUserToMultiCompanyUser({
-              ...response.data.user,
-              currentBranchId: (response.data.user as any).currentBranchId || '',
-              availableBranches: (response.data.user as any).availableBranches || [],
-            });
-            if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId) {
-              const multiCompanyService = MultiCompanyService.getInstance();
-              const mockUsers = multiCompanyService.getMockUsers();
-              const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
-              if (mockUser) {
-                mappedUser = {
-                  ...mappedUser,
-                  companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
-                  companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
-                  currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
-                  availableBranches: mappedUser.availableBranches.length > 0 
-                    ? mappedUser.availableBranches 
-                    : mockUser.availableBranches,
-                  roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
-                  permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
-                };
-              }
-            }
-            await setUserContext(mappedUser);
-            router.replace('/');
-          } catch (mappingError) {
-            alert.showError(t.api.loginFailed);
-            setIsLoading(false);
-          }
+        } catch (profileError: any) {
+          console.error('Error al obtener perfil:', profileError);
+          alert.showError(profileError?.message || t.api.loginFailed || 'Error al procesar la información del usuario');
+          setIsLoading(false);
         }
       } else {
         const errorMessage = response.result?.description || t.auth.invalidCredentials;
         const errorDetail = (response as any)?.result?.details || '';
         alert.showError(errorMessage, false, undefined, errorDetail);
         setErrors({ general: errorMessage });
+        setIsLoading(false);
       }
     } catch (error: any) {
       let errorMessage = t.api.loginFailed;
@@ -161,7 +157,6 @@ export default function LoginPage() {
       }
       alert.showError(errorMessage, false, undefined, errorDetail);
       setErrors({ general: errorMessage });
-    } finally {
       setIsLoading(false);
     }
   };

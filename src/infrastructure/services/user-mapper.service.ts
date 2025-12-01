@@ -1,72 +1,159 @@
 /**
  * Servicio para mapear datos de usuario del API al formato MultiCompanyUser
- * Basado en la estructura real del API según Swagger y Postman
+ * Actualizado para usar la nueva estructura UserResponse del backend
  */
 
-import { MultiCompanyUser, UserPreferences } from '@/src/domains/shared/types';
+import { Branch, BranchAccess, CompanyInfo, MultiCompanyUser, Role, UserPreferences } from '@/src/domains/shared/types';
+import { UserResponse } from '@/src/domains/shared/types/api/user-response.types';
 
 /**
- * Estructura real de la respuesta del login API
- * Actualizada según cambios del backend: companyId → companyIdDefault, agregado companies array
+ * Mapea UserResponse (nueva estructura del backend) a MultiCompanyUser (estructura interna)
  */
-export interface ApiLoginUserResponse {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  companyIdDefault?: string; // Renombrado de companyId
-  companyId?: string; // Mantener por compatibilidad temporal
-  companies?: Array<{ // Array de empresas del usuario
-    id: string;
-    code: string;
-    name: string;
-    status: number;
-    isDefault: boolean;
-  }>;
-  // Campos opcionales que pueden venir del perfil
-  phone?: string;
-  avatar?: string;
-  isEmailVerified?: boolean;
-  companyCode?: string; // Mantener por compatibilidad temporal
-  currentBranchId?: string;
-  availableBranches?: any[];
-  roles?: any[]; // Mantener por compatibilidad
-  userRoles?: any[]; // Campo del API /security/profile
-  permissions?: any[];
-  preferences?: any;
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
+export function mapUserResponseToMultiCompanyUser(
+  userResponse: UserResponse
+): MultiCompanyUser {
+  const now = new Date();
+  
+  // Mapear companies: UserResponse.companies[] → MultiCompanyUser.companies[]
+  const companies: CompanyInfo[] = (userResponse.companies || []).map(c => ({
+    id: c.id,
+    code: c.code,
+    name: c.name,
+    status: 1,
+    isDefault: c.id === userResponse.companyIdDefault,
+  }));
+  
+  // Mapear branches: UserResponse.branches[] → MultiCompanyUser.branches[]
+  const branchesArray = userResponse.branches || [];
+  
+  // LOGS SESSION STORAGE: Aquí se agregará el log del mapeo de branches
+  
+  const availableBranches: BranchAccess[] = branchesArray.map((branch) => {
+    // Crear objeto Branch completo con todos los campos requeridos
+    const branchObj: Branch = {
+      id: branch.id,
+      code: branch.code,
+      name: branch.name,
+      type: branch.type as any, // BranchType: 'headquarters' | 'branch' | 'warehouse' | 'store'
+      companyId: branch.companyId,
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        postalCode: '',
+      },
+      contactInfo: {
+        phone: '',
+        email: '',
+      },
+      settings: {
+        timezone: 'America/Guayaquil',
+        workingHours: {
+          monday: { isOpen: false },
+          tuesday: { isOpen: false },
+          wednesday: { isOpen: false },
+          thursday: { isOpen: false },
+          friday: { isOpen: false },
+          saturday: { isOpen: false },
+          sunday: { isOpen: false },
+        },
+        services: [],
+        features: [],
+      },
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    const branchAccess: BranchAccess = {
+      branchId: branch.id,
+      branch: branchObj,
+    };
+    return branchAccess;
+  });
+  
+  // Mapear roles: UserResponse.rolesByCompany[] → MultiCompanyUser.roles[]
+  const roles: Role[] = [];
+  if (userResponse.rolesByCompany && Array.isArray(userResponse.rolesByCompany)) {
+    for (const roleByCompany of userResponse.rolesByCompany) {
+      if (roleByCompany.roles && Array.isArray(roleByCompany.roles)) {
+        for (const roleInfo of roleByCompany.roles) {
+          roles.push({
+            id: roleInfo.id,
+            code: roleInfo.code,
+            name: roleInfo.name,
+            description: roleInfo.description,
+            permissions: [],
+            isSystem: roleInfo.isSystem,
+            isActive: true,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      }
+    }
+  }
+  
+  const mappedUser = {
+    id: userResponse.id,
+    email: userResponse.email,
+    firstName: userResponse.firstName,
+    lastName: userResponse.lastName,
+    phone: userResponse.phone,
+    avatar: undefined,
+    isEmailVerified: false,
+    companyIdDefault: userResponse.companyIdDefault,
+    companies: companies,
+    currentBranchId: userResponse.branchIdDefault || '',
+    branches: availableBranches, // Mantener mismo nombre que el backend
+    roles: roles,
+    permissions: [],
+    preferences: getDefaultUserPreferences(),
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  // LOGS SESSION STORAGE: Aquí se agregará el log del usuario mapeado antes de guardar en session storage
+  
+  return mappedUser;
 }
 
 /**
- * Mapea la respuesta del API de login/profile a MultiCompanyUser
- * Solo usa los campos que realmente vienen del API
- * Actualizado para usar companyIdDefault y companies array
+ * Mapea la respuesta del API de login (datos mínimos) a MultiCompanyUser
+ * Compatibilidad temporal para el login que aún puede devolver estructura antigua
  */
 export function mapApiUserToMultiCompanyUser(
-  apiUser: ApiLoginUserResponse | Partial<ApiLoginUserResponse>
+  apiUser: any
 ): MultiCompanyUser {
+  // Si ya es UserResponse, usar el mapeo directo
+  if (apiUser.companies && Array.isArray(apiUser.companies) && apiUser.companyIdDefault) {
+    return mapUserResponseToMultiCompanyUser(apiUser as UserResponse);
+  }
+  
+  // Mapeo legacy para compatibilidad
   const now = new Date();
-  // Determinar companyIdDefault: usar companyIdDefault si existe, sino companyId (compatibilidad temporal)
   const companyIdDefault = apiUser.companyIdDefault || apiUser.companyId || '';
   
-  // Obtener companies array: usar companies si existe, sino crear uno desde companyIdDefault/companyId
-  let companies: Array<{ id: string; code: string; name: string; status: number; isDefault: boolean }> = [];
+  let companies: CompanyInfo[] = [];
   if (apiUser.companies && apiUser.companies.length > 0) {
-    companies = apiUser.companies;
+    companies = apiUser.companies.map((c: any) => ({
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      status: c.status || 1,
+      isDefault: c.isDefault || c.id === companyIdDefault,
+    }));
   } else if (companyIdDefault) {
-    // Si no hay companies array pero hay companyIdDefault, crear uno básico (compatibilidad temporal)
     companies = [{
       id: companyIdDefault,
       code: apiUser.companyCode || '',
-      name: '', // Se completará desde el servicio
+      name: '',
       status: 1,
       isDefault: true,
     }];
   }
   
-  // Mapear solo los campos que existen en el API
-  // Los campos faltantes se completarán con datos mock o valores por defecto
   return {
     id: apiUser.id || '',
     email: apiUser.email || '',
@@ -75,14 +162,10 @@ export function mapApiUserToMultiCompanyUser(
     phone: apiUser.phone,
     avatar: apiUser.avatar,
     isEmailVerified: apiUser.isEmailVerified ?? false,
-    // companyIdDefault: usar el nuevo campo, con fallback a companyId para compatibilidad
     companyIdDefault: companyIdDefault,
-    // companies array: usar el array del API o uno creado desde companyIdDefault
     companies: companies,
-    // Estos campos NO vienen del login, solo del perfil
-    currentBranchId: apiUser.currentBranchId || '',
-    availableBranches: apiUser.availableBranches || [],
-    // Usar userRoles del API si está disponible, sino usar roles (compatibilidad)
+    currentBranchId: apiUser.currentBranchId || apiUser.branchIdDefault || '',
+    branches: apiUser.branches || apiUser.availableBranches || [], // Compatibilidad con estructura antigua
     roles: apiUser.userRoles || apiUser.roles || [],
     permissions: apiUser.permissions || [],
     preferences: apiUser.preferences || getDefaultUserPreferences(),

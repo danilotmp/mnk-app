@@ -105,10 +105,10 @@ export class MultiCompanyService {
 
       // Obtener sucursales disponibles PRIMERO
       // IMPORTANTE: Preservar los datos originales del backend antes de cualquier conversión
-      const originalAvailableBranches = userCopy.availableBranches || [];
+      const originalAvailableBranches = userCopy.branches || [];
       
       let availableBranches: BranchAccess[] = [];
-      const userAvailableBranches = userCopy.availableBranches || [];
+      const userAvailableBranches = userCopy.branches || [];
       
       if (userAvailableBranches.length > 0) {
         // Convertir Branch[] a BranchAccess[] si es necesario
@@ -126,11 +126,6 @@ export class MultiCompanyService {
           availableBranches = userAvailableBranches.map((branch: any) => ({
             branchId: branch.id,
             branch: branch,
-            role: 'user',
-            permissions: [],
-            grantedAt: new Date(),
-            grantedBy: 'system',
-            isActive: true,
           }));
         } else {
           // Ya es BranchAccess[]
@@ -157,24 +152,19 @@ export class MultiCompanyService {
         availableBranches = companyBranches.map(branch => ({
           branchId: branch.id,
           branch: branch,
-          role: 'user',
-          permissions: [],
-          grantedAt: new Date(),
-          grantedBy: 'system',
-          isActive: true,
         }));
       }
       
       // Actualizar el usuario con las sucursales (filtradas por empresa) para que se preserven en la sesión
-      userCopy.availableBranches = availableBranches;
+      userCopy.branches = availableBranches;
       // Preservar los roles del usuario (vienen como userRoles del API)
       userCopy.roles = userCopy.roles || [];
 
-      // Obtener sucursal actual desde availableBranches usando currentBranchId
+      // Obtener sucursal actual desde branches usando currentBranchId
       let currentBranch: Branch | null = null;
       
       if (user.currentBranchId && availableBranches.length > 0) {
-        // Buscar la sucursal en availableBranches usando currentBranchId
+        // Buscar la sucursal en branches usando currentBranchId
         const branchAccess = availableBranches.find(
           access => access.branchId === user.currentBranchId || access.branch?.id === user.currentBranchId
         );
@@ -232,9 +222,9 @@ export class MultiCompanyService {
         user: {
           ...userCopy, // Usar la copia para preservar companyIdDefault original
           currentBranchId: currentBranch?.id || userCopy.currentBranchId || '',
-          // Preservar los availableBranches filtrados por empresa actual
+          // Preservar los branches filtrados por empresa actual
           // para que el componente pueda usarlos directamente sin conversiones
-          availableBranches: availableBranches,
+          branches: availableBranches,
           // Preservar los roles del usuario (vienen como userRoles del API)
           roles: userCopy.roles || [],
         },
@@ -269,9 +259,9 @@ export class MultiCompanyService {
       await this.simulateNetworkDelay();
 
       // Verificar que el usuario tiene acceso a la sucursal
-      const hasAccess = this.currentState.user.availableBranches.some(
-        (access) => access.branchId === request.branchId && access.isActive
-      );
+      const hasAccess = this.currentState.user.branches?.some(
+        (access) => access.branchId === request.branchId && access.branch?.isActive
+      ) || false;
 
       if (!hasAccess) {
         throw new Error('No tienes acceso a esta sucursal');
@@ -358,11 +348,6 @@ export class MultiCompanyService {
     const availableBranchesAccess: BranchAccess[] = this.currentState.availableBranches.map(branch => ({
       branchId: branch.id,
       branch: branch,
-      role: 'user',
-      permissions: [],
-      grantedAt: new Date(),
-      grantedBy: 'system',
-      isActive: true,
     }));
 
     return {
@@ -400,9 +385,9 @@ export class MultiCompanyService {
     const user = this.mockUsers.find((u) => u.id === userId);
     if (!user) return [];
 
-    return user.availableBranches
-      .filter((access) => access.isActive)
-      .map((access) => access.branch);
+    return user.branches
+      ?.filter((access) => access.branch?.isActive)
+      .map((access) => access.branch) || [];
   }
 
   private async getUserPermissions(userId: string, branchId: string): Promise<Permission[]> {
@@ -410,8 +395,9 @@ export class MultiCompanyService {
     const user = this.mockUsers.find((u) => u.id === userId);
     if (!user) return [];
 
-    const branchAccess = user.availableBranches.find((access) => access.branchId === branchId);
-    return branchAccess ? branchAccess.permissions : [];
+    // Los permisos se manejan a nivel de usuario/rol-empresa, no a nivel de branch
+    // Retornar permisos del usuario directamente
+    return user.permissions || [];
   }
 
   // ===== Datos mock para desarrollo =====
