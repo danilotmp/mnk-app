@@ -1,7 +1,7 @@
-import { UserSessionService } from './user-session.service';
-import { UserResponse, CompanyInfo, BranchInfo, RoleInfo } from '../types/api/user-response.types';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
 import { MenuItem } from '@/src/infrastructure/menu/types';
+import { BranchInfo, CompanyInfo, RoleInfo, UserResponse } from '../types/api/user-response.types';
+import { UserSessionService } from './user-session.service';
 
 export class UserContextService {
   private static instance: UserContextService;
@@ -38,18 +38,21 @@ export class UserContextService {
     const currentCompanyId = await this.userSessionService.getCurrentCompany() || user.companyIdDefault;
     const currentBranchId = await this.userSessionService.getCurrentBranch() || user.branchIdDefault;
 
-    if (!currentBranchId || !user.branches || !Array.isArray(user.branches) || user.branches.length === 0) {
+    if (!currentBranchId || !currentCompanyId) {
       return null;
     }
 
+    // Nueva estructura: branches están anidados dentro de companies
     const branches = this.getBranchesForCompany(currentCompanyId, user);
     return branches.find(b => b.id === currentBranchId) || null;
   }
 
   getBranchesForCompany(companyId: string, user?: UserResponse | null): BranchInfo[] {
-    if (!user) return [];
-    if (!user.branches) return [];
-    return user.branches.filter(b => b.companyId === companyId);
+    if (!user || !user.companies || !Array.isArray(user.companies)) return [];
+    
+    // Nueva estructura: branches están anidados dentro de cada empresa
+    const company = user.companies.find(c => c.id === companyId);
+    return company?.branches || [];
   }
 
   getRolesForCompany(companyId: string, user?: UserResponse | null): RoleInfo[] {

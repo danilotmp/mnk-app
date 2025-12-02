@@ -36,25 +36,45 @@ export function UserProfileHeader({
   const { user, company, branch: currentBranch } = useCompany();
   const { switchBranch } = useBranches();
   
-  // Filtrar sucursales por la empresa actual
-  // user.branches es BranchAccess[] con TODAS las sucursales del usuario
-  const allBranches: BranchAccess[] = user?.branches || [];
+  // Obtener sucursales directamente desde la empresa actual
+  // Nueva estructura: branches están anidados dentro de companies[].branches[]
+  const [branches, setBranches] = React.useState<BranchAccess[]>([]);
   
-  // Filtrar por la empresa actual
-  const branches: BranchAccess[] = React.useMemo(() => {
-    if (!company || !allBranches.length) {
-      return [];
-    }
+  React.useEffect(() => {
+    const loadBranches = async () => {
+      if (!company || !user) {
+        setBranches([]);
+        return;
+      }
+      
+      // Obtener branches desde UserResponse usando UserContextService
+      const { UserSessionService } = await import('@/src/domains/shared/services/user-session.service');
+      const { UserContextService } = await import('@/src/domains/shared/services/user-context.service');
+      const userSessionService = UserSessionService.getInstance();
+      const userContextService = UserContextService.getInstance();
+      
+      const userResponse = await userSessionService.getUser();
+      if (!userResponse) {
+        setBranches([]);
+        return;
+      }
+      
+      // Obtener branches directamente desde company.branches[] (nueva estructura)
+      const branchInfos = userContextService.getBranchesForCompany(company.id, userResponse);
+      
+      // Convertir BranchInfo[] a BranchAccess[] usando los branches mapeados de user.branches
+      const branchAccesses = branchInfos
+        .map(branchInfo => {
+          const branchAccess = user.branches?.find(ba => ba.branchId === branchInfo.id);
+          return branchAccess;
+        })
+        .filter((access): access is BranchAccess => access != null && access.branch != null);
+      
+      setBranches(branchAccesses);
+    };
     
-    const filtered = allBranches.filter(access => {
-      const branch = access.branch;
-      if (!branch) return false;
-      // Filtrar por companyId de la empresa actual
-      return branch.companyId === company.id;
-    });
-    
-    return filtered;
-  }, [allBranches, company?.id]); 
+    loadBranches();
+  }, [company?.id, user]); 
   const { clearContext } = useMultiCompany();
   const { clearSession } = useSession();
   const [modalVisible, setModalVisible] = useState(false);

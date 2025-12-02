@@ -1,9 +1,10 @@
 import React, { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { MultiCompanyService } from '../services/multi-company.service';
 import {
-    Branch,
-    MultiCompanyState,
-    MultiCompanyUser
+  Branch,
+  Company,
+  MultiCompanyState,
+  MultiCompanyUser
 } from '../types';
 
 interface MultiCompanyContextType extends MultiCompanyState {
@@ -55,9 +56,44 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
       const currentCompany = await userContextService.getCurrentCompany();
       const currentBranch = await userContextService.getCurrentBranch();
 
-      // Si no hay currentCompany, buscarlo directamente en las empresas del usuario
-      // UserContextService.getCurrentCompany() puede devolver null si no encuentra la empresa
-      let finalCurrentCompany = currentCompany;
+      // Convertir CompanyInfo a Company si existe, o buscar en user.companies
+      // UserContextService.getCurrentCompany() devuelve CompanyInfo, pero necesitamos Company
+      let finalCurrentCompany: Company | null = null;
+      
+      // Si hay currentCompany (CompanyInfo), buscar el Company completo en user.companies
+      if (currentCompany && user.companies && Array.isArray(user.companies)) {
+        const foundCompanyInfo = user.companies.find(c => c.id === currentCompany.id);
+        if (foundCompanyInfo) {
+          finalCurrentCompany = {
+            id: foundCompanyInfo.id,
+            code: foundCompanyInfo.code,
+            name: foundCompanyInfo.name,
+            description: '',
+            email: '',
+            phone: '',
+            address: {
+              street: '',
+              city: '',
+              state: '',
+              country: '',
+              postalCode: '',
+            },
+            settings: {
+              timezone: 'America/Guayaquil',
+              currency: 'USD',
+              language: 'es',
+            },
+            subscriptionPlan: {
+              name: 'Basic',
+              maxUsers: 10,
+              maxBranches: 5,
+            },
+            isActive: (foundCompanyInfo.status || 1) === 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Company;
+        }
+      }
       
       if (!finalCurrentCompany && user.companies && Array.isArray(user.companies) && user.companies.length > 0) {
         // Buscar la empresa por currentCompanyId
@@ -129,23 +165,45 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
         }
       }
 
-      // Filtrar sucursales por la empresa actual
-      const branchesForCompany = (user.branches || [])
-        .filter(access => {
-          const branch = access.branch;
-          if (!branch) return false;
-          // Si tenemos finalCurrentCompany, filtrar por companyId
-          if (finalCurrentCompany && branch.companyId) {
+      // Obtener sucursales directamente desde la empresa actual
+      // Nueva estructura: branches están anidados dentro de companies[].branches[]
+      let branchesForCompany: Branch[] = [];
+      
+      if (finalCurrentCompany) {
+        // Obtener branches desde UserResponse usando UserContextService
+        const userResponse = await userSessionService.getUser();
+        if (userResponse) {
+          const branchInfos = userContextService.getBranchesForCompany(finalCurrentCompany.id, userResponse);
+          // Convertir BranchInfo[] a Branch[] usando los branches mapeados de user.branches
+          branchesForCompany = branchInfos
+            .map(branchInfo => {
+              const branchAccess = user.branches?.find(ba => ba.branchId === branchInfo.id);
+              return branchAccess?.branch;
+            })
+            .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
+        }
+      }
+      
+      // Fallback: si no se encontraron branches, filtrar desde user.branches (compatibilidad)
+      if (branchesForCompany.length === 0 && user.branches && user.branches.length > 0 && finalCurrentCompany) {
+        branchesForCompany = (user.branches || [])
+          .filter(access => {
+            const branch = access.branch;
+            if (!branch) return false;
             return branch.companyId === finalCurrentCompany.id;
-          }
-          // Si no, usar todas las sucursales disponibles
-          return true;
-        })
-        .map(access => access.branch)
-        .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
+          })
+          .map(access => access.branch)
+          .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
+      }
 
-      // Si no hay currentBranch pero hay currentBranchId, buscarlo en las sucursales disponibles
-      let finalCurrentBranch = currentBranch;
+      // Convertir BranchInfo a Branch si existe, o buscar en branchesForCompany
+      // UserContextService.getCurrentBranch() devuelve BranchInfo, pero necesitamos Branch
+      let finalCurrentBranch: Branch | null = null;
+      
+      // Si hay currentBranch (BranchInfo), buscar el Branch completo en branchesForCompany
+      if (currentBranch && branchesForCompany.length > 0) {
+        finalCurrentBranch = branchesForCompany.find(b => b.id === currentBranch.id) || null;
+      }
       
       if (!finalCurrentBranch && currentBranchId && branchesForCompany.length > 0) {
         finalCurrentBranch = branchesForCompany.find(b => b.id === currentBranchId) || null;
@@ -174,11 +232,33 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
           id: 'default-branch',
           code: 'DEFAULT',
           name: 'Sucursal Principal',
-          type: 'main',
+          type: 'main' as any,
           companyId: finalCurrentCompany.id,
-          address: undefined,
-          phone: undefined,
-          email: undefined,
+          address: {
+            street: '',
+            city: '',
+            state: '',
+            country: '',
+            postalCode: '',
+          },
+          contactInfo: {
+            phone: '',
+            email: '',
+          },
+          settings: {
+            timezone: 'America/Guayaquil',
+            workingHours: {
+              monday: { isOpen: false },
+              tuesday: { isOpen: false },
+              wednesday: { isOpen: false },
+              thursday: { isOpen: false },
+              friday: { isOpen: false },
+              saturday: { isOpen: false },
+              sunday: { isOpen: false },
+            },
+            services: [],
+            features: [],
+          },
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),

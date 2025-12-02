@@ -25,19 +25,24 @@ export function mapUserResponseToMultiCompanyUser(
     isDefault: c.id === userResponse.companyIdDefault,
   }));
   
-  // Mapear branches: UserResponse.branches[] → MultiCompanyUser.branches[]
-  const branchesArray = Array.isArray(userResponse.branches) ? userResponse.branches : [];
-  
+  // Mapear branches: Extraer branches anidados de cada empresa
   // LOGS SESSION STORAGE: Aquí se agregará el log del mapeo de branches
   
-  const availableBranches: BranchAccess[] = branchesArray.map((branch) => {
-    // Crear objeto Branch completo con todos los campos requeridos
-    const branchObj: Branch = {
-      id: branch.id,
-      code: branch.code,
-      name: branch.name,
-      type: branch.type as any, // BranchType: 'headquarters' | 'branch' | 'warehouse' | 'store'
-      companyId: branch.companyId,
+  const availableBranches: BranchAccess[] = [];
+  
+  // Iterar sobre cada empresa y extraer sus branches
+  for (const company of companiesArray) {
+    if (company.branches && Array.isArray(company.branches)) {
+      for (const branch of company.branches) {
+        // Crear objeto Branch completo con todos los campos requeridos
+        // companyId viene del contexto de la empresa padre
+        // type se infiere del código
+        const branchObj: Branch = {
+          id: branch.id,
+          code: branch.code,
+          name: branch.name,
+          type: inferBranchType(branch.code) as any, // Inferir tipo desde el código
+          companyId: company.id, // Usar id de la empresa padre
       address: {
         street: '',
         city: '',
@@ -68,12 +73,14 @@ export function mapUserResponseToMultiCompanyUser(
       updatedAt: now,
     };
     
-    const branchAccess: BranchAccess = {
-      branchId: branch.id,
-      branch: branchObj,
-    };
-    return branchAccess;
-  });
+        const branchAccess: BranchAccess = {
+          branchId: branch.id,
+          branch: branchObj,
+        };
+        availableBranches.push(branchAccess);
+      }
+    }
+  }
   
   // Mapear roles: UserResponse.rolesByCompany[] → MultiCompanyUser.roles[]
   const roles: Role[] = [];
@@ -174,6 +181,23 @@ export function mapApiUserToMultiCompanyUser(
     createdAt: apiUser.createdAt ? new Date(apiUser.createdAt) : now,
     updatedAt: apiUser.updatedAt ? new Date(apiUser.updatedAt) : now,
   };
+}
+
+/**
+ * Infiere el tipo de sucursal desde el código
+ */
+function inferBranchType(code: string): 'headquarters' | 'branch' | 'warehouse' | 'store' {
+  const upperCode = code.toUpperCase();
+  if (upperCode.includes('HQ') || upperCode.includes('HEADQUARTERS') || upperCode.includes('CASA MATRIZ')) {
+    return 'headquarters';
+  }
+  if (upperCode.includes('WAREHOUSE') || upperCode.includes('ALMACEN') || upperCode.includes('BODEGA')) {
+    return 'warehouse';
+  }
+  if (upperCode.includes('STORE') || upperCode.includes('TIENDA') || upperCode.includes('LOCAL')) {
+    return 'store';
+  }
+  return 'branch';
 }
 
 /**

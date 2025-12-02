@@ -7,7 +7,6 @@ export interface UserResponse {
   companyIdDefault: string;
   branchIdDefault?: string;
   companies: CompanyInfo[];
-  branches?: BranchInfo[];
   rolesByCompany?: RoleByCompany[];
 }
 
@@ -15,14 +14,14 @@ export interface CompanyInfo {
   id: string;
   code: string;
   name: string;
+  branches: BranchInfo[]; // Branches anidados dentro de cada empresa
 }
 
 export interface BranchInfo {
   id: string;
   code: string;
   name: string;
-  type: string;
-  companyId: string;
+  // type y companyId se infieren del contexto de la empresa padre
 }
 
 export interface RoleByCompany {
