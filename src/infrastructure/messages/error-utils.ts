@@ -67,7 +67,23 @@ export function extractErrorMessage(error: any, defaultMessage: string = 'Error 
   // ApiError tiene message directamente (heredado de Error)
   // Error del backend tiene result.description
   const backendResult = error?.result;
-  return backendResult?.description || error?.message || defaultMessage;
+  const description = backendResult?.description;
+  
+  // Si description es un array, unir los elementos
+  if (Array.isArray(description)) {
+    return description
+      .map((item) => (typeof item === 'string' ? item : String(item)))
+      .filter(Boolean)
+      .join(' ');
+  }
+  
+  // Si description es un string, devolverlo directamente
+  if (typeof description === 'string') {
+    return description;
+  }
+  
+  // Fallback a error.message o defaultMessage
+  return error?.message || defaultMessage;
 }
 
 /**

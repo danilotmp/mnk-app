@@ -64,7 +64,7 @@ export class MultiCompanyService {
       // Prioridad: 1) Buscar en companies array por companyIdDefault, 2) Buscar por isDefault, 3) Primera empresa
       let company: Company | null = null;
       
-      if (userCopy.companies && userCopy.companies.length > 0) {
+      if (userCopy.companies && Array.isArray(userCopy.companies) && userCopy.companies.length > 0) {
         // Opción 1: Buscar por companyIdDefault
         const defaultCompanyInfo = userCopy.companies.find(c => c.id === userCopy.companyIdDefault);
         if (defaultCompanyInfo) {

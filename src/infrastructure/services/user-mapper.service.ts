@@ -15,7 +15,9 @@ export function mapUserResponseToMultiCompanyUser(
   const now = new Date();
   
   // Mapear companies: UserResponse.companies[] → MultiCompanyUser.companies[]
-  const companies: CompanyInfo[] = (userResponse.companies || []).map(c => ({
+  const companiesArray = Array.isArray(userResponse.companies) ? userResponse.companies : [];
+  
+  const companies: CompanyInfo[] = companiesArray.map(c => ({
     id: c.id,
     code: c.code,
     name: c.name,
@@ -24,7 +26,7 @@ export function mapUserResponseToMultiCompanyUser(
   }));
   
   // Mapear branches: UserResponse.branches[] → MultiCompanyUser.branches[]
-  const branchesArray = userResponse.branches || [];
+  const branchesArray = Array.isArray(userResponse.branches) ? userResponse.branches : [];
   
   // LOGS SESSION STORAGE: Aquí se agregará el log del mapeo de branches
   

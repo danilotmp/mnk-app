@@ -58,7 +58,8 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
       // Si no hay currentCompany, buscarlo directamente en las empresas del usuario
       // UserContextService.getCurrentCompany() puede devolver null si no encuentra la empresa
       let finalCurrentCompany = currentCompany;
-      if (!finalCurrentCompany && user.companies && user.companies.length > 0) {
+      
+      if (!finalCurrentCompany && user.companies && Array.isArray(user.companies) && user.companies.length > 0) {
         // Buscar la empresa por currentCompanyId
         if (currentCompanyId) {
           const foundCompany = user.companies.find(c => c.id === currentCompanyId);
@@ -145,6 +146,7 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
 
       // Si no hay currentBranch pero hay currentBranchId, buscarlo en las sucursales disponibles
       let finalCurrentBranch = currentBranch;
+      
       if (!finalCurrentBranch && currentBranchId && branchesForCompany.length > 0) {
         finalCurrentBranch = branchesForCompany.find(b => b.id === currentBranchId) || null;
       }
@@ -155,7 +157,7 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
       
       // Si no hay sucursales disponibles, crear una sucursal por defecto
       // Esto es necesario porque UserProfileHeader requiere currentBranch
-      if (!finalCurrentBranch && user.branches && user.branches.length > 0) {
+      if (!finalCurrentBranch && user.branches && Array.isArray(user.branches) && user.branches.length > 0) {
         // Buscar cualquier sucursal del usuario (no filtrada por empresa)
         const anyBranch = user.branches
           .map(access => access.branch)

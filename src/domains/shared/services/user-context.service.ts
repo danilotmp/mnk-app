@@ -22,7 +22,10 @@ export class UserContextService {
 
   async getCurrentCompany(): Promise<CompanyInfo | null> {
     const user = await this.userSessionService.getUser();
-    if (!user || !user.companies || user.companies.length === 0) return null;
+    
+    if (!user || !user.companies || !Array.isArray(user.companies) || user.companies.length === 0) {
+      return null;
+    }
 
     const currentCompanyId = await this.userSessionService.getCurrentCompany() || user.companyIdDefault;
     return user.companies.find(c => c.id === currentCompanyId) || null;
@@ -35,7 +38,9 @@ export class UserContextService {
     const currentCompanyId = await this.userSessionService.getCurrentCompany() || user.companyIdDefault;
     const currentBranchId = await this.userSessionService.getCurrentBranch() || user.branchIdDefault;
 
-    if (!currentBranchId || !user.branches || user.branches.length === 0) return null;
+    if (!currentBranchId || !user.branches || !Array.isArray(user.branches) || user.branches.length === 0) {
+      return null;
+    }
 
     const branches = this.getBranchesForCompany(currentCompanyId, user);
     return branches.find(b => b.id === currentBranchId) || null;
@@ -60,7 +65,7 @@ export class UserContextService {
       throw new Error('Usuario no autenticado');
     }
 
-    if (!user.companies || user.companies.length === 0) {
+    if (!user.companies || !Array.isArray(user.companies) || user.companies.length === 0) {
       throw new Error('No hay empresas disponibles para el usuario');
     }
 

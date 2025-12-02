@@ -12,6 +12,7 @@ import { UserSessionService, UserContextService } from '@/src/domains/shared/ser
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorMessage, extractErrorDetail } from '@/src/infrastructure/messages/error-utils';
 import { authService } from '@/src/infrastructure/services/auth.service';
 import { mapUserResponseToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
 import { useSession } from '@/src/infrastructure/session';
@@ -102,7 +103,7 @@ export default function LoginPage() {
             throw new Error('No se pudo obtener el perfil del usuario');
           }
           
-          if (!userProfile.companies || userProfile.companies.length === 0) {
+          if (!userProfile.companies || !Array.isArray(userProfile.companies) || userProfile.companies.length === 0) {
             throw new Error('El usuario no tiene empresas asignadas');
           }
           
@@ -138,8 +139,10 @@ export default function LoginPage() {
           setIsLoading(false);
         }
       } else {
-        const errorMessage = response.result?.description || t.auth.invalidCredentials;
-        const errorDetail = (response as any)?.result?.details || '';
+        // Usar extractErrorMessage para manejar correctamente si description es array o string
+        const errorMessage = extractErrorMessage(response) || t.auth.invalidCredentials;
+        const errorDetail = extractErrorDetail(response) || '';
+        
         alert.showError(errorMessage, false, undefined, errorDetail);
         setErrors({ general: errorMessage });
         setIsLoading(false);

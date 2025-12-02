@@ -190,7 +190,9 @@ export class AuthService {
 
       if (userProfile) {
         // Obtener companyCode desde companies array si está disponible
-        const defaultCompany = userProfile.companies?.find((c: any) => c.isDefault);
+        const defaultCompany = Array.isArray(userProfile.companies) 
+          ? userProfile.companies.find((c: any) => c.isDefault)
+          : null;
         const companyCode = defaultCompany?.code || userProfile.companyCode;
         
         this.config.setUserContext({

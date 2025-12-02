@@ -160,23 +160,25 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
             companyIdDefault: userData?.companyIdDefault || response.data.user.companyIdDefault || userData?.companyId || response.data.user.companyId || '',
             companies: userData?.companies || response.data.user.companies || undefined,
             currentBranchId: userData?.currentBranchId || response.data.user.currentBranchId || '',
-            availableBranches: userData?.availableBranches || response.data.user.availableBranches || [],
+            branches: userData?.branches || response.data.user.branches || [],
           });
           const multiCompanyService = MultiCompanyService.getInstance();
           const mockUsers = multiCompanyService.getMockUsers();
-          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId || mappedUser.availableBranches.length === 0) {
+          // Verificar si tiene companies y branches válidos
+          const hasValidCompanies = mappedUser.companies && Array.isArray(mappedUser.companies) && mappedUser.companies.length > 0;
+          const hasValidBranches = mappedUser.branches && Array.isArray(mappedUser.branches) && mappedUser.branches.length > 0;
+          
+          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId || !hasValidBranches) {
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
             if (mockUser) {
               mappedUser = {
                 ...mappedUser,
                 companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
-                companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
+                companies: hasValidCompanies ? mappedUser.companies : mockUser.companies,
                 currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
-                availableBranches: mappedUser.availableBranches.length > 0 
-                  ? mappedUser.availableBranches 
-                  : mockUser.availableBranches,
-                roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
-                permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
+                branches: hasValidBranches ? mappedUser.branches : (mockUser.branches || []),
+                roles: mappedUser.roles && Array.isArray(mappedUser.roles) && mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
+                permissions: mappedUser.permissions && Array.isArray(mappedUser.permissions) && mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
               };
             }
           }
@@ -195,9 +197,14 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
           let mappedUser = mapApiUserToMultiCompanyUser({
             ...response.data.user,
             currentBranchId: response.data.user.currentBranchId || '',
-            availableBranches: response.data.user.availableBranches || [],
+            branches: response.data.user.branches || [],
           });
-          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId) {
+          
+          // Verificar si tiene companies y branches válidos
+          const hasValidCompanies = mappedUser.companies && Array.isArray(mappedUser.companies) && mappedUser.companies.length > 0;
+          const hasValidBranches = mappedUser.branches && Array.isArray(mappedUser.branches) && mappedUser.branches.length > 0;
+          
+          if (!mappedUser.companyIdDefault || !mappedUser.currentBranchId || !hasValidBranches) {
             const multiCompanyService = MultiCompanyService.getInstance();
             const mockUsers = multiCompanyService.getMockUsers();
             const mockUser = mockUsers.find(u => u.email === mappedUser.email) || mockUsers[0];
@@ -205,13 +212,11 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
               mappedUser = {
                 ...mappedUser,
                 companyIdDefault: mappedUser.companyIdDefault || mockUser.companyIdDefault,
-                companies: mappedUser.companies.length > 0 ? mappedUser.companies : mockUser.companies,
+                companies: hasValidCompanies ? mappedUser.companies : mockUser.companies,
                 currentBranchId: mappedUser.currentBranchId || mockUser.currentBranchId,
-                availableBranches: mappedUser.availableBranches.length > 0 
-                  ? mappedUser.availableBranches 
-                  : mockUser.availableBranches,
-                roles: mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
-                permissions: mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
+                branches: hasValidBranches ? mappedUser.branches : (mockUser.branches || []),
+                roles: mappedUser.roles && Array.isArray(mappedUser.roles) && mappedUser.roles.length > 0 ? mappedUser.roles : mockUser.roles,
+                permissions: mappedUser.permissions && Array.isArray(mappedUser.permissions) && mappedUser.permissions.length > 0 ? mappedUser.permissions : mockUser.permissions,
               };
             }
           }
