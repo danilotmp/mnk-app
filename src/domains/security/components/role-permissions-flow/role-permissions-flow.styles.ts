@@ -26,11 +26,10 @@ export function createPermissionFlowStyles(colors: any, isMobile: boolean) {
     },
     companySelector: {
       marginLeft: 12,
-      flex: 1,
+      alignSelf: 'flex-start', // Solo ocupa el ancho del contenido
     },
     companySelectorContent: {
       gap: isMobile ? 8 : 12,
-      paddingRight: isMobile ? 16 : 20,
     },
     companyOption: {
       paddingHorizontal: isMobile ? 12 : 16,

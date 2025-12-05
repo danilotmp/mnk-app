@@ -26,6 +26,7 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { createRolesListStyles } from '@/src/styles/pages/roles-list.styles';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
+import { useCompanyOptions } from '@/src/domains/security/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -36,6 +37,7 @@ export function RolesListScreen() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { currentCompany } = useMultiCompany();
+  const { companies } = useCompanyOptions();
   const alert = useAlert();
   const { isMobile } = useResponsive();
   const styles = createRolesListStyles(isMobile);
@@ -246,6 +248,13 @@ export function RolesListScreen() {
     setHasError(false);
   };
 
+  // Función para obtener el nombre de la empresa por su ID
+  const getCompanyName = useCallback((companyId?: string) => {
+    if (!companyId) return '-';
+    const company = companies.find(c => c.id === companyId);
+    return company?.name || '-';
+  }, [companies]);
+
   /**
    * Filtrar roles localmente según el filtro local
    */
@@ -259,14 +268,16 @@ export function RolesListScreen() {
       const name = (role.name || '').toLowerCase();
       const code = (role.code || '').toLowerCase();
       const description = (role.description || '').toLowerCase();
+      const companyName = getCompanyName(role.companyId).toLowerCase();
       
       return (
         name.includes(filterLower) ||
         code.includes(filterLower) ||
-        description.includes(filterLower)
+        description.includes(filterLower) ||
+        companyName.includes(filterLower)
       );
     });
-  }, [roles, localFilter]);
+  }, [roles, localFilter, getCompanyName]);
 
   const handleCreateRole = () => {
     setFormActions(null);
@@ -357,19 +368,29 @@ export function RolesListScreen() {
 
   const columns: TableColumn<Role>[] = [
     {
+      key: 'company',
+      label: t.security?.roles?.company || 'Empresa',
+      width: '18%',
+      render: (role) => (
+        <ThemedText type="body2">
+          {getCompanyName(role.companyId)}
+        </ThemedText>
+      ),
+    },
+    {
       key: 'code',
       label: t.security?.roles?.code || 'Código',
-      width: '18%',
+      width: '15%',
     },
     {
       key: 'name',
       label: t.security?.roles?.name || 'Nombre',
-      width: '23%',
+      width: '18%',
     },
     {
       key: 'description',
       label: t.security?.roles?.description || 'Descripción',
-      width: '26%',
+      width: '20%',
     },
     {
       key: 'isSystem',

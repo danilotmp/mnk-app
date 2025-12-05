@@ -22,8 +22,14 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const styles = createPermissionFlowStyles(colors, isMobile);
-  const { companies, loading: companiesLoading } = useCompanyOptions();
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(companyId);
+  const { companies } = useCompanyOptions();
+  
+  // Filtrar empresas para mostrar solo la empresa del rol
+  const roleCompany = companies.find(c => c.id === companyId);
+  const availableCompanies = roleCompany ? [roleCompany] : [];
+  
+  // Siempre usar la empresa del rol, no permitir cambio
+  const selectedCompanyId = companyId;
   
   // Estado para el menú del rol
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -116,39 +122,29 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
         <View style={styles.roleHeader}>
           <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
           
-          {/* Selector de empresa alineado a la izquierda */}
-          {companies.length > 0 && (
+          {/* Selector de empresa alineado a la izquierda - Solo lectura, muestra solo la empresa del rol */}
+          {roleCompany && (
             <View style={styles.companySelector}>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.companySelectorContent}
+              <View
+                style={[
+                  styles.companyOption,
+                  {
+                    backgroundColor: colors.primary,
+                    borderColor: colors.border,
+                    opacity: 0.8, // Indicar que no es interactivo
+                  },
+                ]}
               >
-                {companies.map((comp) => (
-                  <TouchableOpacity
-                    key={comp.id}
-                    style={[
-                      styles.companyOption,
-                      {
-                        backgroundColor: selectedCompanyId === comp.id ? colors.primary : colors.surface,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                    onPress={() => setSelectedCompanyId(comp.id)}
-                    disabled={companiesLoading}
-                  >
-                    <ThemedText
-                      type="body2"
-                      style={{
-                        color: selectedCompanyId === comp.id ? '#FFFFFF' : colors.text,
-                        fontWeight: selectedCompanyId === comp.id ? '600' : '400',
-                      }}
-                    >
-                      {comp.name}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                <ThemedText
+                  type="body2"
+                  style={{
+                    color: '#FFFFFF',
+                    fontWeight: '600',
+                  }}
+                >
+                  {roleCompany.name}
+                </ThemedText>
+              </View>
             </View>
           )}
         </View>
