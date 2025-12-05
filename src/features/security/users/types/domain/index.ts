@@ -2,5 +2,5 @@
  * Barrel export para tipos de dominio de usuarios
  */
 
-export type { User, UserUpdatePayload, UserFilters } from './user.types';
+export type { User, UserCreatePayload, UserUpdatePayload, UserFilters } from './user.types';
 

@@ -8,7 +8,7 @@ import { apiClient, ApiError } from '@/src/infrastructure/api/api.client';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { PaginatedResponse } from '@/src/domains/shared/types';
 import { userAdapter, usersAdapter } from '../adapters';
-import { User, UserFilters, UserUpdatePayload } from '../types/domain';
+import { User, UserFilters, UserUpdatePayload, UserCreatePayload } from '../types/domain';
 import { UserApi } from '../types/api';
 
 export class UsersService {
@@ -179,7 +179,7 @@ export class UsersService {
   /**
    * Crear nuevo usuario
    */
-  static async createUser(userData: Partial<User>): Promise<User> {
+  static async createUser(userData: UserCreatePayload): Promise<User> {
     try {
       const response = await apiClient.request<UserApi>({
         endpoint: this.BASE_ENDPOINT,

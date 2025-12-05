@@ -43,6 +43,23 @@ export interface User extends BaseEntity {
 }
 
 /**
+ * Payload para crear usuario
+ */
+export interface UserCreatePayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  roleId?: string;
+  status?: number; // Estado: -1=Eliminado, 0=Inactivo, 1=Activo, 2=Pendiente, 3=Suspendido
+  companies?: Array<{
+    id: string;
+    branchIds: string[]; // Array de UUIDs de sucursales
+  }>;
+}
+
+/**
  * Payload para actualizar usuario
  */
 export interface UserUpdatePayload {
@@ -51,10 +68,12 @@ export interface UserUpdatePayload {
   firstName?: string;
   lastName?: string;
   phone?: string;
-  companyId?: string;
   roleId?: string;
-  branchIds?: string[];
-  status?: number; // Sistema de estados
+  status?: number; // Estado: -1=Eliminado, 0=Inactivo, 1=Activo, 2=Pendiente
+  companies?: Array<{
+    id: string;
+    branchIds: string[]; // Array de UUIDs de sucursales
+  }>;
 }
 
 /**

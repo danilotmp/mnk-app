@@ -42,5 +42,13 @@ export interface UserApi extends BaseEntity {
     branchId?: string;
     branchCode?: string;
   }>;
+  companies?: Array<{
+    id: string;
+    branches: Array<{
+      id: string;
+      code: string;
+      name: string;
+    }>;
+  }>;
 }
 

@@ -9,14 +9,19 @@ import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
-import { RolesService } from '@/src/features/security/roles';
 import { useBranchOptions, useCompanyOptions } from '@/src/domains/security/hooks';
-import { UsersService } from '../../services';
+import { BranchesService } from '@/src/features/security/branches';
+import { RolesService } from '@/src/features/security/roles';
+import { apiClient } from '@/src/infrastructure/api/api.client';
+import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { UsersService } from '../../services';
+import { UserUpdatePayload } from '../../types/domain';
 import { createUserFormStyles } from '../user-create-form/user-create-form.styles';
 import { UserEditFormProps, UserFormData } from './user-edit-form.types';
 
@@ -31,8 +36,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     firstName: '',
     lastName: '',
     phone: '',
-    companyId: '',
-    branchIds: [] as string[],
+    companyId: '', // Mantener para compatibilidad
+    branchIds: [] as string[], // Mantener para compatibilidad
+    companyBranches: {} as Record<string, string[]>, // Nueva estructura: { [companyId]: [branchIds] }
     roleId: '',
     status: 1, // Default: Activo
   });
@@ -47,9 +53,13 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const loadedCompanyIdRef = useRef<string | null>(null); // Guardar el companyId ya cargado
   const phoneRef = useRef<string>(''); // Ref para mantener el teléfono actualizado
   const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
+  const companyBranchesRef = useRef<Record<string, string[]>>({}); // Ref para mantener companyBranches actualizado
   const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
   const statusRef = useRef<number>(1); // Ref para mantener el status actualizado
   const formDataRef = useRef(formData); // Ref para mantener el formData actualizado y evitar stale closure
+  const selectedCompanyIdsRef = useRef<string[]>([]); // Ref para mantener selectedCompanyIds actualizado
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]); // Empresas seleccionadas
+  const [branchesByCompany, setBranchesByCompany] = useState<Record<string, any[]>>({}); // Sucursales por empresa
   
   // Sincronizar el ref cuando cambia el formData desde efectos externos
   useEffect(() => {
@@ -100,39 +110,99 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       try {
         setLoadingUser(true);
         isInitialLoadRef.current = true;
+        
+        // Obtener datos directamente de la API para preservar companies (antes del adapter)
+        const response = await apiClient.request<any>({
+          endpoint: `/security/users/${userId}`,
+          method: 'GET',
+        });
+        
+        if (response.result?.statusCode !== SUCCESS_STATUS_CODE || !response.data) {
+          throw new Error(response.result?.description || 'Error al obtener usuario');
+        }
+        
+        // Extraer companies directamente de la respuesta de la API (antes del adapter)
+        const apiUserData = response.data;
+        
+        // Obtener usuario adaptado para campos básicos
         const user = await UsersService.getUserById(userId);
         
-        // Primero cargar las sucursales si hay companyId válido
-        if (user.companyId) {
-          // Validar que companyId sea un UUID válido antes de hacer la llamada
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-          if (uuidRegex.test(user.companyId)) {
-            await refreshBranches({ companyId: user.companyId });
-            loadedCompanyIdRef.current = user.companyId; // Guardar el companyId cargado
+        // Extraer empresas del usuario desde companies[]
+        let userCompanyIds: string[] = [];
+        if (Array.isArray(apiUserData?.companies) && apiUserData.companies.length > 0) {
+          userCompanyIds = apiUserData.companies.map((c: any) => c.id).filter((id: any) => id);
+        } else if (apiUserData?.companyIdDefault) {
+          // Usar companyIdDefault en lugar de companyId
+          userCompanyIds = [apiUserData.companyIdDefault];
+        } else if (user.companyId) {
+          // Fallback para compatibilidad con estructura antigua
+          userCompanyIds = [user.companyId];
+        }
+        
+        setSelectedCompanyIds(userCompanyIds);
+        selectedCompanyIdsRef.current = userCompanyIds;
+        
+        // Extraer sucursales agrupadas por empresa
+        // El backend ahora devuelve companies[] con branches[] dentro
+        const companyBranchesMap: Record<string, string[]> = {};
+        let allBranchIds: string[] = [];
+        
+        // Usar la nueva estructura: companies[].branches[] desde la respuesta de la API
+        if (Array.isArray(apiUserData?.companies) && apiUserData.companies.length > 0) {
+          apiUserData.companies.forEach((company: any) => {
+            const companyId = company.id;
+            if (companyId && Array.isArray(company.branches) && company.branches.length > 0) {
+              const branchIds = company.branches.map((branch: any) => branch.id).filter((id: any) => id);
+              companyBranchesMap[companyId] = branchIds;
+              allBranchIds.push(...branchIds);
+            }
+          });
+        } else if (Array.isArray((user as any).branches) && (user as any).branches.length > 0) {
+          // Compatibilidad con estructura antigua: branches (fallback)
+          (user as any).branches.forEach((branchAccess: any) => {
+            const branchId = branchAccess.branchId || branchAccess.branch?.id || branchAccess.id;
+            const branchCompanyId = branchAccess.branch?.companyId || (userCompanyIds.length > 0 ? userCompanyIds[0] : null);
+            
+            if (branchId && branchCompanyId) {
+              if (!companyBranchesMap[branchCompanyId]) {
+                companyBranchesMap[branchCompanyId] = [];
+              }
+              companyBranchesMap[branchCompanyId].push(branchId);
+              allBranchIds.push(branchId);
+            }
+          });
+        } else if (Array.isArray(user.branchIds) && user.branchIds.length > 0) {
+          // Si solo viene branchIds, asignarlos a la primera empresa (fallback)
+          allBranchIds = user.branchIds;
+          if (userCompanyIds.length > 0) {
+            companyBranchesMap[userCompanyIds[0]] = user.branchIds;
           }
         }
         
-        // Extraer branchIds correctamente
-        // El backend puede devolver branchIds (string[]) o availableBranches (objeto[])
-        let userBranchIds: string[] = [];
+        // Cargar sucursales para cada empresa
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const branchesMap: Record<string, any[]> = {};
         
-        if (Array.isArray(user.branchIds) && user.branchIds.length > 0) {
-          // Si viene branchIds directamente como array de strings
-          userBranchIds = user.branchIds;
-        } else if (Array.isArray((user as any).availableBranches) && (user as any).availableBranches.length > 0) {
-          // Si viene availableBranches como array de objetos, extraer los IDs
-          // Manejar ambos formatos: {id: "..."} o {branchId: "..."}
-          userBranchIds = (user as any).availableBranches.map((branch: any) => {
-            // Priorizar branchId, luego id (manejar ambos formatos)
-            return branch.branchId || branch.id;
-          }).filter((id: any) => id); // Filtrar valores nulos/undefined
+        for (const companyId of userCompanyIds) {
+          if (uuidRegex.test(companyId)) {
+            try {
+              const companyBranches = await BranchesService.getBranchesByCompany(companyId);
+              branchesMap[companyId] = companyBranches || [];
+            } catch (error) {
+              console.error(`Error al cargar sucursales para empresa ${companyId}:`, error);
+              branchesMap[companyId] = [];
+            }
+          }
         }
+        
+        setBranchesByCompany(branchesMap);
         
         // Guardar el phone en la ref
         phoneRef.current = user.phone || '';
         
-        // Guardar branchIds en la ref para evitar stale closure
-        branchIdsRef.current = userBranchIds;
+        // Guardar branchIds y companyBranches en las refs para evitar stale closure
+        branchIdsRef.current = allBranchIds;
+        companyBranchesRef.current = companyBranchesMap;
         
         // Extraer roleId desde el array roles si existe
         let userRoleId = '';
@@ -146,15 +216,15 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         roleIdRef.current = userRoleId;
         statusRef.current = user.status ?? 1;
         
-        // Luego establecer los datos del formulario, incluyendo branchIds
-        // Esto asegura que las sucursales ya estén cargadas cuando se establezcan los branchIds
+        // Luego establecer los datos del formulario
         setFormData({
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           phone: user.phone || '',
-          companyId: user.companyId,
-          branchIds: userBranchIds,
+          companyId: userCompanyIds[0] || '',
+          branchIds: allBranchIds,
+          companyBranches: companyBranchesMap,
           roleId: userRoleId,
           status: user.status ?? 1, // Default: Activo
         });
@@ -162,7 +232,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
         // Marcar como no inicial inmediatamente DESPUÉS de cargar
         isInitialLoadRef.current = false;
       } catch (error: any) {
-        alert.showError(error.message || 'Error al cargar usuario');
+        const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al cargar usuario');
+        alert.showError(errorMessage, false, undefined, detailString, error);
       } finally {
         setLoadingUser(false);
       }
@@ -172,27 +243,11 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  /**
-   * Efecto para cargar sucursales cuando el usuario cambia manualmente la empresa
-   * (no durante la carga inicial para evitar llamadas duplicadas)
-   */
+  // Sincronizar el ref cuando cambia selectedCompanyIds
   useEffect(() => {
-    // No ejecutar durante la carga inicial o si el companyId no cambió
-    if (isInitialLoadRef.current || !formData.companyId || loadedCompanyIdRef.current === formData.companyId) {
-      return;
-    }
-    
-    // Validar que companyId sea un UUID válido antes de hacer la llamada
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(formData.companyId)) {
-      // No hacer la llamada si el ID no es válido (ej: "company-1")
-      return;
-    }
-    
-    refreshBranches({ companyId: formData.companyId });
-    loadedCompanyIdRef.current = formData.companyId; // Actualizar el companyId cargado
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.companyId]);
+      selectedCompanyIdsRef.current = selectedCompanyIds;
+  }, [selectedCompanyIds]);
+
 
 
   /**
@@ -221,13 +276,18 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       newErrors.lastName = 'El apellido es requerido';
     }
 
-    if (!formData.companyId) {
-      newErrors.companyId = 'La empresa es requerida';
+    // Validar que haya al menos una empresa seleccionada
+    if (selectedCompanyIdsRef.current.length === 0) {
+      newErrors.companyId = 'Selecciona al menos una empresa';
     }
 
-    // Usar branchIdsRef.current para evitar stale closure
-    if (!branchIdsRef.current || branchIdsRef.current.length === 0) {
-      newErrors.branchIds = 'Selecciona al menos una sucursal';
+    // Validar que cada empresa tenga al menos una sucursal seleccionada
+    const companiesWithoutBranches = selectedCompanyIdsRef.current.filter(companyId => {
+      const branchIds = companyBranchesRef.current[companyId] || [];
+      return branchIds.length === 0;
+    });
+    if (companiesWithoutBranches.length > 0) {
+      newErrors.branchIds = 'Selecciona al menos una sucursal para cada empresa';
     }
 
     setErrors(newErrors);
@@ -250,20 +310,8 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     }
     
     setFormData((prev) => {
-      const updated = field === 'companyId'
-        ? (prev.companyId === value
-            ? prev
-            : { ...prev, companyId: value, branchIds: [] })
-        : { ...prev, [field]: value };
-      
-      // Actualizar el ref con el estado más reciente para evitar stale closure
+      const updated = { ...prev, [field]: value };
       formDataRef.current = updated;
-      
-      if (field === 'companyId' && prev.companyId !== value) {
-        // Resetear branchIds cuando cambia la empresa
-        branchIdsRef.current = [];
-      }
-      
       return updated;
     });
     setErrors((prev) => {
@@ -280,6 +328,93 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
     }
   }, [generalError]);
 
+  // Manejar selección de empresas (múltiple)
+  const handleCompanySelect = useCallback((selectedIds: string[]) => {
+    // Actualizar selectedCompanyIds primero (esto actualiza el Select sin cerrar el modal)
+    setSelectedCompanyIds(selectedIds);
+    selectedCompanyIdsRef.current = selectedIds;
+    
+    // Actualizar companyBranches y formData dentro de startTransition para evitar re-renders que cierren el modal
+    startTransition(() => {
+      setFormData((prev) => {
+        const updatedCompanyBranches: Record<string, string[]> = {};
+        selectedIds.forEach(companyId => {
+          updatedCompanyBranches[companyId] = prev.companyBranches?.[companyId] || [];
+        });
+        
+        const updated = {
+          ...prev,
+          companyBranches: updatedCompanyBranches,
+          companyId: selectedIds[0] || '', // Mantener primera empresa para compatibilidad
+        };
+        
+        companyBranchesRef.current = updatedCompanyBranches;
+        formDataRef.current = updated;
+        
+        return updated;
+      });
+      
+      if (errors.companyId) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.companyId;
+          return newErrors;
+        });
+      }
+    });
+    
+    // Cargar sucursales para nuevas empresas seleccionadas
+    selectedIds.forEach(async (companyId) => {
+      if (!branchesByCompany[companyId]) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(companyId)) {
+          try {
+            const companyBranches = await BranchesService.getBranchesByCompany(companyId);
+            setBranchesByCompany((prev) => ({
+              ...prev,
+              [companyId]: companyBranches || [],
+            }));
+          } catch (error) {
+            console.error(`Error al cargar sucursales para empresa ${companyId}:`, error);
+          }
+        }
+      }
+    });
+  }, [branchesByCompany, errors]);
+
+  // Manejar selección de sucursales para una empresa específica
+  const handleBranchSelect = useCallback((companyId: string, selectedBranchIds: string[]) => {
+    setFormData((prev) => {
+      const updatedCompanyBranches = {
+        ...prev.companyBranches || {},
+        [companyId]: selectedBranchIds,
+      };
+      
+      // Calcular todos los branchIds para compatibilidad
+      const allBranchIds = Object.values(updatedCompanyBranches).flat();
+      
+      const updated = {
+        ...prev,
+        companyBranches: updatedCompanyBranches,
+        branchIds: allBranchIds, // Mantener para compatibilidad
+      };
+      
+      companyBranchesRef.current = updatedCompanyBranches;
+      branchIdsRef.current = allBranchIds;
+      formDataRef.current = updated;
+      
+      return updated;
+    });
+    
+    if (errors.branchIds) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.branchIds;
+        return newErrors;
+      });
+    }
+  }, [errors]);
+
   /**
    * Manejar envío del formulario
    */
@@ -295,15 +430,19 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
     setIsLoading(true);
     try {
-      // Construir payload solo con campos que tienen valores
-      const updateData: any = {
+      // Construir payload con estructura anidada: companies[] con branchIds[] dentro
+      const companies = selectedCompanyIdsRef.current.map(companyId => ({
+        id: companyId,
+        branchIds: companyBranchesRef.current[companyId] || [], // Array de UUIDs directamente
+      }));
+      
+      const updateData: UserUpdatePayload = {
         email: formData.email.trim(),
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phone: phoneRef.current.trim(),
-        companyId: formData.companyId,
-        branchIds: branchIdsRef.current,
-        status: statusRef.current, // Usar ref para evitar stale closure
+        companies,
+        status: statusRef.current, // Usar status (número) directamente
       };
       
       // Solo incluir roleId si tiene un valor válido
@@ -320,19 +459,9 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
       onSuccess?.(updatedUser);
       onCancel?.();
     } catch (error: any) {
-      const backendResult = (error as any)?.result;
-      const rawDetails = backendResult?.details ?? error?.details;
-      const detailString =
-        typeof rawDetails === 'string'
-          ? rawDetails
-          : rawDetails?.message
-          ? String(rawDetails.message)
-          : undefined;
-
-      const errorMessage =
-        backendResult?.description || error?.message || 'Error al actualizar usuario';
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al actualizar usuario');
       
-      // Mostrar error en InlineAlert dentro del modal
+      // Mostrar error solo en InlineAlert dentro del modal (no mostrar Toast en modales)
       setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsLoading(false);
@@ -584,67 +713,62 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
           </InputWithFocus>
         </View>
 
-        {/* Company */}
+        {/* Companies */}
         <View style={styles.inputGroup}>
           <Select
-            label={t.security?.users?.company || 'Empresa'}
-            placeholder={t.security?.users?.selectCompany || 'Selecciona una empresa'}
-            value={formData.companyId}
+            label={t.security?.users?.companies || 'Empresas'}
+            placeholder={t.security?.users?.selectCompanies || 'Selecciona una o más empresas'}
+            value={selectedCompanyIds}
             options={companies.map((comp) => ({
               value: comp.id,
               label: comp.name,
             }))}
-            onSelect={(value) => handleChange('companyId', value as string)}
+            onSelect={(value) => handleCompanySelect(value as string[])}
             error={!!errors.companyId}
             errorMessage={errors.companyId}
             required
+            multiple={true}
             disabled={isLoading}
             searchable={true}
           />
         </View>
 
-        {/* Branches */}
-        {formData.companyId ? (
-          <View style={styles.inputGroup}>
-            <Select
-              label={t.security?.users?.branches || 'Sucursales'}
-              placeholder={t.security?.users?.selectBranches || 'Selecciona una o más sucursales'}
-              value={formData.branchIds}
-              options={
-                branches.length > 0
-                  ? branches.map((branch) => ({
-                      value: branch.id,
-                      label: branch.name,
-                    }))
-                  : []
-              }
-              onSelect={(value) => {
-                const selectedIds = value as string[];
-                setFormData((prev) => {
-                  const updated = { ...prev, branchIds: selectedIds };
-                  branchIdsRef.current = selectedIds;
-                  formDataRef.current = updated;
-                  return updated;
-                });
-                if (selectedIds.length > 0) {
-                  // Limpiar error de branchIds cuando el usuario selecciona al menos una sucursal
-                  setErrors((prev) => ({ ...prev, branchIds: '' }));
+        {/* Mostrar selector de sucursales para cada empresa seleccionada */}
+        {selectedCompanyIds.map((companyId) => {
+          const company = companies.find(c => c.id === companyId);
+          const companyBranches = formData.companyBranches?.[companyId] || [];
+          const availableBranches = branchesByCompany[companyId] || [];
+          
+          return (
+            <View key={companyId} style={styles.inputGroup}>
+              <Select
+                label={`${t.security?.users?.branches || 'Sucursales'} - ${company?.name || companyId}`}
+                placeholder={t.security?.users?.selectBranches || 'Selecciona una o más sucursales'}
+                value={companyBranches}
+                options={
+                  availableBranches.length > 0
+                    ? availableBranches.map((branch) => ({
+                        value: branch.id,
+                        label: branch.name,
+                      }))
+                    : []
                 }
-              }}
-              error={!!errors.branchIds}
-              errorMessage={errors.branchIds}
-              multiple={true}
-              required
-              disabled={isLoading || branches.length === 0}
-              searchable={true}
-            />
-            {branches.length === 0 && (
-              <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
-                {t.security?.users?.noBranches || 'No hay sucursales disponibles para la empresa seleccionada'}
-              </ThemedText>
-            )}
-          </View>
-        ) : null}
+                onSelect={(value) => handleBranchSelect(companyId, value as string[])}
+                error={!!errors.branchIds && companyBranches.length === 0}
+                errorMessage={companyBranches.length === 0 ? errors.branchIds : undefined}
+                multiple={true}
+                required
+                disabled={isLoading || availableBranches.length === 0}
+                searchable={true}
+              />
+              {availableBranches.length === 0 && (
+                <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
+                  {t.security?.users?.noBranches || 'No hay sucursales disponibles para esta empresa'}
+                </ThemedText>
+              )}
+            </View>
+          );
+        })}
 
         {/* Role */}
         {roles.length > 0 && (
