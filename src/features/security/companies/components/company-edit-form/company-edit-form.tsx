@@ -39,6 +39,14 @@ export function CompanyEditForm({
     description: '',
     status: 1,
   });
+  const formDataRef = useRef<CompanyFormData>({
+    code: '',
+    name: '',
+    email: '',
+    phone: '',
+    description: '',
+    status: 1,
+  });
   const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<Record<keyof CompanyFormData | string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +70,12 @@ export function CompanyEditForm({
 
   const handleChange = useCallback(
     (field: keyof CompanyFormData, value: string | number) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData((prev) => {
+        const updated = { ...prev, [field]: value };
+        // Sincronizar ref inmediatamente
+        formDataRef.current = updated;
+        return updated;
+      });
       if (errors[field]) {
         resetError(field);
       }
@@ -76,22 +89,23 @@ export function CompanyEditForm({
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
+    const currentFormData = formDataRef.current;
 
-    if (!formData.code.trim()) {
+    if (!currentFormData.code.trim()) {
       newErrors.code = t.security?.companies?.codeRequired || 'El código es requerido';
     }
-    if (!formData.name.trim()) {
+    if (!currentFormData.name.trim()) {
       newErrors.name = t.security?.companies?.nameRequired || 'El nombre es requerido';
     }
-    if (!formData.email.trim()) {
+    if (!currentFormData.email.trim()) {
       newErrors.email = t.auth.emailRequired;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentFormData.email.trim())) {
       newErrors.email = t.security?.companies?.emailInvalid || 'Email inválido';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, t.auth.emailRequired, t.security?.companies]);
+  }, [t.auth.emailRequired, t.security?.companies]);
 
   const loadCompany = useCallback(async () => {
     if (!companyId) {
@@ -103,14 +117,16 @@ export function CompanyEditForm({
       const company = await CompaniesService.getCompanyById(companyId);
       const companyStatus = company.status ?? 1;
       statusRef.current = companyStatus;
-      setFormData({
+      const loadedData = {
         code: company.code,
         name: company.name,
         email: company.email,
         phone: company.phone || '',
         description: company.description || '',
         status: companyStatus,
-      });
+      };
+      formDataRef.current = loadedData;
+      setFormData(loadedData);
     } catch (error: any) {
       const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al cargar la empresa');
       alert.showError(errorMessage, false, undefined, detailString, error);
@@ -135,12 +151,13 @@ export function CompanyEditForm({
 
     setIsSubmitting(true);
     try {
+      const currentFormData = formDataRef.current;
       await CompaniesService.updateCompany(companyId, {
-        code: formData.code.trim(),
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim() || undefined,
-        description: formData.description.trim() || undefined,
+        code: currentFormData.code.trim(),
+        name: currentFormData.name.trim(),
+        email: currentFormData.email.trim(),
+        phone: currentFormData.phone.trim() || undefined,
+        description: currentFormData.description.trim() || undefined,
         status: statusRef.current, // Usar ref para evitar stale closure
       });
 
@@ -157,7 +174,7 @@ export function CompanyEditForm({
     } finally {
       setIsSubmitting(false);
     }
-  }, [alert, companyId, formData, onSuccess, t.security?.companies?.editSuccess, validateForm]);
+  }, [alert, companyId, onSuccess, t.security?.companies?.editSuccess, validateForm]);
 
   const handleCancel = useCallback(() => {
     onCancel?.();
