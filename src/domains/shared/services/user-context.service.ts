@@ -34,7 +34,7 @@ export class UserContextService {
   async getCurrentBranch(): Promise<BranchInfo | null> {
       const user = await this.userSessionService.getUser();
       if (!user) return null;
-console.log('DANILO user', user);
+
       const currentCompanyId = await this.userSessionService.getCurrentCompany() || user.companyIdDefault;
     const currentBranchId = await this.userSessionService.getCurrentBranch() || user.branchIdDefault;
 
