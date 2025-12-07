@@ -82,24 +82,22 @@ export function mapUserResponseToMultiCompanyUser(
     }
   }
   
-  // Mapear roles: UserResponse.rolesByCompany[] → MultiCompanyUser.roles[]
+  // Mapear roles: UserResponse.companies[].roles[] → MultiCompanyUser.roles[]
   const roles: Role[] = [];
-  if (userResponse.rolesByCompany && Array.isArray(userResponse.rolesByCompany)) {
-    for (const roleByCompany of userResponse.rolesByCompany) {
-      if (roleByCompany.roles && Array.isArray(roleByCompany.roles)) {
-        for (const roleInfo of roleByCompany.roles) {
-          roles.push({
-            id: roleInfo.id,
-            code: roleInfo.code,
-            name: roleInfo.name,
-            description: roleInfo.description,
-            permissions: [],
-            isSystem: roleInfo.isSystem,
-            isActive: true,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
+  for (const company of companiesArray) {
+    if (company.roles && Array.isArray(company.roles)) {
+      for (const roleInfo of company.roles) {
+        roles.push({
+          id: roleInfo.id,
+          code: roleInfo.code,
+          name: roleInfo.name,
+          description: roleInfo.description,
+          permissions: [],
+          isSystem: roleInfo.isSystem,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        });
       }
     }
   }

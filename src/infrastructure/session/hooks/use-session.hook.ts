@@ -85,17 +85,16 @@ export function useSession() {
       try {
         const userProfile = await authService.getProfile() as UserResponse;
         if (userProfile) {
-          // Guardar UserResponse en session storage con skipBroadcast para evitar bucles
-          await sessionManager.setItem('user', 'current', userProfile, {
-            ttl: 30 * 60 * 1000,
-            skipBroadcast: true,
-          });
+          // Guardar UserResponse original en session storage
+          // IMPORTANTE: Guardar UserResponse, no MultiCompanyUser mapeado
+          const userSessionService = UserSessionService.getInstance();
+          await userSessionService.saveUser(userProfile);
           
           // Inicializar currentCompanyId y currentBranchId si no existen
           const userContextService = (await import('@/src/domains/shared/services/user-context.service')).UserContextService.getInstance();
           await userContextService.initializeContext();
           
-          // Mapear UserResponse a MultiCompanyUser para el contexto
+          // Mapear UserResponse a MultiCompanyUser solo para el contexto de React
           const mappedUser = mapUserResponseToMultiCompanyUser(userProfile);
           // Esperar a que setUserContext termine antes de continuar
           await setUserContext(mappedUser);
@@ -209,15 +208,20 @@ export function useSession() {
         return;
       }
 
-      // Guardar usuario en la sesión usando UserSessionService (centralizado)
-      const { UserSessionService } = await import('@/src/domains/shared/services/user-session.service');
-      const userSessionService = UserSessionService.getInstance();
-      await userSessionService.saveUser(user);
-
-      // Mapear UserResponse a MultiCompanyUser para el contexto
-      const { mapUserResponseToMultiCompanyUser } = await import('@/src/infrastructure/services/user-mapper.service');
-      const mappedUser = mapUserResponseToMultiCompanyUser(user);
-      await setUserContext(mappedUser);
+      // IMPORTANTE: No guardar MultiCompanyUser en session storage
+      // El UserResponse original ya fue guardado en app/auth/login.tsx
+      // Solo usar MultiCompanyUser para el contexto de React, no para session storage
+      // Asegurar que el UserResponse original esté guardado obteniéndolo del profile
+      const userProfile = await authService.getProfile() as UserResponse;
+      
+      if (userProfile) {
+        // Guardar UserResponse original (no MultiCompanyUser mapeado)
+        const userSessionService = UserSessionService.getInstance();
+        await userSessionService.saveUser(userProfile);
+      }
+      
+      // Usar el MultiCompanyUser recibido solo para el contexto de React
+      await setUserContext(user);
     } catch (error) {
       // Fallar silenciosamente
     }

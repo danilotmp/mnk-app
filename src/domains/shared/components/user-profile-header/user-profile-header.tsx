@@ -26,6 +26,23 @@ import { Branch, BranchAccess } from '../../types';
 import { createUserProfileHeaderStyles } from './user-profile-header.styles';
 import { UserProfileHeaderProps } from './user-profile-header.types';
 
+/**
+ * Infiere el tipo de sucursal desde el código
+ */
+function inferBranchType(code: string): 'headquarters' | 'branch' | 'warehouse' | 'store' {
+  const upperCode = code.toUpperCase();
+  if (upperCode.includes('HQ') || upperCode.includes('HEADQUARTERS') || upperCode.includes('CASA MATRIZ')) {
+    return 'headquarters';
+  }
+  if (upperCode.includes('WAREHOUSE') || upperCode.includes('ALMACEN') || upperCode.includes('BODEGA')) {
+    return 'warehouse';
+  }
+  if (upperCode.includes('STORE') || upperCode.includes('TIENDA') || upperCode.includes('LOCAL')) {
+    return 'store';
+  }
+  return 'branch';
+}
+
 export function UserProfileHeader({
   onLogout,
   onSettings,
@@ -59,16 +76,54 @@ export function UserProfileHeader({
         return;
       }
       
-      // Obtener branches directamente desde company.branches[] (nueva estructura)
+      // Obtener branches directamente desde company.branches[] (estructura del profile)
       const branchInfos = userContextService.getBranchesForCompany(company.id, userResponse);
       
-      // Convertir BranchInfo[] a BranchAccess[] usando los branches mapeados de user.branches
-      const branchAccesses = branchInfos
-        .map(branchInfo => {
-          const branchAccess = user.branches?.find(ba => ba.branchId === branchInfo.id);
-          return branchAccess;
-        })
-        .filter((access): access is BranchAccess => access != null && access.branch != null);
+      // Convertir BranchInfo[] a BranchAccess[] directamente desde company.branches[]
+      // Usar la estructura del profile sin depender de user.branches mapeado
+      const branchAccesses: BranchAccess[] = branchInfos.map(branchInfo => {
+        // Crear objeto Branch completo desde BranchInfo del profile
+        const branchObj: Branch = {
+          id: branchInfo.id,
+          code: branchInfo.code,
+          name: branchInfo.name,
+          type: inferBranchType(branchInfo.code) as any,
+          companyId: company.id,
+          address: {
+            street: '',
+            city: '',
+            state: '',
+            country: '',
+            postalCode: '',
+          },
+          contactInfo: {
+            phone: '',
+            email: '',
+          },
+          settings: {
+            timezone: 'America/Guayaquil',
+            workingHours: {
+              monday: { isOpen: false },
+              tuesday: { isOpen: false },
+              wednesday: { isOpen: false },
+              thursday: { isOpen: false },
+              friday: { isOpen: false },
+              saturday: { isOpen: false },
+              sunday: { isOpen: false },
+            },
+            services: [],
+            features: [],
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        return {
+          branchId: branchInfo.id,
+          branch: branchObj,
+        };
+      });
       
       setBranches(branchAccesses);
     };

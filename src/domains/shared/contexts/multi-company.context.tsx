@@ -7,6 +7,23 @@ import {
   MultiCompanyUser
 } from '../types';
 
+/**
+ * Infiere el tipo de sucursal desde el código
+ */
+function inferBranchType(code: string): 'headquarters' | 'branch' | 'warehouse' | 'store' {
+  const upperCode = code.toUpperCase();
+  if (upperCode.includes('HQ') || upperCode.includes('HEADQUARTERS') || upperCode.includes('CASA MATRIZ')) {
+    return 'headquarters';
+  }
+  if (upperCode.includes('WAREHOUSE') || upperCode.includes('ALMACEN') || upperCode.includes('BODEGA')) {
+    return 'warehouse';
+  }
+  if (upperCode.includes('STORE') || upperCode.includes('TIENDA') || upperCode.includes('LOCAL')) {
+    return 'store';
+  }
+  return 'branch';
+}
+
 interface MultiCompanyContextType extends MultiCompanyState {
   setUserContext: (user: MultiCompanyUser) => Promise<void>;
   switchBranch: (newBranch: Branch) => Promise<void>;
@@ -170,30 +187,51 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
       let branchesForCompany: Branch[] = [];
       
       if (finalCurrentCompany) {
-        // Obtener branches desde UserResponse usando UserContextService
+        // Obtener branches directamente desde UserResponse usando UserContextService
+        // Usar la estructura del profile sin depender de user.branches mapeado
         const userResponse = await userSessionService.getUser();
         if (userResponse) {
           const branchInfos = userContextService.getBranchesForCompany(finalCurrentCompany.id, userResponse);
-          // Convertir BranchInfo[] a Branch[] usando los branches mapeados de user.branches
-          branchesForCompany = branchInfos
-            .map(branchInfo => {
-              const branchAccess = user.branches?.find(ba => ba.branchId === branchInfo.id);
-              return branchAccess?.branch;
-            })
-            .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
+          // Convertir BranchInfo[] a Branch[] directamente desde company.branches[]
+          branchesForCompany = branchInfos.map(branchInfo => {
+            // Crear objeto Branch completo desde BranchInfo del profile
+            return {
+              id: branchInfo.id,
+              code: branchInfo.code,
+              name: branchInfo.name,
+              type: inferBranchType(branchInfo.code) as any,
+              companyId: finalCurrentCompany.id,
+              address: {
+                street: '',
+                city: '',
+                state: '',
+                country: '',
+                postalCode: '',
+              },
+              contactInfo: {
+                phone: '',
+                email: '',
+              },
+              settings: {
+                timezone: 'America/Guayaquil',
+                workingHours: {
+                  monday: { isOpen: false },
+                  tuesday: { isOpen: false },
+                  wednesday: { isOpen: false },
+                  thursday: { isOpen: false },
+                  friday: { isOpen: false },
+                  saturday: { isOpen: false },
+                  sunday: { isOpen: false },
+                },
+                services: [],
+                features: [],
+              },
+              isActive: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } as Branch;
+          });
         }
-      }
-      
-      // Fallback: si no se encontraron branches, filtrar desde user.branches (compatibilidad)
-      if (branchesForCompany.length === 0 && user.branches && user.branches.length > 0 && finalCurrentCompany) {
-        branchesForCompany = (user.branches || [])
-          .filter(access => {
-            const branch = access.branch;
-            if (!branch) return false;
-            return branch.companyId === finalCurrentCompany.id;
-          })
-          .map(access => access.branch)
-          .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch);
       }
 
       // Convertir BranchInfo a Branch si existe, o buscar en branchesForCompany
@@ -213,15 +251,52 @@ export function MultiCompanyProvider({ children }: MultiCompanyProviderProps) {
         finalCurrentBranch = branchesForCompany[0];
       }
       
-      // Si no hay sucursales disponibles, crear una sucursal por defecto
-      // Esto es necesario porque UserProfileHeader requiere currentBranch
-      if (!finalCurrentBranch && user.branches && Array.isArray(user.branches) && user.branches.length > 0) {
-        // Buscar cualquier sucursal del usuario (no filtrada por empresa)
-        const anyBranch = user.branches
-          .map(access => access.branch)
-          .filter((branch): branch is Branch => branch != null && typeof branch === 'object' && 'id' in branch)[0];
-        if (anyBranch) {
-          finalCurrentBranch = anyBranch;
+      // Si no hay sucursales disponibles, intentar obtener desde UserResponse
+      if (!finalCurrentBranch && branchesForCompany.length === 0 && finalCurrentCompany) {
+        const userResponse = await userSessionService.getUser();
+        if (userResponse) {
+          // Intentar obtener la sucursal por defecto desde UserResponse
+          if (userResponse.branchIdDefault) {
+            const branchInfos = userContextService.getBranchesForCompany(finalCurrentCompany.id, userResponse);
+            const defaultBranchInfo = branchInfos.find(b => b.id === userResponse.branchIdDefault);
+            if (defaultBranchInfo) {
+              finalCurrentBranch = {
+                id: defaultBranchInfo.id,
+                code: defaultBranchInfo.code,
+                name: defaultBranchInfo.name,
+                type: inferBranchType(defaultBranchInfo.code) as any,
+                companyId: finalCurrentCompany.id,
+                address: {
+                  street: '',
+                  city: '',
+                  state: '',
+                  country: '',
+                  postalCode: '',
+                },
+                contactInfo: {
+                  phone: '',
+                  email: '',
+                },
+                settings: {
+                  timezone: 'America/Guayaquil',
+                  workingHours: {
+                    monday: { isOpen: false },
+                    tuesday: { isOpen: false },
+                    wednesday: { isOpen: false },
+                    thursday: { isOpen: false },
+                    friday: { isOpen: false },
+                    saturday: { isOpen: false },
+                    sunday: { isOpen: false },
+                  },
+                  services: [],
+                  features: [],
+                },
+                isActive: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              } as Branch;
+            }
+          }
         }
       }
       

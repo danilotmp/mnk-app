@@ -32,10 +32,10 @@ export class UserContextService {
   }
 
   async getCurrentBranch(): Promise<BranchInfo | null> {
-    const user = await this.userSessionService.getUser();
-    if (!user) return null;
-
-    const currentCompanyId = await this.userSessionService.getCurrentCompany() || user.companyIdDefault;
+      const user = await this.userSessionService.getUser();
+      if (!user) return null;
+console.log('DANILO user', user);
+      const currentCompanyId = await this.userSessionService.getCurrentCompany() || user.companyIdDefault;
     const currentBranchId = await this.userSessionService.getCurrentBranch() || user.branchIdDefault;
 
     if (!currentBranchId || !currentCompanyId) {
@@ -57,9 +57,9 @@ export class UserContextService {
 
   getRolesForCompany(companyId: string, user?: UserResponse | null): RoleInfo[] {
     if (!user) return [];
-    if (!user.rolesByCompany) return [];
-    const companyRoles = user.rolesByCompany.find(r => r.companyId === companyId);
-    return companyRoles?.roles || [];
+    if (!user.companies || !Array.isArray(user.companies)) return [];
+    const company = user.companies.find(c => c.id === companyId);
+    return company?.roles || [];
   }
 
   async switchCompany(companyId: string): Promise<MenuItem[]> {
