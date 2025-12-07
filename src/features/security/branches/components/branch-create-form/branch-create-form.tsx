@@ -41,9 +41,18 @@ export function BranchCreateForm({
     description: '',
     status: 1,
   });
+  const formDataRef = useRef<BranchFormData>({
+    companyId: '',
+    code: '',
+    name: '',
+    type: 'branch',
+    description: '',
+    status: 1,
+  });
   const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<Record<keyof BranchFormData | string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
 
   useEffect(() => {
     if (!formData.companyId && companies.length > 0 && !companiesLoading) {
@@ -60,11 +69,52 @@ export function BranchCreateForm({
       delete next[field];
       return next;
     });
-  }, []);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [generalError]);
 
   const handleChange = useCallback(
     (field: keyof BranchFormData, value: string | number) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData((prev) => {
+        let updated = { ...prev, [field]: value };
+        
+        // Si se está cambiando el código, aplicar transformaciones
+        if (field === 'code' && typeof value === 'string') {
+          // Convertir a mayúsculas y reemplazar espacios con guiones bajos
+          const processedCode = value.toUpperCase().replace(/\s+/g, '_');
+          updated.code = processedCode;
+          
+          // Generar nombre automáticamente solo si está vacío o coincide con el nombre generado anteriormente
+          const previousCode = prev.code || '';
+          const previousName = prev.name || '';
+          
+          // Calcular el nombre que se generaría a partir del código anterior
+          const previousGeneratedName = previousCode
+            .toLowerCase()
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          // Solo generar nombre si está vacío o si coincide exactamente con el nombre generado anteriormente
+          if (!previousName || previousName === previousGeneratedName) {
+            // Generar nombre: convertir guiones bajos a espacios y capitalizar primera letra de cada palabra
+            const generatedName = processedCode
+              .toLowerCase()
+              .replace(/_/g, ' ')
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+            updated.name = generatedName;
+          }
+        }
+        
+        // Sincronizar ref inmediatamente
+        formDataRef.current = updated;
+        return updated;
+      });
       if (errors[field]) {
         resetError(field);
       }
@@ -78,20 +128,21 @@ export function BranchCreateForm({
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
+    const currentFormData = formDataRef.current;
 
-    if (!formData.companyId) {
+    if (!currentFormData.companyId) {
       newErrors.companyId = 'La empresa es requerida';
     }
-    if (!formData.code.trim()) {
+    if (!currentFormData.code.trim()) {
       newErrors.code = 'El código es requerido';
     }
-    if (!formData.name.trim()) {
+    if (!currentFormData.name.trim()) {
       newErrors.name = 'El nombre es requerido';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
@@ -100,23 +151,26 @@ export function BranchCreateForm({
 
     setIsSubmitting(true);
     try {
+      const currentFormData = formDataRef.current;
       await BranchesService.createBranch({
-        companyId: formData.companyId,
-        code: formData.code.trim(),
-        name: formData.name.trim(),
-        type: formData.type,
-        description: formData.description.trim() || undefined,
+        companyId: currentFormData.companyId,
+        code: currentFormData.code.trim(),
+        name: currentFormData.name.trim(),
+        type: currentFormData.type,
+        description: currentFormData.description.trim() || undefined,
         status: statusRef.current, // Usar ref para evitar stale closure
       });
       alert.showSuccess(t.security?.branches?.createSuccess || 'Sucursal creada exitosamente');
       onSuccess?.();
     } catch (error: any) {
       const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al crear la sucursal');
-      alert.showError(errorMessage, false, undefined, detailString, error);
+      
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsSubmitting(false);
     }
-  }, [alert, formData, onSuccess, t.security?.branches?.createSuccess, validateForm]);
+  }, [alert, onSuccess, t.security?.branches?.createSuccess, validateForm]);
 
   const handleCancel = useCallback(() => {
     onCancel?.();
@@ -128,11 +182,12 @@ export function BranchCreateForm({
         isLoading: isSubmitting,
         handleSubmit,
         handleCancel,
+        generalError,
       });
     }
-    // Intencionalmente solo depende de isSubmitting y companiesLoading
+    // Intencionalmente solo depende de isSubmitting, companiesLoading y generalError
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubmitting, companiesLoading]);
+  }, [isSubmitting, companiesLoading, generalError]);
 
   const companyOptions = useMemo(() => companies, [companies]);
 

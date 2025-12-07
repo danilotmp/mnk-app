@@ -5,6 +5,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { InlineAlert } from '@/components/ui/inline-alert';
 import { SideModal } from '@/components/ui/side-modal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -69,9 +70,12 @@ export function BranchesListScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const [formActions, setFormActions] = useState<{ isLoading: boolean; handleSubmit: () => void; handleCancel: () => void } | null>(
-    null
-  );
+  const [formActions, setFormActions] = useState<{ 
+    isLoading: boolean; 
+    handleSubmit: () => void; 
+    handleCancel: () => void;
+    generalError?: { message: string; detail?: string } | null;
+  } | null>(null);
   const filtersSignatureRef = useRef<string>('');
 
   const loadBranches = useCallback(
@@ -221,6 +225,16 @@ export function BranchesListScreen() {
   const columns = useMemo<TableColumn<Branch>[]>(() => {
     return [
       {
+        key: 'company',
+        label: 'Empresa',
+        minWidth: 200,
+        render: (item) => (
+          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+            {item.company?.name || t.security?.branches?.unknownCompany || 'Sin empresa'}
+          </ThemedText>
+        ),
+      },
+      {
         key: 'code',
         label: 'Código',
         width: 140,
@@ -237,16 +251,6 @@ export function BranchesListScreen() {
         render: (item) => (
           <ThemedText type="body2" style={{ color: colors.text, flexShrink: 1 }}>
             {item.name}
-          </ThemedText>
-        ),
-      },
-      {
-        key: 'company',
-        label: 'Empresa',
-        minWidth: 200,
-        render: (item) => (
-          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-            {item.company?.name || t.security?.branches?.unknownCompany || 'Sin empresa'}
           </ThemedText>
         ),
       },
@@ -475,6 +479,22 @@ export function BranchesListScreen() {
             modalMode === 'edit'
               ? t.security?.branches?.editSubtitle || 'Actualiza la información de la sucursal seleccionada'
               : t.security?.branches?.createSubtitle || 'Completa la información para registrar una nueva sucursal'
+          }
+          topAlert={
+            formActions?.generalError ? (
+              <InlineAlert
+                type="error"
+                message={formActions.generalError.message}
+                detail={formActions.generalError.detail}
+                duration={5000}
+                autoClose={true}
+                onDismiss={() => {
+                  if (formActions) {
+                    setFormActions({ ...formActions, generalError: null });
+                  }
+                }}
+              />
+            ) : undefined
           }
           footer={
             formActions ? (

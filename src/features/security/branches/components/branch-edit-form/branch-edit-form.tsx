@@ -42,10 +42,19 @@ export function BranchEditForm({
     description: '',
     status: 1,
   });
+  const formDataRef = useRef<BranchFormData>({
+    companyId: '',
+    code: '',
+    name: '',
+    type: 'branch',
+    description: '',
+    status: 1,
+  });
   const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<Record<keyof BranchFormData | string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingBranch, setLoadingBranch] = useState(true);
+  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
 
   const resetError = useCallback((field: keyof BranchFormData) => {
     setErrors((prev) => {
@@ -56,11 +65,52 @@ export function BranchEditForm({
       delete next[field];
       return next;
     });
-  }, []);
+    // Limpiar error general cuando el usuario empieza a editar
+    if (generalError) {
+      setGeneralError(null);
+    }
+  }, [generalError]);
 
   const handleChange = useCallback(
     (field: keyof BranchFormData, value: string | number) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData((prev) => {
+        let updated = { ...prev, [field]: value };
+        
+        // Si se está cambiando el código, aplicar transformaciones
+        if (field === 'code' && typeof value === 'string') {
+          // Convertir a mayúsculas y reemplazar espacios con guiones bajos
+          const processedCode = value.toUpperCase().replace(/\s+/g, '_');
+          updated.code = processedCode;
+          
+          // Generar nombre automáticamente solo si está vacío o coincide con el nombre generado anteriormente
+          const previousCode = prev.code || '';
+          const previousName = prev.name || '';
+          
+          // Calcular el nombre que se generaría a partir del código anterior
+          const previousGeneratedName = previousCode
+            .toLowerCase()
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          // Solo generar nombre si está vacío o si coincide exactamente con el nombre generado anteriormente
+          if (!previousName || previousName === previousGeneratedName) {
+            // Generar nombre: convertir guiones bajos a espacios y capitalizar primera letra de cada palabra
+            const generatedName = processedCode
+              .toLowerCase()
+              .replace(/_/g, ' ')
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+            updated.name = generatedName;
+          }
+        }
+        
+        // Sincronizar ref inmediatamente
+        formDataRef.current = updated;
+        return updated;
+      });
       if (errors[field]) {
         resetError(field);
       }
@@ -74,20 +124,21 @@ export function BranchEditForm({
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
+    const currentFormData = formDataRef.current;
 
-    if (!formData.companyId) {
+    if (!currentFormData.companyId) {
       newErrors.companyId = 'La empresa es requerida';
     }
-    if (!formData.code.trim()) {
+    if (!currentFormData.code.trim()) {
       newErrors.code = 'El código es requerido';
     }
-    if (!formData.name.trim()) {
+    if (!currentFormData.name.trim()) {
       newErrors.name = 'El nombre es requerido';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  }, []);
 
   const loadBranch = useCallback(async () => {
     if (!branchId) {
@@ -100,14 +151,16 @@ export function BranchEditForm({
       const branch = await BranchesService.getBranchById(branchId);
       const branchStatus = branch.status ?? 1;
       statusRef.current = branchStatus;
-      setFormData({
+      const loadedData = {
         companyId: branch.companyId,
         code: branch.code,
         name: branch.name,
         type: branch.type || 'branch',
         description: branch.description || '',
         status: branchStatus,
-      });
+      };
+      formDataRef.current = loadedData;
+      setFormData(loadedData);
     } catch (error: any) {
       const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al cargar la sucursal');
       alert.showError(errorMessage, false, undefined, detailString, error);
@@ -132,23 +185,29 @@ export function BranchEditForm({
 
     setIsSubmitting(true);
     try {
+      const currentFormData = formDataRef.current;
       await BranchesService.updateBranch(branchId, {
-        companyId: formData.companyId,
-        code: formData.code.trim(),
-        name: formData.name.trim(),
-        type: formData.type,
-        description: formData.description.trim() || undefined,
+        companyId: currentFormData.companyId,
+        code: currentFormData.code.trim(),
+        name: currentFormData.name.trim(),
+        type: currentFormData.type,
+        description: currentFormData.description.trim() || undefined,
         status: statusRef.current, // Usar ref para evitar stale closure
       });
       alert.showSuccess(t.security?.branches?.editSuccess || 'Sucursal actualizada exitosamente');
       onSuccess?.();
     } catch (error: any) {
       const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al actualizar la sucursal');
+      
+      // Mostrar error en Toast con detalle si existe
       alert.showError(errorMessage, false, undefined, detailString, error);
+      
+      // Mostrar error en InlineAlert dentro del modal
+      setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
       setIsSubmitting(false);
     }
-  }, [alert, branchId, formData, onSuccess, t.security?.branches?.editSuccess, validateForm]);
+  }, [alert, branchId, onSuccess, t.security?.branches?.editSuccess, validateForm]);
 
   const handleCancel = useCallback(() => {
     onCancel?.();
@@ -163,11 +222,12 @@ export function BranchEditForm({
         isLoading: isSubmitting,
         handleSubmit,
         handleCancel,
+        generalError,
       });
     }
-    // Intencionalmente solo depende de isSubmitting, loadingBranch y companiesLoading
+    // Intencionalmente solo depende de isSubmitting, loadingBranch, companiesLoading y generalError
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubmitting, loadingBranch, companiesLoading]);
+  }, [isSubmitting, loadingBranch, companiesLoading, generalError]);
 
   if (loadingBranch || companiesLoading) {
     return (
