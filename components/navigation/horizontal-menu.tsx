@@ -27,6 +27,7 @@ export interface MenuItem {
   description?: string;
   submenu?: MenuItem[];
   columns?: MenuColumn[];
+  isPublic?: boolean; // Indica si el item es público (visible sin autenticación)
 }
 
 export interface MenuColumn {

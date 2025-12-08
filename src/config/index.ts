@@ -51,9 +51,10 @@ export const AppConfig = {
 
   // Configuración de menú de navegación
   navigation: {
-    // Tipo de menú: 'horizontal' | 'vertical'
+    // Tipo de menú: 'horizontal' | 'vertical' | 'mix'
     // - 'horizontal': Menú horizontal en el header (comportamiento actual)
     // - 'vertical': Menú vertical estilo Azure DevOps en el lado izquierdo
+    // - 'mix': Menú horizontal para opciones públicas + menú vertical para opciones privadas
     // Nota: El menú horizontal siempre se muestra antes del login.
     // Después del login, se aplica la configuración aquí definida.
     menuType: process.env.EXPO_PUBLIC_MENU_TYPE || 'vertical',
@@ -67,7 +68,7 @@ export const AppConfig = {
     // Recomendados: 'red' (#ff3366) o 'blue' (colors.primary)
     // - 'red': Se convertirá automáticamente a '#ff3366' (usado en menú horizontal)
     // - 'blue': Se convertirá automáticamente a colors.primary (usado en menú vertical)
-    activeItemColor: process.env.EXPO_PUBLIC_MENU_ACTIVE_COLOR || 'red',
+    activeItemColor: process.env.EXPO_PUBLIC_MENU_ACTIVE_COLOR || 'blue',
   },
 };
 

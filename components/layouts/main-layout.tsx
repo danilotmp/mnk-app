@@ -49,13 +49,15 @@ export function MainLayout({
   // Determinar el tipo de menú según configuración y estado de autenticación
   // El menú horizontal siempre se muestra antes del login
   // Después del login, se aplica la configuración de AppConfig
-  // En móviles, siempre se usa el menú horizontal
+  // En móviles, siempre se usa el menú horizontal independientemente de la configuración
   const isAuthenticated = !!user;
   const menuType = isAuthenticated 
     ? AppConfig.navigation.menuType 
     : 'horizontal';
+  
   // En móviles, siempre usar menú horizontal independientemente de la configuración
   const useVerticalMenu = !isMobile && menuType === 'vertical' && isAuthenticated;
+  const useMixMenu = !isMobile && menuType === 'mix' && isAuthenticated;
 
   const companies = user?.companies || [];
   
@@ -155,6 +157,64 @@ export function MainLayout({
   } else {
     finalMenuItems = defaultMenuItems;
   }
+  
+  // Función helper para filtrar items públicos (recursiva para submenu y columns)
+  const filterPublicItems = (items: MenuItem[]): MenuItem[] => {
+    return items
+      .filter(item => item.isPublic === true)
+      .map(item => {
+        const filtered: MenuItem = { ...item };
+        if (item.submenu) {
+          filtered.submenu = filterPublicItems(item.submenu);
+          // Si el submenu queda vacío, eliminarlo
+          if (filtered.submenu.length === 0) {
+            delete filtered.submenu;
+          }
+        }
+        if (item.columns) {
+          filtered.columns = item.columns.map(column => ({
+            ...column,
+            items: filterPublicItems(column.items),
+          })).filter(column => column.items.length > 0);
+          // Si columns queda vacío, eliminarlo
+          if (filtered.columns.length === 0) {
+            delete filtered.columns;
+          }
+        }
+        return filtered;
+      });
+  };
+  
+  // Función helper para filtrar items privados (no públicos)
+  const filterPrivateItems = (items: MenuItem[]): MenuItem[] => {
+    return items
+      .filter(item => item.isPublic !== true)
+      .map(item => {
+        const filtered: MenuItem = { ...item };
+        if (item.submenu) {
+          filtered.submenu = filterPrivateItems(item.submenu);
+          // Si el submenu queda vacío, eliminarlo
+          if (filtered.submenu.length === 0) {
+            delete filtered.submenu;
+          }
+        }
+        if (item.columns) {
+          filtered.columns = item.columns.map(column => ({
+            ...column,
+            items: filterPrivateItems(column.items),
+          })).filter(column => column.items.length > 0);
+          // Si columns queda vacío, eliminarlo
+          if (filtered.columns.length === 0) {
+            delete filtered.columns;
+          }
+        }
+        return filtered;
+      });
+  };
+  
+  // Filtrar items según el modo de menú
+  const publicMenuItems = useMixMenu ? filterPublicItems(finalMenuItems) : [];
+  const privateMenuItems = useMixMenu ? filterPrivateItems(finalMenuItems) : finalMenuItems;
 
   const router = useRouter();
 
@@ -298,10 +358,13 @@ export function MainLayout({
                     />
                   </View>
                 )}
-                {/* Hamburger Menu a la derecha (solo si no es menú vertical) */}
-                {showNavigation && !useVerticalMenu && (
+                {/* Hamburger Menu a la derecha (solo si no es menú vertical, o si es modo mix) */}
+                {showNavigation && (!useVerticalMenu || useMixMenu) && (
                   <View style={styles.mobileMenuSection}>
-                    <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
+                    <HorizontalMenu 
+                      items={useMixMenu ? publicMenuItems : finalMenuItems} 
+                      onItemPress={handleMenuItemPress} 
+                    />
                   </View>
                 )}
               </View>
@@ -391,10 +454,13 @@ export function MainLayout({
                 </View>
               </View>
 
-              {/* Menú de navegación horizontal en el centro (solo si no es menú vertical) */}
-              {showNavigation && !useVerticalMenu && (
+              {/* Menú de navegación horizontal en el centro (si no es menú vertical, o si es modo mix) */}
+              {showNavigation && (!useVerticalMenu || useMixMenu) && (
                 <View style={styles.menuSection}>
-                  <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
+                  <HorizontalMenu 
+                    items={useMixMenu ? publicMenuItems : finalMenuItems} 
+                    onItemPress={handleMenuItemPress} 
+                  />
                 </View>
               )}
 
@@ -414,11 +480,11 @@ export function MainLayout({
       )}
 
       {/* Contenedor del body: Menú vertical (si aplica) + Content */}
-      <View style={[styles.bodyContainer, useVerticalMenu && styles.bodyContainerWithVerticalMenu]}>
-        {/* Menú vertical (solo cuando está autenticado y configurado) */}
-        {useVerticalMenu && showNavigation && (
+      <View style={[styles.bodyContainer, (useVerticalMenu || useMixMenu) && styles.bodyContainerWithVerticalMenu]}>
+        {/* Menú vertical (solo cuando está autenticado y configurado, o en modo mix) */}
+        {(useVerticalMenu || useMixMenu) && showNavigation && (
           <VerticalMenu
-            items={finalMenuItems}
+            items={useMixMenu ? privateMenuItems : finalMenuItems}
             onItemPress={handleMenuItemPress}
             collapsed={verticalMenuCollapsed}
             onToggleCollapse={() => setVerticalMenuCollapsed(!verticalMenuCollapsed)}

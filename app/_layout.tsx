@@ -82,6 +82,7 @@ function LayoutContent() {
       label: item.label,
       route: item.route,
       description: item.description,
+      isPublic: item.isPublic, // Incluir propiedad isPublic del backend
     };
 
     // Si tiene submenu, mapearlo
@@ -92,6 +93,7 @@ function LayoutContent() {
         route: subItem.route,
         description: subItem.description,
         icon: subItem.icon,
+        isPublic: subItem.isPublic, // Incluir propiedad isPublic del backend
       }));
     }
 
@@ -105,6 +107,7 @@ function LayoutContent() {
           route: colItem.route,
           description: colItem.description,
           icon: colItem.icon,
+          isPublic: colItem.isPublic, // Incluir propiedad isPublic del backend
         })),
       }));
     }
