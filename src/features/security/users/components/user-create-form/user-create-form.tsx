@@ -20,6 +20,7 @@ import React, { startTransition, useCallback, useEffect, useRef, useState } from
 import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { UsersService } from '../../services';
 import { UserCreatePayload } from '../../types/domain';
+import { CompanyConfigCarousel } from '../company-config-carousel/company-config-carousel';
 import { createUserFormStyles } from './user-create-form.styles';
 import { UserCreateFormProps } from './user-create-form.types';
 
@@ -44,7 +45,8 @@ export function UserCreateForm({
     companyId: '', // Mantener para compatibilidad
     branchIds: [] as string[], // Mantener para compatibilidad
     companyBranches: {} as Record<string, string[]>, // Nueva estructura: { [companyId]: [branchIds] }
-    roleId: '',
+    companyRoles: {} as Record<string, string[]>, // Nueva estructura: { [companyId]: [roleIds] }
+    roleId: '', // Mantener para compatibilidad
     status: 1, // Default: Activo
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -54,12 +56,14 @@ export function UserCreateForm({
   const phoneRef = useRef<string>(''); // Ref para mantener el teléfono actualizado
   const branchIdsRef = useRef<string[]>([]); // Ref para mantener los branchIds actualizados
   const companyBranchesRef = useRef<Record<string, string[]>>({}); // Ref para mantener companyBranches actualizado
-  const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado
+  const companyRolesRef = useRef<Record<string, string[]>>({}); // Ref para mantener companyRoles actualizado
+  const roleIdRef = useRef<string>(''); // Ref para mantener el roleId actualizado (compatibilidad)
   const statusRef = useRef<number>(1); // Ref para mantener el status actualizado
   const formDataRef = useRef(formData); // Ref para mantener el formData actualizado y evitar stale closure
   const selectedCompanyIdsRef = useRef<string[]>([]); // Ref para mantener selectedCompanyIds actualizado
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]); // Empresas seleccionadas
   const [branchesByCompany, setBranchesByCompany] = useState<Record<string, any[]>>({}); // Sucursales por empresa
+  const [rolesByCompany, setRolesByCompany] = useState<Record<string, any[]>>({}); // Roles por empresa
   
   // Sincronizar el ref cuando cambia el formData desde efectos externos
   useEffect(() => {
@@ -67,31 +71,6 @@ export function UserCreateForm({
   }, [formData]);
 
   const { companies, loading: companiesLoading } = useCompanyOptions();
-  const [roles, setRoles] = useState<any[]>([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
-
-  /**
-   * Cargar opciones (empresas y roles)
-   */
-  useEffect(() => {
-    const loadRoles = async () => {
-      try {
-        setRolesLoading(true);
-        const rolesResponse = await RolesService.getRoles({
-          page: 1,
-          limit: 100,
-          status: 1, // ✅ Solo roles activos
-        });
-        setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
-      } catch (error) {
-        setRoles([]);
-      } finally {
-        setRolesLoading(false);
-      }
-    };
-
-    loadRoles();
-  }, []);
 
   // Sincronizar el ref cuando cambia selectedCompanyIds
   useEffect(() => {
@@ -140,6 +119,15 @@ export function UserCreateForm({
       newErrors.branchIds = 'Selecciona al menos una sucursal para cada empresa';
     }
 
+    // Validar que cada empresa tenga al menos un rol seleccionado
+    const companiesWithoutRoles = selectedCompanyIdsRef.current.filter(companyId => {
+      const roleIds = companyRolesRef.current[companyId] || [];
+      return roleIds.length === 0;
+    });
+    if (companiesWithoutRoles.length > 0) {
+      newErrors.roleId = 'Selecciona al menos un rol para cada empresa';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [t.auth]);
@@ -184,21 +172,25 @@ export function UserCreateForm({
     setSelectedCompanyIds(selectedIds);
     selectedCompanyIdsRef.current = selectedIds;
     
-    // Actualizar companyBranches y formData dentro de startTransition para evitar re-renders que cierren el modal
+    // Actualizar companyBranches, companyRoles y formData dentro de startTransition para evitar re-renders que cierren el modal
     startTransition(() => {
       setFormData((prev) => {
         const updatedCompanyBranches: Record<string, string[]> = {};
+        const updatedCompanyRoles: Record<string, string[]> = {};
         selectedIds.forEach(companyId => {
           updatedCompanyBranches[companyId] = prev.companyBranches?.[companyId] || [];
+          updatedCompanyRoles[companyId] = prev.companyRoles?.[companyId] || [];
         });
         
         const updated = {
           ...prev,
           companyBranches: updatedCompanyBranches,
+          companyRoles: updatedCompanyRoles,
           companyId: selectedIds[0] || '', // Mantener primera empresa para compatibilidad
         };
         
         companyBranchesRef.current = updatedCompanyBranches;
+        companyRolesRef.current = updatedCompanyRoles;
         formDataRef.current = updated;
         
         return updated;
@@ -213,11 +205,12 @@ export function UserCreateForm({
       }
     });
     
-    // Cargar sucursales para nuevas empresas seleccionadas
+    // Cargar sucursales y roles para nuevas empresas seleccionadas
     selectedIds.forEach(async (companyId) => {
-      if (!branchesByCompany[companyId]) {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (uuidRegex.test(companyId)) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(companyId)) {
+        // Cargar sucursales
+        if (!branchesByCompany[companyId]) {
           try {
             const companyBranches = await BranchesService.getBranchesByCompany(companyId);
             setBranchesByCompany((prev) => ({
@@ -228,9 +221,37 @@ export function UserCreateForm({
             console.error(`Error al cargar sucursales para empresa ${companyId}:`, error);
           }
         }
+        
+        // Cargar roles por empresa
+        if (!rolesByCompany[companyId]) {
+          try {
+            // Asegurar que se pase el companyId correcto para cada empresa
+            const rolesResponse = await RolesService.getRoles({
+              page: 1,
+              limit: 100,
+              status: 1, // Solo roles activos
+              companyId: companyId, // Filtrar por empresa específica
+            });
+            const rolesData = Array.isArray(rolesResponse.data) ? rolesResponse.data : [];
+            // Actualizar el estado con los roles específicos de esta empresa
+            setRolesByCompany((prev) => {
+              const updated = {
+                ...prev,
+                [companyId]: rolesData,
+              };
+              return updated;
+            });
+          } catch (error) {
+            console.error(`Error al cargar roles para empresa ${companyId}:`, error);
+            setRolesByCompany((prev) => ({
+              ...prev,
+              [companyId]: [],
+            }));
+          }
+        }
       }
     });
-  }, [branchesByCompany, errors]);
+  }, [branchesByCompany, rolesByCompany, errors]);
 
   // Manejar selección de sucursales para una empresa específica
   const handleBranchSelect = useCallback((companyId: string, selectedBranchIds: string[]) => {
@@ -265,6 +286,51 @@ export function UserCreateForm({
     }
   }, [errors]);
 
+  // Manejar selección de roles para una empresa específica
+  const handleRoleSelect = useCallback((companyId: string, selectedRoleIds: string[]) => {
+    setFormData((prev) => {
+      const updatedCompanyRoles = {
+        ...prev.companyRoles || {},
+        [companyId]: selectedRoleIds,
+      };
+      
+      // Calcular todos los roleIds para compatibilidad
+      const allRoleIds = Object.values(updatedCompanyRoles).flat();
+      
+      const updated = {
+        ...prev,
+        companyRoles: updatedCompanyRoles,
+        roleId: allRoleIds[0] || '', // Mantener para compatibilidad (primer rol)
+      };
+      
+      companyRolesRef.current = updatedCompanyRoles;
+      roleIdRef.current = allRoleIds[0] || '';
+      formDataRef.current = updated;
+      
+      return updated;
+    });
+    
+    // Limpiar error de roles si se seleccionó al menos un rol para esta empresa
+    if (selectedRoleIds.length > 0 && errors.roleId) {
+      // Verificar si todas las empresas tienen al menos un rol
+      const allCompaniesHaveRoles = selectedCompanyIdsRef.current.every(cId => {
+        if (cId === companyId) {
+          return selectedRoleIds.length > 0;
+        }
+        const roleIds = companyRolesRef.current[cId] || [];
+        return roleIds.length > 0;
+      });
+      
+      if (allCompaniesHaveRoles) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.roleId;
+          return newErrors;
+        });
+      }
+    }
+  }, [errors]);
+
   /**
    * Manejar envío del formulario
    */
@@ -278,10 +344,11 @@ export function UserCreateForm({
       // Usar formDataRef.current para obtener los valores más recientes
       const currentFormData = formDataRef.current;
       
-      // Construir payload con estructura anidada: companies[] con branchIds[] dentro
+      // Construir payload con estructura anidada: companies[] con branchIds[] y roleIds[] dentro
       const companies = selectedCompanyIdsRef.current.map(companyId => ({
         id: companyId,
         branchIds: companyBranchesRef.current[companyId] || [], // Array de UUIDs directamente
+        roleIds: companyRolesRef.current[companyId] || [], // Array de UUIDs de roles por empresa
       }));
       
       const createData: UserCreatePayload = {
@@ -294,7 +361,7 @@ export function UserCreateForm({
         status: statusRef.current, // Usar status (número) directamente
       };
       
-      // Solo incluir roleId si tiene un valor válido
+      // Mantener roleId para compatibilidad (primer rol de la primera empresa si existe)
       if (roleIdRef.current && roleIdRef.current.trim()) {
         createData.roleId = roleIdRef.current.trim();
       }
@@ -323,7 +390,7 @@ export function UserCreateForm({
   /**
    * Exponer funciones del formulario cuando está listo (para footer externo)
    */
-  const loadingOptions = companiesLoading || rolesLoading;
+  const loadingOptions = companiesLoading;
 
   // Llamar onFormReady solo cuando el componente está listo o cuando isLoading cambia
   useEffect(() => {
@@ -543,8 +610,8 @@ export function UserCreateForm({
         {/* Companies */}
         <View style={styles.inputGroup}>
           <Select
-            label={t.security?.users?.companies || 'Empresas'}
-            placeholder={t.security?.users?.selectCompanies || 'Selecciona una o más empresas'}
+              label="Empresas"
+              placeholder="Selecciona una o más empresas"
             value={selectedCompanyIds}
             options={companies.map((comp) => ({
               value: comp.id,
@@ -560,62 +627,22 @@ export function UserCreateForm({
           />
         </View>
 
-        {/* Mostrar selector de sucursales para cada empresa seleccionada */}
-        {selectedCompanyIds.map((companyId) => {
-          const company = companies.find(c => c.id === companyId);
-          const companyBranches = formData.companyBranches?.[companyId] || [];
-          const availableBranches = branchesByCompany[companyId] || [];
-          
-          return (
-            <View key={companyId} style={styles.inputGroup}>
-              <Select
-                label={`${t.security?.users?.branches || 'Sucursales'} - ${company?.name || companyId}`}
-                placeholder={t.security?.users?.selectBranches || 'Selecciona una o más sucursales'}
-                value={companyBranches}
-                options={
-                  availableBranches.length > 0
-                    ? availableBranches.map((branch) => ({
-                        value: branch.id,
-                        label: branch.name,
-                      }))
-                    : []
-                }
-                onSelect={(value) => handleBranchSelect(companyId, value as string[])}
-                error={!!errors.branchIds && companyBranches.length === 0}
-                errorMessage={companyBranches.length === 0 ? errors.branchIds : undefined}
-                multiple={true}
-                required
-                disabled={isLoading || availableBranches.length === 0}
-                searchable={true}
-              />
-              {availableBranches.length === 0 && (
-                <ThemedText type="caption" variant="secondary" style={{ marginTop: 8 }}>
-                  {t.security?.users?.noBranches || 'No hay sucursales disponibles para esta empresa'}
-                </ThemedText>
-              )}
-            </View>
-          );
-        })}
-
-        {/* Role */}
-        {roles.length > 0 && (
-          <View style={styles.inputGroup}>
-            <Select
-              label={t.security?.users?.role || 'Rol'}
-              placeholder={t.security?.users?.noRole || 'Sin rol'}
-              value={formData.roleId || undefined}
-              options={[
-                { value: '', label: t.security?.users?.noRole || 'Sin rol' },
-                ...roles.map((role) => ({
-                  value: role.id,
-                  label: role.name,
-                })),
-              ]}
-              onSelect={(value) => handleChange('roleId', value as string)}
-              disabled={isLoading}
-              searchable={true}
-            />
-          </View>
+        {/* Carrusel de configuración por empresa */}
+        {selectedCompanyIds.length > 0 && (
+          <CompanyConfigCarousel
+            selectedCompanyIds={selectedCompanyIds}
+            companies={companies}
+            branchesByCompany={branchesByCompany}
+            rolesByCompany={rolesByCompany}
+            companyBranches={formData.companyBranches || {}}
+            companyRoles={formData.companyRoles || {}}
+            onBranchSelect={handleBranchSelect}
+            onRoleSelect={handleRoleSelect}
+            branchErrors={errors.branchIds}
+            roleErrors={errors.roleId}
+            isLoading={isLoading}
+            t={t}
+          />
         )}
 
         {/* Estado */}

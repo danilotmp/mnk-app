@@ -12,13 +12,13 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { UsersService, UserCreateForm, UserEditForm } from '@/src/features/security/users';
-import { User, UserFilters } from '@/src/features/security/users/types/domain';
 import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
 import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
 import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
 import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
+import { UserCreateForm, UserEditForm, UsersService } from '@/src/features/security/users';
+import { User, UserFilters } from '@/src/features/security/users/types/domain';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
@@ -316,6 +316,89 @@ export function UsersListScreen() {
   }, [users, localFilter]);
 
   /**
+   * Recopilar todas las empresas únicas de todos los usuarios para determinar el orden
+   */
+  const allCompaniesOrdered = useMemo(() => {
+    const companiesMap = new Map<string, { id: string; name: string; code?: string }>();
+    
+    users.forEach((user) => {
+      const userAny = user as any;
+      if (userAny.companies && Array.isArray(userAny.companies)) {
+        userAny.companies.forEach((company: any) => {
+          if (company.id && company.name && !companiesMap.has(company.id)) {
+            companiesMap.set(company.id, {
+              id: company.id,
+              name: company.name,
+              code: company.code,
+            });
+          }
+        });
+      }
+    });
+    
+    return Array.from(companiesMap.values());
+  }, [users]);
+
+  /**
+   * Paleta de colores del sistema para empresas (a partir de la segunda)
+   * Se calcula dentro del useMemo para tener acceso a los colores actualizados
+   */
+  const systemCompanyColors = useMemo(() => [
+    colors.primaryDark, // Segunda empresa
+    colors.textSecondary, // Tercera empresa
+    colors.border, // Cuarta empresa
+    colors.surfaceVariant, // Quinta empresa
+    colors.primaryDark || colors.primary, // Sexta empresa
+  ], [actionIconColor, colors.textSecondary, colors.border, colors.surfaceVariant, colors.primaryDark, colors.primary]);
+
+  /**
+   * Función para obtener el color de una empresa por su nombre o ID
+   * Primera empresa usa colors.primary, las demás usan colores diferentes del sistema
+   */
+  const getCompanyColor = useCallback((companyIdentifier: string | undefined, companyId?: string): string => {
+    if (!companyIdentifier || companyIdentifier.trim() === '') {
+      return colors.primary;
+    }
+    
+    // Buscar la empresa en la lista ordenada por nombre o ID
+    const companyIndex = allCompaniesOrdered.findIndex(
+      c => {
+        const nameMatch = c.name === companyIdentifier;
+        const idMatch = c.id === companyIdentifier || (companyId && c.id === companyId);
+        return nameMatch || idMatch;
+      }
+    );
+    
+    // Si es la primera empresa (índice 0), usar el color del badge
+    if (companyIndex === 0) {
+      return colors.primary;
+    }
+    
+    // Si se encuentra la empresa y no es la primera
+    if (companyIndex > 0) {
+      // Usar un color de la paleta según el índice (restar 1 porque el índice 0 es la primera)
+      const colorIndex = (companyIndex - 1) % systemCompanyColors.length;
+      return systemCompanyColors[colorIndex];
+    }
+    
+    // Si no se encuentra la empresa, usar hash para asignar un color
+    let hash = 0;
+    const identifier = (companyIdentifier || companyId || '').trim();
+    for (let i = 0; i < identifier.length; i++) {
+      const char = identifier.codePointAt(i) || 0;
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    // Si el hash indica que es "primera" (módulo 2 === 0), usar primary
+    // Si no, usar un color de la paleta
+    if (Math.abs(hash) % 2 === 0) {
+      return colors.primary;
+    }
+    const colorIndex = Math.abs(hash) % systemCompanyColors.length;
+    return systemCompanyColors[colorIndex];
+  }, [colors.primary, allCompaniesOrdered, systemCompanyColors]);
+
+  /**
    * Navegar a crear usuario
    */
   const handleCreateUser = () => {
@@ -446,36 +529,128 @@ export function UsersListScreen() {
     {
       key: 'role',
       label: t.security?.users?.role || 'Rol',
-      width: '13%',
+      width: '18%',
       render: (user) => {
-        // Intentar diferentes formas de obtener el nombre del rol
         const userAny = user as any;
-        let roleName: string | undefined;
         
-        // 1. Si hay un array de roles, tomar el primero
-        if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-          const firstRole = user.roles[0];
-          roleName = firstRole.displayName || firstRole.name;
-        }
-        // 2. Si hay un objeto role singular (no array)
-        else if (userAny.role) {
-          const role = userAny.role;
-          if (typeof role === 'object' && role !== null) {
-            roleName = role.displayName || role.name;
-          } else if (typeof role === 'string') {
-            roleName = role;
-          }
-        }
-        // 3. Si hay un string directo para roleName
-        else if (userAny.roleName) {
-          roleName = userAny.roleName;
+        // Recopilar todos los roles desde companies
+        const rolesByCompany: Array<{ companyId?: string; companyName?: string; roles: Array<{ name: string; code?: string }> }> = [];
+        
+        if (userAny.companies && Array.isArray(userAny.companies)) {
+          userAny.companies.forEach((company: any) => {
+            if (company.roles && Array.isArray(company.roles) && company.roles.length > 0) {
+              rolesByCompany.push({
+                companyId: company.id,
+                companyName: company.name,
+                roles: company.roles.map((r: any) => ({ name: r.name, code: r.code })),
+              });
+            }
+          });
         }
         
-        // Si no se encontró el nombre, mostrar guion
+        // Fallback: intentar obtener roles del array legacy
+        if (rolesByCompany.length === 0 && user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+          rolesByCompany.push({
+            roles: user.roles.map((r: any) => ({ name: r.displayName || r.name, code: r.code })),
+          });
+        }
+        
+        // Si no hay roles, mostrar guion
+        if (rolesByCompany.length === 0) {
+          return (
+            <ThemedText type="body2" variant="secondary">
+              -
+            </ThemedText>
+          );
+        }
+        
+        // Contar total de roles y empresas
+        const totalRoles = rolesByCompany.reduce((sum, c) => sum + c.roles.length, 0);
+        const totalCompanies = rolesByCompany.length;
+        
+        // Si hay solo una empresa y un rol, mostrar simple
+        if (totalCompanies === 1 && totalRoles === 1) {
+          const companyColor = getCompanyColor(rolesByCompany[0].companyName, rolesByCompany[0].companyId);
+          return (
+            <View style={styles.roleContainer}>
+              <View style={[styles.roleBadge, { backgroundColor: companyColor + '20' }]}>
+                <Ionicons name="business" size={12} color={companyColor} style={{ marginRight: 4 }} />
+                <ThemedText type="caption" style={{ color: companyColor, fontWeight: '500' }}>
+                  {rolesByCompany[0].roles[0].name}
+                </ThemedText>
+              </View>
+            </View>
+          );
+        }
+        
+        // Si hay múltiples roles o empresas, mostrar badges con tooltip
+        // Limitar a 3 badges visibles, el resto se muestra en tooltip
+        const maxVisible = 3;
+        const visibleRoles: Array<{ companyId?: string; companyName?: string; role: { name: string; code?: string }; companyIndex: number; roleIndex: number }> = [];
+        let count = 0;
+        
+        rolesByCompany.forEach((companyData, companyIndex) => {
+          companyData.roles.forEach((role, roleIndex) => {
+            if (count < maxVisible) {
+              visibleRoles.push({ 
+                companyId: companyData.companyId, 
+                companyName: companyData.companyName, 
+                role, 
+                companyIndex, 
+                roleIndex 
+              });
+              count++;
+            }
+          });
+        });
+        
+        const remainingCount = totalRoles - visibleRoles.length;
+        const tooltipFullText = rolesByCompany.map(c => 
+          `${c.companyName || 'Empresa'}: ${c.roles.map(r => r.name).join(', ')}`
+        ).join('\n');
+        
         return (
-          <ThemedText type="body2" variant="secondary">
-            {roleName || '-'}
-          </ThemedText>
+          <View style={styles.roleContainer}>
+            {visibleRoles.map((item, index) => {
+              const tooltipText = totalCompanies > 1 
+                ? `${item.companyName || 'Empresa'}: ${item.role.name}`
+                : item.role.name;
+              
+              // Obtener el color de la empresa para el icono
+              // Priorizar companyName, si no está disponible usar companyId como fallback
+              const companyIdentifier = item.companyName || item.companyId || '';
+              const companyColor = getCompanyColor(companyIdentifier, item.companyId);
+              
+              return (
+                <Tooltip key={`${item.companyIndex}-${item.roleIndex}`} text={tooltipText} position="top">
+                  <View 
+                    style={[
+                      styles.roleBadge, 
+                      { 
+                        backgroundColor: companyColor + '20', 
+                        marginRight: index < visibleRoles.length - 1 || remainingCount > 0 ? 4 : 0,
+                        marginBottom: 4,
+                      }
+                    ]}
+                  >
+                    <Ionicons name="business" size={12} color={companyColor} style={{ marginRight: 4 }} />
+                    <ThemedText type="caption" style={{ color: companyColor, fontWeight: '500' }} numberOfLines={1}>
+                      {item.role.name}
+                    </ThemedText>
+                  </View>
+                </Tooltip>
+              );
+            })}
+            {remainingCount > 0 && (
+              <Tooltip text={tooltipFullText} position="top">
+                <View style={[styles.roleBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, marginBottom: 4 }]}>
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: '500' }}>
+                    +{remainingCount}
+                  </ThemedText>
+                </View>
+              </Tooltip>
+            )}
+          </View>
         );
       },
     },

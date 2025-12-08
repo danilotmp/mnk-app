@@ -40,6 +40,23 @@ export interface User extends BaseEntity {
     branchId?: string; // Para compatibilidad con algunas respuestas
     branchCode?: string; // Para compatibilidad con algunas respuestas
   }>;
+  companies?: Array<{
+    id: string;
+    code?: string;
+    name?: string;
+    branches?: Array<{
+      id: string;
+      code: string;
+      name: string;
+    }>;
+    roles?: Array<{
+      id: string;
+      code: string;
+      name: string;
+      description?: string;
+      isSystem?: boolean;
+    }>;
+  }>;
 }
 
 /**
@@ -51,11 +68,12 @@ export interface UserCreatePayload {
   firstName: string;
   lastName: string;
   phone?: string;
-  roleId?: string;
+  roleId?: string; // Mantener para compatibilidad, pero se prefiere companies[].roleIds[]
   status?: number; // Estado: -1=Eliminado, 0=Inactivo, 1=Activo, 2=Pendiente, 3=Suspendido
   companies?: Array<{
     id: string;
     branchIds: string[]; // Array de UUIDs de sucursales
+    roleIds?: string[]; // Array de UUIDs de roles (nuevo: roles por empresa)
   }>;
 }
 
@@ -68,11 +86,12 @@ export interface UserUpdatePayload {
   firstName?: string;
   lastName?: string;
   phone?: string;
-  roleId?: string;
+  roleId?: string; // Mantener para compatibilidad, pero se prefiere companies[].roleIds[]
   status?: number; // Estado: -1=Eliminado, 0=Inactivo, 1=Activo, 2=Pendiente
   companies?: Array<{
     id: string;
     branchIds: string[]; // Array de UUIDs de sucursales
+    roleIds?: string[]; // Array de UUIDs de roles (nuevo: roles por empresa)
   }>;
 }
 

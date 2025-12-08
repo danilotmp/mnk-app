@@ -78,5 +78,9 @@ export interface DataTableProps<T = any> {
   deleteAction?: DeleteAction<T>; // Acción estándar de eliminar (se renderiza al final)
   actionsColumnWidth?: string;    // Opcional: ancho de la columna acciones (default: '18%')
   actionsColumnLabel?: string;    // Opcional: label de la columna (default: 'Acciones')
+  
+  // Opciones adicionales
+  enableRowClick?: boolean;       // Opcional: habilita click en fila para abrir edición (default: false)
+  showRowNumber?: boolean;        // Opcional: muestra columna de contador al inicio (default: false)
 }
 

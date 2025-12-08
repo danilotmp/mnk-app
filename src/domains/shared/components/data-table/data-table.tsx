@@ -41,6 +41,8 @@ export function DataTable<T = any>({
   deleteAction,
   actionsColumnWidth = '18%',
   actionsColumnLabel,
+  enableRowClick = false,
+  showRowNumber = true,
 }: DataTableProps<T>) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
@@ -89,6 +91,9 @@ export function DataTable<T = any>({
    * Renderizar acciones para un item
    */
   const renderActions = useCallback((item: T, index: number) => {
+    // Color para iconos deshabilitados
+    const disabledIconColor = colors.textSecondary || '#9ca3af';
+    
     return (
       <View style={styles.actionsContainer}>
         {orderedActions.map((actionOrConfig) => {
@@ -96,18 +101,16 @@ export function DataTable<T = any>({
           if ('id' in actionOrConfig) {
             const action = actionOrConfig as TableAction<T>;
             const isVisible = action.visible === undefined ? true : action.visible(item);
-            
-            if (!isVisible) {
-              return null;
-            }
+            const iconColor = isVisible ? actionIconColor : disabledIconColor;
             
             return (
               <Tooltip key={action.id} text={action.tooltip} position="left">
                 <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => action.onPress(item)}
+                  style={[styles.actionButton, !isVisible && { opacity: 0.5 }]}
+                  onPress={isVisible ? () => action.onPress(item) : undefined}
+                  disabled={!isVisible}
                 >
-                  <Ionicons name={action.icon as any} size={18} color={actionIconColor} />
+                  <Ionicons name={action.icon as any} size={18} color={iconColor} />
                 </TouchableOpacity>
               </Tooltip>
             );
@@ -116,51 +119,102 @@ export function DataTable<T = any>({
           // Acción estándar (editar o eliminar)
           const { type, action } = actionOrConfig as { type: 'edit' | 'delete'; action: any };
           const isVisible = action.visible === undefined ? true : action.visible(item);
-          
-          if (!isVisible) {
-            return null;
-          }
-          
           const iconName = type === 'edit' ? 'pencil' : 'trash';
           const tooltipText = action.tooltip || (type === 'edit' ? (t.common?.edit || 'Editar') : (t.common?.delete || 'Eliminar'));
+          const iconColor = isVisible ? actionIconColor : disabledIconColor;
           
           return (
             <Tooltip key={type} text={tooltipText} position="left">
               <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => action.onPress(item)}
+                style={[styles.actionButton, !isVisible && { opacity: 0.5 }]}
+                onPress={isVisible ? () => action.onPress(item) : undefined}
+                disabled={!isVisible}
               >
-                <Ionicons name={iconName as any} size={18} color={actionIconColor} />
+                <Ionicons name={iconName as any} size={18} color={iconColor} />
               </TouchableOpacity>
             </Tooltip>
           );
         })}
       </View>
     );
-  }, [orderedActions, styles, colors]);
+  }, [orderedActions, styles, colors, actionIconColor]);
   
   /**
-   * Construir columnas finales incluyendo la columna de acciones si hay acciones definidas
+   * Construir columnas finales incluyendo la columna de contador (si está habilitada) y la columna de acciones (si hay acciones definidas)
    */
   const finalColumns = useMemo(() => {
-    const hasActions = (actions && actions.length > 0) || editAction || deleteAction;
+    let resultColumns = [...columns];
     
-    if (!hasActions) {
-      return columns;
+    // Agregar columna de contador al inicio si está habilitada
+    if (showRowNumber) {
+      resultColumns = [
+        {
+          key: 'rowNumber',
+          label: '#',
+          width: '5%',
+          align: 'center' as const,
+          render: (item: T, index: number) => {
+            // Calcular el número de registro considerando la paginación
+            const rowNumber = pagination 
+              ? (pagination.page - 1) * pagination.limit + index + 1
+              : index + 1;
+            
+            // Determinar qué acción de editar usar:
+            // 1. Si hay editAction y está visible, usar editAction
+            // 2. Si no hay editAction pero hay onRowPress, usar onRowPress
+            let canEdit = false;
+            let editHandler: (() => void) | undefined = undefined;
+            
+            if (editAction) {
+              const isVisible = editAction.visible === undefined ? true : editAction.visible(item);
+              if (isVisible) {
+                canEdit = true;
+                editHandler = () => editAction.onPress(item);
+              }
+            } else if (onRowPress) {
+              // Si no hay editAction pero hay onRowPress, usar onRowPress
+              canEdit = true;
+              editHandler = () => onRowPress(item, index);
+            }
+            
+            if (canEdit && editHandler) {
+              return (
+                <TouchableOpacity
+                  onPress={editHandler}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText type="body2" style={{ color: actionIconColor }}>
+                    {rowNumber}
+                  </ThemedText>
+                </TouchableOpacity>
+              );
+            }
+            
+            return (
+              <ThemedText type="body2" style={{ color: actionIconColor }}>
+                {rowNumber}
+              </ThemedText>
+            );
+          },
+        },
+        ...resultColumns,
+      ];
     }
     
-    // Agregar columna de acciones al final
-    return [
-      ...columns,
-        {
-          key: 'actions',
-          label: actionsColumnLabel || t.common?.actions || 'Acciones',
-          width: actionsColumnWidth,
-          align: 'center' as const,
-          render: (item: T, index: number) => renderActions(item, index),
-        },
-    ];
-  }, [columns, actions, editAction, deleteAction, actionsColumnWidth, actionsColumnLabel, renderActions]);
+    // Agregar columna de acciones al final si hay acciones definidas
+    const hasActions = (actions && actions.length > 0) || editAction || deleteAction;
+    if (hasActions) {
+      resultColumns.push({
+        key: 'actions',
+        label: actionsColumnLabel || t.common?.actions || 'Acciones',
+        width: actionsColumnWidth,
+        align: 'center' as const,
+        render: (item: T, index: number) => renderActions(item, index),
+      });
+    }
+    
+    return resultColumns;
+  }, [columns, actions, editAction, deleteAction, actionsColumnWidth, actionsColumnLabel, renderActions, showRowNumber, pagination, t, actionIconColor, onRowPress]);
   
   // Calcular altura máxima para el DataTable
   // Restamos espacio para header de la app, header de la página, búsqueda, padding, y paginación
@@ -174,10 +228,48 @@ export function DataTable<T = any>({
   const maxTableHeight = Math.max(300, availableHeight * 0.95); // 95% del espacio disponible, mínimo 300px
 
   /**
+   * Lista estándar de nombres de columnas que deben tener comportamiento compacto
+   * Estas columnas serán más pequeñas que el resto
+   * Se puede extender fácilmente agregando nuevos nombres a esta lista
+   */
+  const compactColumnKeys = [
+    'status', 'estado',
+    'sistema',
+    'phone', 'telefono', 'teléfono',
+    'code', 'codigo', 'código',
+    'permisos', 'permissions',
+    'tipo', 'type',
+    'empresa', 'empresas', 'company', 'companies',
+    // Agregar más nombres de columnas compactas aquí según se vayan detectando
+  ];
+
+  /**
+   * Verificar si una columna debe tener comportamiento compacto
+   */
+  const isCompactColumn = (column: TableColumn<T>): boolean => {
+    const key = column.key?.toLowerCase() || '';
+    const label = column.label?.toLowerCase() || '';
+    return compactColumnKeys.some(compactKey => 
+      key === compactKey.toLowerCase() || 
+      label.includes(compactKey.toLowerCase())
+    );
+  };
+
+  /**
    * Calcular flex value para cada columna basado en width
    * Sistema autoajustable: usa flex con minWidth para permitir crecimiento según contenido
    */
   const getColumnFlex = (column: TableColumn<T>, index: number): number => {
+    // Columna de acciones: flex 0 para tamaño fijo
+    if (column.key === 'actions' || column.key === 'acciones') {
+      return 0;
+    }
+    
+    // Columnas compactas: flex reducido para que sean más pequeñas
+    if (isCompactColumn(column)) {
+      return 0.5;
+    }
+    
     // Si no tiene width, usar flex: 1 (distribución igual con autoajuste)
     if (!column.width) {
       return 1;
@@ -208,6 +300,11 @@ export function DataTable<T = any>({
     // MinWidth mínimo para cualquier columna
     const baseMinWidth = isMobile ? 100 : 120;
     
+    // Columna de contador: tamaño fijo pequeño
+    if (column.key === 'rowNumber') {
+      return isMobile ? 40 : 50;
+    }
+    
     // Calcular ancho estimado del label
     const labelLength = column.label?.length || 0;
     const labelWidth = labelLength * (isMobile ? 7 : 8); // Aproximadamente 7-8px por carácter
@@ -217,6 +314,34 @@ export function DataTable<T = any>({
     if (column.key === 'email') {
       // Emails pueden ser largos, necesitan espacio generoso
       return Math.max(baseMinWidth, isMobile ? 200 : 250);
+    }
+    
+    // Columnas compactas: usar minWidth reducido
+    if (isCompactColumn(column)) {
+      if (column.key === 'phone' || column.key === 'telefono' || column.key === 'teléfono' || 
+          column.label?.toLowerCase().includes('teléfono') || column.label?.toLowerCase().includes('telefono')) {
+        // Teléfono: tamaño compacto
+        return isMobile ? 90 : 110;
+      }
+      if (column.key === 'code' || column.key === 'codigo' || column.key === 'código' ||
+          column.label?.toLowerCase().includes('codigo') || column.label?.toLowerCase().includes('código') ||
+          column.label?.toLowerCase().includes('code')) {
+        // Código: 50% más grande que el tamaño compacto estándar
+        return isMobile ? 120 : 200;
+      }
+      if (column.key === 'empresa' || column.key === 'empresas' || column.key === 'company' || column.key === 'companies' ||
+          column.label?.toLowerCase().includes('empresa') || column.label?.toLowerCase().includes('empresas') ||
+          column.label?.toLowerCase().includes('company') || column.label?.toLowerCase().includes('companies')) {
+        // Empresa: mismo tamaño que código (50% más grande que el tamaño compacto estándar)
+        return isMobile ? 120 : 200;
+      }
+      if (column.key === 'tipo' || column.key === 'type' ||
+          column.label?.toLowerCase().includes('tipo') || column.label?.toLowerCase().includes('type')) {
+        // Tipo: mismo tamaño que código (50% más grande que el tamaño compacto estándar)
+        return isMobile ? 120 : 200;
+      }
+      // Otras columnas compactas (estado, sistema, etc.): tamaño compacto estándar
+      return isMobile ? 80 : 100;
     }
     
     if (column.key === 'phone' || column.key === 'teléfono' || column.label?.toLowerCase().includes('teléfono') || column.label?.toLowerCase().includes('telefono')) {
@@ -239,14 +364,11 @@ export function DataTable<T = any>({
       return Math.max(baseMinWidth, isMobile ? 110 : 140);
     }
     
-    if (column.key === 'status' || column.key === 'estado') {
-      // Estado necesita espacio para "Activo"/"Inactivo"
-      return Math.max(baseMinWidth, isMobile ? 100 : 120);
-    }
     
     if (column.key === 'actions' || column.key === 'acciones') {
-      // Acciones necesita espacio para los botones
-      return Math.max(baseMinWidth, isMobile ? 100 : 130);
+      // Acciones: tamaño fijo para aproximadamente 5 iconos (40px cada uno + padding)
+      // 5 iconos * 40px + padding horizontal = ~220px
+      return isMobile ? 180 : 220;
     }
     
     // Para otras columnas, usar el máximo entre baseMinWidth y labelWidth
@@ -295,6 +417,12 @@ export function DataTable<T = any>({
           // Columnas críticas no deben comprimirse tanto
           const isCriticalColumn = column.key === 'email' || column.key === 'phone' || column.key === 'teléfono' || 
                                    column.key === 'name' || column.key === 'nombre';
+          // Columna de acciones: tamaño fijo, no crece ni se comprime
+          const isActionsColumn = column.key === 'actions' || column.key === 'acciones';
+          // Columna de contador: tamaño fijo, no crece ni se comprime
+          const isRowNumberColumn = column.key === 'rowNumber';
+          // Columnas compactas: más pequeñas, se comprimen más
+          const isCompactCol = isCompactColumn(column);
           return (
             <View
               key={column.key}
@@ -303,8 +431,9 @@ export function DataTable<T = any>({
                 { 
                   flex: columnFlex,
                   minWidth: columnMinWidth,
-                  flexShrink: isCriticalColumn ? 0.5 : 1, // Columnas críticas se comprimen menos
-                  flexGrow: 1, // Permite crecimiento según contenido
+                  maxWidth: (isActionsColumn || isRowNumberColumn) ? columnMinWidth : undefined, // Acciones y contador: tamaño fijo
+                  flexShrink: (isActionsColumn || isRowNumberColumn) ? 0 : (isCompactCol ? 1.5 : (isCriticalColumn ? 0.5 : 1)), // Columnas compactas se comprimen más
+                  flexGrow: (isActionsColumn || isRowNumberColumn) ? 0 : (isCompactCol ? 0 : 1), // Columnas compactas, acciones y contador no crecen
                 },
                 column.align === 'center' && styles.cellCenter,
                 column.align === 'right' && styles.cellRight,
@@ -320,7 +449,8 @@ export function DataTable<T = any>({
       </>
     );
 
-    if (onRowPress) {
+    // Solo hacer la fila clickeable si enableRowClick está habilitado Y onRowPress está definido
+    if (enableRowClick && onRowPress) {
       return (
         <TouchableOpacity
           key={rowKey}
@@ -716,6 +846,12 @@ export function DataTable<T = any>({
                     // Columnas críticas no deben comprimirse tanto
                     const isCriticalColumn = column.key === 'email' || column.key === 'phone' || column.key === 'teléfono' || 
                                              column.key === 'name' || column.key === 'nombre';
+                    // Columna de acciones: tamaño fijo, no crece ni se comprime
+                    const isActionsColumn = column.key === 'actions' || column.key === 'acciones';
+                    // Columna de contador: tamaño fijo, no crece ni se comprime
+                    const isRowNumberColumn = column.key === 'rowNumber';
+                    // Columnas compactas: más pequeñas, se comprimen más
+                    const isCompactCol = isCompactColumn(column);
                     return (
                       <View
                         key={column.key}
@@ -724,8 +860,9 @@ export function DataTable<T = any>({
                           { 
                             flex: columnFlex,
                             minWidth: columnMinWidth,
-                            flexShrink: isCriticalColumn ? 0.5 : 1, // Columnas críticas se comprimen menos
-                            flexGrow: 1, // Permite crecimiento según contenido
+                            maxWidth: (isActionsColumn || isRowNumberColumn) ? columnMinWidth : undefined, // Acciones y contador: tamaño fijo
+                            flexShrink: (isActionsColumn || isRowNumberColumn) ? 0 : (isCompactCol ? 1.5 : (isCriticalColumn ? 0.5 : 1)), // Columnas compactas se comprimen más
+                            flexGrow: (isActionsColumn || isRowNumberColumn) ? 0 : (isCompactCol ? 0 : 1), // Columnas compactas, acciones y contador no crecen
                           },
                           column.align === 'center' && styles.headerCellCenter,
                           column.align === 'right' && styles.headerCellRight,

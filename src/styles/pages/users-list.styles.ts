@@ -56,5 +56,19 @@ export const createUsersListStyles = (isMobile: boolean = false) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    roleContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'flex-start',
+      gap: 4,
+    },
+    roleBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 8,
+      maxWidth: 120,
+    },
   });
 

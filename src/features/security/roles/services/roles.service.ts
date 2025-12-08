@@ -49,6 +49,9 @@ export class RolesService {
       if (filters.isSystem !== undefined) {
         queryParams.append('isSystem', filters.isSystem.toString());
       }
+      if (filters.companyId) {
+        queryParams.append('companyId', filters.companyId);
+      }
 
       const endpoint = `${this.BASE_ENDPOINT}?${queryParams.toString()}`;
       

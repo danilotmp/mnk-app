@@ -44,10 +44,19 @@ export interface UserApi extends BaseEntity {
   }>;
   companies?: Array<{
     id: string;
+    code?: string;
+    name?: string;
     branches: Array<{
       id: string;
       code: string;
       name: string;
+    }>;
+    roles?: Array<{
+      id: string;
+      code: string;
+      name: string;
+      description?: string;
+      isSystem?: boolean;
     }>;
   }>;
 }

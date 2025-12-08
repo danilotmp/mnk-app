@@ -26,5 +26,6 @@ export interface RoleFilters extends PaginationParams {
   search?: string;
   status?: number;
   isSystem?: boolean;
+  companyId?: string; // Filtrar roles por empresa
 }
 

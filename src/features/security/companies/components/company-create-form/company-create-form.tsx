@@ -69,7 +69,39 @@ export function CompanyCreateForm({
   const handleChange = useCallback(
     (field: keyof CompanyFormData, value: string | number) => {
       setFormData((prev) => {
-        const updated = { ...prev, [field]: value };
+        let updated = { ...prev, [field]: value };
+        
+        // Si se está cambiando el código, aplicar transformaciones
+        if (field === 'code' && typeof value === 'string') {
+          // Convertir a mayúsculas y reemplazar espacios con guiones bajos
+          const processedCode = value.toUpperCase().replace(/\s+/g, '_');
+          updated.code = processedCode;
+          
+          // Generar nombre automáticamente solo si está vacío o coincide con el nombre generado anteriormente
+          const previousCode = prev.code || '';
+          const previousName = prev.name || '';
+          
+          // Calcular el nombre que se generaría a partir del código anterior
+          const previousGeneratedName = previousCode
+            .toLowerCase()
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          // Solo generar nombre si está vacío o si coincide exactamente con el nombre generado anteriormente
+          if (!previousName || previousName === previousGeneratedName) {
+            // Generar nombre: convertir guiones bajos a espacios y capitalizar primera letra de cada palabra
+            const generatedName = processedCode
+              .toLowerCase()
+              .replace(/_/g, ' ')
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+            updated.name = generatedName;
+          }
+        }
+        
         // Sincronizar ref inmediatamente
         formDataRef.current = updated;
         return updated;

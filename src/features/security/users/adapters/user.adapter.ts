@@ -33,6 +33,7 @@ export function userAdapter(apiUser: UserApi): User {
     branchIds: apiUser.branchIds,
     currentBranchId: apiUser.currentBranchId,
     availableBranches: apiUser.availableBranches,
+    companies: apiUser.companies,
   };
 }
 

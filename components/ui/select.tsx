@@ -208,7 +208,7 @@ export function Select<T = string>({
                       style={[
                         styles.option,
                         {
-                          backgroundColor: selected ? colors.surface : 'transparent',
+                          backgroundColor: selected ? colors.primary : 'transparent',
                           opacity: optionDisabled ? 0.5 : 1,
                         },
                         selected && styles.selectedOption,
