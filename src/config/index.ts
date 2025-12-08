@@ -48,6 +48,27 @@ export const AppConfig = {
     enableDebugMode: __DEV__,
     enableHotReload: __DEV__,
   },
+
+  // Configuración de menú de navegación
+  navigation: {
+    // Tipo de menú: 'horizontal' | 'vertical'
+    // - 'horizontal': Menú horizontal en el header (comportamiento actual)
+    // - 'vertical': Menú vertical estilo Azure DevOps en el lado izquierdo
+    // Nota: El menú horizontal siempre se muestra antes del login.
+    // Después del login, se aplica la configuración aquí definida.
+    menuType: process.env.EXPO_PUBLIC_MENU_TYPE || 'vertical',
+    // Ancho del menú vertical cuando está expandido (en píxeles)
+    verticalMenuExpandedWidth: 240,
+    // Ancho del menú vertical cuando está colapsado (solo iconos)
+    verticalMenuCollapsedWidth: 48,
+    // Color de las opciones activas/seleccionadas en el menú
+    // Puede ser cualquier color válido (hexadecimal, nombre de color, etc.)
+    // Ejemplos: '#ff3366', '#0087FF', 'red', 'blue', 'rgb(255, 51, 102)', etc.
+    // Recomendados: 'red' (#ff3366) o 'blue' (colors.primary)
+    // - 'red': Se convertirá automáticamente a '#ff3366' (usado en menú horizontal)
+    // - 'blue': Se convertirá automáticamente a colors.primary (usado en menú vertical)
+    activeItemColor: process.env.EXPO_PUBLIC_MENU_ACTIVE_COLOR || 'red',
+  },
 };
 
 // Configuración específica por plataforma

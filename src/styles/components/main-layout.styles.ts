@@ -50,6 +50,15 @@ export const createMainLayoutStyles = () =>
     content: {
       flex: 1,
     },
+    // Contenedor del body: menú vertical + contenido
+    bodyContainer: {
+      flex: 1,
+      flexDirection: 'row',
+    },
+    bodyContainerWithVerticalMenu: {
+      // El menú vertical está dentro de este contenedor
+      // El contenido se ajustará automáticamente
+    },
   });
 
 

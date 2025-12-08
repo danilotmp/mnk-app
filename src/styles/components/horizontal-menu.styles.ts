@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 
-export const createHorizontalMenuStyles = () =>
+export const createHorizontalMenuStyles = (activeItemColor: string = '#ff3366') =>
   StyleSheet.create({
     desktopContainer: {
       position: 'relative',
@@ -59,7 +59,7 @@ export const createHorizontalMenuStyles = () =>
     },
     activeMobileMenuItemParent: {
       borderLeftWidth: 3,
-      borderLeftColor: '#ff3366',
+      borderLeftColor: activeItemColor,
       paddingLeft: 13, // Reducir padding izquierdo para compensar el borde
     },
     submenuContainer: { paddingLeft: 16 },
@@ -83,7 +83,7 @@ export const createHorizontalMenuStyles = () =>
       borderBottomWidth: 2,
       borderBottomColor: 'transparent',
     },
-    activeMenuItem: { borderBottomColor: '#ff3366' },
+    activeMenuItem: { borderBottomColor: activeItemColor },
     menuItemText: { fontSize: 14 },
     dropdownIndicator: { fontSize: 10, opacity: 0.6, marginLeft: 4 },
     megaMenu: {
@@ -119,7 +119,7 @@ export const createHorizontalMenuStyles = () =>
     megaMenuColumnTitle: { marginBottom: 8, fontWeight: '600', letterSpacing: 0.5 },
     megaMenuColumnLine: { height: 1, width: '100%', marginBottom: 12 },
     megaMenuItem: { paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1 },
-    activeMegaMenuItem: { borderLeftWidth: 3, borderLeftColor: '#ff3366', paddingLeft: 7 },
+    activeMegaMenuItem: { borderLeftWidth: 3, borderLeftColor: activeItemColor, paddingLeft: 7 },
     megaMenuItemText: { opacity: 0.8 },
     desktopSubmenu: {
       position: 'absolute',
@@ -145,7 +145,7 @@ export const createHorizontalMenuStyles = () =>
       padding: 12,
     },
     desktopSubmenuItem: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
-    activeSubmenuItem: { borderLeftWidth: 3, borderLeftColor: '#ff3366', paddingLeft: 13 },
+    activeSubmenuItem: { borderLeftWidth: 3, borderLeftColor: activeItemColor, paddingLeft: 13 },
     submenuItemTitle: { marginBottom: 4 },
     submenuItemDescription: { opacity: 0.7, lineHeight: 16 },
   });

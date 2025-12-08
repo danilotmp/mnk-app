@@ -1,9 +1,10 @@
 import { Header } from '@/components/header';
-import { HorizontalMenu, MenuItem } from '@/components/navigation';
+import { HorizontalMenu, VerticalMenu, MenuItem } from '@/components/navigation';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AppConfig } from '@/src/config';
 import { useCompany, useMultiCompany, UserProfileHeader } from '@/src/domains/shared';
 import { useMenu } from '@/src/infrastructure/menu';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
@@ -43,6 +44,18 @@ export function MainLayout({
   const styles = createMainLayoutStyles();
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [titleWidth, setTitleWidth] = useState<number>(0);
+  const [verticalMenuCollapsed, setVerticalMenuCollapsed] = useState(false);
+
+  // Determinar el tipo de menú según configuración y estado de autenticación
+  // El menú horizontal siempre se muestra antes del login
+  // Después del login, se aplica la configuración de AppConfig
+  // En móviles, siempre se usa el menú horizontal
+  const isAuthenticated = !!user;
+  const menuType = isAuthenticated 
+    ? AppConfig.navigation.menuType 
+    : 'horizontal';
+  // En móviles, siempre usar menú horizontal independientemente de la configuración
+  const useVerticalMenu = !isMobile && menuType === 'vertical' && isAuthenticated;
 
   const companies = user?.companies || [];
   
@@ -178,7 +191,7 @@ export function MainLayout({
 
   return (
     <ThemedView style={styles.container}>
-      {/* Header unificado: Logo + Menú + UserProfile en la misma línea */}
+      {/* Header unificado: Logo + Menú + UserProfile en la misma línea - SIEMPRE ocupa todo el ancho */}
       {showHeader && (
         <View style={[
           styles.unifiedHeader,
@@ -285,8 +298,8 @@ export function MainLayout({
                     />
                   </View>
                 )}
-                {/* Hamburger Menu a la derecha */}
-                {showNavigation && (
+                {/* Hamburger Menu a la derecha (solo si no es menú vertical) */}
+                {showNavigation && !useVerticalMenu && (
                   <View style={styles.mobileMenuSection}>
                     <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
                   </View>
@@ -378,8 +391,8 @@ export function MainLayout({
                 </View>
               </View>
 
-              {/* Menú de navegación horizontal en el centro */}
-              {showNavigation && (
+              {/* Menú de navegación horizontal en el centro (solo si no es menú vertical) */}
+              {showNavigation && !useVerticalMenu && (
                 <View style={styles.menuSection}>
                   <HorizontalMenu items={finalMenuItems} onItemPress={handleMenuItemPress} />
                 </View>
@@ -400,9 +413,22 @@ export function MainLayout({
         </View>
       )}
 
-      {/* Contenido dinámico de las páginas */}
-      <View style={styles.content}>
-        {children}
+      {/* Contenedor del body: Menú vertical (si aplica) + Content */}
+      <View style={[styles.bodyContainer, useVerticalMenu && styles.bodyContainerWithVerticalMenu]}>
+        {/* Menú vertical (solo cuando está autenticado y configurado) */}
+        {useVerticalMenu && showNavigation && (
+          <VerticalMenu
+            items={finalMenuItems}
+            onItemPress={handleMenuItemPress}
+            collapsed={verticalMenuCollapsed}
+            onToggleCollapse={() => setVerticalMenuCollapsed(!verticalMenuCollapsed)}
+          />
+        )}
+
+        {/* Contenido dinámico de las páginas */}
+        <View style={styles.content}>
+          {children}
+        </View>
       </View>
     </ThemedView>
   );

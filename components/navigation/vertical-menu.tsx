@@ -1,0 +1,499 @@
+import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
+import { AppConfig } from '@/src/config';
+import { useTranslation } from '@/src/infrastructure/i18n';
+import { createVerticalMenuStyles } from '@/src/styles/components/vertical-menu.styles';
+import { Ionicons } from '@expo/vector-icons';
+import { usePathname } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    Animated,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+} from 'react-native';
+import { MenuItem } from './horizontal-menu';
+
+interface VerticalMenuProps {
+  items: MenuItem[];
+  onItemPress?: (item: MenuItem) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+/**
+ * Menú de navegación vertical estilo Azure DevOps
+ * - Se muestra en el lado izquierdo de la página
+ * - Puede expandirse/colapsarse
+ * - Cuando está colapsado, muestra solo iconos
+ * - Cuando está expandido, muestra iconos + texto
+ */
+export function VerticalMenu({ 
+  items, 
+  onItemPress,
+  collapsed = false,
+  onToggleCollapse
+}: VerticalMenuProps) {
+  const { colors } = useTheme();
+  const pathname = usePathname();
+  const { t } = useTranslation();
+  const { height: windowHeight } = useWindowDimensions();
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  
+  // Calcular altura disponible: altura de ventana - header (~60px) - botón (40px)
+  const HEADER_HEIGHT = 80; // Altura aproximada del header (padding + contenido)
+  const TOGGLE_BUTTON_HEIGHT = 40;
+  const availableHeight = windowHeight - HEADER_HEIGHT - TOGGLE_BUTTON_HEIGHT;
+  
+  // Obtener el color para items activos según la configuración
+  // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
+  const getActiveItemColor = (): string => {
+    const configColor = AppConfig.navigation.activeItemColor;
+    if (configColor === 'red') return '#ff3366';
+    if (configColor === 'blue') return colors.primary;
+    return configColor; // Cualquier otro color se usa directamente
+  };
+  const activeItemColor = getActiveItemColor();
+  const styles = createVerticalMenuStyles(collapsed);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [isManuallyExpanded, setIsManuallyExpanded] = useState<boolean>(!collapsed); // Estado para saber si fue expandido manualmente
+  const [isHovered, setIsHovered] = useState<boolean>(false); // Estado para hover
+  const [animatedWidth, setAnimatedWidth] = useState<number>(collapsed ? 48 : 240); // Estado para rastrear el ancho animado
+  const slideAnim = React.useRef(new Animated.Value(collapsed ? 0 : 1)).current;
+  const activeItemIdRef = React.useRef<string | null>(null); // Ref para proteger el activeItemId
+  
+  // Determinar si el menú debe estar expandido
+  // Si fue expandido manualmente, siempre expandido
+  // Si está colapsado pero hay hover, expandir temporalmente
+  const isExpanded = isManuallyExpanded || (collapsed && isHovered);
+  
+  // Determinar si el texto debe mostrarse basado en el ancho actual
+  const shouldShowText = animatedWidth > 100; // Mostrar texto solo si el ancho es mayor a 100px
+
+  // Animar el cambio de estado colapsado/expandido
+  useEffect(() => {
+    const targetValue = isExpanded ? 1 : 0;
+    Animated.timing(slideAnim, {
+      toValue: targetValue,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+    
+    // Actualizar el ancho inmediatamente para sincronizar el renderizado
+    setAnimatedWidth(isExpanded ? 240 : 48);
+  }, [isExpanded, slideAnim]);
+  
+  // Listener para el ancho animado (opcional, para mayor precisión)
+  useEffect(() => {
+    const listenerId = slideAnim.addListener(({ value }) => {
+      const currentWidth = value * (240 - 48) + 48; // Interpolación: 0 -> 48, 1 -> 240
+      setAnimatedWidth(currentWidth);
+    });
+    
+    return () => {
+      slideAnim.removeListener(listenerId);
+    };
+  }, [slideAnim]);
+
+  // Sincronizar isManuallyExpanded cuando cambia collapsed desde fuera
+  useEffect(() => {
+    if (!collapsed) {
+      setIsManuallyExpanded(true);
+    }
+  }, [collapsed]);
+
+  // Detectar la ruta actual y establecer el item activo
+  useEffect(() => {
+    if (!pathname || !items || items.length === 0) {
+      return;
+    }
+
+    // Función recursiva simple: buscar el item que tiene la ruta actual
+    const findItemByRoute = (menuItems: MenuItem[], currentPath: string): { item: MenuItem | null; parent: MenuItem | null } => {
+      for (const item of menuItems) {
+        // Verificar si este item tiene la ruta
+        if (item.route && isRouteMatch(currentPath, item.route)) {
+          return { item, parent: null };
+        }
+        
+        // Buscar en submenu
+        if (item.submenu) {
+          for (const subItem of item.submenu) {
+            if (subItem.route && isRouteMatch(currentPath, subItem.route)) {
+              return { item: subItem, parent: item };
+            }
+          }
+        }
+        
+        // Buscar en columnas (mega menú)
+        if (item.columns) {
+          for (const column of item.columns) {
+            for (const colItem of column.items) {
+              if (colItem.route && isRouteMatch(currentPath, colItem.route)) {
+                return { item: colItem, parent: item };
+              }
+            }
+          }
+        }
+      }
+      return { item: null, parent: null };
+    };
+
+    // Buscar el item que coincide con la ruta actual
+    const { item, parent } = findItemByRoute(items, pathname);
+    
+    if (item) {
+      // Marcar el item encontrado como activo
+      activeItemIdRef.current = item.id;
+      setActiveItemId(item.id);
+      
+      // Si tiene padre, expandir el padre para que sea visible
+      if (parent) {
+        setExpandedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.add(parent.id);
+          return newSet;
+        });
+      }
+    }
+  }, [pathname, items]);
+
+  const handleItemPress = (item: MenuItem) => {
+    // Si tiene submenu o columnas, expandir/colapsar
+    if ((item.submenu && item.submenu.length > 0) || (item.columns && item.columns.length > 0)) {
+      setExpandedItems(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(item.id)) {
+          newSet.delete(item.id);
+        } else {
+          newSet.add(item.id);
+        }
+        return newSet;
+      });
+    } else {
+      // Si no tiene submenu ni columnas, navegar
+      if (item.route || item.onPress) {
+        activeItemIdRef.current = item.id;
+        setActiveItemId(item.id);
+        if (onItemPress) {
+          onItemPress(item);
+        }
+        // Si está colapsado (no expandido manualmente), colapsar después de seleccionar
+        if (collapsed && !isManuallyExpanded) {
+          setIsHovered(false);
+        }
+      }
+    }
+  };
+
+  const handleSubItemPress = (parentItem: MenuItem, subItem: MenuItem) => {
+    activeItemIdRef.current = subItem.id;
+    setActiveItemId(subItem.id);
+    if (onItemPress) {
+      onItemPress(subItem);
+    }
+    // Si está colapsado (no expandido manualmente), colapsar después de seleccionar
+    if (collapsed && !isManuallyExpanded) {
+      setIsHovered(false);
+    }
+  };
+
+  const handleColumnItemPress = (parentItem: MenuItem, colItem: MenuItem) => {
+    activeItemIdRef.current = colItem.id;
+    setActiveItemId(colItem.id);
+    if (onItemPress) {
+      onItemPress(colItem);
+    }
+    // Si está colapsado (no expandido manualmente), colapsar después de seleccionar
+    if (collapsed && !isManuallyExpanded) {
+      setIsHovered(false);
+    }
+  };
+
+  const handleToggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    }
+    // Si se está expandiendo manualmente, marcar como expandido manualmente
+    if (collapsed) {
+      setIsManuallyExpanded(true);
+    } else {
+      // Si se está colapsando manualmente, permitir hover de nuevo
+      setIsManuallyExpanded(false);
+      setIsHovered(false);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    // Solo expandir con hover si está colapsado y no fue expandido manualmente
+    if (collapsed && !isManuallyExpanded) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    // Solo colapsar con hover si está colapsado y no fue expandido manualmente
+    if (collapsed && !isManuallyExpanded) {
+      setIsHovered(false);
+    }
+  };
+
+  const getIconName = (icon?: string): keyof typeof Ionicons.glyphMap => {
+    if (!icon) return 'ellipse-outline';
+    // Mapear nombres comunes de iconos
+    const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+      'home': 'home',
+      'dashboard': 'grid',
+      'settings': 'settings',
+      'user': 'person',
+      'users': 'people',
+      'security': 'lock-closed',
+      'roles': 'key',
+      'companies': 'business',
+      'branches': 'storefront',
+      'products': 'cube',
+      'services': 'construct',
+      'about': 'information-circle',
+    };
+    return iconMap[icon.toLowerCase()] || (icon as keyof typeof Ionicons.glyphMap) || 'ellipse-outline';
+  };
+
+  // Función para comparar rutas (igual que HorizontalMenu)
+  const isRouteMatch = (currentPath: string, route: string): boolean => {
+    if (!route) return false;
+    const normalizedPath = currentPath.toLowerCase().replace(/^\/+|\/+$/g, '');
+    const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+    if (normalizedPath === normalizedRoute) return true;
+    if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+    if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+    return normalizedPath.includes('/' + normalizedRoute + '/');
+  };
+
+  const isItemActive = (item: MenuItem): boolean => {
+    // Verificar directamente la ruta en el render (igual que HorizontalMenu)
+    return !!(activeItemId === item.id || activeItemIdRef.current === item.id ||
+           (item.route && pathname && isRouteMatch(pathname, item.route)));
+  };
+
+  const isSubItemActive = (subItem: MenuItem): boolean => {
+    // Verificar directamente la ruta en el render (igual que HorizontalMenu)
+    return !!(activeItemId === subItem.id || activeItemIdRef.current === subItem.id ||
+           (subItem.route && pathname && isRouteMatch(pathname, subItem.route)));
+  };
+
+  const isItemExpanded = (item: MenuItem): boolean => {
+    return expandedItems.has(item.id);
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          width: slideAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [48, 240],
+          }),
+          backgroundColor: colors.surface,
+          borderRightColor: colors.border,
+        },
+      ]}
+      {...(Platform.OS === 'web' ? {
+        onMouseEnter: handleMouseEnter,
+        onMouseLeave: handleMouseLeave,
+      } : {})}
+    >
+      {/* Contenedor con altura fija y scroll para todo el menú */}
+      <View style={[styles.scrollContainer, { height: availableHeight }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
+          {items.map((item) => {
+            const hasSubmenu = item.submenu && item.submenu.length > 0;
+            const hasColumns = item.columns && item.columns.length > 0;
+            const hasChildren = hasSubmenu || hasColumns;
+            const isActive = isItemActive(item);
+            const isExpanded = isItemExpanded(item);
+            const iconName = getIconName(item.icon);
+
+            // Verificar si algún item hijo está activo
+            const hasActiveChild = hasSubmenu
+              ? item.submenu!.some(subItem => isSubItemActive(subItem))
+              : hasColumns
+              ? item.columns!.some(column => column.items.some(colItem => activeItemId === colItem.id))
+              : false;
+
+            return (
+              <View key={item.id}>
+                {/* Item principal */}
+                <TouchableOpacity
+                    style={[
+                    styles.menuItem,
+                    (isActive || hasActiveChild) && { backgroundColor: activeItemColor + '15' },
+                    { borderLeftColor: (isActive || hasActiveChild) ? activeItemColor : 'transparent' },
+                    ]}
+                    onPress={() => handleItemPress(item)}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.menuItemContent}>
+                    <Ionicons
+                        name={iconName}
+                        size={20}
+                        color={(isActive || hasActiveChild) ? activeItemColor : colors.textSecondary}
+                        style={styles.menuItemIcon}
+                    />
+                    {shouldShowText && (
+                        <>
+                        <ThemedText
+                            type="body2"
+                            style={[
+                            styles.menuItemLabel,
+                            { color: (isActive || hasActiveChild) ? activeItemColor : colors.text },
+                            ]}
+                            numberOfLines={1}
+                        >
+                            {item.label}
+                        </ThemedText>
+                        {hasChildren && (
+                            <Ionicons
+                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                            size={16}
+                            color={colors.textSecondary}
+                            style={styles.chevronIcon}
+                            />
+                        )}
+                        </>
+                    )}
+                    </View>
+                </TouchableOpacity>
+
+                {/* Submenu simple (solo cuando está expandido y el texto se muestra) */}
+                {hasSubmenu && !hasColumns && isExpanded && shouldShowText && (
+                    <View style={styles.submenuContainer}>
+                    {item.submenu!.map((subItem) => {
+                        const isSubActive = isSubItemActive(subItem);
+                        const subIconName = getIconName(subItem.icon);
+
+                        return (
+                        <TouchableOpacity
+                            key={subItem.id}
+                            style={[
+                            styles.submenuItem,
+                            isSubActive && { backgroundColor: activeItemColor + '10' },
+                            ]}
+                            onPress={() => handleSubItemPress(item, subItem)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.submenuItemContent}>
+                            {subItem.icon && (
+                                <Ionicons
+                                name={subIconName}
+                                size={16}
+                                color={isSubActive ? activeItemColor : colors.textSecondary}
+                                style={styles.submenuItemIcon}
+                                />
+                            )}
+                            <ThemedText
+                                type="caption"
+                                style={[
+                                styles.submenuItemLabel,
+                                { color: isSubActive ? activeItemColor : colors.textSecondary },
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {subItem.label}
+                            </ThemedText>
+                            </View>
+                        </TouchableOpacity>
+                        );
+                    })}
+                    </View>
+                )}
+
+                {/* Columnas (mega menú) - solo cuando está expandido y el texto se muestra */}
+                {hasColumns && isExpanded && shouldShowText && (
+                    <View style={styles.columnsContainer}>
+                    {item.columns!.map((column, colIdx) => (
+                        <View key={colIdx} style={styles.columnContainer}>
+                        {/* Título de la columna */}
+                        {column.title && (
+                            <ThemedText
+                            type="caption"
+                            style={[
+                                styles.columnTitle,
+                                { color: colors.textSecondary, fontWeight: '600' },
+                            ]}
+                            >
+                            {column.title}
+                            </ThemedText>
+                        )}
+                        {/* Items de la columna */}
+                        {column.items.map((colItem) => {
+                            const isColActive = activeItemId === colItem.id;
+                            const colIconName = getIconName(colItem.icon);
+
+                            return (
+                            <TouchableOpacity
+                                key={colItem.id}
+                                style={[
+                                styles.columnItem,
+                                isColActive && { backgroundColor: activeItemColor + '10' },
+                                ]}
+                                onPress={() => handleColumnItemPress(item, colItem)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.columnItemContent}>
+                                {colItem.icon && (
+                                    <Ionicons
+                                    name={colIconName}
+                                    size={16}
+                                    color={isColActive ? activeItemColor : colors.textSecondary}
+                                    style={styles.columnItemIcon}
+                                    />
+                                )}
+                                <ThemedText
+                                    type="caption"
+                                    style={[
+                                    styles.columnItemLabel,
+                                    { color: isColActive ? activeItemColor : colors.textSecondary },
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    {colItem.label}
+                                </ThemedText>
+                                </View>
+                            </TouchableOpacity>
+                            );
+                        })}
+                        </View>
+                    ))}
+                    </View>
+              )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Botón para colapsar/expandir - en la parte inferior */}
+      {onToggleCollapse && (
+        <TouchableOpacity
+          style={[styles.toggleButton, { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }]}
+          onPress={handleToggleCollapse}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={isManuallyExpanded ? 'chevron-back' : 'chevron-forward'}
+            size={20}
+            color={colors.text}
+          />
+        </TouchableOpacity>
+      )}
+    </Animated.View>
+  );
+}
+

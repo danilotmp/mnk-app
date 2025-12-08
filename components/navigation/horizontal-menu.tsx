@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import { AppConfig } from '@/src/config';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
@@ -46,13 +47,23 @@ interface HorizontalMenuProps {
 export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  const styles = createHorizontalMenuStyles();
   const pathname = usePathname();
   const isMobile = isMobileDevice(width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Obtener el color para items activos según la configuración
+  // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
+  const getActiveItemColor = (): string => {
+    const configColor = AppConfig.navigation.activeItemColor;
+    if (configColor === 'red') return '#ff3366';
+    if (configColor === 'blue') return colors.primary;
+    return configColor; // Cualquier otro color se usa directamente
+  };
+  const activeItemColor = getActiveItemColor();
+  const styles = createHorizontalMenuStyles(activeItemColor);
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
   const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(null); // Para rastrear opción activa del submenú
