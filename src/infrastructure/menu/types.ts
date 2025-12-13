@@ -13,6 +13,8 @@ export interface MenuItem {
   description?: string;
   icon?: string; // Nombre del icono (formato: "Familia:Nombre" o solo "Nombre" para Ionicons)
   isPublic?: boolean; // Si es true, es una opción pública (opción por defecto)
+  status?: number; // -1=Eliminado, 0=Inactivo, 1=Activo, 2=Pendiente
+  statusDescription?: string; // Descripción del estado (ej: "Pendiente", "Activo", etc.)
   columns?: MenuColumn[];
   submenu?: MenuSubItem[];
 }
@@ -35,6 +37,8 @@ export interface MenuSubItem {
   description?: string;
   icon?: string; // Nombre del icono de Ionicons (solo para opciones de último nivel)
   isPublic?: boolean; // Si es true, es una opción pública (opción por defecto)
+  status?: number; // -1=Eliminado, 0=Inactivo, 1=Activo, 2=Pendiente
+  statusDescription?: string; // Descripción del estado (ej: "Pendiente", "Activo", etc.)
 }
 
 /**

@@ -10,6 +10,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { useBranchOptions, useCompanyOptions } from '@/src/domains/security/hooks';
+import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { BranchesService } from '@/src/features/security/branches';
 import { RolesService } from '@/src/features/security/roles';
 import { apiClient } from '@/src/infrastructure/api/api.client';
@@ -19,7 +20,7 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { startTransition, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { UsersService } from '../../services';
 import { UserUpdatePayload } from '../../types/domain';
 import { CompanyConfigCarousel } from '../company-config-carousel/company-config-carousel';
@@ -461,14 +462,12 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
               companyId: companyId, // Filtrar por empresa específica
             });
             const rolesData = Array.isArray(rolesResponse.data) ? rolesResponse.data : [];
-            console.log(`[DEBUG] Roles cargados para empresa ${companyId}:`, rolesData.length, rolesData.map(r => r.name));
             // Actualizar el estado con los roles específicos de esta empresa
             setRolesByCompany((prev) => {
               const updated = {
                 ...prev,
                 [companyId]: rolesData,
               };
-              console.log(`[DEBUG] Estado rolesByCompany actualizado para ${companyId}:`, updated[companyId]?.length);
               return updated;
             });
           } catch (error) {
@@ -696,16 +695,12 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
         {/* Change Password Toggle */}
         <View style={styles.switchGroup}>
-          <View style={styles.switchLabel}>
-            <ThemedText type="body2" style={{ color: colors.text }}>
-              {t.auth?.changePassword || 'Cambiar contraseña'}
-            </ThemedText>
-          </View>
-          <Switch
+          <ThemedText type="body2" style={[styles.switchLabel, { color: colors.text }]}>
+            {t.auth?.changePassword || 'Cambiar contraseña'}
+          </ThemedText>
+          <CustomSwitch
             value={changePassword}
             onValueChange={setChangePassword}
-            trackColor={{ false: colors.border, true: colors.primary + '80' }}
-            thumbColor={changePassword ? colors.primary : colors.textSecondary}
             disabled={isLoading}
           />
         </View>

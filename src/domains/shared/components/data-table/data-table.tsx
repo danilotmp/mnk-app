@@ -836,7 +836,7 @@ export function DataTable<T = any>({
         {/* Contenedor interno con ancho mínimo */}
         <View style={{ ...styles.tableWrapper, maxHeight: maxTableHeight } as any}>
           {/* Encabezado de la tabla */}
-          <View style={[styles.header, { backgroundColor: colors.surfaceVariant, borderBottomColor: colors.border }]}>
+          <View style={[styles.header, { backgroundColor: colors.surfaceVariant, borderBottomColor: isDark ? colors.border : 'transparent' }]}>
                 <View style={styles.headerRow}>
                   {finalColumns.map((column, colIndex) => {
                     const columnFlex = getColumnFlex(column, colIndex);
@@ -868,7 +868,7 @@ export function DataTable<T = any>({
                           column.align === 'right' && styles.headerCellRight,
                           isFirstColumn && styles.cellFirst,
                           isLastColumn && styles.cellLast,
-                          { borderRightWidth: isLastColumn ? 0 : 1, borderRightColor: colors.border },
+                          { borderRightWidth: isLastColumn ? 0 : 1, borderRightColor: isDark ? colors.border : 'transparent' },
                         ]}
                       >
                         <ThemedText type="defaultSemiBold" style={styles.headerText}>

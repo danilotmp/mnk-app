@@ -125,10 +125,6 @@ export function PermissionActionIcons({
         return 0;
       });
     
-    // Debug temporal: verificar qué está pasando
-    if (matchingPerms.length > 0) {
-      console.log('[PermissionActionIcons] Encontrados permisos personalizados para menuItemId:', menuItemId, matchingPerms);
-    }
     
     return matchingPerms;
   }, [menuItemId, customPermissions]);

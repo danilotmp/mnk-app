@@ -8,23 +8,26 @@ export const createMenuAdminStyles = (colors: any) =>
   StyleSheet.create({
     publicToggleContainer: {
       marginTop: 16,
-    },
-    publicToggleRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
     },
-    publicToggleControls: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingLeft: 30,
-      gap: 8,
+    publicToggleLabel: {
+      minWidth: 60,
     },
     publicToggleSwitch: {
-      transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+      width: 43,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      padding: 3,
+      justifyContent: 'center',
+      position: 'relative',
     },
-    publicToggleText: {
-      minWidth: 30,
+    publicToggleThumb: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
     },
     formRow: {
       flexDirection: 'row',
@@ -51,6 +54,21 @@ export const createMenuAdminStyles = (colors: any) =>
       flexDirection: 'row',
       gap: 8,
       justifyContent: 'flex-end',
+    },
+    selectOptions: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingRight: 8, // Padding derecho para permitir scroll completo
+    },
+    selectOption: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      maxHeight: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0, // Evitar que se compriman
     },
   });
 

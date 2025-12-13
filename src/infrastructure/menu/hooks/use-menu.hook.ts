@@ -91,20 +91,14 @@ export function useMenu() {
             // SIEMPRE sobrescribir session storage con el companyIdDefault del login
             // Esto asegura que session storage tenga el valor correcto y elimine cualquier valor antiguo
             await userSessionService.setCurrentCompany(userResponse.companyIdDefault, true);
-            console.log('[useMenu] Usando companyIdDefault del UserResponse:', userResponse.companyIdDefault);
           } else if (user?.companyIdDefault) {
             // PRIORIDAD 2: companyIdDefault del user del contexto (fallback)
             currentCompanyId = user.companyIdDefault;
             await userSessionService.setCurrentCompany(user.companyIdDefault, true);
-            console.log('[useMenu] Usando companyIdDefault del user del contexto:', user.companyIdDefault);
           } else {
             // PRIORIDAD 3: currentCompanyId de session storage (solo si no hay UserResponse ni user)
             currentCompanyId = await userSessionService.getCurrentCompany();
-            console.log('[useMenu] Usando currentCompanyId de session storage:', currentCompanyId);
           }
-          
-          // Log de depuración para verificar qué valor se está usando
-          console.log('[useMenu] companyId final que se usará para el menú:', currentCompanyId);
           
           // Si aún no hay companyId, no podemos cargar el menú
           if (!currentCompanyId) {

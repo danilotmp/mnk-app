@@ -52,15 +52,11 @@ export const createHorizontalMenuStyles = (activeItemColor: string = '#ff3366') 
     mobileMenuContent: { flex: 1 },
     mobileMenuItem: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
       padding: 16,
       borderBottomWidth: 1,
-    },
-    activeMobileMenuItemParent: {
       borderLeftWidth: 3,
-      borderLeftColor: activeItemColor,
-      paddingLeft: 13, // Reducir padding izquierdo para compensar el borde
+      borderLeftColor: 'transparent',
     },
     submenuContainer: { paddingLeft: 16 },
     submenuItem: { padding: 12, paddingLeft: 24 },

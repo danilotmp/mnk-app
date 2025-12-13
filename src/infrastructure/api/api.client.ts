@@ -73,6 +73,25 @@ export class ApiClient {
       // Validar si result.statusCode es 200 (éxito)
       // Si no es 200, es un error y lanzar ApiError
       if (data.result?.statusCode !== SUCCESS_STATUS_CODE) {
+        // Si es un error 401 y no estamos en una ruta pública, redirigir al home
+        if (data.result?.statusCode === HTTP_STATUS.UNAUTHORIZED && !config.skipAuth) {
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname;
+            const isPrivateRoute = currentPath !== '/' && 
+                                  !currentPath.startsWith('/auth') && 
+                                  !currentPath.startsWith('/main');
+            const isAdminRoute = currentPath.includes('/security') || 
+                                currentPath.includes('/admin');
+            
+            if (isPrivateRoute || isAdminRoute) {
+              // Limpiar tokens antes de redirigir
+              await this.clearTokens();
+              // Redirigir al home
+              window.location.href = '/';
+            }
+          }
+        }
+        
         throw new ApiError(
           data.result?.description || 'Error en la petición',
           data.result?.statusCode || response.status,
@@ -160,6 +179,24 @@ export class ApiClient {
       this.failedQueue.forEach(({ reject }) => reject(error));
       this.failedQueue = [];
       await this.clearTokens();
+      
+      // Redirigir al home si estamos en una ruta privada o de administración
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        // Verificar si estamos en una ruta privada (no es /, /auth, o rutas públicas)
+        const isPrivateRoute = currentPath !== '/' && 
+                              !currentPath.startsWith('/auth') && 
+                              !currentPath.startsWith('/main');
+        // Verificar si estamos en una ruta de administración
+        const isAdminRoute = currentPath.includes('/security') || 
+                            currentPath.includes('/admin');
+        
+        if (isPrivateRoute || isAdminRoute) {
+          // Redirigir al home
+          window.location.href = '/';
+        }
+      }
+      
       if (error instanceof ApiError) {
         throw error;
       }

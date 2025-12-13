@@ -1,21 +1,23 @@
 import { ThemedText } from '@/components/themed-text';
+import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { AppConfig } from '@/src/config';
+import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createVerticalMenuStyles } from '@/src/styles/components/vertical-menu.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Animated,
-    Platform,
-    ScrollView,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Animated,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
-import { MenuItem } from './horizontal-menu';
+import { MenuColumn, MenuItem } from './horizontal-menu';
 
 interface VerticalMenuProps {
   items: MenuItem[];
@@ -61,7 +63,13 @@ export function VerticalMenu({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isManuallyExpanded, setIsManuallyExpanded] = useState<boolean>(!collapsed); // Estado para saber si fue expandido manualmente
   const [isHovered, setIsHovered] = useState<boolean>(false); // Estado para hover
-  const [animatedWidth, setAnimatedWidth] = useState<number>(collapsed ? 48 : 240); // Estado para rastrear el ancho animado
+  const [searchValue, setSearchValue] = useState<string>(''); // Estado para búsqueda
+  
+  // Obtener anchos del menú desde la configuración
+  const expandedWidth = AppConfig.navigation.verticalMenuExpandedWidth;
+  const collapsedWidth = AppConfig.navigation.verticalMenuCollapsedWidth;
+  
+  const [animatedWidth, setAnimatedWidth] = useState<number>(collapsed ? collapsedWidth : expandedWidth); // Estado para rastrear el ancho animado
   const slideAnim = React.useRef(new Animated.Value(collapsed ? 0 : 1)).current;
   const activeItemIdRef = React.useRef<string | null>(null); // Ref para proteger el activeItemId
   
@@ -83,20 +91,20 @@ export function VerticalMenu({
     }).start();
     
     // Actualizar el ancho inmediatamente para sincronizar el renderizado
-    setAnimatedWidth(isExpanded ? 240 : 48);
-  }, [isExpanded, slideAnim]);
+    setAnimatedWidth(isExpanded ? expandedWidth : collapsedWidth);
+  }, [isExpanded, slideAnim, expandedWidth, collapsedWidth]);
   
   // Listener para el ancho animado (opcional, para mayor precisión)
   useEffect(() => {
     const listenerId = slideAnim.addListener(({ value }) => {
-      const currentWidth = value * (240 - 48) + 48; // Interpolación: 0 -> 48, 1 -> 240
+      const currentWidth = value * (expandedWidth - collapsedWidth) + collapsedWidth; // Interpolación: 0 -> collapsedWidth, 1 -> expandedWidth
       setAnimatedWidth(currentWidth);
     });
     
     return () => {
       slideAnim.removeListener(listenerId);
     };
-  }, [slideAnim]);
+  }, [slideAnim, expandedWidth, collapsedWidth]);
 
   // Sincronizar isManuallyExpanded cuando cambia collapsed desde fuera
   useEffect(() => {
@@ -158,6 +166,11 @@ export function VerticalMenu({
           return newSet;
         });
       }
+    } else {
+      // Si no encontramos el item en este menú, limpiar el estado activo
+      // Esto asegura que cuando se selecciona un item en otro menú, este menú se desactive
+      activeItemIdRef.current = null;
+      setActiveItemId(null);
     }
   }, [pathname, items]);
 
@@ -269,6 +282,63 @@ export function VerticalMenu({
     return expandedItems.has(item.id);
   };
 
+  // Función para filtrar recursivamente items y sus hijos
+  const filterItemRecursively = (item: MenuItem, searchLower: string): MenuItem | null => {
+    const itemMatches = 
+      item.label.toLowerCase().includes(searchLower) ||
+      item.route?.toLowerCase().includes(searchLower) ||
+      item.description?.toLowerCase().includes(searchLower);
+    
+    let filteredSubmenu: MenuItem[] | undefined;
+    if (item.submenu && item.submenu.length > 0) {
+      filteredSubmenu = item.submenu
+        .map(subItem => filterItemRecursively(subItem, searchLower))
+        .filter((subItem): subItem is MenuItem => subItem !== null);
+    }
+    
+    let filteredColumns: MenuColumn[] | undefined;
+    if (item.columns && item.columns.length > 0) {
+      filteredColumns = item.columns
+        .map(col => {
+          const filteredColItems = col.items
+            .map(colItem => filterItemRecursively(colItem, searchLower))
+            .filter((colItem): colItem is MenuItem => colItem !== null);
+          
+          if (filteredColItems.length > 0) {
+            return {
+              ...col,
+              items: filteredColItems,
+            };
+          }
+          return null;
+        })
+        .filter((col): col is MenuColumn => col !== null);
+      
+      if (filteredColumns.length === 0) {
+        filteredColumns = undefined;
+      }
+    }
+    
+    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
+      return {
+        ...item,
+        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
+        columns: filteredColumns,
+      };
+    }
+    
+    return null;
+  };
+
+  // Filtrar items
+  const filteredItems = items
+    .map(item => {
+      if (!searchValue) return item;
+      const searchLower = searchValue.toLowerCase();
+      return filterItemRecursively(item, searchLower);
+    })
+    .filter((item): item is MenuItem => item !== null);
+
   return (
     <Animated.View
       style={[
@@ -276,7 +346,7 @@ export function VerticalMenu({
         {
           width: slideAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [48, 240],
+            outputRange: [collapsedWidth, expandedWidth],
           }),
           backgroundColor: colors.surface,
           borderRightColor: colors.border,
@@ -287,14 +357,65 @@ export function VerticalMenu({
         onMouseLeave: handleMouseLeave,
       } : {})}
     >
+      {/* Input de búsqueda */}
+      {shouldShowText && (
+        <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <View style={{ position: 'relative' }}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={colors.textSecondary}
+              style={{ position: 'absolute', left: 10, top: 10, zIndex: 1 }}
+            />
+            {searchValue.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchValue('')}
+                style={{ position: 'absolute', right: 10, top: 8, zIndex: 1, padding: 4 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+            <InputWithFocus
+              containerStyle={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 6,
+                backgroundColor: colors.background,
+                paddingLeft: 36,
+                paddingRight: searchValue.length > 0 ? 36 : 10,
+                height: 36,
+              }}
+              primaryColor={colors.primary}
+            >
+              <TextInput
+                placeholder="Buscar..."
+                value={searchValue}
+                onChangeText={setSearchValue}
+                style={{
+                  padding: 8,
+                  color: colors.text,
+                  fontSize: 14,
+                }}
+                placeholderTextColor={colors.textSecondary}
+              />
+            </InputWithFocus>
+          </View>
+        </View>
+      )}
+
       {/* Contenedor con altura fija y scroll para todo el menú */}
-      <View style={[styles.scrollContainer, { height: availableHeight }]}>
+      <View style={[styles.scrollContainer, { height: shouldShowText ? availableHeight - 60 : availableHeight }]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
         >
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const hasSubmenu = item.submenu && item.submenu.length > 0;
             const hasColumns = item.columns && item.columns.length > 0;
             const hasChildren = hasSubmenu || hasColumns;
@@ -353,7 +474,7 @@ export function VerticalMenu({
                 </TouchableOpacity>
 
                 {/* Submenu simple (solo cuando está expandido y el texto se muestra) */}
-                {hasSubmenu && !hasColumns && isExpanded && shouldShowText && (
+                {hasSubmenu && isExpanded && shouldShowText && (
                     <View style={styles.submenuContainer}>
                     {item.submenu!.map((subItem) => {
                         const isSubActive = isSubItemActive(subItem);

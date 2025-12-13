@@ -212,10 +212,6 @@ export class MenuService {
         throw new Error('companyId es requerido');
       }
 
-      // Log para depuración: ver qué companyId se está enviando
-      console.log(`[MenuService.getMenuForCompany] Enviando request con companyId: ${companyId}`);
-      console.log(`[MenuService.getMenuForCompany] URL completa: ${API_CONFIG.ENDPOINTS.MENU}?companyId=${companyId}`);
-
       const queryParams = new URLSearchParams();
       queryParams.append('companyId', companyId);
       if (showAll) {
@@ -274,7 +270,6 @@ export class MenuService {
       }
 
       const body = { items };
-      console.log('Enviando items al backend:', JSON.stringify(body, null, 2));
       
       const response = await apiClient.request<{
         items: MenuItem[];

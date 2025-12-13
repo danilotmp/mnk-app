@@ -122,7 +122,6 @@ export class UserContextService {
     // usar el companyIdDefault del UserResponse (que es la fuente de verdad del login)
     if (!currentCompanyId || currentCompanyId !== user.companyIdDefault) {
       if (user.companyIdDefault) {
-        console.log(`[initializeContext] Actualizando currentCompanyId: ${currentCompanyId} -> ${user.companyIdDefault}`);
         currentCompanyId = user.companyIdDefault;
         await this.userSessionService.setCurrentCompany(user.companyIdDefault, true);
       }
@@ -144,7 +143,6 @@ export class UserContextService {
           return;
         }
         
-        console.log(`[initializeContext] Llamando a MenuService.getMenuForCompany con companyId: ${currentCompanyId}`);
         const newMenu = await MenuService.getMenuForCompany(currentCompanyId);
         await this.userSessionService.setMenu(newMenu, true);
       } catch (error: any) {

@@ -93,8 +93,8 @@ export const LightTheme = {
     subtitle: BrandColors.gray[700], // Color estándar para subtítulos (gris)
     
     // Colores de borde
-    border: BrandColors.gray[200],
-    borderLight: BrandColors.gray[100],
+    border: BrandColors.gray[300], // Cambiado de gray[200] a gray[300] para mejor visibilidad
+    borderLight: BrandColors.gray[200],
     
     // Colores de estado
     success: BrandColors.status.success,

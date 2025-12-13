@@ -59,7 +59,7 @@ export const AppConfig = {
     // Después del login, se aplica la configuración aquí definida.
     menuType: process.env.EXPO_PUBLIC_MENU_TYPE || 'mix',
     // Ancho del menú vertical cuando está expandido (en píxeles)
-    verticalMenuExpandedWidth: 240,
+    verticalMenuExpandedWidth: 280,
     // Ancho del menú vertical cuando está colapsado (solo iconos)
     verticalMenuCollapsedWidth: 48,
     // Color de las opciones activas/seleccionadas en el menú

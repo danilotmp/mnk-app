@@ -4,6 +4,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { AppConfig } from '@/src/config';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
+import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -13,10 +14,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions
 } from 'react-native';
+import { InputWithFocus } from '@/components/ui/input-with-focus';
 
 export interface MenuItem {
   id: string;
@@ -68,6 +71,9 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
   const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(null); // Para rastrear opción activa del submenú
+  const [searchValue, setSearchValue] = useState<string>(''); // Estado para búsqueda (móvil)
+  const [desktopSearchExpanded, setDesktopSearchExpanded] = useState<boolean>(false); // Estado para búsqueda expandida (desktop)
+  const [desktopSearchValue, setDesktopSearchValue] = useState<string>(''); // Estado para búsqueda (desktop)
   const menuItemRefs = useRef<any>({});
   const slideAnim = useRef(new Animated.Value(-400)).current; // Animación para deslizar desde la izquierda
   const pendingRouteRef = useRef<string | null>(null); // Para rastrear la ruta que estamos navegando
@@ -385,27 +391,64 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
         }
       }
     } else {
-      // Si no hay item activo, verificar si debemos limpiar las banderas
-      // IMPORTANTE: Si hay una ruta pendiente y activeSubmenuItem está establecido,
-      // NO limpiar - mantener el estado hasta que se encuentre el item
-      if (pendingRouteRef.current && pendingItemIdRef.current) {
-        // Hay una ruta pendiente y un itemId pendiente - mantener el estado
-        // Solo limpiar si la ruta actual definitivamente NO coincide
-        if (!isRouteMatch(pathname, pendingRouteRef.current)) {
-          // La ruta cambió y no coincide con la pendiente - limpiar todo
-          pendingRouteRef.current = null;
-          pendingItemIdRef.current = null;
-          justClickedRef.current = false;
+      // Si no hay item activo en este menú, verificar si debemos limpiar
+      // Primero verificar si el pathname actual corresponde a algún item de este menú
+      // Si no corresponde, limpiar el estado activo (puede que el item activo esté en otro menú)
+      
+      // Verificar si hay algún item en este menú que coincida con el pathname
+      const hasMatchingItem = (() => {
+        for (const item of items) {
+          if (item.route && isRouteMatch(pathname, item.route)) {
+            return true;
+          }
+          if (item.submenu) {
+            for (const subItem of item.submenu) {
+              if (subItem.route && isRouteMatch(pathname, subItem.route)) {
+                return true;
+              }
+            }
+          }
+          if (item.columns) {
+            for (const column of item.columns) {
+              for (const colItem of column.items) {
+                if (colItem.route && isRouteMatch(pathname, colItem.route)) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        return false;
+      })();
+      
+      // Si no hay item que coincida en este menú, limpiar el estado activo
+      // Esto asegura que cuando se selecciona un item en otro menú, este menú se desactive
+      if (!hasMatchingItem) {
+        // Limpiar las banderas pendientes si existen
+        if (pendingRouteRef.current && pendingItemIdRef.current) {
+          // Solo limpiar si la ruta pendiente definitivamente no coincide
+          if (!isRouteMatch(pathname, pendingRouteRef.current)) {
+            pendingRouteRef.current = null;
+            pendingItemIdRef.current = null;
+            justClickedRef.current = false;
+          }
+        }
+        
+        // Limpiar el estado activo solo si no hay ruta pendiente o si la ruta pendiente no coincide
+        if (!pendingRouteRef.current) {
           setActiveMenuItem(null);
           setActiveSubmenuItem(null);
+          setActiveSubmenu(null);
+        } else if (!isRouteMatch(pathname, pendingRouteRef.current)) {
+          setActiveMenuItem(null);
+          setActiveSubmenuItem(null);
+          setActiveSubmenu(null);
         }
-        // Si la ruta coincide o aún no ha cambiado, mantener el estado
       } else if (!pendingRouteRef.current) {
-        // No hay ruta pendiente y no hay item activo - limpiar normalmente
-        setActiveMenuItem(null);
-        setActiveSubmenuItem(null);
+        // Hay un item que coincide pero no lo encontramos en findActiveItem
+        // Esto puede pasar en casos edge, pero no deberíamos limpiar aquí
+        // El estado se actualizará en la próxima ejecución
       }
-      // Si hay ruta pendiente pero aún no coincide, mantener el estado (no limpiar)
     }
   }, [pathname, items]); // Agregado items a las dependencias para que se actualice cuando el menú carga
 
@@ -656,8 +699,115 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                 </TouchableOpacity>
               </View>
 
+              {/* Input de búsqueda para móvil */}
+              <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <View style={{ position: 'relative' }}>
+                  <Ionicons
+                    name="search"
+                    size={18}
+                    color={colors.textSecondary}
+                    style={{ position: 'absolute', left: 10, top: 10, zIndex: 1 }}
+                  />
+                  {searchValue.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => setSearchValue('')}
+                      style={{ position: 'absolute', right: 10, top: 8, zIndex: 1, padding: 4 }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                  <InputWithFocus
+                    containerStyle={{
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 6,
+                      backgroundColor: colors.background,
+                      paddingLeft: 36,
+                      paddingRight: searchValue.length > 0 ? 36 : 10,
+                      height: 36,
+                    }}
+                    primaryColor={colors.primary}
+                  >
+                    <TextInput
+                      placeholder="Buscar..."
+                      value={searchValue}
+                      onChangeText={setSearchValue}
+                      style={{
+                        padding: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+                  </InputWithFocus>
+                </View>
+              </View>
+
               <ScrollView style={styles.mobileMenuContent}>
-                {items.map((item) => (
+                {(() => {
+                  // Función para filtrar recursivamente items y sus hijos
+                  const filterItemRecursively = (item: MenuItem, searchLower: string): MenuItem | null => {
+                    const itemMatches = 
+                      item.label.toLowerCase().includes(searchLower) ||
+                      item.route?.toLowerCase().includes(searchLower) ||
+                      item.description?.toLowerCase().includes(searchLower);
+                    
+                    let filteredSubmenu: MenuItem[] | undefined;
+                    if (item.submenu && item.submenu.length > 0) {
+                      filteredSubmenu = item.submenu
+                        .map(subItem => filterItemRecursively(subItem, searchLower))
+                        .filter((subItem): subItem is MenuItem => subItem !== null);
+                    }
+                    
+                    let filteredColumns: MenuColumn[] | undefined;
+                    if (item.columns && item.columns.length > 0) {
+                      filteredColumns = item.columns
+                        .map(col => {
+                          const filteredColItems = col.items
+                            .map(colItem => filterItemRecursively(colItem, searchLower))
+                            .filter((colItem): colItem is MenuItem => colItem !== null);
+                          
+                          if (filteredColItems.length > 0) {
+                            return {
+                              ...col,
+                              items: filteredColItems,
+                            };
+                          }
+                          return null;
+                        })
+                        .filter((col): col is MenuColumn => col !== null);
+                      
+                      if (filteredColumns.length === 0) {
+                        filteredColumns = undefined;
+                      }
+                    }
+                    
+                    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
+                      return {
+                        ...item,
+                        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
+                        columns: filteredColumns,
+                      };
+                    }
+                    
+                    return null;
+                  };
+
+                  // Filtrar items
+                  const filteredItems = items
+                    .map(item => {
+                      if (!searchValue) return item;
+                      const searchLower = searchValue.toLowerCase();
+                      return filterItemRecursively(item, searchLower);
+                    })
+                    .filter((item): item is MenuItem => item !== null);
+
+                  return filteredItems.map((item) => (
                   <View key={item.id}>
                     {(() => {
                       // Función para comparar rutas de manera flexible
@@ -671,37 +821,70 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                         return normalizedPath.includes('/' + normalizedRoute + '/');
                       };
                       
+                      // Verificar si este item principal está activo
+                      const isActive = activeMenuItem === item.id || 
+                                       (item.route && pathname && isRouteMatch(pathname, item.route));
+                      
                       // Verificar si algún subitem de este menú padre está activo
                       let hasActiveSubitem = false;
                       if (item.submenu) {
                         hasActiveSubitem = item.submenu.some(subitem => {
-                          const isActive = activeSubmenuItem === subitem.id || 
+                          const subIsActive = activeSubmenuItem === subitem.id || 
                                          (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                          return isActive;
+                          return subIsActive;
                         });
                       } else if (item.columns) {
                         hasActiveSubitem = item.columns.some(column =>
                           column.items.some(subitem => {
-                            const isActive = activeSubmenuItem === subitem.id || 
+                            const subIsActive = activeSubmenuItem === subitem.id || 
                                            (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                            return isActive;
+                            return subIsActive;
                           })
                         );
                       }
+                      
+                      const hasActiveChild = hasActiveSubitem;
+                      const isItemActive = isActive || hasActiveChild;
                       
                       return (
                         <TouchableOpacity
                           style={[
                             styles.mobileMenuItem,
                             { borderBottomColor: colors.border },
-                            hasActiveSubitem && styles.activeMobileMenuItemParent,
+                            isItemActive && { 
+                              backgroundColor: activeItemColor + '15',
+                              borderLeftWidth: 3,
+                              borderLeftColor: activeItemColor,
+                              paddingLeft: 13,
+                            },
                           ]}
                           onPress={() => handleItemPress(item)}
+                          activeOpacity={0.7}
                         >
-                          <ThemedText type="defaultSemiBold">{item.label}</ThemedText>
-                          {(item.submenu || item.columns) && (
-                            <ThemedText>{activeSubmenu === item.id ? '▲' : '▼'}</ThemedText>
-                          )}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                            <DynamicIcon
+                              name={item.icon || 'ellipse-outline'}
+                              size={20}
+                              color={isItemActive ? activeItemColor : colors.textSecondary}
+                            />
+                            <ThemedText 
+                              type="body2"
+                              style={{ 
+                                color: isItemActive ? activeItemColor : colors.text,
+                                flex: 1,
+                              }}
+                            >
+                              {item.label}
+                            </ThemedText>
+                            {(item.submenu || item.columns) && (
+                              <Ionicons
+                                name={activeSubmenu === item.id ? 'chevron-up' : 'chevron-down'}
+                                size={16}
+                                color={colors.textSecondary}
+                                style={{ opacity: 0.6 }}
+                              />
+                            )}
+                          </View>
                         </TouchableOpacity>
                       );
                     })()}
@@ -736,13 +919,19 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                                 {subitem.icon && (
-                                  <Ionicons 
-                                    name={subitem.icon as any} 
-                                    size={16} 
-                                    color={colors.textSecondary} 
+                                  <DynamicIcon
+                                    name={subitem.icon}
+                                    size={16}
+                                    color={isActive ? activeItemColor : colors.textSecondary}
                                   />
                                 )}
-                                <ThemedText type="body2" style={styles.submenuText}>
+                                <ThemedText 
+                                  type="body2" 
+                                  style={{ 
+                                    color: isActive ? activeItemColor : colors.text,
+                                    opacity: isActive ? 1 : 0.8,
+                                  }}
+                                >
                                   {subitem.label}
                                 </ThemedText>
                               </View>
@@ -779,13 +968,19 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                                 >
                                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                                     {subitem.icon && (
-                                      <Ionicons 
-                                        name={subitem.icon as any} 
-                                        size={16} 
-                                        color={colors.textSecondary} 
+                                      <DynamicIcon
+                                        name={subitem.icon}
+                                        size={16}
+                                        color={isActive ? activeItemColor : colors.textSecondary}
                                       />
                                     )}
-                                    <ThemedText type="body2" style={styles.submenuText}>
+                                    <ThemedText 
+                                      type="body2" 
+                                      style={{ 
+                                        color: isActive ? activeItemColor : colors.text,
+                                        opacity: isActive ? 1 : 0.8,
+                                      }}
+                                    >
                                       {subitem.label}
                                     </ThemedText>
                                   </View>
@@ -797,7 +992,8 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                       </View>
                     )}
                   </View>
-                ))}
+                ));
+                })()}
               </ScrollView>
               </Pressable>
             </Animated.View>
@@ -808,18 +1004,171 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   }
 
   // Desktop/Tablet: Horizontal Menu
-  const activeItem = items.find(item => item.id === activeSubmenu);
+  // Filtrar items para desktop primero
+  const filterItemRecursivelyDesktop = (item: MenuItem, searchLower: string): MenuItem | null => {
+    const itemMatches = 
+      item.label.toLowerCase().includes(searchLower) ||
+      item.route?.toLowerCase().includes(searchLower) ||
+      item.description?.toLowerCase().includes(searchLower);
+    
+    let filteredSubmenu: MenuItem[] | undefined;
+    if (item.submenu && item.submenu.length > 0) {
+      filteredSubmenu = item.submenu
+        .map(subItem => filterItemRecursivelyDesktop(subItem, searchLower))
+        .filter((subItem): subItem is MenuItem => subItem !== null);
+    }
+    
+    let filteredColumns: MenuColumn[] | undefined;
+    if (item.columns && item.columns.length > 0) {
+      filteredColumns = item.columns
+        .map(col => {
+          const filteredColItems = col.items
+            .map(colItem => filterItemRecursivelyDesktop(colItem, searchLower))
+            .filter((colItem): colItem is MenuItem => colItem !== null);
+          
+          if (filteredColItems.length > 0) {
+            return {
+              ...col,
+              items: filteredColItems,
+            };
+          }
+          return null;
+        })
+        .filter((col): col is MenuColumn => col !== null);
+      
+      if (filteredColumns.length === 0) {
+        filteredColumns = undefined;
+      }
+    }
+    
+    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
+      return {
+        ...item,
+        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
+        columns: filteredColumns,
+      };
+    }
+    
+    return null;
+  };
+
+  const filteredItemsDesktop = items
+    .map(item => {
+      if (!desktopSearchValue) return item;
+      const searchLower = desktopSearchValue.toLowerCase();
+      return filterItemRecursivelyDesktop(item, searchLower);
+    })
+    .filter((item): item is MenuItem => item !== null);
+
+  const activeItem = filteredItemsDesktop.find(item => item.id === activeSubmenu) || items.find(item => item.id === activeSubmenu);
+
+  const searchWidthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(searchWidthAnim, {
+      toValue: desktopSearchExpanded ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [desktopSearchExpanded, searchWidthAnim]);
 
   return (
-    <View style={styles.desktopContainer} data-menu-container="true">
+    <View style={[styles.desktopContainer, { flexDirection: 'row', alignItems: 'center' }]} data-menu-container="true">
+      {/* Icono de búsqueda expandible */}
+      <Animated.View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          height: 40,
+          marginRight: 8,
+          overflow: 'hidden',
+          width: searchWidthAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [40, 250],
+          }),
+        }}
+      >
+        {desktopSearchExpanded ? (
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={colors.textSecondary}
+              style={{ position: 'absolute', left: 10, top: 11, zIndex: 1 }}
+            />
+            {desktopSearchValue.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setDesktopSearchValue('')}
+                style={{ position: 'absolute', right: 10, top: 9, zIndex: 1, padding: 4 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+            <InputWithFocus
+              containerStyle={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 6,
+                backgroundColor: colors.background,
+                paddingLeft: 36,
+                paddingRight: desktopSearchValue.length > 0 ? 36 : 10,
+                height: 36,
+                flex: 1,
+              }}
+              primaryColor={colors.primary}
+            >
+              <TextInput
+                placeholder="Buscar..."
+                value={desktopSearchValue}
+                onChangeText={setDesktopSearchValue}
+                style={{
+                  padding: 8,
+                  color: colors.text,
+                  fontSize: 14,
+                }}
+                placeholderTextColor={colors.textSecondary}
+                autoFocus
+                onBlur={() => {
+                  if (!desktopSearchValue) {
+                    setDesktopSearchExpanded(false);
+                  }
+                }}
+              />
+            </InputWithFocus>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() => setDesktopSearchExpanded(true)}
+            style={{
+              width: 40,
+              height: 40,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="search"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+
       {/* Menú horizontal */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.horizontalMenuContent}
-        style={styles.horizontalMenuScroll}
+        style={[styles.horizontalMenuScroll, { flex: 1 }]}
       >
-        {items.map((item) => (
+        {filteredItemsDesktop.map((item) => (
           <TouchableOpacity
             key={item.id}
             ref={(ref) => {
@@ -849,7 +1198,8 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
       {/* Mega Menu o Submenu - Renderizado fuera del ScrollView */}
       {activeSubmenu && activeItem && (
         <>
-          {activeItem.columns && activeItem.columns.length > 0 && (
+          {/* Si tiene tanto submenu como columns, mostrar estilo vertical combinado */}
+          {activeItem.submenu && activeItem.submenu.length > 0 && activeItem.columns && activeItem.columns.length > 0 ? (
             <View
               style={[
                 styles.megaMenu,
@@ -858,24 +1208,84 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                   borderColor: colors.border,
                   ...(Platform.OS === 'web' ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' } : { shadowColor: colors.text }),
                   left: submenuPosition.left,
+                  maxWidth: 400,
                 },
               ]}
             >
-              <View style={styles.megaMenuContent}>
-                {activeItem.columns.map((column, colIdx) => (
-                  <View key={colIdx} style={styles.megaMenuColumn}>
-                    <ThemedText
-                      type="h6"
+              <ScrollView style={{ maxHeight: 600 }}>
+                {/* Primero mostrar los subitems como items individuales */}
+                {activeItem.submenu.map((subitem) => {
+                  const isRouteMatch = (pathname: string, route: string): boolean => {
+                    if (!route) return false;
+                    const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                    const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                    if (normalizedPath === normalizedRoute) return true;
+                    if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                    if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                    return normalizedPath.includes('/' + normalizedRoute + '/');
+                  };
+                  
+                  const isActive = activeSubmenuItem === subitem.id || 
+                                   (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                  
+                  return (
+                    <TouchableOpacity
+                      key={subitem.id}
                       style={[
-                        styles.megaMenuColumnTitle,
-                        { color: colors.textSecondary },
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderBottomWidth: 1,
+                          borderBottomColor: colors.border,
+                        },
+                        isActive && styles.activeSubmenuItem
                       ]}
+                      onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                    >
+                      {subitem.icon && (
+                        <DynamicIcon
+                          name={subitem.icon}
+                          size={18}
+                          color={isActive ? activeItemColor : colors.textSecondary}
+                          style={{ marginRight: 12 }}
+                        />
+                      )}
+                      <ThemedText 
+                        type="body2" 
+                        style={{ 
+                          color: isActive ? activeItemColor : colors.text,
+                          fontWeight: isActive ? '600' : '400',
+                        }}
+                      >
+                        {subitem.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* Luego mostrar las columns como agrupamientos */}
+                {activeItem.columns.map((column, colIdx) => (
+                  <View key={colIdx} style={{ marginTop: colIdx === 0 ? 8 : 16 }}>
+                    {/* Título del agrupamiento en mayúsculas */}
+                    <ThemedText
+                      type="caption"
+                      style={{
+                        color: colors.textSecondary,
+                        fontWeight: '700',
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                        textTransform: 'uppercase',
+                        paddingHorizontal: 16,
+                        paddingTop: 8,
+                        paddingBottom: 4,
+                      }}
                     >
                       {column.title}
                     </ThemedText>
-                    <View
-                      style={[styles.megaMenuColumnLine, { backgroundColor: colors.border }]}
-                    />
+                    
+                    {/* Items del agrupamiento */}
                     {column.items.map((subitem) => {
                       const isRouteMatch = (pathname: string, route: string): boolean => {
                         if (!route) return false;
@@ -894,95 +1304,192 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                         <TouchableOpacity
                           key={subitem.id}
                           style={[
-                            styles.megaMenuItem, 
-                            { borderBottomColor: colors.border },
-                            isActive && styles.activeMegaMenuItem
+                            {
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingVertical: 10,
+                              paddingHorizontal: 16,
+                              paddingLeft: 24,
+                              borderBottomWidth: colIdx === activeItem.columns!.length - 1 && subitem === column.items[column.items.length - 1] ? 0 : 1,
+                              borderBottomColor: colors.border,
+                            },
+                            isActive && styles.activeSubmenuItem
                           ]}
                           onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                            {subitem.icon && (
-                              <Ionicons 
-                                name={subitem.icon as any} 
-                                size={16} 
-                                color={colors.textSecondary} 
-                              />
-                            )}
-                            <ThemedText type="body2" style={styles.megaMenuItemText}>
-                              {subitem.label}
-                            </ThemedText>
-                          </View>
+                          {subitem.icon && (
+                            <DynamicIcon
+                              name={subitem.icon}
+                              size={16}
+                              color={isActive ? activeItemColor : colors.textSecondary}
+                              style={{ marginRight: 12 }}
+                            />
+                          )}
+                          <ThemedText 
+                            type="body2" 
+                            style={{ 
+                              color: isActive ? activeItemColor : colors.text,
+                              fontWeight: isActive ? '600' : '400',
+                            }}
+                          >
+                            {subitem.label}
+                          </ThemedText>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 ))}
-              </View>
+              </ScrollView>
             </View>
-          )}
-
-          {activeItem.submenu && activeItem.submenu.length > 0 && (
-            <View
-              style={[
-                styles.desktopSubmenu,
-                {
-                  backgroundColor: colors.background, // ← Agregado explícitamente
-                  borderColor: colors.border,
-                  ...(Platform.OS === 'web' ? { boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' } : { shadowColor: colors.text }),
-                  left: submenuPosition.left, // ← Posición calculada
-                },
-              ]}
-            >
-              {activeItem.submenu.map((subitem) => {
-                // Función para comparar rutas de manera flexible
-                const isRouteMatch = (pathname: string, route: string): boolean => {
-                  if (!route) return false;
-                  const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                  const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
-                  if (normalizedPath === normalizedRoute) return true;
-                  if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                  if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                  return normalizedPath.includes('/' + normalizedRoute + '/');
-                };
-                
-                // Verificar si este item debe estar activo basándose en la ruta actual
-                // Esto es más confiable que depender solo del estado activeSubmenuItem
-                const isActive = activeSubmenuItem === subitem.id || 
-                                 (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                
-                return (
-                  <TouchableOpacity
-                    key={subitem.id}
-                    style={[
-                      styles.desktopSubmenuItem, 
-                      { borderBottomColor: colors.border },
-                      isActive && styles.activeSubmenuItem
-                    ]}
-                    onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                      {subitem.icon && (
-                        <Ionicons 
-                          name={subitem.icon as any} 
-                          size={18} 
-                          color={colors.textSecondary} 
-                        />
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="defaultSemiBold" style={styles.submenuItemTitle}>
-                          {subitem.label}
+          ) : (
+            <>
+              {/* Si solo tiene columns, mostrar como mega menú tradicional */}
+              {activeItem.columns && activeItem.columns.length > 0 && (
+                <View
+                  style={[
+                    styles.megaMenu,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      ...(Platform.OS === 'web' ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' } : { shadowColor: colors.text }),
+                      left: submenuPosition.left,
+                    },
+                  ]}
+                >
+                  <View style={styles.megaMenuContent}>
+                    {activeItem.columns.map((column, colIdx) => (
+                      <View key={colIdx} style={styles.megaMenuColumn}>
+                        <ThemedText
+                          type="h6"
+                          style={[
+                            styles.megaMenuColumnTitle,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          {column.title}
                         </ThemedText>
-                        {subitem.description && (
-                          <ThemedText type="caption" style={styles.submenuItemDescription}>
-                            {subitem.description}
-                          </ThemedText>
-                        )}
+                        <View
+                          style={[styles.megaMenuColumnLine, { backgroundColor: colors.border }]}
+                        />
+                        {column.items.map((subitem) => {
+                          const isRouteMatch = (pathname: string, route: string): boolean => {
+                            if (!route) return false;
+                            const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                            const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                            if (normalizedPath === normalizedRoute) return true;
+                            if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                            if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                            return normalizedPath.includes('/' + normalizedRoute + '/');
+                          };
+                          
+                          const isActive = activeSubmenuItem === subitem.id || 
+                                           (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                          
+                          return (
+                            <TouchableOpacity
+                              key={subitem.id}
+                              style={[
+                                styles.megaMenuItem, 
+                                { borderBottomColor: colors.border },
+                                isActive && styles.activeMegaMenuItem
+                              ]}
+                              onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                {subitem.icon && (
+                                  <DynamicIcon
+                                    name={subitem.icon}
+                                    size={16}
+                                    color={isActive ? activeItemColor : colors.textSecondary}
+                                  />
+                                )}
+                                <ThemedText 
+                                  type="body2" 
+                                  style={[
+                                    styles.megaMenuItemText,
+                                    { color: isActive ? activeItemColor : colors.text }
+                                  ]}
+                                >
+                                  {subitem.label}
+                                </ThemedText>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Si solo tiene submenu, mostrar como submenu tradicional */}
+              {activeItem.submenu && activeItem.submenu.length > 0 && (
+                <View
+                  style={[
+                    styles.desktopSubmenu,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      ...(Platform.OS === 'web' ? { boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' } : { shadowColor: colors.text }),
+                      left: submenuPosition.left,
+                    },
+                  ]}
+                >
+                  {activeItem.submenu.map((subitem) => {
+                    const isRouteMatch = (pathname: string, route: string): boolean => {
+                      if (!route) return false;
+                      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+                      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                      if (normalizedPath === normalizedRoute) return true;
+                      if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+                      if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+                      return normalizedPath.includes('/' + normalizedRoute + '/');
+                    };
+                    
+                    const isActive = activeSubmenuItem === subitem.id || 
+                                     (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
+                    
+                    return (
+                      <TouchableOpacity
+                        key={subitem.id}
+                        style={[
+                          styles.desktopSubmenuItem, 
+                          { borderBottomColor: colors.border },
+                          isActive && styles.activeSubmenuItem
+                        ]}
+                        onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                          {subitem.icon && (
+                            <DynamicIcon
+                              name={subitem.icon}
+                              size={18}
+                              color={isActive ? activeItemColor : colors.textSecondary}
+                            />
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <ThemedText 
+                              type="defaultSemiBold" 
+                              style={[
+                                styles.submenuItemTitle,
+                                { color: isActive ? activeItemColor : colors.text }
+                              ]}
+                            >
+                              {subitem.label}
+                            </ThemedText>
+                            {subitem.description && (
+                              <ThemedText type="caption" style={styles.submenuItemDescription}>
+                                {subitem.description}
+                              </ThemedText>
+                            )}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </>
           )}
         </>
       )}

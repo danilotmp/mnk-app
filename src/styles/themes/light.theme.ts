@@ -38,8 +38,8 @@ export const lightTheme: LightTheme = {
     textTertiary: '#9CA3AF',
     
     // Colores de borde
-    border: '#E5E7EB',
-    borderLight: '#F3F4F6',
+    border: '#DADCE0', // Cambiado de #E5E7EB a #DADCE0 para mejor visibilidad
+    borderLight: '#E5E7EB',
     
     // Colores de navegación
     tabIconDefault: '#9CA3AF',

@@ -8,18 +8,22 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { APP_CONFIG } from '@/src/config/app.config';
 import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { IconInput } from '@/src/domains/security/components/shared/icon-input/icon-input';
+import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
 import { MenuItem } from '@/src/infrastructure/menu/types';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
+import { openBrowserAsync } from 'expo-web-browser';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { MenuAdminColumn, MenuAdminFormData, MenuAdminItem } from '../types';
 import { createMenuAdminStyles } from './menu-admin.screen.styles';
 
@@ -37,11 +41,22 @@ export function MenuAdminScreen() {
   const [searchValue, setSearchValue] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [editingColumnTitle, setEditingColumnTitle] = useState<string>('');
   const [showIconModal, setShowIconModal] = useState(false);
   const [iconModalItemId, setIconModalItemId] = useState<string | null>(null);
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const [dragOverColumnParentId, setDragOverColumnParentId] = useState<string | null>(null);
+  const [showDropZone, setShowDropZone] = useState<string | null>(null); // ID del item sobre el cual mostrar el recuadro
   const draggingItemRef = useRef<string | null>(null);
+  const dragOverItemRef = useRef<string | null>(null);
+  const draggingColumnRef = useRef<string | null>(null);
+  const dragOverColumnRef = useRef<string | null>(null);
+  const dragOverColumnParentRef = useRef<string | null>(null);
+  const dropZoneRef = useRef<string | null>(null); // Ref para detectar si se soltó sobre el recuadro
   const [formData, setFormData] = useState<MenuAdminFormData>({
     label: '',
     route: '',
@@ -51,6 +66,12 @@ export function MenuAdminScreen() {
     status: 1,
     order: 0,
   });
+  const [validationErrors, setValidationErrors] = useState<{
+    icon?: string;
+    label?: string;
+    route?: string;
+  }>({});
+  const [savingItem, setSavingItem] = useState(false);
 
   // Cargar items del menú
   const loadMenuItems = useCallback(async () => {
@@ -81,26 +102,68 @@ export function MenuAdminScreen() {
 
   // Convertir MenuItem[] a MenuAdminItem[]
   const convertToAdminItems = (items: MenuItem[], level: number = 0, parentId?: string): MenuAdminItem[] => {
-    return items.map((item, index) => ({
-      id: item.id,
-      label: item.label,
-      route: item.route,
-      description: item.description,
-      icon: item.icon,
-      isPublic: item.isPublic,
-      status: 1, // Por defecto activo, esto debería venir del backend
-      order: index,
-      level,
-      parentId,
-      submenu: item.submenu ? convertToAdminItems(item.submenu, level + 1, item.id) : undefined,
-      columns: item.columns ? item.columns.map((col, colIndex) => ({
-        id: `col-${item.id}-${colIndex}`,
-        title: col.title,
-        order: colIndex,
-        parentId: item.id,
-        items: convertToAdminItems(col.items, level + 1, item.id),
-      })) : undefined,
-    }));
+    return items.map((item, index) => {
+      // Convertir status a número si viene como string, y usar valor por defecto si no viene
+      const statusValue = item.status !== undefined && item.status !== null 
+        ? Number(item.status) 
+        : 1;
+      
+      return {
+        id: item.id,
+        label: item.label,
+        route: item.route,
+        description: item.description,
+        icon: item.icon,
+        isPublic: item.isPublic,
+        status: statusValue, // Usar el status convertido a número
+        order: index,
+        level,
+        parentId,
+        submenu: item.submenu ? convertToAdminItems(item.submenu, level + 1, item.id) : undefined,
+        columns: item.columns ? item.columns.map((col, colIndex) => ({
+          id: `col-${item.id}-${colIndex}`,
+          title: col.title,
+          order: colIndex,
+          parentId: item.id,
+          items: convertToAdminItems(col.items, level + 1, item.id),
+        })) : undefined,
+      };
+    });
+  };
+
+  // Verificar si algún hijo tiene estado pendiente (2)
+  const hasChildWithPendingStatus = (item: MenuAdminItem): boolean => {
+    // Verificar submenu
+    if (item.submenu && item.submenu.length > 0) {
+      for (const subItem of item.submenu) {
+        if (subItem.status === 2) {
+          return true;
+        }
+        // Verificar recursivamente
+        if (hasChildWithPendingStatus(subItem)) {
+          return true;
+        }
+      }
+    }
+    
+    // Verificar columns
+    if (item.columns && item.columns.length > 0) {
+      for (const col of item.columns) {
+        if (col.items && col.items.length > 0) {
+          for (const colItem of col.items) {
+            if (colItem.status === 2) {
+              return true;
+            }
+            // Verificar recursivamente
+            if (hasChildWithPendingStatus(colItem)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    return false;
   };
 
   // Toggle expandir/colapsar item
@@ -118,15 +181,45 @@ export function MenuAdminScreen() {
 
   // Iniciar edición de un item
   const startEdit = (item: MenuAdminItem) => {
-    setEditingItemId(item.id);
+    // Buscar el item actualizado del estado para asegurar que tenemos el valor más reciente
+    const findItemById = (items: MenuAdminItem[], itemId: string): MenuAdminItem | null => {
+      for (const currentItem of items) {
+        if (currentItem.id === itemId) {
+          return currentItem;
+        }
+        if (currentItem.submenu) {
+          const found = findItemById(currentItem.submenu, itemId);
+          if (found) return found;
+        }
+        if (currentItem.columns) {
+          for (const col of currentItem.columns) {
+            if (col.items) {
+              const found = findItemById(col.items, itemId);
+              if (found) return found;
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    // Buscar el item actualizado del estado
+    const currentItem = findItemById(menuItems, item.id) || item;
+    
+    // Asegurar que el status sea un número válido
+    const statusValue = currentItem.status !== undefined && currentItem.status !== null 
+      ? Number(currentItem.status) 
+      : 1;
+    
+    setEditingItemId(currentItem.id);
     setFormData({
-      label: item.label,
-      route: item.route || '',
-      description: item.description || '',
-      icon: item.icon || '',
-      isPublic: item.isPublic || false,
-      status: item.status,
-      order: item.order,
+      label: currentItem.label,
+      route: currentItem.route || '',
+      description: currentItem.description || '',
+      icon: currentItem.icon || '',
+      isPublic: currentItem.isPublic || false,
+      status: statusValue, // Usar el status convertido a número
+      order: currentItem.order,
     });
   };
 
@@ -142,6 +235,171 @@ export function MenuAdminScreen() {
       status: 1,
       order: 0,
     });
+    setValidationErrors({}); // Limpiar errores al cancelar
+  };
+
+  // Validar campos obligatorios
+  const validateForm = (): boolean => {
+    const errors: { icon?: string; label?: string; route?: string } = {};
+    
+    if (!formData.icon || formData.icon.trim() === '') {
+      errors.icon = 'El icono es obligatorio';
+    }
+    
+    if (!formData.label || formData.label.trim() === '') {
+      errors.label = 'El nombre es obligatorio';
+    }
+    
+    if (!formData.route || formData.route.trim() === '') {
+      errors.route = 'La URL es obligatoria';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Guardar un item individual (para items nuevos)
+  const saveSingleItem = async (itemId: string) => {
+    if (!validateForm()) {
+      alert.showError('Por favor, complete todos los campos obligatorios');
+      return;
+    }
+
+    try {
+      setSavingItem(true);
+      
+      // Encontrar el item y su padre
+      const findItemAndParent = (items: MenuAdminItem[]): { item: MenuAdminItem; parent: MenuAdminItem | null } | null => {
+        for (const item of items) {
+          if (item.id === itemId) {
+            return { item, parent: null };
+          }
+          if (item.submenu) {
+            const found = item.submenu.find(sub => sub.id === itemId);
+            if (found) {
+              return { item: found, parent: item };
+            }
+            const recursive = findItemAndParent(item.submenu);
+            if (recursive) return recursive;
+          }
+          if (item.columns) {
+            for (const col of item.columns) {
+              if (col.items) {
+                const found = col.items.find(ci => ci.id === itemId);
+                if (found) {
+                  return { item: found, parent: item };
+                }
+                const recursive = findItemAndParent(col.items);
+                if (recursive) return recursive;
+              }
+            }
+          }
+        }
+        return null;
+      };
+
+      const result = findItemAndParent(menuItems);
+      if (!result) {
+        alert.showError('No se encontró el item a guardar');
+        return;
+      }
+
+      const { item: foundItem, parent } = result;
+      
+      // Usar los valores actuales del formulario
+      const item: MenuAdminItem = {
+        ...foundItem,
+        label: formData.label,
+        route: formData.route,
+        description: formData.description,
+        icon: formData.icon,
+        isPublic: formData.isPublic,
+        status: formData.status,
+        order: formData.order,
+      };
+      
+      // Convertir a formato MenuItem para el backend
+      const convertToMenuItem = (adminItem: MenuAdminItem, parentItem: MenuAdminItem | null): MenuItem => {
+        const menuItem: any = {
+          // Si es un item nuevo (ID empieza con 'new-'), no enviar el ID para que el backend lo cree
+          ...(adminItem.id.startsWith('new-') ? {} : { id: adminItem.id }),
+          label: adminItem.label,
+          route: adminItem.route || '',
+          order: adminItem.order,
+          status: adminItem.status,
+        };
+        
+        if (adminItem.description) menuItem.description = adminItem.description;
+        if (adminItem.icon) menuItem.icon = adminItem.icon;
+        if (adminItem.isPublic !== undefined) menuItem.isPublic = adminItem.isPublic;
+        
+        // Si tiene padre, incluirlo en la estructura anidada
+        if (parentItem) {
+          // Crear estructura con el padre y solo este hijo
+          const parentMenuItem: any = {
+            id: parentItem.id,
+            label: parentItem.label,
+            route: parentItem.route || '',
+            order: parentItem.order,
+          };
+          
+          if (parentItem.description) parentMenuItem.description = parentItem.description;
+          if (parentItem.icon) parentMenuItem.icon = parentItem.icon;
+          if (parentItem.isPublic !== undefined) parentMenuItem.isPublic = parentItem.isPublic;
+          
+          // Determinar si el item está en submenu o columns
+          const isInSubmenu = parentItem.submenu?.some(s => s.id === adminItem.id);
+          
+          if (isInSubmenu) {
+            parentMenuItem.submenu = [menuItem];
+          } else {
+            // Está en columns, encontrar la columna
+            const column = parentItem.columns?.find(col => 
+              col.items?.some(ci => ci.id === adminItem.id)
+            );
+            if (column) {
+              parentMenuItem.columns = [{
+                title: column.title,
+                items: [menuItem],
+              }];
+            }
+          }
+          
+          return parentMenuItem as MenuItem;
+        }
+        
+        return menuItem as MenuItem;
+      };
+
+      const itemToSync = convertToMenuItem(item, parent);
+      const itemsToSync = parent ? [itemToSync] : [itemToSync];
+      
+      const result_sync = await MenuService.syncMenuItems(itemsToSync);
+      
+      if (result_sync.result.statusCode === 200) {
+        alert.showSuccess('Item guardado correctamente');
+        
+        // Recargar items para obtener los IDs actualizados del backend
+        await loadMenuItems();
+        
+        // Cerrar el formulario de edición
+        setEditingItemId(null);
+        setValidationErrors({});
+      } else {
+        if (result_sync.result.details?.validationErrors) {
+          const errors = result_sync.result.details.validationErrors;
+          const errorMessages = errors.map((err: any) => err.error).join('\n');
+          alert.showError(`Errores de validación:\n${errorMessages}`);
+        } else {
+          alert.showError(result_sync.result.description || 'Error al guardar el item');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error al guardar item:', error);
+      alert.showError(error.message || 'Error al guardar el item');
+    } finally {
+      setSavingItem(false);
+    }
   };
 
   // Actualizar item en el estado (para edición masiva)
@@ -349,6 +607,16 @@ export function MenuAdminScreen() {
     return result;
   }, []);
 
+  // Cancelar cambios y restaurar estado original
+  const handleCancelChanges = () => {
+    // Restaurar items originales
+    setMenuItems(JSON.parse(JSON.stringify(originalMenuItems)));
+    // Cerrar cualquier edición abierta
+    setEditingItemId(null);
+    // Limpiar errores de validación
+    setValidationErrors({});
+  };
+
   // Guardar cambios masivamente
   const handleSaveChanges = async () => {
     if (!hasUnsavedChanges) {
@@ -361,21 +629,9 @@ export function MenuAdminScreen() {
       // Obtener IDs de items modificados
       const modifiedIds = getModifiedItems();
       
-      console.log('Items modificados (IDs):', Array.from(modifiedIds));
-      console.log('Total de items modificados:', modifiedIds.size);
-      
       // Extraer items modificados manteniendo la estructura jerárquica
       // El backend necesita la estructura anidada (submenu/columns) para preservar parentId
       const modifiedMenuItems = extractModifiedItems(menuItems, modifiedIds);
-      
-      console.log('Items a sincronizar (antes de conversión):', JSON.stringify(modifiedMenuItems.map(i => ({ 
-        id: i.id, 
-        label: i.label,
-        hasSubmenu: !!i.submenu,
-        hasColumns: !!i.columns,
-        submenuCount: i.submenu?.length || 0,
-        columnsCount: i.columns?.length || 0,
-      })), null, 2));
 
       // Convertir MenuAdminItem[] a MenuItem[] para enviar al backend
       // IMPORTANTE: El backend espera estructura anidada (submenu/columns) para preservar parentId
@@ -440,23 +696,13 @@ export function MenuAdminScreen() {
       };
 
       const itemsToSync = convertToMenuItems(modifiedMenuItems);
-      
-      console.log('Items a sincronizar (después de conversión):', JSON.stringify(itemsToSync.map(i => ({
-        id: i.id,
-        label: i.label,
-        route: i.route,
-        hasSubmenu: !!i.submenu,
-        hasColumns: !!i.columns,
-        submenuIds: i.submenu?.map(s => s.id) || [],
-        columnItemIds: i.columns?.flatMap(c => c.items.map(ci => ci.id)) || [],
-      })), null, 2));
 
       const result = await MenuService.syncMenuItems(itemsToSync);
 
       if (result.result.statusCode === 200) {
         const summary = result.data.summary;
         const summaryMessage = `${summary.created > 0 ? `${summary.created} creado${summary.created > 1 ? 's' : ''}` : ''}${summary.created > 0 && summary.updated > 0 ? ', ' : ''}${summary.updated > 0 ? `${summary.updated} actualizado${summary.updated > 1 ? 's' : ''}` : ''}${(summary.created > 0 || summary.updated > 0) && summary.activated > 0 ? ', ' : ''}${summary.activated > 0 ? `${summary.activated} reactivado${summary.activated > 1 ? 's' : ''}` : ''}`;
-        const successMessage = `Menú actualizado correctamente${summaryMessage ? ` (${summaryMessage})` : ''}`;
+        const successMessage = `Menú actualizado correctamente${summaryMessage ? `\n(${summaryMessage})` : ''}`;
         alert.showSuccess(successMessage);
 
         // Recargar items para obtener los IDs actualizados del backend
@@ -487,10 +733,364 @@ export function MenuAdminScreen() {
   };
 
   // Agregar nodo hijo
+  // Agregar un nuevo item en el nivel raíz
+  const addRootItem = () => {
+    const newItemId = `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newOrder = menuItems.length; // El orden será el último
+    
+    const newItem: MenuAdminItem = {
+      id: newItemId,
+      label: '',
+      route: '',
+      description: '',
+      icon: '',
+      isPublic: false,
+      status: 2, // Pendiente
+      order: newOrder,
+      level: 0, // Nivel raíz
+      parentId: undefined,
+    };
+    
+    setMenuItems(prev => [...prev, newItem]);
+    
+    // Abrir el formulario de edición con los valores por defecto
+    setEditingItemId(newItemId);
+    setFormData({
+      label: '',
+      route: '',
+      description: '',
+      icon: '',
+      isPublic: false,
+      status: 2, // Pendiente
+      order: newOrder,
+    });
+    setValidationErrors({});
+    
+    // Hacer scroll al final para ver el nuevo item
+    // Esto se puede hacer con un ref al ScrollView si es necesario
+  };
+
+  // Agregar una nueva columna vacía
+  const addNewColumn = (parentId: string) => {
+    const findParentAndAddColumn = (items: MenuAdminItem[]): MenuAdminItem[] => {
+      return items.map(item => {
+        if (item.id === parentId) {
+          const newColumnId = `col-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Recalcular el order de las columnas existentes (incrementar en 1)
+          const existingColumns = item.columns || [];
+          const updatedColumns = existingColumns.map(col => ({
+            ...col,
+            order: col.order + 1,
+          }));
+          
+          const newColumn: MenuAdminColumn = {
+            id: newColumnId,
+            title: 'Nuevo Agrupamiento',
+            order: 0, // Nueva columna al inicio (order 0)
+            items: [],
+            parentId: parentId,
+          };
+          
+          return {
+            ...item,
+            columns: [newColumn, ...updatedColumns], // Nueva columna al inicio
+          };
+        }
+        
+        // Buscar recursivamente en submenu y columns
+        return {
+          ...item,
+          submenu: item.submenu ? findParentAndAddColumn(item.submenu) : undefined,
+          columns: item.columns ? item.columns.map(col => ({
+            ...col,
+            items: col.items ? findParentAndAddColumn(col.items) : [],
+          })) : undefined,
+        };
+      });
+    };
+    
+    setMenuItems(prev => {
+      const updated = findParentAndAddColumn(prev);
+      // Expandir el padre para que se vea la nueva columna
+      setExpandedItems(prevExpanded => new Set([...prevExpanded, parentId]));
+      return updated;
+    });
+  };
+
+  // Agregar item a una columna específica
+  const addItemToColumn = (parentId: string, columnId: string) => {
+    let newItemId: string | null = null;
+    
+    const findParentAndAddToColumn = (items: MenuAdminItem[]): MenuAdminItem[] => {
+      return items.map(item => {
+        if (item.id === parentId && item.columns) {
+          const parentLevel = item.level || 0;
+          const newLevel = parentLevel + 1;
+          
+          const updatedColumns = item.columns.map(col => {
+            if (col.id === columnId) {
+              newItemId = `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const newItem: MenuAdminItem = {
+                id: newItemId,
+                label: '',
+                route: '',
+                description: '',
+                icon: '',
+                isPublic: false,
+                status: 2, // Pendiente
+                order: col.items?.length || 0,
+                level: newLevel,
+                parentId: parentId,
+              };
+              return {
+                ...col,
+                items: [...(col.items || []), newItem],
+              };
+            }
+            return col;
+          });
+          
+          return {
+            ...item,
+            columns: updatedColumns,
+          };
+        }
+        
+        // Buscar recursivamente en submenu y columns
+        return {
+          ...item,
+          submenu: item.submenu ? findParentAndAddToColumn(item.submenu) : undefined,
+          columns: item.columns ? item.columns.map(col => ({
+            ...col,
+            items: col.items ? findParentAndAddToColumn(col.items) : [],
+          })) : undefined,
+        };
+      });
+    };
+    
+    setMenuItems(prev => {
+      const updated = findParentAndAddToColumn(prev);
+      
+      if (newItemId) {
+        // Expandir el padre para que se vea el nuevo item
+        setExpandedItems(prevExpanded => new Set([...prevExpanded, parentId]));
+        
+        // Abrir el formulario de edición con los valores por defecto
+        setEditingItemId(newItemId);
+        setFormData({
+          label: '',
+          route: '/',
+          description: '',
+          icon: '',
+          isPublic: false,
+          status: 2, // Pendiente
+          order: 0,
+        });
+        setValidationErrors({});
+      }
+      
+      return updated;
+    });
+  };
+
+  // Actualizar el título de una columna
+  const updateColumnTitle = (parentId: string, columnId: string, newTitle: string) => {
+    const findParentAndUpdateColumn = (items: MenuAdminItem[]): MenuAdminItem[] => {
+      return items.map(item => {
+        if (item.id === parentId && item.columns) {
+          const updatedColumns = item.columns.map(col => {
+            if (col.id === columnId) {
+              return {
+                ...col,
+                title: newTitle,
+              };
+            }
+            return col;
+          });
+          
+          return {
+            ...item,
+            columns: updatedColumns,
+          };
+        }
+        
+        // Buscar recursivamente en submenu y columns
+        return {
+          ...item,
+          submenu: item.submenu ? findParentAndUpdateColumn(item.submenu) : undefined,
+          columns: item.columns ? item.columns.map(col => ({
+            ...col,
+            items: col.items ? findParentAndUpdateColumn(col.items) : [],
+          })) : undefined,
+        };
+      });
+    };
+    
+    setMenuItems(prev => findParentAndUpdateColumn(prev));
+    setEditingColumnId(null);
+    setEditingColumnTitle('');
+  };
+
+  // Iniciar edición del título de una columna
+  const startEditColumnTitle = (parentId: string, columnId: string, currentTitle: string) => {
+    setEditingColumnId(columnId);
+    setEditingColumnTitle(currentTitle);
+  };
+
+  // Eliminar una columna y mover sus items al submenu del padre
+  const deleteColumnAndMoveItemsToSubmenu = (parentId: string, columnId: string) => {
+    const findParentAndDeleteColumn = (items: MenuAdminItem[]): MenuAdminItem[] => {
+      return items.map(item => {
+        if (item.id === parentId && item.columns) {
+          // Encontrar la columna a eliminar
+          const columnToDelete = item.columns.find(col => col.id === columnId);
+          if (columnToDelete && columnToDelete.items) {
+            // Mover los items de la columna al submenu del padre
+            const itemsToMove = columnToDelete.items.map(colItem => ({
+              ...colItem,
+              // Ajustar el nivel (mismo nivel que tendrían en submenu)
+              level: item.level + 1,
+              // Ajustar el order (agregar al final del submenu)
+              order: (item.submenu?.length || 0) + colItem.order,
+              // El parentId ya es correcto (es el id del padre)
+            }));
+
+            // Eliminar la columna y agregar sus items al submenu
+            const updatedColumns = item.columns.filter(col => col.id !== columnId);
+            const updatedSubmenu = [...(item.submenu || []), ...itemsToMove];
+
+            return {
+              ...item,
+              columns: updatedColumns.length > 0 ? updatedColumns : undefined,
+              submenu: updatedSubmenu,
+            };
+          }
+        }
+        
+        // Buscar recursivamente en submenu y columns
+        return {
+          ...item,
+          submenu: item.submenu ? findParentAndDeleteColumn(item.submenu) : undefined,
+          columns: item.columns ? item.columns.map(col => ({
+            ...col,
+            items: col.items ? findParentAndDeleteColumn(col.items) : [],
+          })) : undefined,
+        };
+      });
+    };
+    
+    setMenuItems(prev => findParentAndDeleteColumn(prev));
+  };
+
   const addChildNode = (parentId: string, type: 'submenu' | 'column') => {
-    // TODO: Implementar agregar nodo hijo
-    console.log('Agregar nodo hijo:', parentId, type);
-    alert.showInfo('Funcionalidad en desarrollo');
+    let newItemId: string | null = null;
+    
+    const findParentAndAdd = (items: MenuAdminItem[]): MenuAdminItem[] => {
+      return items.map(item => {
+        if (item.id === parentId) {
+          // Encontrar el padre, agregar el nuevo item
+          newItemId = `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const parentLevel = item.level || 0;
+          const newLevel = parentLevel + 1;
+          
+          // Calcular el order basado en la cantidad de hijos existentes
+          let newOrder = 0;
+          if (type === 'submenu') {
+            newOrder = item.submenu?.length || 0;
+          } else {
+            // Para columns, agregamos a la primera columna si existe
+            if (item.columns && item.columns.length > 0) {
+              newOrder = item.columns[0]?.items?.length || 0;
+            }
+          }
+          
+          const newItem: MenuAdminItem = {
+            id: newItemId,
+            label: '',
+            route: '',
+            description: '',
+            icon: '',
+            isPublic: false,
+            status: 2, // Pendiente
+            order: newOrder,
+            level: newLevel,
+            parentId: parentId,
+          };
+          
+          if (type === 'submenu') {
+            const updatedSubmenu = [...(item.submenu || []), newItem];
+            return {
+              ...item,
+              submenu: updatedSubmenu,
+            };
+          } else {
+            // Agregar a la primera columna (o crear una nueva si no existe)
+            if (!item.columns || item.columns.length === 0) {
+              const newColumnId = `col-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const newColumn: MenuAdminColumn = {
+                id: newColumnId,
+                title: 'Nuevo Agrupamiento',
+                order: 0,
+                items: [newItem],
+                parentId: parentId,
+              };
+              return {
+                ...item,
+                columns: [newColumn],
+              };
+            } else {
+              const updatedColumns = item.columns.map((col, colIndex) => {
+                if (colIndex === 0) {
+                  return {
+                    ...col,
+                    items: [...(col.items || []), newItem],
+                  };
+                }
+                return col;
+              });
+              return {
+                ...item,
+                columns: updatedColumns,
+              };
+            }
+          }
+        }
+        
+        // Buscar recursivamente en submenu y columns
+        return {
+          ...item,
+          submenu: item.submenu ? findParentAndAdd(item.submenu) : undefined,
+          columns: item.columns ? item.columns.map(col => ({
+            ...col,
+            items: col.items ? findParentAndAdd(col.items) : [],
+          })) : undefined,
+        };
+      });
+    };
+    
+    setMenuItems(prev => {
+      const updated = findParentAndAdd(prev);
+      
+      if (newItemId) {
+        // Expandir el padre para que se vea el nuevo item
+        setExpandedItems(prevExpanded => new Set([...prevExpanded, parentId]));
+        
+        // Abrir el formulario de edición con los valores por defecto
+        setEditingItemId(newItemId);
+        setFormData({
+          label: '',
+          route: '',
+          description: '',
+          icon: '',
+          isPublic: false,
+          status: 2, // Pendiente
+          order: 0, // Se calculará cuando se guarde
+        });
+      }
+      
+      return updated;
+    });
   };
 
   // Función para encontrar un item por ID en la estructura jerárquica
@@ -518,65 +1118,430 @@ export function MenuAdminScreen() {
     return null;
   };
 
-  // Función para reordenar items
+  // Función para reordenar columnas
+  const reorderColumns = useCallback((parentId: string, draggedColumnId: string, targetColumnId: string) => {
+    if (draggedColumnId === targetColumnId) return;
+
+    setMenuItems(prev => {
+      const findParentAndReorderColumns = (items: MenuAdminItem[]): MenuAdminItem[] => {
+        return items.map(item => {
+          if (item.id === parentId && item.columns && item.columns.length > 0) {
+            const draggedIndex = item.columns.findIndex(col => col.id === draggedColumnId);
+            const targetIndex = item.columns.findIndex(col => col.id === targetColumnId);
+
+            if (draggedIndex !== -1 && targetIndex !== -1) {
+              const newColumns = [...item.columns];
+              // Remover la columna arrastrada
+              const [draggedColumn] = newColumns.splice(draggedIndex, 1);
+              
+              // Insertar en la nueva posición
+              const newTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+              newColumns.splice(newTargetIndex, 0, draggedColumn);
+
+              // Recalcular order para TODAS las columnas
+              const updatedColumns = newColumns.map((col, index) => ({
+                ...col,
+                order: index, // Recalcular order basado en la nueva posición
+              }));
+
+              return {
+                ...item,
+                columns: updatedColumns,
+              };
+            }
+          }
+          
+          // Buscar recursivamente en submenu y columns
+          return {
+            ...item,
+            submenu: item.submenu ? findParentAndReorderColumns(item.submenu) : undefined,
+            columns: item.columns ? item.columns.map(col => ({
+              ...col,
+              items: col.items ? findParentAndReorderColumns(col.items) : [],
+            })) : undefined,
+          };
+        });
+      };
+
+      return findParentAndReorderColumns(prev);
+    });
+  }, []);
+
+  // Función para encontrar un item y su contexto (padre, nivel, etc.)
+  const findItemContext = (items: MenuAdminItem[], itemId: string, parent: MenuAdminItem | null = null, level: number = 0): { item: MenuAdminItem; parent: MenuAdminItem | null; parentItems: MenuAdminItem[]; index: number; level: number; location: 'root' | 'submenu' | 'column'; columnId?: string } | null => {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].id === itemId) {
+        return { item: items[i], parent, parentItems: items, index: i, level, location: parent ? 'submenu' : 'root' };
+      }
+      
+      // Buscar en submenu
+      const submenu = items[i].submenu;
+      if (submenu && submenu.length > 0) {
+        const found = findItemContext(submenu, itemId, items[i], level + 1);
+        if (found) return found;
+      }
+      
+      // Buscar en columns
+      const columns = items[i].columns;
+      if (columns && columns.length > 0) {
+        for (const column of columns) {
+          const columnItems = column.items;
+          if (columnItems && columnItems.length > 0) {
+            const found = findItemContext(columnItems, itemId, items[i], level + 1);
+            if (found) {
+              return { ...found, location: 'column' as const, columnId: column.id };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // Función para remover un item de su ubicación actual
+  const removeItemFromLocation = (items: MenuAdminItem[], itemId: string): MenuAdminItem[] => {
+    return items.map(item => {
+      // Remover del submenu si está ahí
+      if (item.submenu && item.submenu.some(sub => sub.id === itemId)) {
+        return {
+          ...item,
+          submenu: item.submenu.filter(sub => sub.id !== itemId),
+        };
+      }
+      
+      // Remover de las columnas si está ahí
+      if (item.columns && item.columns.some(col => col.items.some(ci => ci.id === itemId))) {
+        return {
+          ...item,
+          columns: item.columns.map(col => ({
+            ...col,
+            items: col.items.filter(ci => ci.id !== itemId),
+          })),
+        };
+      }
+      
+      // Buscar recursivamente
+      return {
+        ...item,
+        submenu: item.submenu ? removeItemFromLocation(item.submenu, itemId) : undefined,
+        columns: item.columns ? item.columns.map(col => ({
+          ...col,
+          items: removeItemFromLocation(col.items, itemId),
+        })) : undefined,
+      };
+    }).filter(item => item.id !== itemId); // Remover si es el item raíz
+  };
+
+  // Función para agregar un item a una nueva ubicación
+  const addItemToLocation = (items: MenuAdminItem[], targetId: string, draggedItem: MenuAdminItem, insertIndex?: number): MenuAdminItem[] => {
+    return items.map(item => {
+      // Si el target es este item, agregar como hijo en submenu
+      if (item.id === targetId) {
+        const newItem = {
+          ...draggedItem,
+          parentId: targetId,
+          level: item.level + 1,
+          order: insertIndex !== undefined ? insertIndex : (item.submenu?.length || 0),
+        };
+        
+        const updatedSubmenu = [...(item.submenu || [])];
+        if (insertIndex !== undefined) {
+          updatedSubmenu.splice(insertIndex, 0, newItem);
+        } else {
+          updatedSubmenu.push(newItem);
+        }
+        
+        // Recalcular orders
+        const reorderedSubmenu = updatedSubmenu.map((sub, idx) => ({
+          ...sub,
+          order: idx,
+        }));
+        
+        return {
+          ...item,
+          submenu: reorderedSubmenu,
+        };
+      }
+      
+      // Si el target está en el submenu de este item
+      if (item.submenu && item.submenu.some(sub => sub.id === targetId)) {
+        const targetIndex = item.submenu.findIndex(sub => sub.id === targetId);
+        const newItem = {
+          ...draggedItem,
+          parentId: item.id,
+          level: item.level + 1,
+          order: insertIndex !== undefined ? insertIndex : targetIndex,
+        };
+        
+        const updatedSubmenu = [...item.submenu];
+        if (insertIndex !== undefined) {
+          updatedSubmenu.splice(insertIndex, 0, newItem);
+        } else {
+          updatedSubmenu.splice(targetIndex, 0, newItem);
+        }
+        
+        // Recalcular orders
+        const reorderedSubmenu = updatedSubmenu.map((sub, idx) => ({
+          ...sub,
+          order: idx,
+        }));
+        
+        return {
+          ...item,
+          submenu: reorderedSubmenu,
+        };
+      }
+      
+      // Si el target está en una columna de este item
+      if (item.columns) {
+        for (let colIndex = 0; colIndex < item.columns.length; colIndex++) {
+          const column = item.columns[colIndex];
+          if (column.items.some(ci => ci.id === targetId)) {
+            const targetIndex = column.items.findIndex(ci => ci.id === targetId);
+            const newItem = {
+              ...draggedItem,
+              parentId: item.id,
+              level: item.level + 1,
+              order: insertIndex !== undefined ? insertIndex : targetIndex,
+            };
+            
+            const updatedItems = [...column.items];
+            if (insertIndex !== undefined) {
+              updatedItems.splice(insertIndex, 0, newItem);
+            } else {
+              updatedItems.splice(targetIndex, 0, newItem);
+            }
+            
+            // Recalcular orders
+            const reorderedItems = updatedItems.map((ci, idx) => ({
+              ...ci,
+              order: idx,
+            }));
+            
+            const updatedColumns = [...item.columns];
+            updatedColumns[colIndex] = {
+              ...column,
+              items: reorderedItems,
+            };
+            
+            return {
+              ...item,
+              columns: updatedColumns,
+            };
+          }
+        }
+      }
+      
+      // Buscar recursivamente
+      return {
+        ...item,
+        submenu: item.submenu ? addItemToLocation(item.submenu, targetId, draggedItem, insertIndex) : undefined,
+        columns: item.columns ? item.columns.map(col => ({
+          ...col,
+          items: addItemToLocation(col.items, targetId, draggedItem, insertIndex),
+        })) : undefined,
+      };
+    });
+  };
+
+  // Función para agregar un item arrastrado a una columna específica
+  const addDraggedItemToColumn = (items: MenuAdminItem[], parentId: string, columnId: string, draggedItem: MenuAdminItem, insertIndex?: number): MenuAdminItem[] => {
+    return items.map(item => {
+      if (item.id === parentId && item.columns) {
+        const updatedColumns = item.columns.map(col => {
+          if (col.id === columnId) {
+            const newItem = {
+              ...draggedItem,
+              parentId: parentId,
+              level: item.level + 1,
+              order: insertIndex !== undefined ? insertIndex : col.items.length,
+            };
+            
+            const updatedItems = [...col.items];
+            if (insertIndex !== undefined) {
+              updatedItems.splice(insertIndex, 0, newItem);
+            } else {
+              updatedItems.push(newItem);
+            }
+            
+            // Recalcular orders
+            const reorderedItems = updatedItems.map((ci, idx) => ({
+              ...ci,
+              order: idx,
+            }));
+            
+            return {
+              ...col,
+              items: reorderedItems,
+            };
+          }
+          return col;
+        });
+        
+        return {
+          ...item,
+          columns: updatedColumns,
+        };
+      }
+      
+      return {
+        ...item,
+        submenu: item.submenu ? addDraggedItemToColumn(item.submenu, parentId, columnId, draggedItem, insertIndex) : undefined,
+        columns: item.columns ? item.columns.map(col => ({
+          ...col,
+          items: col.items ? addDraggedItemToColumn(col.items, parentId, columnId, draggedItem, insertIndex) : [],
+        })) : undefined,
+      };
+    });
+  };
+
+  // Función mejorada para reordenar/mover items (soporta cambio de padre)
   const reorderItems = useCallback((draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
 
     setMenuItems(prev => {
-      const findAndReorder = (items: MenuAdminItem[], parentLevel: number = 0): MenuAdminItem[] => {
-        const draggedIndex = items.findIndex(i => i.id === draggedId);
-        const targetIndex = items.findIndex(i => i.id === targetId);
+      // Encontrar el contexto del item arrastrado
+      const draggedContext = findItemContext(prev, draggedId);
+      if (!draggedContext) return prev;
+      
+      // Encontrar el contexto del item objetivo
+      const targetContext = findItemContext(prev, targetId);
+      if (!targetContext) return prev;
+      
+      const draggedItem = draggedContext.item;
+      
+      // Si están en el mismo padre y mismo nivel, solo reordenar
+      if (draggedContext.parent?.id === targetContext.parent?.id && 
+          draggedContext.location === targetContext.location &&
+          draggedContext.columnId === targetContext.columnId) {
+        const findAndReorder = (items: MenuAdminItem[], parentLevel: number = 0): MenuAdminItem[] => {
+          const draggedIndex = items.findIndex(i => i.id === draggedId);
+          const targetIndex = items.findIndex(i => i.id === targetId);
 
-        // Si ambos están en este nivel
-        if (draggedIndex !== -1 && targetIndex !== -1) {
-          const newItems = [...items];
-          // Remover el item arrastrado
-          const [draggedItem] = newItems.splice(draggedIndex, 1);
-          
-          // Insertar en la nueva posición
-          const newTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
-          newItems.splice(newTargetIndex, 0, draggedItem);
+          if (draggedIndex !== -1 && targetIndex !== -1) {
+            const newItems = [...items];
+            const [dragged] = newItems.splice(draggedIndex, 1);
+            const newTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+            newItems.splice(newTargetIndex, 0, dragged);
 
-          // Recalcular orden para TODOS los items en este nivel
-          // El order debe reflejar la posición visual (0, 1, 2, 3...)
-          return newItems.map((item, index) => ({
+            return newItems.map((item, index) => ({
+              ...item,
+              order: index,
+              submenu: item.submenu ? findAndReorder(item.submenu, parentLevel + 1) : undefined,
+              columns: item.columns ? item.columns.map(col => ({
+                ...col,
+                items: col.items ? findAndReorder(col.items, parentLevel + 1) : col.items,
+              })) : undefined,
+            }));
+          }
+
+          return items.map((item, index) => ({
             ...item,
-            order: index, // Recalcular order basado en la nueva posición
-            // Recalcular order también para submenu y columns recursivamente
-            submenu: item.submenu && item.submenu.length > 0 
-              ? findAndReorder(item.submenu, parentLevel + 1)
-              : undefined,
-            columns: item.columns && item.columns.length > 0
-              ? item.columns.map(col => ({
-                  ...col,
-                  items: col.items && col.items.length > 0
-                    ? findAndReorder(col.items, parentLevel + 1)
-                    : col.items,
-                }))
-              : undefined,
+            order: index,
+            submenu: item.submenu ? findAndReorder(item.submenu, parentLevel + 1) : undefined,
+            columns: item.columns ? item.columns.map(col => ({
+              ...col,
+              items: col.items ? findAndReorder(col.items, parentLevel + 1) : col.items,
+            })) : undefined,
+          }));
+        };
+
+        // Aplicar reordenamiento según la ubicación
+        if (draggedContext.location === 'column' && draggedContext.columnId && draggedContext.parent) {
+          return prev.map(item => {
+            if (item.id === draggedContext.parent!.id && item.columns) {
+              return {
+                ...item,
+                columns: item.columns.map(col => {
+                  if (col.id === draggedContext.columnId) {
+                    return {
+                      ...col,
+                      items: findAndReorder(col.items, draggedContext.level),
+                    };
+                  }
+                  return col;
+                }),
+              };
+            }
+            return item;
+          });
+        } else if (draggedContext.parent) {
+          return prev.map(item => {
+            if (item.id === draggedContext.parent!.id) {
+              return {
+                ...item,
+                submenu: findAndReorder(item.submenu || [], draggedContext.level),
+              };
+            }
+            return item;
+          });
+        } else {
+          return findAndReorder(prev);
+        }
+      }
+      
+      // Si están en diferentes padres, mover el item
+      // Primero remover el item de su ubicación actual
+      let updated = removeItemFromLocation(prev, draggedId);
+      
+      // Determinar dónde agregar el item
+      // Si el target está en una columna, agregar a esa columna (no como hermano)
+      if (targetContext.location === 'column' && targetContext.columnId && targetContext.parent) {
+        // Agregar al final de la columna (o en la posición del target si se especifica)
+        updated = addDraggedItemToColumn(updated, targetContext.parent.id, targetContext.columnId, draggedItem, targetContext.index);
+      } else if (targetContext.parent) {
+        // Si el target tiene un padre, verificar si el padre tiene columnas
+        // Si el padre tiene columnas y el target no está en una columna, agregar a la primera columna
+        const parentItem = prev.find(item => item.id === targetContext.parent!.id) || 
+                          prev.flatMap(item => item.submenu || []).find(sub => sub.id === targetContext.parent!.id) ||
+                          prev.flatMap(item => item.columns?.flatMap(col => col.items) || []).find(ci => ci.id === targetContext.parent!.id);
+        
+        if (parentItem && parentItem.columns && parentItem.columns.length > 0) {
+          // El padre tiene columnas, agregar a la primera columna
+          updated = addDraggedItemToColumn(updated, targetContext.parent.id, parentItem.columns[0].id, draggedItem);
+        } else {
+          // Agregar como hermano del target (mismo nivel)
+          updated = addItemToLocation(updated, targetContext.parent.id, draggedItem, targetContext.index);
+        }
+      } else {
+        // Si el target es raíz, verificar si tiene hijos (submenu o columns)
+        // Si tiene hijos, agregar como hijo; si no, agregar como hermano
+        const targetItem = targetContext.item;
+        if ((targetItem.submenu && targetItem.submenu.length > 0) || (targetItem.columns && targetItem.columns.length > 0)) {
+          // Tiene hijos, agregar como hijo en submenu
+          updated = addItemToLocation(updated, targetId, draggedItem);
+        } else {
+          // No tiene hijos, agregar como hermano al nivel raíz
+          const newItem = {
+            ...draggedItem,
+            parentId: undefined,
+            level: 0,
+            order: targetContext.index,
+          };
+          const newItems = [...updated];
+          newItems.splice(targetContext.index, 0, newItem);
+          updated = newItems.map((item, index) => ({
+            ...item,
+            order: index,
           }));
         }
-
-        // Si no están en este nivel, buscar recursivamente
-        // IMPORTANTE: También recalcular order en cada nivel para mantener consistencia
+      }
+      
+      // Recalcular orders en todos los niveles
+      const recalculateOrders = (items: MenuAdminItem[], level: number = 0): MenuAdminItem[] => {
         return items.map((item, index) => ({
           ...item,
-          order: index, // Asegurar que el order siempre refleje la posición visual
-          submenu: item.submenu && item.submenu.length > 0 
-            ? findAndReorder(item.submenu, parentLevel + 1)
-            : undefined,
-          columns: item.columns && item.columns.length > 0
-            ? item.columns.map(col => ({
-                ...col,
-                items: col.items && col.items.length > 0
-                  ? findAndReorder(col.items, parentLevel + 1)
-                  : col.items,
-              }))
-            : undefined,
+          order: index,
+          level,
+          submenu: item.submenu ? recalculateOrders(item.submenu, level + 1) : undefined,
+          columns: item.columns ? item.columns.map(col => ({
+            ...col,
+            items: recalculateOrders(col.items, level + 1),
+          })) : undefined,
         }));
       };
-
-      return findAndReorder(prev);
+      
+      return recalculateOrders(updated);
     });
   }, []);
 
@@ -613,9 +1578,6 @@ export function MenuAdminScreen() {
     setDragOverItemId(null);
   };
 
-  // Ref para mantener el item objetivo durante el drag
-  const dragOverItemRef = useRef<string | null>(null);
-
   // Handlers para mouse/touch events (alternativa más robusta)
   const handleMouseDown = useCallback((e: any, itemId: string) => {
     if (Platform.OS === 'web') {
@@ -631,22 +1593,114 @@ export function MenuAdminScreen() {
         upEvent.preventDefault();
         const draggedId = draggingItemRef.current;
         const targetId = dragOverItemRef.current;
+        const targetColumnId = dragOverColumnRef.current;
+        const targetColumnParentId = dragOverColumnParentRef.current;
+        const targetDropZoneId = dropZoneRef.current;
         
-        if (draggedId && targetId && draggedId !== targetId) {
-          console.log('Reordenando:', draggedId, '->', targetId);
+        // Si se soltó sobre el recuadro de "agregar como hijo"
+        if (draggedId && targetDropZoneId && draggedId !== targetDropZoneId) {
+          setMenuItems(prev => {
+            const draggedContext = findItemContext(prev, draggedId);
+            if (!draggedContext) return prev;
+            
+            const draggedItem = draggedContext.item;
+            let updated = removeItemFromLocation(prev, draggedId);
+            // Agregar como hijo del item target
+            updated = addItemToLocation(updated, targetDropZoneId, draggedItem);
+            
+            // Recalcular orders
+            const recalculateOrders = (items: MenuAdminItem[], level: number = 0): MenuAdminItem[] => {
+              return items.map((item, index) => ({
+                ...item,
+                order: index,
+                level,
+                submenu: item.submenu ? recalculateOrders(item.submenu, level + 1) : undefined,
+                columns: item.columns ? item.columns.map(col => ({
+                  ...col,
+                  items: recalculateOrders(col.items, level + 1),
+                })) : undefined,
+              }));
+            };
+            
+            return recalculateOrders(updated);
+          });
+        }
+        // Si se arrastró sobre una columna directamente
+        else if (draggedId && targetColumnId && targetColumnParentId) {
+          setMenuItems(prev => {
+            const draggedContext = findItemContext(prev, draggedId);
+            if (!draggedContext) return prev;
+            
+            const draggedItem = draggedContext.item;
+            let updated = removeItemFromLocation(prev, draggedId);
+            updated = addDraggedItemToColumn(updated, targetColumnParentId, targetColumnId, draggedItem);
+            
+            // Recalcular orders
+            const recalculateOrders = (items: MenuAdminItem[], level: number = 0): MenuAdminItem[] => {
+              return items.map((item, index) => ({
+                ...item,
+                order: index,
+                level,
+                submenu: item.submenu ? recalculateOrders(item.submenu, level + 1) : undefined,
+                columns: item.columns ? item.columns.map(col => ({
+                  ...col,
+                  items: recalculateOrders(col.items, level + 1),
+                })) : undefined,
+              }));
+            };
+            
+            return recalculateOrders(updated);
+          });
+        } else if (draggedId && targetId && draggedId !== targetId) {
           reorderItems(draggedId, targetId);
         }
         
         setDraggingItemId(null);
         setDragOverItemId(null);
+        setDragOverColumnId(null);
+        setDragOverColumnParentId(null);
+        setShowDropZone(null);
         draggingItemRef.current = null;
         dragOverItemRef.current = null;
+        dragOverColumnRef.current = null;
+        dragOverColumnParentRef.current = null;
+        dropZoneRef.current = null;
         document.removeEventListener('mouseup', handleMouseUp);
       };
 
       document.addEventListener('mouseup', handleMouseUp, { once: true });
     }
   }, [reorderItems]);
+
+  // Handlers para drag and drop de columnas
+  const handleColumnMouseDown = useCallback((e: any, parentId: string, columnId: string) => {
+    if (Platform.OS !== 'web') return;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    draggingColumnRef.current = columnId;
+    dragOverColumnRef.current = null;
+    setDraggingColumnId(columnId);
+    setDragOverColumnId(null);
+    
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      upEvent.preventDefault();
+      const draggedId = draggingColumnRef.current;
+      const targetId = dragOverColumnRef.current;
+      
+      if (draggedId && targetId && draggedId !== targetId) {
+        reorderColumns(parentId, draggedId, targetId);
+      }
+      
+      setDraggingColumnId(null);
+      setDragOverColumnId(null);
+      draggingColumnRef.current = null;
+      dragOverColumnRef.current = null;
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mouseup', handleMouseUp, { once: true });
+  }, [reorderColumns]);
 
   // Renderizar item del menú
   const renderMenuItem = (item: MenuAdminItem, index: number) => {
@@ -697,6 +1751,27 @@ export function MenuAdminScreen() {
         {...(Platform.OS === 'web' ? { 
           // @ts-ignore - data attributes para web
           'data-item-id': item.id,
+          onMouseEnter: () => {
+            if (draggingItemId && draggingItemId !== item.id) {
+              dragOverItemRef.current = item.id;
+              setDragOverItemId(item.id);
+              // Si el item no tiene hijos, mostrar el recuadro para agregar como hijo
+              if (!hasChildren) {
+                setShowDropZone(item.id);
+              }
+            }
+          },
+          onMouseLeave: () => {
+            if (dragOverItemId === item.id) {
+              dragOverItemRef.current = null;
+              setDragOverItemId(null);
+              // Ocultar el recuadro solo si realmente salimos del contenedor completo
+              // (no solo del div del título, sino también del drop zone)
+              if (showDropZone === item.id) {
+                setShowDropZone(null);
+              }
+            }
+          },
         } : {})}
       >
         {/* Div del título: siempre visible, ocupa todo el ancho */}
@@ -714,46 +1789,36 @@ export function MenuAdminScreen() {
               zIndex: isEditing ? 1 : 0, // El div activo está sobre el de edición
             }
           ]}
-          {...(Platform.OS === 'web' ? {
-            onMouseEnter: () => {
-              if (draggingItemId && draggingItemId !== item.id) {
-                dragOverItemRef.current = item.id;
-                setDragOverItemId(item.id);
-              }
-            },
-            onMouseLeave: () => {
-              if (dragOverItemId === item.id) {
-                dragOverItemRef.current = null;
-                setDragOverItemId(null);
-              }
-            },
-          } : {})}
         >
-          {/* Handle de arrastre */}
-          <View
-            style={dragHandleStyle}
-            {...(Platform.OS === 'web' ? {
-              onMouseDown: (e: any) => handleMouseDown(e, item.id),
-            } : {})}
-          >
-            <Ionicons
-              name="reorder-three-outline"
-              size={20}
-              color={colors.textSecondary}
-            />
-          </View>
-
           {/* Icono de expandir/colapsar */}
           {hasChildren && (
-            <TouchableOpacity onPress={() => toggleExpand(item.id)} style={{ marginRight: 8 }}>
+            <Tooltip text={isExpanded ? "Contraer" : "Expandir"} position="top">
+              <TouchableOpacity onPress={() => toggleExpand(item.id)} style={{ marginRight: 8 }}>
+                <Ionicons
+                  name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </Tooltip>
+          )}
+          {!hasChildren && <View style={{ width: 28 }} />}
+
+          {/* Handle de arrastre */}
+          <Tooltip text="Mover" position="top">
+            <View
+              style={dragHandleStyle}
+              {...(Platform.OS === 'web' ? {
+                onMouseDown: (e: any) => handleMouseDown(e, item.id),
+              } : {})}
+            >
               <Ionicons
-                name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                name="reorder-three-outline"
                 size={20}
                 color={colors.textSecondary}
               />
-            </TouchableOpacity>
-          )}
-          {!hasChildren && <View style={{ width: 28 }} />}
+            </View>
+          </Tooltip>
 
           {/* Primera fila: Icono, Nombre, URL, Estado (vista) */}
           <View style={{ flex: 1, flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -809,8 +1874,19 @@ export function MenuAdminScreen() {
               </ThemedText>
             </TouchableOpacity>
 
-            {/* URL */}
-            <View style={{ flex: 2, minWidth: 200 }}>
+            {/* URL clickeable (abre edición igual que el nombre) */}
+            <TouchableOpacity
+              onPress={() => {
+                const isEditing = editingItemId === item.id;
+                // Si ya está en edición, cerrar; si no, abrir
+                if (isEditing) {
+                  setEditingItemId(null);
+                } else {
+                  startEdit(item);
+                }
+              }}
+              style={{ flex: 2, minWidth: 200 }}
+            >
               {item.route ? (
                 <ThemedText type="caption" variant="secondary" numberOfLines={1}>
                   {item.route}
@@ -820,30 +1896,90 @@ export function MenuAdminScreen() {
                   Sin URL
                 </ThemedText>
               )}
-            </View>
-
-            {/* Estado */}
-            <View style={{ flex: 1, minWidth: 100, alignItems: 'center', marginRight: 8 }}>
-              <ThemedText
-                type="caption"
-                style={{
-                  color: item.status === 1 ? colors.success : item.status === 0 ? colors.error : colors.textSecondary,
-                  fontWeight: '500',
-                }}
-              >
-                {item.status === 1 ? 'Activo' : item.status === 0 ? 'Inactivo' : item.status === -1 ? 'Eliminado' : 'Pendiente'}
-              </ThemedText>
-            </View>
-
-            {/* Botón agregar hijo */}
-            <TouchableOpacity
-              onPress={() => addChildNode(item.id, 'submenu')}
-              style={{ marginLeft: 'auto' }}
-            >
-              <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
+
+            {/* Estado clickeable (abre edición igual que el nombre) */}
+            <TouchableOpacity
+              onPress={() => {
+                const isEditing = editingItemId === item.id;
+                // Si ya está en edición, cerrar; si no, abrir
+                if (isEditing) {
+                  setEditingItemId(null);
+                } else {
+                  startEdit(item);
+                }
+              }}
+              style={{ flex: 1, minWidth: 100, alignItems: 'center', marginRight: 8, flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+            >
+              <StatusBadge
+                status={item.status}
+                statusDescription={
+                  item.status === 1 ? 'Activo' : 
+                  item.status === 0 ? 'Inactivo' : 
+                  item.status === -1 ? 'Eliminado' : 
+                  'Pendiente'
+                }
+                size="small"
+                showIcon={true}
+              />
+              {/* Indicador de hijos con estado pendiente */}
+              {hasChildWithPendingStatus(item) && (
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: '#f59e0b', // Color tomate igual que pendiente
+                  }}
+                />
+              )}
+            </TouchableOpacity>
+
+            {/* Botón agregar item */}
+            <View style={{ flexDirection: 'row', marginLeft: 'auto', gap: 8 }}>
+              <Tooltip text="Agregar item" position="top">
+                <TouchableOpacity
+                  onPress={() => addChildNode(item.id, 'submenu')}
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
+                </TouchableOpacity>
+              </Tooltip>
+            </View>
           </View>
         </View>
+
+        {/* Recuadro para agregar como hijo (solo cuando se arrastra sobre un item sin hijos) */}
+        {showDropZone === item.id && !hasChildren && draggingItemId && draggingItemId !== item.id && (
+          <View
+            style={{
+              marginTop: 4,
+              marginLeft: item.level * 20,
+              padding: 12,
+              borderWidth: 2,
+              borderStyle: 'dashed',
+              borderColor: colors.primary,
+              borderRadius: 8,
+              backgroundColor: colors.primary + '10',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            {...(Platform.OS === 'web' ? {
+              onMouseEnter: () => {
+                dropZoneRef.current = item.id;
+              },
+              onMouseLeave: () => {
+                if (dropZoneRef.current === item.id) {
+                  dropZoneRef.current = null;
+                }
+              },
+            } : {})}
+          >
+            <ThemedText type="body2" style={{ color: colors.primary, fontWeight: '600' }}>
+              Soltar aquí para agregar como hijo
+            </ThemedText>
+          </View>
+        )}
 
         {/* Formulario de edición (debajo del título cuando está en edición) */}
         {isEditing && (
@@ -868,26 +2004,67 @@ export function MenuAdminScreen() {
                 <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
                   <View style={{ flex: 1, minWidth: 180 }}>
                     <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      Icono
+                      Icono <ThemedText style={{ color: colors.error }}>*</ThemedText>
                     </ThemedText>
-                    <IconInput
-                      value={formData.icon || ''}
-                      onChange={(value) => {
-                        setFormData(prev => ({ ...prev, icon: value }));
-                        // Aplicar cambios automáticamente al estado
-                        updateItem(item.id, { icon: value });
-                      }}
-                      placeholder="Nombre del icono (ej: home, settings)"
-                    />
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <IconInput
+                          value={formData.icon || ''}
+                          onChange={(value) => {
+                            setFormData(prev => ({ ...prev, icon: value }));
+                            // Aplicar cambios automáticamente al estado
+                            updateItem(item.id, { icon: value });
+                            // Limpiar error si existe
+                            if (validationErrors.icon) {
+                              setValidationErrors(prev => ({ ...prev, icon: undefined }));
+                            }
+                          }}
+                          placeholder="Nombre del icono (ej: home, settings)"
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: colors.primary,
+                          paddingHorizontal: 16,
+                          paddingVertical: 12,
+                          borderRadius: 8,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          minHeight: 48,
+                        }}
+                        onPress={async () => {
+                          try {
+                            const iconsUrl = APP_CONFIG.EXTERNAL_URLS.ICONS_DOCUMENTATION;
+                            
+                            // En web, abrir en una nueva pestaña
+                            if (Platform.OS === 'web') {
+                              window.open(iconsUrl, '_blank', 'noopener,noreferrer');
+                            } else {
+                              // En móviles, usar el navegador in-app
+                              await openBrowserAsync(iconsUrl);
+                            }
+                          } catch (error) {
+                            alert.showError('Error al abrir la documentación de iconos');
+                          }
+                        }}
+                      >
+                        <Ionicons name="open-outline" size={20} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                    {validationErrors.icon && (
+                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                        {validationErrors.icon}
+                      </ThemedText>
+                    )}
                   </View>
                   <View style={{ flex: 1, minWidth: 180 }}>
                     <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      Nombre
+                      Nombre <ThemedText style={{ color: colors.error }}>*</ThemedText>
                     </ThemedText>
                     <InputWithFocus
                       containerStyle={{
                         borderWidth: 1,
-                        borderColor: colors.border,
+                        borderColor: validationErrors.label ? colors.error : colors.border,
                         borderRadius: 8,
                         backgroundColor: colors.surface,
                       }}
@@ -899,6 +2076,10 @@ export function MenuAdminScreen() {
                           setFormData(prev => ({ ...prev, label: text }));
                           // Aplicar cambios automáticamente al estado
                           updateItem(item.id, { label: text });
+                          // Limpiar error si existe
+                          if (validationErrors.label) {
+                            setValidationErrors(prev => ({ ...prev, label: undefined }));
+                          }
                         }}
                         placeholder="Nombre del item"
                         style={{
@@ -907,15 +2088,20 @@ export function MenuAdminScreen() {
                         }}
                       />
                     </InputWithFocus>
+                    {validationErrors.label && (
+                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                        {validationErrors.label}
+                      </ThemedText>
+                    )}
                   </View>
                   <View style={{ flex: 1, minWidth: 180 }}>
                     <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      URL
+                      URL <ThemedText style={{ color: colors.error }}>*</ThemedText>
                     </ThemedText>
                     <InputWithFocus
                       containerStyle={{
                         borderWidth: 1,
-                        borderColor: colors.border,
+                        borderColor: validationErrors.route ? colors.error : colors.border,
                         borderRadius: 8,
                         backgroundColor: colors.surface,
                       }}
@@ -924,9 +2110,22 @@ export function MenuAdminScreen() {
                       <TextInput
                         value={formData.route}
                         onChangeText={(text) => {
-                          setFormData(prev => ({ ...prev, route: text }));
+                          // Asegurar que siempre empiece con /
+                          let normalizedText = text.trim();
+                          // Si está vacío, poner solo "/"
+                          if (!normalizedText) {
+                            normalizedText = '/';
+                          } else if (!normalizedText.startsWith('/')) {
+                            // Si no empieza con /, agregarlo
+                            normalizedText = '/' + normalizedText;
+                          }
+                          setFormData(prev => ({ ...prev, route: normalizedText }));
                           // Aplicar cambios automáticamente al estado
-                          updateItem(item.id, { route: text });
+                          updateItem(item.id, { route: normalizedText });
+                          // Limpiar error si existe
+                          if (validationErrors.route) {
+                            setValidationErrors(prev => ({ ...prev, route: undefined }));
+                          }
                         }}
                         placeholder="/ruta"
                         style={{
@@ -935,6 +2134,11 @@ export function MenuAdminScreen() {
                         }}
                       />
                     </InputWithFocus>
+                    {validationErrors.route && (
+                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                        {validationErrors.route}
+                      </ThemedText>
+                    )}
                   </View>
                 </View>
                 
@@ -973,59 +2177,135 @@ export function MenuAdminScreen() {
                     </InputWithFocus>
                   </View>
                   <View style={{ flex: 1, minWidth: 180 }}>
-                    <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
+                    <ThemedText type="body2" style={[styles.formLabel, { color: colors.text }]}>
                       Estado
                     </ThemedText>
-                    <Select
-                      value={formData.status}
-                      options={[
-                        { value: -1, label: 'Eliminado' },
-                        { value: 0, label: 'Inactivo' },
-                        { value: 1, label: 'Activo' },
-                        { value: 2, label: 'Pendiente' },
-                      ]}
-                      onSelect={(value) => {
-                        const statusValue = value as number;
-                        setFormData(prev => ({ ...prev, status: statusValue }));
-                        // Aplicar cambios automáticamente al estado
-                        updateItem(item.id, { status: statusValue });
-                      }}
-                    />
-                    <View style={styles.publicToggleContainer}>
-                      <View style={styles.publicToggleRow}>
-                        <ThemedText type="body2" style={{ color: colors.text }}>
-                          Público
-                        </ThemedText>
-                        <View style={styles.publicToggleControls}>
-                          <Switch
-                            value={formData.isPublic}
-                            onValueChange={(value) => {
-                              setFormData(prev => ({ ...prev, isPublic: value }));
-                              // Aplicar cambios automáticamente al estado
-                              updateItem(item.id, { isPublic: value });
-                            }}
-                            trackColor={{ 
-                              false: colors.border + 'CC', 
-                              true: colors.primary 
-                            }}
-                            thumbColor="#FFFFFF"
-                            ios_backgroundColor={colors.border + 'CC'}
-                            style={styles.publicToggleSwitch}
-                          />
-                          <ThemedText 
-                            type="caption" 
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingRight: 8 }}
+                      nestedScrollEnabled={true}
+                    >
+                      <View style={styles.selectOptions}>
+                        {/* Activo */}
+                        <TouchableOpacity
+                          style={[
+                            styles.selectOption,
+                            { borderColor: colors.border },
+                            formData.status === 1 && {
+                              backgroundColor: '#10b981',
+                              borderColor: '#10b981',
+                            },
+                          ]}
+                          onPress={() => {
+                            const statusValue = 1;
+                            setFormData(prev => ({ ...prev, status: statusValue }));
+                            // Aplicar cambios automáticamente al estado
+                            updateItem(item.id, { status: statusValue });
+                          }}
+                        >
+                          <ThemedText
+                            type="caption"
+                            style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                          >
+                            Activo
+                          </ThemedText>
+                        </TouchableOpacity>
+
+                        {/* Inactivo */}
+                        <TouchableOpacity
+                          style={[
+                            styles.selectOption,
+                            { borderColor: colors.border },
+                            formData.status === 0 && {
+                              backgroundColor: '#ef4444',
+                              borderColor: '#ef4444',
+                            },
+                          ]}
+                          onPress={() => {
+                            const statusValue = 0;
+                            setFormData(prev => ({ ...prev, status: statusValue }));
+                            // Aplicar cambios automáticamente al estado
+                            updateItem(item.id, { status: statusValue });
+                          }}
+                        >
+                          <ThemedText
+                            type="caption"
                             style={[
-                              styles.publicToggleText,
-                              { 
-                                color: formData.isPublic ? colors.primary : colors.textSecondary,
-                                fontWeight: formData.isPublic ? '600' : '400',
-                              }
+                              formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text },
+                              { fontSize: 12 }
                             ]}
                           >
-                            {formData.isPublic ? 'Sí' : 'No'}
+                            Inactivo
                           </ThemedText>
-                        </View>
+                        </TouchableOpacity>
+
+                        {/* Pendiente */}
+                        <TouchableOpacity
+                          style={[
+                            styles.selectOption,
+                            { borderColor: colors.border },
+                            formData.status === 2 && {
+                              backgroundColor: '#f59e0b',
+                              borderColor: '#f59e0b',
+                            },
+                          ]}
+                          onPress={() => {
+                            const statusValue = 2;
+                            setFormData(prev => ({ ...prev, status: statusValue }));
+                            // Aplicar cambios automáticamente al estado
+                            updateItem(item.id, { status: statusValue });
+                          }}
+                        >
+                          <ThemedText
+                            type="caption"
+                            style={[
+                              formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text },
+                              { fontSize: 12 }
+                            ]}
+                          >
+                            Pendiente
+                          </ThemedText>
+                        </TouchableOpacity>
+
+                        {/* Eliminado */}
+                        <TouchableOpacity
+                          style={[
+                            styles.selectOption,
+                            { borderColor: colors.border },
+                            formData.status === -1 && {
+                              backgroundColor: '#6b7280',
+                              borderColor: '#6b7280',
+                            },
+                          ]}
+                          onPress={() => {
+                            const statusValue = -1;
+                            setFormData(prev => ({ ...prev, status: statusValue }));
+                            // Aplicar cambios automáticamente al estado
+                            updateItem(item.id, { status: statusValue });
+                          }}
+                        >
+                          <ThemedText
+                            type="caption"
+                            style={[
+                              formData.status === -1 ? { color: '#FFFFFF' } : { color: colors.text },
+                              { fontSize: 12 }
+                            ]}
+                          >
+                            Eliminado
+                          </ThemedText>
+                        </TouchableOpacity>
                       </View>
+                    </ScrollView>
+                    <View style={styles.publicToggleContainer}>
+                      <CustomSwitch
+                        value={formData.isPublic || false}
+                        onValueChange={(newValue) => {
+                          setFormData(prev => ({ ...prev, isPublic: newValue }));
+                          updateItem(item.id, { isPublic: newValue });
+                        }}
+                        label="Público"
+                      />
                     </View>
                   </View>
                 </View>
@@ -1035,51 +2315,354 @@ export function MenuAdminScreen() {
               <Button 
                 title="Cancelar" 
                 onPress={() => {
+                  // Si es un item nuevo, eliminarlo del estado
+                  if (item.id.startsWith('new-')) {
+                    const removeNewItem = (items: MenuAdminItem[]): MenuAdminItem[] => {
+                      return items
+                        .map(item => ({
+                          ...item,
+                          submenu: item.submenu ? removeNewItem(item.submenu.filter(sub => sub.id !== editingItemId)) : undefined,
+                          columns: item.columns ? item.columns.map(col => ({
+                            ...col,
+                            items: col.items ? removeNewItem(col.items.filter(ci => ci.id !== editingItemId)) : [],
+                          })) : undefined,
+                        }))
+                        .filter(item => item.id !== editingItemId);
+                    };
+                    setMenuItems(prev => removeNewItem(prev));
+                  }
                   cancelEdit();
-                  // Recargar para restaurar valores originales
-                  loadMenuItems();
+                  // Solo recargar si no es un item nuevo
+                  if (!item.id.startsWith('new-')) {
+                    loadMenuItems();
+                  }
                 }} 
                 variant="outlined" 
                 size="sm" 
               />
+              {/* Botón Guardar para items nuevos y edición de items existentes */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {savingItem && <ActivityIndicator size="small" color={colors.primary} />}
+                <Button 
+                  title={savingItem ? "Guardando..." : "Guardar"} 
+                  onPress={() => saveSingleItem(item.id)} 
+                  variant="primary" 
+                  size="sm"
+                  disabled={savingItem}
+                />
+              </View>
             </View>
               </View>
             )}
 
-        {/* Submenu expandido */}
+        {/* Contenido expandido: Submenu, Botón Agregar Agrupamiento, y Columns */}
+        {/* Submenu expandido (antes de las columnas, tal como lo devuelve el servicio) */}
         {isExpanded && item.submenu && item.submenu.length > 0 && (
           <View style={{ marginTop: 8 }}>
             {item.submenu.map((subItem, subIndex) => renderMenuItem(subItem, subIndex))}
           </View>
         )}
 
-        {/* Columns expandidas */}
+        {/* Botón para agregar nuevo agrupamiento (entre subitems y columnas, solo para items padre) */}
+        {isExpanded && item.level === 0 && (
+          <View style={{ marginTop: 8 }}>
+            <TouchableOpacity
+              onPress={() => addNewColumn(item.id)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 12,
+                backgroundColor: colors.surface,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderStyle: 'dashed',
+                marginBottom: 8,
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+              <ThemedText type="body2" style={{ marginLeft: 8, color: colors.primary }}>
+                Agregar Agrupamiento
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Columns expandidas (después de los subitems y el botón de agregar agrupamiento) */}
         {isExpanded && item.columns && item.columns.length > 0 && (
           <View style={{ marginTop: 8 }}>
-            {item.columns.map((column) => (
-              <View key={column.id} style={{ marginBottom: 16 }}>
-                <ThemedText type="subtitle" style={{ marginBottom: 8, fontWeight: '600' }}>
-                  {column.title}
-                </ThemedText>
+            {item.columns.map((column) => {
+              const isDraggingColumn = draggingColumnId === column.id;
+              const isDragOverColumn = dragOverColumnId === column.id;
+              
+              return (
+              <View 
+                key={column.id} 
+                style={{ 
+                  marginBottom: 16, 
+                  padding: 12, 
+                  backgroundColor: (isDragOverColumn || (draggingItemId && dragOverColumnId === column.id))
+                    ? colors.primary + '20' 
+                    : colors.surfaceVariant, 
+                  borderRadius: 8,
+                  opacity: isDraggingColumn ? 0.5 : 1,
+                }}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: () => {
+                    // Si se está arrastrando una columna
+                    if (draggingColumnId && draggingColumnId !== column.id) {
+                      dragOverColumnRef.current = column.id;
+                      setDragOverColumnId(column.id);
+                    }
+                    // Si se está arrastrando un item, detectar que está sobre la columna
+                    if (draggingItemId && draggingItemId !== column.id) {
+                      dragOverColumnRef.current = column.id;
+                      dragOverColumnParentRef.current = item.id;
+                      setDragOverColumnId(column.id);
+                      setDragOverColumnParentId(item.id);
+                    }
+                  },
+                  onMouseLeave: () => {
+                    if (dragOverColumnId === column.id) {
+                      setDragOverColumnId(null);
+                      setDragOverColumnParentId(null);
+                    }
+                  },
+                } : {})}
+              >
+                {/* Header de la columna con título editable */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  {/* Icono de reordenar a la izquierda */}
+                  <Tooltip text="Mover" position="top">
+                    <View
+                      style={[
+                        {
+                          marginRight: 8,
+                          padding: 4,
+                        },
+                        Platform.OS === 'web' && { cursor: 'grab' } as any,
+                      ]}
+                      {...(Platform.OS === 'web' ? {
+                        onMouseDown: (e: any) => handleColumnMouseDown(e, item.id, column.id),
+                      } : {})}
+                    >
+                      <Ionicons
+                        name="reorder-three-outline"
+                        size={20}
+                        color={colors.textSecondary}
+                      />
+                    </View>
+                  </Tooltip>
+                  {editingColumnId === column.id ? (
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TextInput
+                        value={editingColumnTitle}
+                        onChangeText={setEditingColumnTitle}
+                        style={{
+                          flex: 1,
+                          padding: 8,
+                          backgroundColor: colors.background,
+                          borderRadius: 4,
+                          borderWidth: 1,
+                          borderColor: colors.primary,
+                          color: colors.text,
+                          fontSize: 14,
+                          fontWeight: '600',
+                        }}
+                        placeholder="Título de la columna"
+                        placeholderTextColor={colors.textSecondary}
+                        autoFocus
+                        onBlur={() => {
+                          if (editingColumnTitle.trim()) {
+                            updateColumnTitle(item.id, column.id, editingColumnTitle.trim());
+                          } else {
+                            setEditingColumnId(null);
+                            setEditingColumnTitle('');
+                          }
+                        }}
+                        onSubmitEditing={() => {
+                          if (editingColumnTitle.trim()) {
+                            updateColumnTitle(item.id, column.id, editingColumnTitle.trim());
+                          } else {
+                            setEditingColumnId(null);
+                            setEditingColumnTitle('');
+                          }
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (editingColumnTitle.trim()) {
+                            updateColumnTitle(item.id, column.id, editingColumnTitle.trim());
+                          } else {
+                            setEditingColumnId(null);
+                            setEditingColumnTitle('');
+                          }
+                        }}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setEditingColumnId(null);
+                          setEditingColumnTitle('');
+                        }}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="close" size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => startEditColumnTitle(item.id, column.id, column.title)}
+                        style={{ flex: 1 }}
+                      >
+                        <ThemedText type="subtitle" style={{ fontWeight: '600', color: colors.text }}>
+                          {column.title}
+                        </ThemedText>
+                      </TouchableOpacity>
+                      <Tooltip text="Eliminar agrupamiento" position="top">
+                        <TouchableOpacity
+                          onPress={() => {
+                            // Si tiene items, mostrar confirmación
+                            if (column.items && column.items.length > 0) {
+                              alert.showConfirm(
+                                'Eliminar agrupamiento',
+                                '¿Está seguro de eliminar este agrupamiento? Los items se moverán al submenu del padre.',
+                                () => {
+                                  deleteColumnAndMoveItemsToSubmenu(item.id, column.id);
+                                  alert.showSuccess('Agrupamiento eliminado. Los items se movieron al submenu.');
+                                },
+                                () => {}
+                              );
+                            } else {
+                              // Si no tiene items, eliminar directamente
+                              deleteColumnAndMoveItemsToSubmenu(item.id, column.id);
+                            }
+                          }}
+                          style={{ padding: 4 }}
+                        >
+                          <Ionicons name="trash-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                      </Tooltip>
+                      <TouchableOpacity
+                        onPress={() => addItemToColumn(item.id, column.id)}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+                {/* Items de la columna */}
                 {column.items.map((colItem, colIndex) => renderMenuItem(colItem, colIndex))}
               </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
     );
   };
 
-  // Filtrar items
-  const filteredItems = menuItems.filter(item => {
-    if (!searchValue) return true;
-    const searchLower = searchValue.toLowerCase();
-    return (
+  // Función recursiva para verificar si un item o sus hijos coinciden con la búsqueda
+  // Función para verificar si un item coincide con la búsqueda
+  const itemMatchesSearch = (item: MenuAdminItem, searchLower: string): boolean => {
+    // Verificar el item actual
+    const matchesItem = 
       item.label.toLowerCase().includes(searchLower) ||
       item.route?.toLowerCase().includes(searchLower) ||
-      item.description?.toLowerCase().includes(searchLower)
-    );
-  });
+      item.description?.toLowerCase().includes(searchLower);
+    
+    if (matchesItem) return true;
+    
+    // Verificar en submenu recursivamente
+    if (item.submenu && item.submenu.length > 0) {
+      for (const subItem of item.submenu) {
+        if (itemMatchesSearch(subItem, searchLower)) {
+          return true;
+        }
+      }
+    }
+    
+    // Verificar en columns recursivamente
+    if (item.columns && item.columns.length > 0) {
+      for (const col of item.columns) {
+        if (col.items && col.items.length > 0) {
+          for (const colItem of col.items) {
+            if (itemMatchesSearch(colItem, searchLower)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    return false;
+  };
+
+  // Función para filtrar recursivamente items y sus hijos
+  const filterItemRecursively = (item: MenuAdminItem, searchLower: string): MenuAdminItem | null => {
+    // Verificar si el item actual coincide
+    const itemMatches = 
+      item.label.toLowerCase().includes(searchLower) ||
+      item.route?.toLowerCase().includes(searchLower) ||
+      item.description?.toLowerCase().includes(searchLower);
+    
+    // Filtrar submenu recursivamente
+    let filteredSubmenu: MenuAdminItem[] | undefined;
+    if (item.submenu && item.submenu.length > 0) {
+      filteredSubmenu = item.submenu
+        .map(subItem => filterItemRecursively(subItem, searchLower))
+        .filter((subItem): subItem is MenuAdminItem => subItem !== null);
+    }
+    
+    // Filtrar columns recursivamente
+    let filteredColumns: MenuAdminColumn[] | undefined;
+    if (item.columns && item.columns.length > 0) {
+      filteredColumns = item.columns
+        .map(col => {
+          const filteredColItems = col.items
+            .map(colItem => filterItemRecursively(colItem, searchLower))
+            .filter((colItem): colItem is MenuAdminItem => colItem !== null);
+          
+          if (filteredColItems.length > 0) {
+            return {
+              ...col,
+              items: filteredColItems,
+            };
+          }
+          return null;
+        })
+        .filter((col): col is MenuAdminColumn => col !== null);
+      
+      if (filteredColumns.length === 0) {
+        filteredColumns = undefined;
+      }
+    }
+    
+    // Si el item coincide o tiene hijos filtrados que coinciden, incluirlo
+    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
+      return {
+        ...item,
+        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
+        columns: filteredColumns,
+      };
+    }
+    
+    return null;
+  };
+
+  // Filtrar items (incluyendo búsqueda recursiva en subniveles)
+  const filteredItems = menuItems
+    .map(item => {
+      if (!searchValue) return item;
+      const searchLower = searchValue.toLowerCase();
+      return filterItemRecursively(item, searchLower);
+    })
+    .filter((item): item is MenuAdminItem => item !== null);
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -1093,6 +2676,19 @@ export function MenuAdminScreen() {
               color={colors.textSecondary}
               style={{ position: 'absolute', left: 12, top: 14, zIndex: 1 }}
             />
+            {searchValue.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchValue('')}
+                style={{ position: 'absolute', right: 12, top: 14, zIndex: 1, padding: 4 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
             <InputWithFocus
               containerStyle={{
                 borderWidth: 1,
@@ -1100,6 +2696,7 @@ export function MenuAdminScreen() {
                 borderRadius: 8,
                 backgroundColor: colors.surface,
                 paddingLeft: 40,
+                paddingRight: searchValue.length > 0 ? 40 : 12,
               }}
               primaryColor={colors.primary}
             >
@@ -1116,10 +2713,7 @@ export function MenuAdminScreen() {
           </View>
           <Button
             title="Nuevo Item"
-            onPress={() => {
-              // TODO: Implementar crear nuevo item
-              alert.showInfo('Funcionalidad en desarrollo');
-            }}
+            onPress={addRootItem}
             variant="primary"
             size="md"
           />
@@ -1166,17 +2760,26 @@ export function MenuAdminScreen() {
           <ThemedText type="body2" style={{ color: colors.textSecondary }}>
             {getModifiedItems().size} {getModifiedItems().size === 1 ? 'cambio pendiente' : 'cambios pendientes'} de guardar
           </ThemedText>
-          <Button
-            title="Guardar cambios"
-            onPress={handleSaveChanges}
-            variant="primary"
-            size="md"
-            disabled={savingChanges}
-          >
-            {savingChanges && (
-              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-            )}
-          </Button>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <Button
+              title="Cancelar"
+              onPress={handleCancelChanges}
+              variant="outlined"
+              size="md"
+              disabled={savingChanges}
+            />
+            <Button
+              title="Guardar cambios"
+              onPress={handleSaveChanges}
+              variant="primary"
+              size="md"
+              disabled={savingChanges}
+            >
+              {savingChanges && (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+              )}
+            </Button>
+          </View>
         </View>
       )}
 

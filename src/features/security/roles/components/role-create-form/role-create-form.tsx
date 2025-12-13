@@ -12,13 +12,14 @@ import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { RolesService } from '../../services';
 import { CompaniesService } from '@/src/features/security/companies';
+import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { processCodeAndName } from '@/src/infrastructure/utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { createRoleFormStyles } from './role-create-form.styles';
 import { RoleCreateFormProps } from './role-create-form.types';
 
@@ -510,11 +511,9 @@ export function RoleCreateForm({
               {t.security?.roles?.systemRoleDescription || 'Los roles del sistema están protegidos contra eliminación'}
             </ThemedText>
           </View>
-          <Switch
+          <CustomSwitch
             value={formData.isSystem}
             onValueChange={(value) => handleChange('isSystem', value)}
-            trackColor={{ false: colors.border, true: colors.primary + '80' }}
-            thumbColor={formData.isSystem ? colors.primary : colors.textSecondary}
           />
         </View>
       </Card>
