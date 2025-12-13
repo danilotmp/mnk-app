@@ -4,6 +4,7 @@ import { AppConfig } from '@/src/config';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createVerticalMenuStyles } from '@/src/styles/components/vertical-menu.styles';
 import { Ionicons } from '@expo/vector-icons';
+import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -240,25 +241,6 @@ export function VerticalMenu({
     }
   };
 
-  const getIconName = (icon?: string): keyof typeof Ionicons.glyphMap => {
-    if (!icon) return 'ellipse-outline';
-    // Mapear nombres comunes de iconos
-    const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
-      'home': 'home',
-      'dashboard': 'grid',
-      'settings': 'settings',
-      'user': 'person',
-      'users': 'people',
-      'security': 'lock-closed',
-      'roles': 'key',
-      'companies': 'business',
-      'branches': 'storefront',
-      'products': 'cube',
-      'services': 'construct',
-      'about': 'information-circle',
-    };
-    return iconMap[icon.toLowerCase()] || (icon as keyof typeof Ionicons.glyphMap) || 'ellipse-outline';
-  };
 
   // Función para comparar rutas (igual que HorizontalMenu)
   const isRouteMatch = (currentPath: string, route: string): boolean => {
@@ -318,7 +300,6 @@ export function VerticalMenu({
             const hasChildren = hasSubmenu || hasColumns;
             const isActive = isItemActive(item);
             const isExpanded = isItemExpanded(item);
-            const iconName = getIconName(item.icon);
 
             // Verificar si algún item hijo está activo
             const hasActiveChild = hasSubmenu
@@ -340,8 +321,8 @@ export function VerticalMenu({
                     activeOpacity={0.7}
                 >
                     <View style={styles.menuItemContent}>
-                    <Ionicons
-                        name={iconName}
+                    <DynamicIcon
+                        name={item.icon || 'ellipse-outline'}
                         size={20}
                         color={(isActive || hasActiveChild) ? activeItemColor : colors.textSecondary}
                         style={styles.menuItemIcon}
@@ -376,7 +357,6 @@ export function VerticalMenu({
                     <View style={styles.submenuContainer}>
                     {item.submenu!.map((subItem) => {
                         const isSubActive = isSubItemActive(subItem);
-                        const subIconName = getIconName(subItem.icon);
 
                         return (
                         <TouchableOpacity
@@ -390,8 +370,8 @@ export function VerticalMenu({
                         >
                             <View style={styles.submenuItemContent}>
                             {subItem.icon && (
-                                <Ionicons
-                                name={subIconName}
+                                <DynamicIcon
+                                name={subItem.icon}
                                 size={16}
                                 color={isSubActive ? activeItemColor : colors.textSecondary}
                                 style={styles.submenuItemIcon}
@@ -434,7 +414,6 @@ export function VerticalMenu({
                         {/* Items de la columna */}
                         {column.items.map((colItem) => {
                             const isColActive = activeItemId === colItem.id;
-                            const colIconName = getIconName(colItem.icon);
 
                             return (
                             <TouchableOpacity
@@ -448,8 +427,8 @@ export function VerticalMenu({
                             >
                                 <View style={styles.columnItemContent}>
                                 {colItem.icon && (
-                                    <Ionicons
-                                    name={colIconName}
+                                    <DynamicIcon
+                                    name={colItem.icon}
                                     size={16}
                                     color={isColActive ? activeItemColor : colors.textSecondary}
                                     style={styles.columnItemIcon}

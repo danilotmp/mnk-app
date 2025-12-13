@@ -11,6 +11,7 @@ export interface MenuItem {
   label: string;
   route?: string;
   description?: string;
+  icon?: string; // Nombre del icono (formato: "Familia:Nombre" o solo "Nombre" para Ionicons)
   isPublic?: boolean; // Si es true, es una opción pública (opción por defecto)
   columns?: MenuColumn[];
   submenu?: MenuSubItem[];

@@ -24,15 +24,18 @@ export class MenuService {
    * incluso si el backend no las devuelve en el menú
    * 
    * @param language Idioma del menú (es, en, pt)
-   * @param showAll Si es true, solicita todas las opciones disponibles del menú (para administración)
+   * @param showAll Si es true, solicita todas las opciones disponibles del menú (envía showAll=true)
+   * @param admin Si es true, solicita el menú para administración (envía admin=true, solo para pantalla de admin)
    * @returns Array de items del menú (merge del backend + páginas públicas)
    */
-  static async getMenu(language: string = 'es', showAll: boolean = false): Promise<MenuItem[]> {
+  static async getMenu(language: string = 'es', showAll: boolean = false, admin: boolean = false): Promise<MenuItem[]> {
     try {
       // El endpoint NO debe recibir roleId como parámetro.
       // El roleId se extrae del token JWT en el header Authorization por el backend.
       const queryParams = new URLSearchParams();
-      if (showAll) {
+      if (admin) {
+        queryParams.append('admin', 'true');
+      } else if (showAll) {
         queryParams.append('showAll', 'true');
       }
       
@@ -209,7 +212,9 @@ export class MenuService {
         throw new Error('companyId es requerido');
       }
 
-      // LOGS SESSION STORAGE: Aquí se agregará el log del companyId a enviar
+      // Log para depuración: ver qué companyId se está enviando
+      console.log(`[MenuService.getMenuForCompany] Enviando request con companyId: ${companyId}`);
+      console.log(`[MenuService.getMenuForCompany] URL completa: ${API_CONFIG.ENDPOINTS.MENU}?companyId=${companyId}`);
 
       const queryParams = new URLSearchParams();
       queryParams.append('companyId', companyId);
@@ -236,6 +241,67 @@ export class MenuService {
       }
       // Para otros errores, devolver menú por defecto
       return this.getDefaultMenu();
+    }
+  }
+
+  /**
+   * Sincronización masiva de items del menú
+   * Envía todo el árbol del menú y el backend detecta qué crear, actualizar o eliminar
+   * 
+   * @param items Array completo de items del menú (árbol completo)
+   * @returns Respuesta con items procesados y resumen de cambios
+   */
+  static async syncMenuItems(items: MenuItem[]): Promise<{
+    data: {
+      items: MenuItem[];
+      summary: {
+        total: number;
+        created: number;
+        updated: number;
+        activated: number;
+      };
+    };
+    result: {
+      statusCode: number;
+      description: string;
+      details?: any;
+    };
+  }> {
+    try {
+      // Validar que items no esté vacío
+      if (!items || items.length === 0) {
+        throw new Error('No hay items para sincronizar');
+      }
+
+      const body = { items };
+      console.log('Enviando items al backend:', JSON.stringify(body, null, 2));
+      
+      const response = await apiClient.request<{
+        items: MenuItem[];
+        summary: {
+          total: number;
+          created: number;
+          updated: number;
+          activated: number;
+        };
+      }>({
+        endpoint: API_CONFIG.ENDPOINTS.MENU_SYNC,
+        method: 'PUT',
+        skipAuth: false,
+        body,
+      });
+
+      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+        return {
+          data: response.data,
+          result: response.result,
+        };
+      }
+
+      throw new Error(response.result?.description || 'Error al sincronizar el menú');
+    } catch (error: any) {
+      console.error('Error al sincronizar menú:', error);
+      throw error;
     }
   }
 }

@@ -36,6 +36,7 @@ export const API_CONFIG = {
     PROFILE: '/security/profile',
     CURRENT_USER: '/users/me',
     MENU: '/security/menu', // Endpoint único: con token devuelve público+privado, sin token no se llama
+    MENU_SYNC: '/security/admin/menu-items/sync', // Endpoint para sincronización masiva del menú
     ACCESS_CHECK: '/security/access',
   },
 };

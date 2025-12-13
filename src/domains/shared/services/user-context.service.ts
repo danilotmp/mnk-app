@@ -114,9 +114,18 @@ export class UserContextService {
       return;
     }
 
-    const currentCompanyId = await this.userSessionService.getCurrentCompany();
-    if (!currentCompanyId) {
-      await this.userSessionService.setCurrentCompany(user.companyIdDefault, true);
+    // IMPORTANTE: SIEMPRE usar companyIdDefault del UserResponse como fuente de verdad
+    // No confiar en session storage que puede tener valores antiguos
+    let currentCompanyId = await this.userSessionService.getCurrentCompany();
+    
+    // Si no hay currentCompanyId en session storage O si es diferente del companyIdDefault del login,
+    // usar el companyIdDefault del UserResponse (que es la fuente de verdad del login)
+    if (!currentCompanyId || currentCompanyId !== user.companyIdDefault) {
+      if (user.companyIdDefault) {
+        console.log(`[initializeContext] Actualizando currentCompanyId: ${currentCompanyId} -> ${user.companyIdDefault}`);
+        currentCompanyId = user.companyIdDefault;
+        await this.userSessionService.setCurrentCompany(user.companyIdDefault, true);
+      }
     }
 
     const currentBranchId = await this.userSessionService.getCurrentBranch();
@@ -125,8 +134,7 @@ export class UserContextService {
     }
 
     const menu = await this.userSessionService.getMenu();
-    if (!menu) {
-      const companyId = currentCompanyId || user.companyIdDefault;
+    if (!menu && currentCompanyId) {
       try {
         // Verificar nuevamente que el token esté disponible antes de llamar al menú
         const { apiClient } = await import('@/src/infrastructure/api/api.client');
@@ -136,7 +144,8 @@ export class UserContextService {
           return;
         }
         
-        const newMenu = await MenuService.getMenuForCompany(companyId);
+        console.log(`[initializeContext] Llamando a MenuService.getMenuForCompany con companyId: ${currentCompanyId}`);
+        const newMenu = await MenuService.getMenuForCompany(currentCompanyId);
         await this.userSessionService.setMenu(newMenu, true);
       } catch (error: any) {
         // Si es un error 401, no hacer nada (el menú se cargará después cuando el token esté disponible)

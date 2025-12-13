@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { DynamicIcon, getIconFamilies } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 interface IconInputProps {
@@ -88,6 +88,34 @@ export function IconInput({
       setContainerLayout({ x: pageX, y: pageY, width, height });
     });
   };
+
+  // Actualizar posición del dropdown cuando hay scroll o cambios de layout
+  useEffect(() => {
+    if (isDropdownOpen) {
+      const updatePosition = () => {
+        containerRef.current?.measure((x, y, width, height, pageX, pageY) => {
+          setContainerLayout({ x: pageX, y: pageY, width, height });
+        });
+      };
+
+      // Actualizar posición periódicamente mientras el dropdown está abierto
+      const interval = setInterval(updatePosition, 100);
+
+      // También actualizar en eventos de scroll
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
+      }
+
+      return () => {
+        clearInterval(interval);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.removeEventListener('scroll', updatePosition, true);
+          window.removeEventListener('resize', updatePosition);
+        }
+      };
+    }
+  }, [isDropdownOpen]);
 
   return (
     <View style={styles.container}>

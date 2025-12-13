@@ -57,7 +57,7 @@ export const AppConfig = {
     // - 'mix': Menú horizontal para opciones públicas + menú vertical para opciones privadas
     // Nota: El menú horizontal siempre se muestra antes del login.
     // Después del login, se aplica la configuración aquí definida.
-    menuType: process.env.EXPO_PUBLIC_MENU_TYPE || 'vertical',
+    menuType: process.env.EXPO_PUBLIC_MENU_TYPE || 'mix',
     // Ancho del menú vertical cuando está expandido (en píxeles)
     verticalMenuExpandedWidth: 240,
     // Ancho del menú vertical cuando está colapsado (solo iconos)
