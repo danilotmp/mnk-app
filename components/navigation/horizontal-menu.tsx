@@ -1,25 +1,25 @@
 import { ThemedText } from '@/components/themed-text';
+import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
-import { useTranslation } from '@/src/infrastructure/i18n';
 import { AppConfig } from '@/src/config';
-import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { useTranslation } from '@/src/infrastructure/i18n';
+import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View,
-  useWindowDimensions
+    Animated,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View,
+    useWindowDimensions
 } from 'react-native';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
 
 export interface MenuItem {
   id: string;
@@ -657,6 +657,437 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     }
   }, [mobileMenuOpen]);
 
+  // Función auxiliar recursiva para renderizar solo los hijos de un item (sin el botón principal)
+  // Se usa cuando un item tiene hijos y queremos renderizarlos recursivamente
+  const renderMobileMenuItemChildren = (item: MenuItem, level: number, parentId: string): React.ReactNode => {
+    const isRouteMatch = (pathname: string, route: string): boolean => {
+      if (!route) return false;
+      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+      if (normalizedPath === normalizedRoute) return true;
+      if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+      if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+      return normalizedPath.includes('/' + normalizedRoute + '/');
+    };
+
+    return (
+      <View style={{ marginLeft: 16 }}>
+        {item.submenu && item.submenu.length > 0 && (
+          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+            {item.submenu.map((subItem) => {
+              const subIsActive = activeSubmenuItem === subItem.id || 
+                                 (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
+              return (
+                <View key={subItem.id}>
+                  <TouchableOpacity
+                    style={[
+                      styles.submenuItem,
+                      subIsActive && styles.activeSubmenuItem
+                    ]}
+                    onPress={() => handleSubmenuItemPress(subItem, parentId)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                      {subItem.icon && (
+                        <DynamicIcon
+                          name={subItem.icon}
+                          size={16}
+                          color={subIsActive ? activeItemColor : colors.textSecondary}
+                        />
+                      )}
+                      <ThemedText 
+                        type="body2" 
+                        style={{ 
+                          color: subIsActive ? activeItemColor : colors.text,
+                          opacity: subIsActive ? 1 : 0.8,
+                        }}
+                      >
+                        {subItem.label}
+                      </ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                  {/* Renderizar recursivamente si tiene hijos */}
+                  {(subItem.submenu || subItem.columns) && renderMobileMenuItemChildren(subItem, level + 1, subItem.id)}
+                </View>
+              );
+            })}
+          </View>
+        )}
+        {item.columns && item.columns.length > 0 && (
+          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+            {item.columns.map((column, colIdx) => (
+              <View key={colIdx} style={styles.mobileColumn}>
+                <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                  {column.title}
+                </ThemedText>
+                {column.items.map((colItem) => {
+                  const colIsActive = activeSubmenuItem === colItem.id || 
+                                     (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                  return (
+                    <View key={colItem.id}>
+                      <TouchableOpacity
+                        style={[
+                          styles.submenuItem,
+                          colIsActive && styles.activeSubmenuItem
+                        ]}
+                        onPress={() => handleSubmenuItemPress(colItem, parentId)}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                          {colItem.icon && (
+                            <DynamicIcon
+                              name={colItem.icon}
+                              size={16}
+                              color={colIsActive ? activeItemColor : colors.textSecondary}
+                            />
+                          )}
+                          <ThemedText 
+                            type="body2" 
+                            style={{ 
+                              color: colIsActive ? activeItemColor : colors.text,
+                              opacity: colIsActive ? 1 : 0.8,
+                            }}
+                          >
+                            {colItem.label}
+                          </ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                      {/* Renderizar recursivamente si tiene hijos */}
+                      {(colItem.submenu || colItem.columns) && renderMobileMenuItemChildren(colItem, level + 1, colItem.id)}
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Función recursiva para renderizar items del menú móvil
+  // Soporta items con submenu y columns anidados a cualquier nivel
+  const renderMobileMenuItem = (item: MenuItem, level: number = 0, parentId?: string): React.ReactNode => {
+    const isRouteMatch = (pathname: string, route: string): boolean => {
+      if (!route) return false;
+      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+      if (normalizedPath === normalizedRoute) return true;
+      if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
+      if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
+      return normalizedPath.includes('/' + normalizedRoute + '/');
+    };
+    
+    const isActive = activeMenuItem === item.id || 
+                     (item.route && pathname && isRouteMatch(pathname, item.route));
+    
+    // Verificar si algún hijo está activo (recursivamente)
+    const hasActiveChild = (() => {
+      if (item.submenu && item.submenu.length > 0) {
+        return item.submenu.some(subItem => {
+          const subIsActive = activeSubmenuItem === subItem.id || 
+                             (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
+          return subIsActive || (subItem.submenu && subItem.submenu.some(s => hasActiveChild.call({ submenu: [s] }))) ||
+                 (subItem.columns && subItem.columns.some(col => col.items.some(i => hasActiveChild.call({ submenu: [i] }))));
+        });
+      }
+      if (item.columns && item.columns.length > 0) {
+        return item.columns.some(column =>
+          column.items.some(subItem => {
+            const subIsActive = activeSubmenuItem === subItem.id || 
+                               (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
+            return subIsActive || (subItem.submenu && subItem.submenu.some(s => hasActiveChild.call({ submenu: [s] }))) ||
+                   (subItem.columns && subItem.columns.some(col => col.items.some(i => hasActiveChild.call({ submenu: [i] }))));
+          })
+        );
+      }
+      return false;
+    })();
+    
+    const hasActiveChildSimplified = (() => {
+      const checkItem = (it: MenuItem): boolean => {
+        const itemActive = activeSubmenuItem === it.id || 
+                          (it.route && pathname && isRouteMatch(pathname, it.route));
+        if (itemActive) return true;
+        if (it.submenu && it.submenu.length > 0) {
+          return it.submenu.some(checkItem);
+        }
+        if (it.columns && it.columns.length > 0) {
+          return it.columns.some(col => col.items.some(checkItem));
+        }
+        return false;
+      };
+      return checkItem(item);
+    })();
+    
+    const hasChildren = (item.submenu && item.submenu.length > 0) || (item.columns && item.columns.length > 0);
+    const isExpanded = activeSubmenu === item.id;
+    const isItemActive = isActive || hasActiveChildSimplified;
+    
+    return (
+      <View key={item.id} style={{ marginLeft: level * 16 }}>
+        <TouchableOpacity
+          style={[
+            styles.mobileMenuItem,
+            { borderBottomColor: colors.border },
+            isItemActive && { 
+              backgroundColor: activeItemColor + '15',
+              borderLeftWidth: 3,
+              borderLeftColor: activeItemColor,
+              paddingLeft: 13,
+            },
+          ]}
+          onPress={() => handleItemPress(item)}
+          activeOpacity={0.7}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            <DynamicIcon
+              name={item.icon || 'ellipse-outline'}
+              size={20}
+              color={isItemActive ? activeItemColor : colors.textSecondary}
+            />
+            <ThemedText 
+              type="body2"
+              style={{ 
+                color: isItemActive ? activeItemColor : colors.text,
+                flex: 1,
+              }}
+            >
+              {item.label}
+            </ThemedText>
+            {hasChildren && (
+              <Ionicons
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.textSecondary}
+                style={{ opacity: 0.6 }}
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Renderizar submenu recursivamente si está expandido */}
+        {isExpanded && item.submenu && item.submenu.length > 0 && (
+          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+            {item.submenu.map((subItem) => {
+              const subIsActive = activeSubmenuItem === subItem.id || 
+                                 (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
+              return (
+                <View key={subItem.id}>
+                  <TouchableOpacity
+                    style={[
+                      styles.submenuItem,
+                      subIsActive && styles.activeSubmenuItem
+                    ]}
+                    onPress={() => handleSubmenuItemPress(subItem, parentId || item.id)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                      {subItem.icon && (
+                        <DynamicIcon
+                          name={subItem.icon}
+                          size={16}
+                          color={subIsActive ? activeItemColor : colors.textSecondary}
+                        />
+                      )}
+                      <ThemedText 
+                        type="body2" 
+                        style={{ 
+                          color: subIsActive ? activeItemColor : colors.text,
+                          opacity: subIsActive ? 1 : 0.8,
+                        }}
+                      >
+                        {subItem.label}
+                      </ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                  {/* Renderizar recursivamente si tiene hijos - cuando el padre está expandido, mostrar hijos directamente */}
+                  {isExpanded && (subItem.submenu || subItem.columns) && (
+                    <View style={{ marginLeft: 16 }}>
+                      {subItem.submenu && subItem.submenu.length > 0 && (
+                        <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                          {subItem.submenu.map((nestedItem) => {
+                            const nestedIsActive = activeSubmenuItem === nestedItem.id || 
+                                                   (nestedItem.route && pathname && isRouteMatch(pathname, nestedItem.route));
+                            return (
+                              <View key={nestedItem.id}>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.submenuItem,
+                                    nestedIsActive && styles.activeSubmenuItem
+                                  ]}
+                                  onPress={() => handleSubmenuItemPress(nestedItem, subItem.id)}
+                                >
+                                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                    {nestedItem.icon && (
+                                      <DynamicIcon
+                                        name={nestedItem.icon}
+                                        size={16}
+                                        color={nestedIsActive ? activeItemColor : colors.textSecondary}
+                                      />
+                                    )}
+                                    <ThemedText 
+                                      type="body2" 
+                                      style={{ 
+                                        color: nestedIsActive ? activeItemColor : colors.text,
+                                        opacity: nestedIsActive ? 1 : 0.8,
+                                      }}
+                                    >
+                                      {nestedItem.label}
+                                    </ThemedText>
+                                  </View>
+                                </TouchableOpacity>
+                                {/* Continuar recursivamente si tiene más hijos */}
+                                {(nestedItem.submenu || nestedItem.columns) && (
+                                  <View style={{ marginLeft: 16 }}>
+                                    {nestedItem.submenu && nestedItem.submenu.length > 0 && (
+                                      <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                                        {nestedItem.submenu.map((deepItem) => renderMobileMenuItem(deepItem, level + 3, nestedItem.id))}
+                                      </View>
+                                    )}
+                                    {nestedItem.columns && nestedItem.columns.length > 0 && (
+                                      <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                                        {nestedItem.columns.map((deepColumn, deepColIdx) => (
+                                          <View key={deepColIdx} style={styles.mobileColumn}>
+                                            <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                                              {deepColumn.title}
+                                            </ThemedText>
+                                            {deepColumn.items.map((deepColItem) => renderMobileMenuItem(deepColItem, level + 3, nestedItem.id))}
+                                          </View>
+                                        ))}
+                                      </View>
+                                    )}
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+                      {subItem.columns && subItem.columns.length > 0 && (
+                        <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                          {subItem.columns.map((nestedColumn, nestedColIdx) => (
+                            <View key={nestedColIdx} style={styles.mobileColumn}>
+                              <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                                {nestedColumn.title}
+                              </ThemedText>
+                              {nestedColumn.items.map((nestedColItem) => {
+                                const nestedColIsActive = activeSubmenuItem === nestedColItem.id || 
+                                                          (nestedColItem.route && pathname && isRouteMatch(pathname, nestedColItem.route));
+                                return (
+                                  <View key={nestedColItem.id}>
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.submenuItem,
+                                        nestedColIsActive && styles.activeSubmenuItem
+                                      ]}
+                                      onPress={() => handleSubmenuItemPress(nestedColItem, subItem.id)}
+                                    >
+                                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                        {nestedColItem.icon && (
+                                          <DynamicIcon
+                                            name={nestedColItem.icon}
+                                            size={16}
+                                            color={nestedColIsActive ? activeItemColor : colors.textSecondary}
+                                          />
+                                        )}
+                                        <ThemedText 
+                                          type="body2" 
+                                          style={{ 
+                                            color: nestedColIsActive ? activeItemColor : colors.text,
+                                            opacity: nestedColIsActive ? 1 : 0.8,
+                                          }}
+                                        >
+                                          {nestedColItem.label}
+                                        </ThemedText>
+                                      </View>
+                                    </TouchableOpacity>
+                                    {/* Continuar recursivamente si tiene más hijos */}
+                                    {(nestedColItem.submenu || nestedColItem.columns) && (
+                                      <View style={{ marginLeft: 16 }}>
+                                        {nestedColItem.submenu && nestedColItem.submenu.length > 0 && (
+                                          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                                            {nestedColItem.submenu.map((deepItem) => renderMobileMenuItem(deepItem, level + 3, nestedColItem.id))}
+                                          </View>
+                                        )}
+                                        {nestedColItem.columns && nestedColItem.columns.length > 0 && (
+                                          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                                            {nestedColItem.columns.map((deepColumn, deepColIdx) => (
+                                              <View key={deepColIdx} style={styles.mobileColumn}>
+                                                <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                                                  {deepColumn.title}
+                                                </ThemedText>
+                                                {deepColumn.items.map((deepColItem) => renderMobileMenuItem(deepColItem, level + 3, nestedColItem.id))}
+                                              </View>
+                                            ))}
+                                          </View>
+                                        )}
+                                      </View>
+                                    )}
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Renderizar columns recursivamente si está expandido - mostrar todos los niveles cuando está expandido */}
+        {isExpanded && item.columns && item.columns.length > 0 && (
+          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+            {item.columns.map((column, colIdx) => (
+              <View key={colIdx} style={styles.mobileColumn}>
+                <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                  {column.title}
+                </ThemedText>
+                {column.items.map((colItem) => {
+                  const colIsActive = activeSubmenuItem === colItem.id || 
+                                     (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                  return (
+                    <View key={colItem.id}>
+                      <TouchableOpacity
+                        style={[
+                          styles.submenuItem,
+                          colIsActive && styles.activeSubmenuItem
+                        ]}
+                        onPress={() => handleSubmenuItemPress(colItem, parentId || item.id)}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                          {colItem.icon && (
+                            <DynamicIcon
+                              name={colItem.icon}
+                              size={16}
+                              color={colIsActive ? activeItemColor : colors.textSecondary}
+                            />
+                          )}
+                          <ThemedText 
+                            type="body2" 
+                            style={{ 
+                              color: colIsActive ? activeItemColor : colors.text,
+                              opacity: colIsActive ? 1 : 0.8,
+                            }}
+                          >
+                            {colItem.label}
+                          </ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                      {/* Renderizar recursivamente si tiene hijos - cuando el padre principal está expandido, mostrar todos los niveles */}
+                      {(colItem.submenu || colItem.columns) && renderMobileMenuItemChildren(colItem, level + 1, colItem.id)}
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Mobile: Hamburger Menu
   if (isMobile) {
     return (
@@ -807,192 +1238,8 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                     })
                     .filter((item): item is MenuItem => item !== null);
 
-                  return filteredItems.map((item) => (
-                  <View key={item.id}>
-                    {(() => {
-                      // Función para comparar rutas de manera flexible
-                      const isRouteMatch = (pathname: string, route: string): boolean => {
-                        if (!route) return false;
-                        const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                        const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
-                        if (normalizedPath === normalizedRoute) return true;
-                        if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                        if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                        return normalizedPath.includes('/' + normalizedRoute + '/');
-                      };
-                      
-                      // Verificar si este item principal está activo
-                      const isActive = activeMenuItem === item.id || 
-                                       (item.route && pathname && isRouteMatch(pathname, item.route));
-                      
-                      // Verificar si algún subitem de este menú padre está activo
-                      let hasActiveSubitem = false;
-                      if (item.submenu) {
-                        hasActiveSubitem = item.submenu.some(subitem => {
-                          const subIsActive = activeSubmenuItem === subitem.id || 
-                                         (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                          return subIsActive;
-                        });
-                      } else if (item.columns) {
-                        hasActiveSubitem = item.columns.some(column =>
-                          column.items.some(subitem => {
-                            const subIsActive = activeSubmenuItem === subitem.id || 
-                                           (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                            return subIsActive;
-                          })
-                        );
-                      }
-                      
-                      const hasActiveChild = hasActiveSubitem;
-                      const isItemActive = isActive || hasActiveChild;
-                      
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.mobileMenuItem,
-                            { borderBottomColor: colors.border },
-                            isItemActive && { 
-                              backgroundColor: activeItemColor + '15',
-                              borderLeftWidth: 3,
-                              borderLeftColor: activeItemColor,
-                              paddingLeft: 13,
-                            },
-                          ]}
-                          onPress={() => handleItemPress(item)}
-                          activeOpacity={0.7}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                            <DynamicIcon
-                              name={item.icon || 'ellipse-outline'}
-                              size={20}
-                              color={isItemActive ? activeItemColor : colors.textSecondary}
-                            />
-                            <ThemedText 
-                              type="body2"
-                              style={{ 
-                                color: isItemActive ? activeItemColor : colors.text,
-                                flex: 1,
-                              }}
-                            >
-                              {item.label}
-                            </ThemedText>
-                            {(item.submenu || item.columns) && (
-                              <Ionicons
-                                name={activeSubmenu === item.id ? 'chevron-up' : 'chevron-down'}
-                                size={16}
-                                color={colors.textSecondary}
-                                style={{ opacity: 0.6 }}
-                              />
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })()}
-
-                    {(item.submenu || item.columns) && activeSubmenu === item.id && (
-                      <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
-                        {item.submenu?.map((subitem) => {
-                          // Función para comparar rutas de manera flexible
-                          const isRouteMatch = (pathname: string, route: string): boolean => {
-                            if (!route) return false;
-                            const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                            const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
-                            if (normalizedPath === normalizedRoute) return true;
-                            if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                            if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                            return normalizedPath.includes('/' + normalizedRoute + '/');
-                          };
-                          
-                          // Verificar si este item debe estar activo basándose en la ruta actual
-                          // Esto es más confiable que depender solo del estado activeSubmenuItem
-                          const isActive = activeSubmenuItem === subitem.id || 
-                                           (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                          
-                          return (
-                            <TouchableOpacity
-                              key={subitem.id}
-                              style={[
-                                styles.submenuItem,
-                                isActive && styles.activeSubmenuItem
-                              ]}
-                              onPress={() => handleSubmenuItemPress(subitem, item.id)}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                                {subitem.icon && (
-                                  <DynamicIcon
-                                    name={subitem.icon}
-                                    size={16}
-                                    color={isActive ? activeItemColor : colors.textSecondary}
-                                  />
-                                )}
-                                <ThemedText 
-                                  type="body2" 
-                                  style={{ 
-                                    color: isActive ? activeItemColor : colors.text,
-                                    opacity: isActive ? 1 : 0.8,
-                                  }}
-                                >
-                                  {subitem.label}
-                                </ThemedText>
-                              </View>
-                            </TouchableOpacity>
-                          );
-                        })}
-                        {item.columns?.map((column, colIdx) => (
-                          <View key={colIdx} style={styles.mobileColumn}>
-                            <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
-                              {column.title}
-                            </ThemedText>
-                            {column.items.map((subitem) => {
-                              // Función para comparar rutas de manera flexible
-                              const isRouteMatch = (pathname: string, route: string): boolean => {
-                                if (!route) return false;
-                                const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                                const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
-                                if (normalizedPath === normalizedRoute) return true;
-                                if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                                if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                                return normalizedPath.includes('/' + normalizedRoute + '/');
-                              };
-                              
-                              const isActive = activeSubmenuItem === subitem.id || 
-                                               (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                              return (
-                                <TouchableOpacity
-                                  key={subitem.id}
-                                  style={[
-                                    styles.submenuItem,
-                                    isActive && styles.activeSubmenuItem
-                                  ]}
-                                  onPress={() => handleSubmenuItemPress(subitem, item.id)}
-                                >
-                                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                                    {subitem.icon && (
-                                      <DynamicIcon
-                                        name={subitem.icon}
-                                        size={16}
-                                        color={isActive ? activeItemColor : colors.textSecondary}
-                                      />
-                                    )}
-                                    <ThemedText 
-                                      type="body2" 
-                                      style={{ 
-                                        color: isActive ? activeItemColor : colors.text,
-                                        opacity: isActive ? 1 : 0.8,
-                                      }}
-                                    >
-                                      {subitem.label}
-                                    </ThemedText>
-                                  </View>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                ));
+                  // Usar función recursiva para renderizar todos los items
+                  return filteredItems.map((item) => renderMobileMenuItem(item, 0));
                 })()}
               </ScrollView>
               </Pressable>

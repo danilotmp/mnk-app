@@ -9,13 +9,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Animated,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Animated,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { MenuColumn, MenuItem } from './horizontal-menu';
 
@@ -282,6 +282,142 @@ export function VerticalMenu({
     return expandedItems.has(item.id);
   };
 
+  // Función auxiliar recursiva para renderizar solo los hijos de un item (sin el botón principal)
+  // Se usa cuando un item tiene hijos y queremos renderizarlos recursivamente
+  const renderVerticalMenuItemChildren = (item: MenuItem, level: number, parentItem: MenuItem): React.ReactNode => {
+    const isSubItemActive = (subItem: MenuItem): boolean => {
+      return !!(activeItemId === subItem.id || activeItemIdRef.current === subItem.id ||
+             (subItem.route && pathname && isRouteMatch(pathname, subItem.route)));
+    };
+
+    return (
+      <View style={{ marginLeft: 16 }}>
+        {item.submenu && item.submenu.length > 0 && (
+          <View style={styles.submenuContainer}>
+            {item.submenu.map((subItem) => {
+              const isSubActive = isSubItemActive(subItem);
+              const isSubExpanded = expandedItems.has(subItem.id);
+              const hasSubChildren = (subItem.submenu && subItem.submenu.length > 0) || (subItem.columns && subItem.columns.length > 0);
+
+              return (
+                <View key={subItem.id}>
+                  <TouchableOpacity
+                    style={[
+                      styles.submenuItem,
+                      isSubActive && { backgroundColor: activeItemColor + '10' },
+                    ]}
+                    onPress={() => hasSubChildren ? handleItemPress(subItem) : handleSubItemPress(parentItem, subItem)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.submenuItemContent}>
+                      {subItem.icon && (
+                        <DynamicIcon
+                          name={subItem.icon}
+                          size={16}
+                          color={isSubActive ? activeItemColor : colors.textSecondary}
+                          style={styles.submenuItemIcon}
+                        />
+                      )}
+                      <ThemedText
+                        type="caption"
+                        style={[
+                          styles.submenuItemLabel,
+                          { color: isSubActive ? activeItemColor : colors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {subItem.label}
+                      </ThemedText>
+                      {hasSubChildren && (
+                        <Ionicons
+                          name={isSubExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={12}
+                          color={colors.textSecondary}
+                          style={{ marginLeft: 4 }}
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                  {/* Renderizar recursivamente si tiene hijos y está expandido */}
+                  {isSubExpanded && (subItem.submenu || subItem.columns) && renderVerticalMenuItemChildren(subItem, level + 1, subItem)}
+                </View>
+              );
+            })}
+          </View>
+        )}
+        {item.columns && item.columns.length > 0 && (
+          <View style={styles.columnsContainer}>
+            {item.columns.map((column, colIdx) => (
+              <View key={colIdx} style={styles.columnContainer}>
+                {column.title && (
+                  <ThemedText
+                    type="caption"
+                    style={[
+                      styles.columnTitle,
+                      { color: colors.textSecondary, fontWeight: '600' },
+                    ]}
+                  >
+                    {column.title}
+                  </ThemedText>
+                )}
+                {column.items.map((colItem) => {
+                  const isColActive = activeItemId === colItem.id || activeItemIdRef.current === colItem.id ||
+                                    (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                  const isColExpanded = expandedItems.has(colItem.id);
+                  const hasColChildren = (colItem.submenu && colItem.submenu.length > 0) || (colItem.columns && colItem.columns.length > 0);
+
+                  return (
+                    <View key={colItem.id}>
+                      <TouchableOpacity
+                        style={[
+                          styles.columnItem,
+                          isColActive && { backgroundColor: activeItemColor + '10' },
+                        ]}
+                        onPress={() => hasColChildren ? handleItemPress(colItem) : handleColumnItemPress(parentItem, colItem)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.columnItemContent}>
+                          {colItem.icon && (
+                            <DynamicIcon
+                              name={colItem.icon}
+                              size={16}
+                              color={isColActive ? activeItemColor : colors.textSecondary}
+                              style={styles.columnItemIcon}
+                            />
+                          )}
+                          <ThemedText
+                            type="caption"
+                            style={[
+                              styles.columnItemLabel,
+                              { color: isColActive ? activeItemColor : colors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {colItem.label}
+                          </ThemedText>
+                          {hasColChildren && (
+                            <Ionicons
+                              name={isColExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={12}
+                              color={colors.textSecondary}
+                              style={{ marginLeft: 4 }}
+                            />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                      {/* Renderizar recursivamente si tiene hijos y está expandido */}
+                      {isColExpanded && (colItem.submenu || colItem.columns) && renderVerticalMenuItemChildren(colItem, level + 1, colItem)}
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Función para filtrar recursivamente items y sus hijos
   const filterItemRecursively = (item: MenuItem, searchLower: string): MenuItem | null => {
     const itemMatches = 
@@ -473,49 +609,62 @@ export function VerticalMenu({
                     </View>
                 </TouchableOpacity>
 
-                {/* Submenu simple (solo cuando está expandido y el texto se muestra) */}
+                {/* Submenu simple (solo cuando está expandido y el texto se muestra) - renderizado recursivo */}
                 {hasSubmenu && isExpanded && shouldShowText && (
                     <View style={styles.submenuContainer}>
                     {item.submenu!.map((subItem) => {
                         const isSubActive = isSubItemActive(subItem);
+                        const isSubExpanded = expandedItems.has(subItem.id);
+                        const hasSubChildren = (subItem.submenu && subItem.submenu.length > 0) || (subItem.columns && subItem.columns.length > 0);
 
                         return (
-                        <TouchableOpacity
-                            key={subItem.id}
-                            style={[
-                            styles.submenuItem,
-                            isSubActive && { backgroundColor: activeItemColor + '10' },
-                            ]}
-                            onPress={() => handleSubItemPress(item, subItem)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.submenuItemContent}>
-                            {subItem.icon && (
-                                <DynamicIcon
-                                name={subItem.icon}
-                                size={16}
-                                color={isSubActive ? activeItemColor : colors.textSecondary}
-                                style={styles.submenuItemIcon}
-                                />
-                            )}
-                            <ThemedText
-                                type="caption"
+                        <View key={subItem.id}>
+                            <TouchableOpacity
                                 style={[
-                                styles.submenuItemLabel,
-                                { color: isSubActive ? activeItemColor : colors.textSecondary },
+                                styles.submenuItem,
+                                isSubActive && { backgroundColor: activeItemColor + '10' },
                                 ]}
-                                numberOfLines={1}
+                                onPress={() => hasSubChildren ? handleItemPress(subItem) : handleSubItemPress(item, subItem)}
+                                activeOpacity={0.7}
                             >
-                                {subItem.label}
-                            </ThemedText>
-                            </View>
-                        </TouchableOpacity>
+                                <View style={styles.submenuItemContent}>
+                                {subItem.icon && (
+                                    <DynamicIcon
+                                    name={subItem.icon}
+                                    size={16}
+                                    color={isSubActive ? activeItemColor : colors.textSecondary}
+                                    style={styles.submenuItemIcon}
+                                    />
+                                )}
+                                <ThemedText
+                                    type="caption"
+                                    style={[
+                                    styles.submenuItemLabel,
+                                    { color: isSubActive ? activeItemColor : colors.textSecondary },
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    {subItem.label}
+                                </ThemedText>
+                                {hasSubChildren && (
+                                    <Ionicons
+                                        name={isSubExpanded ? 'chevron-up' : 'chevron-down'}
+                                        size={12}
+                                        color={colors.textSecondary}
+                                        style={{ marginLeft: 4 }}
+                                    />
+                                )}
+                                </View>
+                            </TouchableOpacity>
+                            {/* Renderizar recursivamente si tiene hijos y está expandido */}
+                            {isSubExpanded && (subItem.submenu || subItem.columns) && renderVerticalMenuItemChildren(subItem, 1, subItem)}
+                        </View>
                         );
                     })}
                     </View>
                 )}
 
-                {/* Columnas (mega menú) - solo cuando está expandido y el texto se muestra */}
+                {/* Columnas (mega menú) - solo cuando está expandido y el texto se muestra - renderizado recursivo */}
                 {hasColumns && isExpanded && shouldShowText && (
                     <View style={styles.columnsContainer}>
                     {item.columns!.map((column, colIdx) => (
@@ -534,39 +683,53 @@ export function VerticalMenu({
                         )}
                         {/* Items de la columna */}
                         {column.items.map((colItem) => {
-                            const isColActive = activeItemId === colItem.id;
+                            const isColActive = activeItemId === colItem.id || activeItemIdRef.current === colItem.id ||
+                                              (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                            const isColExpanded = expandedItems.has(colItem.id);
+                            const hasColChildren = (colItem.submenu && colItem.submenu.length > 0) || (colItem.columns && colItem.columns.length > 0);
 
                             return (
-                            <TouchableOpacity
-                                key={colItem.id}
-                                style={[
-                                styles.columnItem,
-                                isColActive && { backgroundColor: activeItemColor + '10' },
-                                ]}
-                                onPress={() => handleColumnItemPress(item, colItem)}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.columnItemContent}>
-                                {colItem.icon && (
-                                    <DynamicIcon
-                                    name={colItem.icon}
-                                    size={16}
-                                    color={isColActive ? activeItemColor : colors.textSecondary}
-                                    style={styles.columnItemIcon}
-                                    />
-                                )}
-                                <ThemedText
-                                    type="caption"
+                            <View key={colItem.id}>
+                                <TouchableOpacity
                                     style={[
-                                    styles.columnItemLabel,
-                                    { color: isColActive ? activeItemColor : colors.textSecondary },
+                                    styles.columnItem,
+                                    isColActive && { backgroundColor: activeItemColor + '10' },
                                     ]}
-                                    numberOfLines={1}
+                                    onPress={() => hasColChildren ? handleItemPress(colItem) : handleColumnItemPress(item, colItem)}
+                                    activeOpacity={0.7}
                                 >
-                                    {colItem.label}
-                                </ThemedText>
-                                </View>
-                            </TouchableOpacity>
+                                    <View style={styles.columnItemContent}>
+                                    {colItem.icon && (
+                                        <DynamicIcon
+                                        name={colItem.icon}
+                                        size={16}
+                                        color={isColActive ? activeItemColor : colors.textSecondary}
+                                        style={styles.columnItemIcon}
+                                        />
+                                    )}
+                                    <ThemedText
+                                        type="caption"
+                                        style={[
+                                        styles.columnItemLabel,
+                                        { color: isColActive ? activeItemColor : colors.textSecondary },
+                                        ]}
+                                        numberOfLines={1}
+                                    >
+                                        {colItem.label}
+                                    </ThemedText>
+                                    {hasColChildren && (
+                                        <Ionicons
+                                            name={isColExpanded ? 'chevron-up' : 'chevron-down'}
+                                            size={12}
+                                            color={colors.textSecondary}
+                                            style={{ marginLeft: 4 }}
+                                        />
+                                    )}
+                                    </View>
+                                </TouchableOpacity>
+                                {/* Renderizar recursivamente si tiene hijos y está expandido */}
+                                {isColExpanded && (colItem.submenu || colItem.columns) && renderVerticalMenuItemChildren(colItem, 1, colItem)}
+                            </View>
                             );
                         })}
                         </View>

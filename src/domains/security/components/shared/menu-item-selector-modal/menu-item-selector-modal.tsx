@@ -7,11 +7,11 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { CenteredModal } from '@/components/ui/centered-modal';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { useTheme } from '@/hooks/use-theme';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/src/infrastructure/i18n';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
 import { MenuItem } from '@/src/infrastructure/menu/types';
-import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -29,11 +29,15 @@ export interface MenuItemSelectorModalProps {
  * Solo retorna items que tienen route (son páginas, no módulos o grupos)
  * EXCLUYE items públicos (isPublic: true)
  * EXCLUYE items padre que tienen submenu o columns (solo incluye sus hijos)
+ * Soporta estructuras anidadas a cualquier nivel
  */
-const extractLastLevelItems = (items: MenuItem[]): Array<{ id: string; label: string; route?: string; description?: string; path: string; isPublic?: boolean }> => {
+const extractLastLevelItems = (items: MenuItem[], parentPath: string = ''): Array<{ id: string; label: string; route?: string; description?: string; path: string; isPublic?: boolean }> => {
   const result: Array<{ id: string; label: string; route?: string; description?: string; path: string; isPublic?: boolean }> = [];
   
   for (const item of items) {
+    // Construir el path actual
+    const currentPath = parentPath ? `${parentPath} > ${item.label}` : item.label;
+    
     // Verificar si el item tiene submenu o columns
     const hasSubmenu = item.submenu && item.submenu.length > 0;
     const hasColumns = item.columns && item.columns.length > 0;
@@ -46,45 +50,24 @@ const extractLastLevelItems = (items: MenuItem[]): Array<{ id: string; label: st
         label: item.label,
         route: item.route,
         description: item.description,
-        path: item.label,
+        path: currentPath,
         isPublic: item.isPublic,
       });
     }
     
-    // Buscar en submenu
-    if (item.submenu) {
-      for (const subItem of item.submenu) {
-        // EXCLUIR items públicos
-        if (subItem.route && !subItem.isPublic) {
-          result.push({
-            id: subItem.id,
-            label: subItem.label,
-            route: subItem.route,
-            description: subItem.description,
-            path: `${item.label} > ${subItem.label}`,
-            isPublic: subItem.isPublic,
-          });
-        }
-      }
+    // Buscar recursivamente en submenu
+    if (item.submenu && item.submenu.length > 0) {
+      const subItems = extractLastLevelItems(item.submenu, currentPath);
+      result.push(...subItems);
     }
     
-    // Buscar en columnas
-    if (item.columns) {
+    // Buscar recursivamente en columnas
+    if (item.columns && item.columns.length > 0) {
       for (const column of item.columns) {
-        if (column.items) {
-          for (const colItem of column.items) {
-            // EXCLUIR items públicos
-            if (colItem.route && !colItem.isPublic) {
-              result.push({
-                id: colItem.id,
-                label: colItem.label,
-                route: colItem.route,
-                description: colItem.description,
-                path: `${item.label} > ${column.title || ''} > ${colItem.label}`,
-                isPublic: colItem.isPublic,
-              });
-            }
-          }
+        if (column.items && column.items.length > 0) {
+          const columnPath = column.title ? `${currentPath} > ${column.title}` : currentPath;
+          const colItems = extractLastLevelItems(column.items, columnPath);
+          result.push(...colItems);
         }
       }
     }
@@ -211,7 +194,7 @@ export function MenuItemSelectorModal({
   const [showOnlySelected, setShowOnlySelected] = useState(true); // Preseleccionado al inicio
   
   // Extraer todos los items de último nivel (excluyendo públicos)
-  const lastLevelItems = extractLastLevelItems(menuItems);
+    const lastLevelItems = extractLastLevelItems(menuItems, '');
   
   // Inicializar todos los módulos como expandidos cuando se cargan los items
   useEffect(() => {

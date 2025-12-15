@@ -73,6 +73,42 @@ export function PermissionsManagementContent({
   };
 
   /**
+   * Función auxiliar recursiva para buscar menuItemId por route
+   * Retorna solo si el id es un UUID válido
+   */
+  const findMenuItemIdByRouteRecursive = (route: string, item: MenuItem): string | null => {
+    // Verificar el item actual
+    if (item.route === route) {
+      if (isValidUUID(item.id)) {
+        return item.id;
+      }
+      console.warn(`El menuItem con route "${route}" tiene un id inválido: "${item.id}". Debe ser un UUID.`);
+    }
+
+    // Buscar recursivamente en submenu
+    if (item.submenu && item.submenu.length > 0) {
+      for (const subItem of item.submenu) {
+        const found = findMenuItemIdByRouteRecursive(route, subItem);
+        if (found) return found;
+      }
+    }
+
+    // Buscar recursivamente en columns
+    if (item.columns && item.columns.length > 0) {
+      for (const column of item.columns) {
+        if (column.items && column.items.length > 0) {
+          for (const colItem of column.items) {
+            const found = findMenuItemIdByRouteRecursive(route, colItem);
+            if (found) return found;
+          }
+        }
+      }
+    }
+
+    return null;
+  };
+
+  /**
    * Buscar menuItemId por route en menuItems (recursivamente)
    * Retorna solo si el id es un UUID válido
    */
@@ -80,38 +116,8 @@ export function PermissionsManagementContent({
     if (!route) return null;
 
     for (const item of items) {
-      if (item.route === route) {
-        if (isValidUUID(item.id)) {
-          return item.id;
-        }
-        console.warn(`El menuItem con route "${route}" tiene un id inválido: "${item.id}". Debe ser un UUID.`);
-      }
-
-      if (item.submenu) {
-        for (const subItem of item.submenu) {
-          if (subItem.route === route) {
-            if (isValidUUID(subItem.id)) {
-              return subItem.id;
-            }
-            console.warn(`El menuItem del submenu con route "${route}" tiene un id inválido: "${subItem.id}". Debe ser un UUID.`);
-          }
-        }
-      }
-
-      if (item.columns) {
-        for (const column of item.columns) {
-          if (column.items) {
-            for (const columnItem of column.items) {
-              if (columnItem.route === route) {
-                if (isValidUUID(columnItem.id)) {
-                  return columnItem.id;
-                }
-                console.warn(`El menuItem de la columna con route "${route}" tiene un id inválido: "${columnItem.id}". Debe ser un UUID.`);
-              }
-            }
-          }
-        }
-      }
+      const found = findMenuItemIdByRouteRecursive(route, item);
+      if (found) return found;
     }
 
     return null;
