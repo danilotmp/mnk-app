@@ -362,6 +362,45 @@ export interface Translations {
         status: string;
       };
     };
+    menuAdmin?: {
+      expand: string;
+      collapse: string;
+      move: string;
+      addItem: string;
+      noUrl: string;
+      dropHere: string;
+      addGrouping: string;
+      deleteGrouping: string;
+      deleteGroupingConfirm: string;
+      deleteGroupingMessage: string;
+      groupingDeleted: string;
+      itemsMovedToSubmenu: string;
+      columnTitle: string;
+      columnTitlePlaceholder: string;
+      icon: string;
+      iconPlaceholder: string;
+      iconExample: string;
+      name: string;
+      namePlaceholder: string;
+      url: string;
+      urlPlaceholder: string;
+      description: string;
+      descriptionPlaceholder: string;
+      status: string;
+      active: string;
+      inactive: string;
+      deleted: string;
+      pending: string;
+      public: string;
+      saving: string;
+      save: string;
+      cancel: string;
+      newItem: string;
+      searchPlaceholder: string;
+      errorLoadingMenu: string;
+      errorSavingMenu: string;
+      errorOpeningIconsDoc: string;
+    };
   };
 }
 

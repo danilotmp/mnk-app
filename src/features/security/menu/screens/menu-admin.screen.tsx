@@ -17,6 +17,7 @@ import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-ic
 import { IconInput } from '@/src/domains/security/components/shared/icon-input/icon-input';
 import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import type { Translations } from '@/src/infrastructure/i18n/types';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
 import { MenuItem } from '@/src/infrastructure/menu/types';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
@@ -30,6 +31,7 @@ import { createMenuAdminStyles } from './menu-admin.screen.styles';
 export function MenuAdminScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const menuAdminTranslations = (t.security?.menuAdmin || {}) as NonNullable<NonNullable<Translations['security']>['menuAdmin']>;
   const { isMobile } = useResponsive();
   const alert = useAlert();
   const styles = createMenuAdminStyles(colors);
@@ -84,7 +86,7 @@ export function MenuAdminScreen() {
       setOriginalMenuItems(JSON.parse(JSON.stringify(adminItems))); // Deep copy para comparar cambios
     } catch (error: any) {
       console.error('Error al cargar menú:', error);
-      alert.showError('Error al cargar el menú');
+      alert.showError(menuAdminTranslations.errorLoadingMenu || 'Error al cargar el menú');
     } finally {
       setLoading(false);
     }
@@ -396,7 +398,7 @@ export function MenuAdminScreen() {
       }
     } catch (error: any) {
       console.error('Error al guardar item:', error);
-      alert.showError(error.message || 'Error al guardar el item');
+      alert.showError(error.message || menuAdminTranslations.errorSavingMenu || 'Error al guardar el item');
     } finally {
       setSavingItem(false);
     }
@@ -498,18 +500,84 @@ export function MenuAdminScreen() {
           }
         }
         
-        // Comparar recursivamente submenu y columns
+        // Comparar estructura de columns
+        const currentColumns = item.columns || [];
+        const originalColumns = originalItem?.columns || [];
+        
+        // Si la cantidad de columnas cambió, el padre está modificado
+        if (currentColumns.length !== originalColumns.length) {
+          modifiedIds.add(item.id);
+        }
+        
+        // Comparar cada columna
+        currentColumns.forEach((col, colIndex) => {
+          const originalCol = originalItem?.columns?.[colIndex];
+          
+          // Si la columna no existe en original, es nueva (padre modificado)
+          if (!originalCol) {
+            modifiedIds.add(item.id);
+            // Marcar todos los items de la nueva columna como modificados
+            col.items?.forEach(colItem => {
+              modifiedIds.add(colItem.id);
+            });
+          } else {
+            // Comparar título y orden de la columna
+            if (col.title !== originalCol.title || col.order !== originalCol.order) {
+              modifiedIds.add(item.id);
+            }
+            
+            // Comparar items dentro de la columna
+            if (col.items && originalCol.items) {
+              compareItems(col.items, originalCol.items);
+            } else if (col.items && col.items.length > 0) {
+              // Si la columna tiene items pero la original no, todos los items son nuevos
+              col.items.forEach(colItem => {
+                modifiedIds.add(colItem.id);
+              });
+              modifiedIds.add(item.id);
+            }
+          }
+        });
+        
+        // Comparar recursivamente submenu
         if (item.submenu && originalItem?.submenu) {
           compareItems(item.submenu, originalItem.submenu);
         }
-        if (item.columns && originalItem?.columns) {
-          item.columns.forEach((col, colIndex) => {
-            const originalCol = originalItem.columns?.[colIndex];
-            if (originalCol && col.items && originalCol.items) {
-              compareItems(col.items, originalCol.items);
-            }
+        
+        // Detectar items que se movieron de submenu a columnas o viceversa
+        const currentSubmenuIds = new Set((item.submenu || []).map(sub => sub.id));
+        const originalSubmenuIds = new Set((originalItem?.submenu || []).map(sub => sub.id));
+        
+        // Crear un set de IDs de items en columnas actuales
+        const currentColumnItemIds = new Set<string>();
+        currentColumns.forEach(col => {
+          col.items?.forEach(colItem => {
+            currentColumnItemIds.add(colItem.id);
           });
-        }
+        });
+        
+        // Crear un set de IDs de items en columnas originales
+        const originalColumnItemIds = new Set<string>();
+        originalColumns.forEach(col => {
+          col.items?.forEach(colItem => {
+            originalColumnItemIds.add(colItem.id);
+          });
+        });
+        
+        // Si un item estaba en submenu y ahora está en columnas (o viceversa), está modificado
+        currentSubmenuIds.forEach(itemId => {
+          if (originalColumnItemIds.has(itemId)) {
+            modifiedIds.add(itemId);
+            modifiedIds.add(item.id);
+          }
+        });
+        
+        currentColumnItemIds.forEach(itemId => {
+          if (originalSubmenuIds.has(itemId)) {
+            modifiedIds.add(itemId);
+            modifiedIds.add(item.id);
+          }
+        });
       });
     };
     
@@ -575,18 +643,35 @@ export function MenuAdminScreen() {
           ...item,
         };
         
-        // Incluir submenu/columns solo si hay hijos modificados
-        // Esto mantiene la estructura jerárquica que el backend necesita
-        if (modifiedSubmenu) {
-          extractedItem.submenu = modifiedSubmenu;
+        // Si el padre está modificado, incluir TODA su estructura tal como está en el estado actual
+        // Esto es necesario cuando se crean nuevas columnas o se mueven items
+        if (isItemModified) {
+          // Incluir submenu completo del estado actual
+          if (item.submenu && item.submenu.length > 0) {
+            extractedItem.submenu = item.submenu;
+          } else {
+            delete extractedItem.submenu;
+          }
+          
+          // Incluir columns completo del estado actual
+          if (item.columns && item.columns.length > 0) {
+            extractedItem.columns = item.columns;
+          } else {
+            delete extractedItem.columns;
+          }
         } else {
-          delete extractedItem.submenu;
-        }
-        
-        if (modifiedColumns) {
-          extractedItem.columns = modifiedColumns;
-        } else {
-          delete extractedItem.columns;
+          // Si el padre no está modificado, solo incluir hijos modificados
+          if (modifiedSubmenu) {
+            extractedItem.submenu = modifiedSubmenu;
+          } else {
+            delete extractedItem.submenu;
+          }
+          
+          if (modifiedColumns) {
+            extractedItem.columns = modifiedColumns;
+          } else {
+            delete extractedItem.columns;
+          }
         }
         
         return extractedItem;
@@ -715,12 +800,12 @@ export function MenuAdminScreen() {
           const errorMessages = errors.map((err: any) => err.error).join('\n');
           alert.showError(`Errores de validación:\n${errorMessages}`);
         } else {
-          alert.showError(result.result.description || 'Error al guardar los cambios');
+          alert.showError(result.result.description || menuAdminTranslations.errorSavingMenu || 'Error al guardar los cambios');
         }
       }
     } catch (error: any) {
       console.error('Error al guardar cambios:', error);
-      alert.showError(error.message || 'Error al guardar los cambios');
+      alert.showError(error.message || menuAdminTranslations.errorSavingMenu || 'Error al guardar el item');
     } finally {
       setSavingChanges(false);
     }
@@ -1712,42 +1797,31 @@ export function MenuAdminScreen() {
     const isDragOver = dragOverItemId === item.id;
     const isModified = getModifiedItems().has(item.id);
 
-    const containerStyle: any = {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      backgroundColor: isDragOver 
-        ? colors.primary + '20' 
-        : colors.surface,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: isEditing
-        ? colors.primary // Borde azul cuando está en edición
-        : isDragging 
-          ? colors.primary 
-          : isDragOver 
-            ? colors.primary 
-            : colors.border,
-      opacity: isDragging ? 0.5 : 1,
-    };
-
-    if (Platform.OS === 'web') {
-      containerStyle.cursor = isDragging ? 'grabbing' : 'grab';
-    }
-
-    const dragHandleStyle: any = {
-      marginRight: 8,
-      padding: 4,
-    };
-
-    if (Platform.OS === 'web') {
-      dragHandleStyle.cursor = 'grab';
-    }
+    // Construir estilos dinámicos del contenedor del título
+    const containerStyle: any = [
+      styles.itemTitleContainerBase,
+      {
+        backgroundColor: isDragOver ? colors.primary + '20' : colors.surface,
+        borderColor: isEditing
+          ? colors.primary
+          : isDragging
+            ? colors.primary
+            : isDragOver
+              ? colors.primary
+              : colors.border,
+        opacity: isDragging ? 0.5 : 1,
+        borderBottomLeftRadius: isEditing ? 0 : 8,
+        borderBottomRightRadius: isEditing ? 0 : 8,
+        borderBottomWidth: isEditing ? 0 : 1,
+        zIndex: isEditing ? 1 : 0,
+        ...(Platform.OS === 'web' ? { cursor: isDragging ? 'grabbing' : 'grab' } as any : {}),
+      },
+    ];
 
     return (
       <View 
         key={item.id} 
-        style={{ marginLeft: item.level * 20, marginBottom: 8 }}
+        style={[styles.itemContainerBase, { marginLeft: item.level * 20 }]}
         {...(Platform.OS === 'web' ? { 
           // @ts-ignore - data attributes para web
           'data-item-id': item.id,
@@ -1775,25 +1849,11 @@ export function MenuAdminScreen() {
         } : {})}
       >
         {/* Div del título: siempre visible, ocupa todo el ancho */}
-        <View
-          style={[
-            containerStyle,
-            {
-              width: '100%',
-              marginBottom: 0,
-              borderTopLeftRadius: 8, // Bordes superiores siempre redondeados
-              borderTopRightRadius: 8,
-              borderBottomLeftRadius: isEditing ? 0 : 8, // Sin borde inferior redondeado cuando está en edición
-              borderBottomRightRadius: isEditing ? 0 : 8,
-              borderBottomWidth: isEditing ? 0 : 1, // Sin borde inferior cuando está en edición
-              zIndex: isEditing ? 1 : 0, // El div activo está sobre el de edición
-            }
-          ]}
-        >
+        <View style={containerStyle}>
           {/* Icono de expandir/colapsar */}
           {hasChildren && (
-            <Tooltip text={isExpanded ? "Contraer" : "Expandir"} position="top">
-              <TouchableOpacity onPress={() => toggleExpand(item.id)} style={{ marginRight: 8 }}>
+            <Tooltip text={isExpanded ? menuAdminTranslations.collapse : menuAdminTranslations.expand} position="top">
+              <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.expandCollapseButton}>
                 <Ionicons
                   name={isExpanded ? 'chevron-down' : 'chevron-forward'}
                   size={20}
@@ -1802,12 +1862,12 @@ export function MenuAdminScreen() {
               </TouchableOpacity>
             </Tooltip>
           )}
-          {!hasChildren && <View style={{ width: 28 }} />}
+          {!hasChildren && <View style={styles.expandCollapsePlaceholder} />}
 
           {/* Handle de arrastre */}
-          <Tooltip text="Mover" position="top">
+          <Tooltip text={menuAdminTranslations.move} position="top">
             <View
-              style={dragHandleStyle}
+              style={styles.dragHandle}
               {...(Platform.OS === 'web' ? {
                 onMouseDown: (e: any) => handleMouseDown(e, item.id),
               } : {})}
@@ -1821,7 +1881,7 @@ export function MenuAdminScreen() {
           </Tooltip>
 
           {/* Primera fila: Icono, Nombre, URL, Estado (vista) */}
-          <View style={{ flex: 1, flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <View style={styles.itemRow}>
             {/* Icono clickeable (abre edición igual que el nombre) */}
             <TouchableOpacity
               onPress={() => {
@@ -1833,7 +1893,7 @@ export function MenuAdminScreen() {
                   startEdit(item);
                 }
               }}
-              style={{ padding: 4 }}
+              style={styles.itemIconButton}
             >
               {item.icon ? (
                 <DynamicIcon
@@ -1856,20 +1916,13 @@ export function MenuAdminScreen() {
                     startEdit(item);
                   }
                 }}
-                style={{ flex: 2, minWidth: 200, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                style={styles.itemNameButton}
               >
               {/* Indicador de cambios pendientes (punto verde) */}
               {isModified && (
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: colors.success,
-                  }}
-                />
+                <View style={styles.modifiedIndicator} />
               )}
-              <ThemedText type="body1" style={{ fontWeight: '600', color: colors.text }}>
+              <ThemedText type="body1" style={styles.itemNameText}>
                 {item.label}
               </ThemedText>
             </TouchableOpacity>
@@ -1885,15 +1938,15 @@ export function MenuAdminScreen() {
                   startEdit(item);
                 }
               }}
-              style={{ flex: 2, minWidth: 200 }}
+              style={styles.itemRouteButton}
             >
               {item.route ? (
                 <ThemedText type="caption" variant="secondary" numberOfLines={1}>
                   {item.route}
                 </ThemedText>
               ) : (
-                <ThemedText type="caption" variant="secondary" style={{ fontStyle: 'italic' }}>
-                  Sin URL
+                <ThemedText type="caption" variant="secondary" style={styles.itemRouteText}>
+                  {menuAdminTranslations.noUrl}
                 </ThemedText>
               )}
             </TouchableOpacity>
@@ -1909,29 +1962,22 @@ export function MenuAdminScreen() {
                   startEdit(item);
                 }
               }}
-              style={{ flex: 1, minWidth: 100, alignItems: 'center', marginRight: 8, flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+              style={styles.itemStatusButton}
             >
               <StatusBadge
                 status={item.status}
                 statusDescription={
-                  item.status === 1 ? 'Activo' : 
-                  item.status === 0 ? 'Inactivo' : 
-                  item.status === -1 ? 'Eliminado' : 
-                  'Pendiente'
+                  item.status === 1 ? menuAdminTranslations.active : 
+                  item.status === 0 ? menuAdminTranslations.inactive : 
+                  item.status === -1 ? menuAdminTranslations.deleted : 
+                  menuAdminTranslations.pending
                 }
                 size="small"
                 showIcon={true}
               />
               {/* Indicador de hijos con estado pendiente */}
               {hasChildWithPendingStatus(item) && (
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: '#f59e0b', // Color tomate igual que pendiente
-                  }}
-                />
+                <View style={styles.pendingChildIndicator} />
               )}
             </TouchableOpacity>
 
@@ -1952,18 +1998,7 @@ export function MenuAdminScreen() {
         {/* Recuadro para agregar como hijo (solo cuando se arrastra sobre un item sin hijos) */}
         {showDropZone === item.id && !hasChildren && draggingItemId && draggingItemId !== item.id && (
           <View
-            style={{
-              marginTop: 4,
-              marginLeft: item.level * 20,
-              padding: 12,
-              borderWidth: 2,
-              borderStyle: 'dashed',
-              borderColor: colors.primary,
-              borderRadius: 8,
-              backgroundColor: colors.primary + '10',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            style={[styles.dropZoneBase, { marginLeft: item.level * 20, backgroundColor: colors.primary + '10', borderColor: colors.primary }]}
             {...(Platform.OS === 'web' ? {
               onMouseEnter: () => {
                 dropZoneRef.current = item.id;
@@ -1975,8 +2010,8 @@ export function MenuAdminScreen() {
               },
             } : {})}
           >
-            <ThemedText type="body2" style={{ color: colors.primary, fontWeight: '600' }}>
-              Soltar aquí para agregar como hijo
+            <ThemedText type="body2" style={styles.dropZoneText}>
+              {menuAdminTranslations.dropHere}
             </ThemedText>
           </View>
         )}
@@ -1984,30 +2019,22 @@ export function MenuAdminScreen() {
         {/* Formulario de edición (debajo del título cuando está en edición) */}
         {isEditing && (
           <View 
-            style={{ 
-              width: '100%',
-              backgroundColor: colors.surface, // Mismo color que el div activo
-              borderTopLeftRadius: 0, // Sin borde superior redondeado para conectar con el div activo
-              borderTopRightRadius: 0,
-              borderBottomLeftRadius: 8, // Solo bordes inferiores redondeados
-              borderBottomRightRadius: 8,
-              borderWidth: 1,
-              borderTopWidth: 0, // Sin borde superior para conectar visualmente
-              borderColor: colors.primary, // Borde azul activo (laterales e inferior)
-              padding: 12,
-              gap: 12,
-              marginTop: -1, // Ligeramente sobrepuesto para conectar mejor
-              zIndex: 0, // El div de edición está debajo del activo
-            }}
+            style={[
+              styles.editFormContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.primary,
+              }
+            ]}
           >
             {/* Primera fila: Icono, Nombre, URL */}
-                <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-                  <View style={{ flex: 1, minWidth: 180 }}>
-                    <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      Icono <ThemedText style={{ color: colors.error }}>*</ThemedText>
+                <View style={styles.editFormRow}>
+                  <View style={styles.editFormField}>
+                    <ThemedText type="body2" style={styles.editFormLabel}>
+                      {menuAdminTranslations.icon} <ThemedText style={styles.editFormLabelRequired}>*</ThemedText>
                     </ThemedText>
-                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-                      <View style={{ flex: 1 }}>
+                    <View style={styles.iconInputContainer}>
+                      <View style={styles.iconInputWrapper}>
                         <IconInput
                           value={formData.icon || ''}
                           onChange={(value) => {
@@ -2019,19 +2046,11 @@ export function MenuAdminScreen() {
                               setValidationErrors(prev => ({ ...prev, icon: undefined }));
                             }
                           }}
-                          placeholder="Nombre del icono (ej: home, settings)"
+                          placeholder={menuAdminTranslations.iconPlaceholder}
                         />
                       </View>
                       <TouchableOpacity
-                        style={{
-                          backgroundColor: colors.primary,
-                          paddingHorizontal: 16,
-                          paddingVertical: 12,
-                          borderRadius: 8,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          minHeight: 48,
-                        }}
+                        style={styles.iconDocumentationButton}
                         onPress={async () => {
                           try {
                             const iconsUrl = APP_CONFIG.EXTERNAL_URLS.ICONS_DOCUMENTATION;
@@ -2044,7 +2063,7 @@ export function MenuAdminScreen() {
                               await openBrowserAsync(iconsUrl);
                             }
                           } catch (error) {
-                            alert.showError('Error al abrir la documentación de iconos');
+                            alert.showError(menuAdminTranslations.errorOpeningIconsDoc || 'Error al abrir la documentación de iconos');
                           }
                         }}
                       >
@@ -2052,22 +2071,20 @@ export function MenuAdminScreen() {
                       </TouchableOpacity>
                     </View>
                     {validationErrors.icon && (
-                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                      <ThemedText type="caption" style={styles.validationError}>
                         {validationErrors.icon}
                       </ThemedText>
                     )}
                   </View>
-                  <View style={{ flex: 1, minWidth: 180 }}>
-                    <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      Nombre <ThemedText style={{ color: colors.error }}>*</ThemedText>
+                  <View style={styles.editFormField}>
+                    <ThemedText type="body2" style={styles.editFormLabel}>
+                      {menuAdminTranslations.name} <ThemedText style={styles.editFormLabelRequired}>*</ThemedText>
                     </ThemedText>
                     <InputWithFocus
-                      containerStyle={{
-                        borderWidth: 1,
-                        borderColor: validationErrors.label ? colors.error : colors.border,
-                        borderRadius: 8,
-                        backgroundColor: colors.surface,
-                      }}
+                      containerStyle={[
+                        styles.textInputContainerBase,
+                        validationErrors.label ? styles.textInputContainerError : styles.textInputContainerNormal
+                      ]}
                       primaryColor={colors.primary}
                     >
                       <TextInput
@@ -2081,30 +2098,25 @@ export function MenuAdminScreen() {
                             setValidationErrors(prev => ({ ...prev, label: undefined }));
                           }
                         }}
-                        placeholder="Nombre del item"
-                        style={{
-                          padding: 12,
-                          color: colors.text,
-                        }}
+                        placeholder={menuAdminTranslations.namePlaceholder}
+                        style={styles.textInput}
                       />
                     </InputWithFocus>
                     {validationErrors.label && (
-                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                      <ThemedText type="caption" style={styles.validationError}>
                         {validationErrors.label}
                       </ThemedText>
                     )}
                   </View>
-                  <View style={{ flex: 1, minWidth: 180 }}>
-                    <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      URL <ThemedText style={{ color: colors.error }}>*</ThemedText>
+                  <View style={styles.editFormField}>
+                    <ThemedText type="body2" style={styles.editFormLabel}>
+                      {menuAdminTranslations.url} <ThemedText style={styles.editFormLabelRequired}>*</ThemedText>
                     </ThemedText>
                     <InputWithFocus
-                      containerStyle={{
-                        borderWidth: 1,
-                        borderColor: validationErrors.route ? colors.error : colors.border,
-                        borderRadius: 8,
-                        backgroundColor: colors.surface,
-                      }}
+                      containerStyle={[
+                        styles.textInputContainerBase,
+                        validationErrors.route ? styles.textInputContainerError : styles.textInputContainerNormal
+                      ]}
                       primaryColor={colors.primary}
                     >
                       <TextInput
@@ -2127,15 +2139,12 @@ export function MenuAdminScreen() {
                             setValidationErrors(prev => ({ ...prev, route: undefined }));
                           }
                         }}
-                        placeholder="/ruta"
-                        style={{
-                          padding: 12,
-                          color: colors.text,
-                        }}
+                        placeholder={menuAdminTranslations.urlPlaceholder}
+                        style={styles.textInput}
                       />
                     </InputWithFocus>
                     {validationErrors.route && (
-                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                      <ThemedText type="caption" style={styles.validationError}>
                         {validationErrors.route}
                       </ThemedText>
                     )}
@@ -2143,19 +2152,17 @@ export function MenuAdminScreen() {
                 </View>
                 
                 {/* Segunda fila: Descripción y Estado/Público */}
-                <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-                  <View style={{ flex: 2, minWidth: 180 }}>
-                    <ThemedText type="body2" style={{ marginBottom: 8, color: colors.text }}>
-                      Descripción
+                <View style={styles.editFormRow}>
+                  <View style={styles.editFormFieldWide}>
+                    <ThemedText type="body2" style={styles.editFormLabel}>
+                      {menuAdminTranslations.description}
                     </ThemedText>
                     <InputWithFocus
-                      containerStyle={{
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 8,
-                        backgroundColor: colors.surface,
-                        minHeight: 105,
-                      }}
+                      containerStyle={[
+                        styles.textInputContainerBase,
+                        styles.textInputContainerNormal,
+                        styles.textInputContainerMultiline
+                      ]}
                       primaryColor={colors.primary}
                     >
                       <TextInput
@@ -2165,20 +2172,16 @@ export function MenuAdminScreen() {
                           // Aplicar cambios automáticamente al estado
                           updateItem(item.id, { description: text });
                         }}
-                        placeholder="Descripción del item"
+                        placeholder={menuAdminTranslations.descriptionPlaceholder}
                         multiline
                         numberOfLines={3}
-                        style={{
-                          padding: 12,
-                          color: colors.text,
-                          textAlignVertical: 'top',
-                        }}
+                        style={[styles.textInput, { textAlignVertical: 'top' }]}
                       />
                     </InputWithFocus>
                   </View>
-                  <View style={{ flex: 1, minWidth: 180 }}>
-                    <ThemedText type="body2" style={[styles.formLabel, { color: colors.text }]}>
-                      Estado
+                  <View style={styles.editFormField}>
+                    <ThemedText type="body2" style={styles.editFormLabel}>
+                      {menuAdminTranslations.status}
                     </ThemedText>
                     <ScrollView 
                       horizontal 
@@ -2208,7 +2211,7 @@ export function MenuAdminScreen() {
                             type="caption"
                             style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
                           >
-                            Activo
+                            {menuAdminTranslations.active}
                           </ThemedText>
                         </TouchableOpacity>
 
@@ -2341,10 +2344,10 @@ export function MenuAdminScreen() {
                 size="sm" 
               />
               {/* Botón Guardar para items nuevos y edición de items existentes */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={styles.saveCancelActions}>
                 {savingItem && <ActivityIndicator size="small" color={colors.primary} />}
                 <Button 
-                  title={savingItem ? "Guardando..." : "Guardar"} 
+                  title={savingItem ? menuAdminTranslations.saving : menuAdminTranslations.save || t.common.save} 
                   onPress={() => saveSingleItem(item.id)} 
                   variant="primary" 
                   size="sm"
@@ -2368,22 +2371,11 @@ export function MenuAdminScreen() {
           <View style={{ marginTop: 8 }}>
             <TouchableOpacity
               onPress={() => addNewColumn(item.id)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 12,
-                backgroundColor: colors.surface,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderStyle: 'dashed',
-                marginBottom: 8,
-              }}
+              style={[styles.addGroupingButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-              <ThemedText type="body2" style={{ marginLeft: 8, color: colors.primary }}>
-                Agregar Agrupamiento
+              <ThemedText type="body2" style={styles.addGroupingText}>
+                {menuAdminTranslations.addGrouping}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -2399,15 +2391,13 @@ export function MenuAdminScreen() {
               return (
               <View 
                 key={column.id} 
-                style={{ 
-                  marginBottom: 16, 
-                  padding: 12, 
-                  backgroundColor: (isDragOverColumn || (draggingItemId && dragOverColumnId === column.id))
-                    ? colors.primary + '20' 
-                    : colors.surfaceVariant, 
-                  borderRadius: 8,
-                  opacity: isDraggingColumn ? 0.5 : 1,
-                }}
+                style={[
+                  styles.columnContainerBase,
+                  (isDragOverColumn || (draggingItemId && dragOverColumnId === column.id))
+                    ? styles.columnContainerDragOver
+                    : styles.columnContainerNormal,
+                  isDraggingColumn && styles.columnContainerDragging,
+                ]}
                 {...(Platform.OS === 'web' ? {
                   onMouseEnter: () => {
                     // Si se está arrastrando una columna
@@ -2432,15 +2422,12 @@ export function MenuAdminScreen() {
                 } : {})}
               >
                 {/* Header de la columna con título editable */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                <View style={styles.columnHeader}>
                   {/* Icono de reordenar a la izquierda */}
-                  <Tooltip text="Mover" position="top">
+                  <Tooltip text={menuAdminTranslations.move} position="top">
                     <View
                       style={[
-                        {
-                          marginRight: 8,
-                          padding: 4,
-                        },
+                        styles.columnDragHandle,
                         Platform.OS === 'web' && { cursor: 'grab' } as any,
                       ]}
                       {...(Platform.OS === 'web' ? {
@@ -2455,22 +2442,12 @@ export function MenuAdminScreen() {
                     </View>
                   </Tooltip>
                   {editingColumnId === column.id ? (
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={styles.columnTitleEditContainer}>
                       <TextInput
                         value={editingColumnTitle}
                         onChangeText={setEditingColumnTitle}
-                        style={{
-                          flex: 1,
-                          padding: 8,
-                          backgroundColor: colors.background,
-                          borderRadius: 4,
-                          borderWidth: 1,
-                          borderColor: colors.primary,
-                          color: colors.text,
-                          fontSize: 14,
-                          fontWeight: '600',
-                        }}
-                        placeholder="Título de la columna"
+                        style={[styles.columnTitleInput, { backgroundColor: colors.background, borderColor: colors.primary, color: colors.text }]}
+                        placeholder={menuAdminTranslations.columnTitlePlaceholder}
                         placeholderTextColor={colors.textSecondary}
                         autoFocus
                         onBlur={() => {
@@ -2499,7 +2476,7 @@ export function MenuAdminScreen() {
                             setEditingColumnTitle('');
                           }
                         }}
-                        style={{ padding: 4 }}
+                        style={styles.columnTitleButton}
                       >
                         <Ionicons name="checkmark" size={20} color={colors.primary} />
                       </TouchableOpacity>
@@ -2508,7 +2485,7 @@ export function MenuAdminScreen() {
                           setEditingColumnId(null);
                           setEditingColumnTitle('');
                         }}
-                        style={{ padding: 4 }}
+                        style={styles.columnTitleButton}
                       >
                         <Ionicons name="close" size={20} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -2519,21 +2496,21 @@ export function MenuAdminScreen() {
                         onPress={() => startEditColumnTitle(item.id, column.id, column.title)}
                         style={{ flex: 1 }}
                       >
-                        <ThemedText type="subtitle" style={{ fontWeight: '600', color: colors.text }}>
+                        <ThemedText type="subtitle" style={styles.columnTitleButtonText}>
                           {column.title}
                         </ThemedText>
                       </TouchableOpacity>
-                      <Tooltip text="Eliminar agrupamiento" position="top">
+                      <Tooltip text={menuAdminTranslations.deleteGrouping} position="top">
                         <TouchableOpacity
                           onPress={() => {
                             // Si tiene items, mostrar confirmación
                             if (column.items && column.items.length > 0) {
                               alert.showConfirm(
-                                'Eliminar agrupamiento',
-                                '¿Está seguro de eliminar este agrupamiento? Los items se moverán al submenu del padre.',
+                                menuAdminTranslations.deleteGroupingConfirm,
+                                menuAdminTranslations.deleteGroupingMessage,
                                 () => {
                                   deleteColumnAndMoveItemsToSubmenu(item.id, column.id);
-                                  alert.showSuccess('Agrupamiento eliminado. Los items se movieron al submenu.');
+                                  alert.showSuccess(menuAdminTranslations.itemsMovedToSubmenu);
                                 },
                                 () => {}
                               );
@@ -2542,14 +2519,14 @@ export function MenuAdminScreen() {
                               deleteColumnAndMoveItemsToSubmenu(item.id, column.id);
                             }
                           }}
-                          style={{ padding: 4 }}
+                          style={styles.columnTitleButton}
                         >
                           <Ionicons name="trash-outline" size={20} color={colors.primary} />
                         </TouchableOpacity>
                       </Tooltip>
                       <TouchableOpacity
                         onPress={() => addItemToColumn(item.id, column.id)}
-                        style={{ padding: 4 }}
+                        style={styles.columnTitleButton}
                       >
                         <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                       </TouchableOpacity>
@@ -2667,19 +2644,19 @@ export function MenuAdminScreen() {
   return (
     <ThemedView style={{ flex: 1 }}>
       {/* Header con búsqueda */}
-      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-          <View style={{ flex: 1, position: 'relative' }}>
+      <View style={[styles.headerContainer, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerRow}>
+          <View style={styles.searchContainer}>
             <Ionicons
               name="search"
               size={20}
               color={colors.textSecondary}
-              style={{ position: 'absolute', left: 12, top: 14, zIndex: 1 }}
+              style={styles.searchIcon}
             />
             {searchValue.length > 0 && (
               <TouchableOpacity
                 onPress={() => setSearchValue('')}
-                style={{ position: 'absolute', right: 12, top: 14, zIndex: 1, padding: 4 }}
+                style={styles.searchClearButton}
                 activeOpacity={0.7}
               >
                 <Ionicons
@@ -2690,29 +2667,23 @@ export function MenuAdminScreen() {
               </TouchableOpacity>
             )}
             <InputWithFocus
-              containerStyle={{
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 8,
-                backgroundColor: colors.surface,
-                paddingLeft: 40,
-                paddingRight: searchValue.length > 0 ? 40 : 12,
-              }}
+              containerStyle={[
+                styles.searchInputContainerBase,
+                searchValue.length > 0 ? styles.searchInputContainerWithValue : styles.searchInputContainerEmpty,
+                { borderColor: colors.border, backgroundColor: colors.surface }
+              ]}
               primaryColor={colors.primary}
             >
               <TextInput
-                placeholder="Filtrar por nombre, código, módulo o acción..."
+                placeholder={menuAdminTranslations.searchPlaceholder}
                 value={searchValue}
                 onChangeText={setSearchValue}
-                style={{
-                  padding: 12,
-                  color: colors.text,
-                }}
+                style={styles.searchInput}
               />
             </InputWithFocus>
           </View>
           <Button
-            title="Nuevo Item"
+            title={menuAdminTranslations.newItem}
             onPress={addRootItem}
             variant="primary"
             size="md"
@@ -2725,7 +2696,7 @@ export function MenuAdminScreen() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
           <ThemedText type="body2" variant="secondary" style={{ marginTop: 16 }}>
-            Cargando menú...
+            {t.common.loading}
           </ThemedText>
         </View>
       ) : (

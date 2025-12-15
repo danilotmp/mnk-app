@@ -1,107 +1,445 @@
-# Architecture Overview
+# Arquitectura del Sistema MNK-App
 
-This document provides a consolidated view of how the MNK mobile application is structured.  
-It replaces the previous scattered architecture notes (`ARCHITECTURE*.md`, `MULTI_COMPANY_ARCHITECTURE.md`, `NAVIGATION_SYSTEM.md`, etc.).
-
----
-
-## 1. Technology Stack
-
-| Layer | Technology | Notes |
-| --- | --- | --- |
-| Runtime | [Expo](https://expo.dev/) / React Native (TypeScript) | Managed workflow. |
-| State & Data | React Hooks, Context API | `src/domains/shared/contexts` contains reusable contexts (e.g., MultiCompany). |
-| HTTP Client | `apiClient` wrapper over `fetch` | Located at `src/infrastructure/api/api.client.ts`. Centralises interceptors, error handling and authentication headers. |
-| Styling | Tailored theme system on top of React Native StyleSheet | Color tokens live in `src/styles/themes`. |
-| Navigation | Expo Router | App routes under `app/` mirror navigation hierarchy. |
+Este documento describe la arquitectura completa del sistema MNK-App, diseñada para evitar crear un monolito mediante separación por dominios y features.
 
 ---
 
-## 2. High-Level Module Layout
+## 1. Principios Arquitectónicos
+
+### 1.1 Separación por Dominios (Anti-Monolito)
+
+La arquitectura está diseñada para **evitar crear un monolito** mediante:
+
+- **Separación por dominio de negocio**: Cada dominio (seguridad, facturación, etc.) está completamente desacoplado
+- **Separación por feature dentro de cada dominio**: Cada feature tiene su propia estructura completa
+- **Componentes compartidos centralizados**: Elementos reutilizables en `domains/shared/` o `components/ui/`
+
+### 1.2 Estructura de Directorios
 
 ```
-app/
- ├─ _layout.tsx            # Global layout (main menu, header, theme toggle)
- ├─ security/              # Navigation entry points for security modules
- └─ …                      # Additional feature areas (products, services, etc.)
+app/                          # ⚠️ SOLO rutas (Expo Router file-based routing)
+└── [domain]/[feature]/
+    └── index.tsx             # Wrapper delgado (5-10 líneas máximo)
 
 src/
- ├─ domains/
- │   ├─ security/          # Bounded context for security/administration
- │   │   ├─ components/    # Reusable UI building blocks (forms, tables, modals)
- │   │   ├─ services/      # API accessors (UsersService, RolesService…)
- │   │   ├─ hooks/         # Domain specific hooks (branch/company options)
- │   │   └─ types/         # DTOs, filters and payload definitions
- │   ├─ shared/            # Cross-domain components, contexts, utilities
- │   └─ catalog/           # Example of additional bounded context
- │
- ├─ infrastructure/
- │   ├─ api/               # HTTP client, config, error constants
- │   ├─ i18n/              # Translation system and language context
- │   ├─ menu/              # Dynamic main menu configuration
- │   └─ messages/          # Toasts and alert services
- │
- ├─ styles/                # Centralised design tokens and page/component styles
- └─ hooks/                 # Global hooks (theme mode, responsiveness, etc.)
+├── domains/                  # Componentes y servicios compartidos POR DOMINIO
+│   ├── security/            # Dominio de seguridad
+│   │   ├── components/      # Componentes compartidos del dominio seguridad
+│   │   ├── services/        # Servicios compartidos del dominio seguridad
+│   │   ├── hooks/           # Hooks específicos del dominio seguridad
+│   │   └── types/           # Tipos compartidos del dominio seguridad
+│   ├── shared/              # Elementos compartidos cross-domain
+│   │   ├── components/      # Componentes reutilizables (DataTable, SearchFilterBar)
+│   │   ├── contexts/        # Contextos compartidos (MultiCompany)
+│   │   ├── hooks/           # Hooks compartidos (useMultiCompany)
+│   │   └── services/        # Servicios compartidos (ThemeService)
+│   └── [otro-dominio]/      # Otros dominios (facturación, etc.)
+│
+├── features/                 # Features completas con estructura propia
+│   └── [domain]/[feature]/
+│       ├── adapters/        # Transformación API → Dominio
+│       ├── components/       # Componentes específicos de la feature
+│       ├── screens/          # Pantallas (smart components)
+│       ├── services/         # Servicios de negocio (SSOT)
+│       ├── types/            # Tipos de dominio y API
+│       │   ├── domain/       # Modelos de negocio puros
+│       │   └── api/          # Contratos de API (DTOs)
+│       └── hooks/            # Hooks específicos de la feature
+│
+├── infrastructure/           # Servicios de bajo nivel
+│   ├── api/                 # Cliente API centralizado
+│   ├── i18n/                # Sistema de traducciones
+│   ├── menu/                # Configuración dinámica del menú
+│   ├── messages/            # Sistema de alertas y toasts
+│   └── session/             # Gestión de sesión
+│
+├── styles/                   # Sistema de estilos centralizado
+│   ├── themes/              # Tokens de diseño (colores, tipografía)
+│   ├── components/          # Estilos de componentes compartidos
+│   └── pages/               # Estilos de páginas específicas
+│
+└── hooks/                    # Hooks globales (useTheme, useResponsive)
 ```
 
 ---
 
-## 3. Application Flow
+## 2. Reglas de Organización
 
-1. **Entry point** – Expo Router loads `_layout.tsx`, which wraps the app with:
-   - `ThemeProvider` (`hooks/use-theme-mode.tsx`)
-   - `LanguageProvider`
-   - `MultiCompanyProvider`
-   - `ToastProvider`
+### 2.1 ¿Cuándo usar `domains/` vs `features/`?
 
-2. **Navigation** – Each feature screen lives under `app/<feature>/index.tsx`.  
-   For security, the route stack (`app/security/`) points to list screens which consume domain services.
+**`src/domains/[domain]/`** - Usar para:
+- Componentes compartidos **dentro de un dominio** (ej: `permissions-carousel` compartido en seguridad)
+- Servicios compartidos **dentro de un dominio** (ej: `PermissionsService` usado por múltiples features)
+- Hooks específicos del dominio (ej: `use-company-options` usado por múltiples features de seguridad)
+- Tipos compartidos del dominio
 
-3. **Data Access** – Screens interact with domain services (e.g., `UsersService`) which in turn use the shared `apiClient`.  
-   Responses are mapped to domain types before reaching the UI layer.
+**`src/features/[domain]/[feature]/`** - Usar para:
+- Features completas con estructura propia
+- Componentes específicos de una feature (ej: `UserCreateForm` solo para usuarios)
+- Servicios específicos de una feature (ej: `UsersService` solo para gestión de usuarios)
+- Screens (pantallas) de una feature
 
-4. **State Management** – Local component state via React hooks. Shared state (company selection, theme) travels through contexts in `src/domains/shared/contexts`.
+**`src/domains/shared/`** - Usar para:
+- Componentes reutilizables **cross-domain** (ej: `DataTable`, `SearchFilterBar`)
+- Contextos compartidos (ej: `MultiCompanyContext`)
+- Hooks compartidos (ej: `useMultiCompany`)
+- Servicios compartidos (ej: `ThemeService`)
 
-5. **Styling** – Component styles reference theme tokens (`colors.primary`, `colors.surface`, etc.). Theme overrides propagate automatically.
+### 2.2 Estructura de Componentes
+
+Cada componente debe seguir el patrón:
+
+```
+component-name/
+├── component-name.tsx          # Lógica y JSX
+├── component-name.styles.ts    # Estilos (StyleSheet.create)
+└── component-name.types.ts     # Tipos e interfaces
+```
+
+**Regla de oro**: **NUNCA mezclar estilos inline con lógica**. Todos los estilos deben estar en el archivo `.styles.ts`.
+
+**Excepción**: Estilos dinámicos que dependen de props/estado pueden calcularse en el componente usando estilos base del archivo `.styles.ts`:
+
+```typescript
+// ✅ CORRECTO: Estilos base en .styles.ts, variantes dinámicas en el componente
+const containerStyle = [
+  styles.containerBase,
+  { backgroundColor: isActive ? colors.primary : colors.surface }
+];
+```
+
+### 2.3 Estructura de Screens
+
+Los screens deben:
+- Estar en `src/features/[domain]/[feature]/screens/`
+- Usar estilos del archivo `.styles.ts` correspondiente
+- Usar traducciones del sistema i18n (nunca strings hardcodeados)
+- Ser importados desde `app/` que solo actúa como wrapper de ruta
 
 ---
 
-## 4. Security Domain Responsibilities
+## 3. Sistema de Estilos
 
-| Module | Description | Key Files |
-| --- | --- | --- |
-| Users | CRUD for application users, status management (Active/Pending/Suspended/Deleted). | `app/security/users/index.tsx` + forms under `src/domains/security/components`. |
-| Roles & Permissions | Administration of RBAC entities, mapping roles to permissions. | `app/security/roles/index.tsx`, `app/security/permissions/index.tsx`. |
-| Companies & Branches | Multi-company support with branch assignment to users. | `app/security/companies/index.tsx`, `app/security/branches/index.tsx`. |
-| Shared utilities | Hooks to fetch options (`use-company-options`, `use-branch-options`), status badge, etc. | `src/domains/security/hooks`, `components/ui/status-badge.tsx`. |
+### 3.1 Organización
+
+```
+src/styles/
+├── themes/                    # Tokens de diseño
+│   ├── base.theme.ts         # Tokens base (colores, tipografía, espaciado)
+│   ├── light.theme.ts        # Variante claro
+│   └── dark.theme.ts         # Variante oscuro
+├── components/                # Estilos de componentes compartidos
+└── pages/                     # Estilos de páginas específicas
+```
+
+### 3.2 Patrón de Estilos
+
+**Estilos generales** (bordes, colores, tamaños):
+- Centralizados en `src/styles/themes/`
+- Accesibles vía `useTheme()` hook: `colors.primary`, `colors.surface`, etc.
+
+**Estilos de componente**:
+- En archivo `component-name.styles.ts` junto al componente
+- Función factory que recibe `colors`: `createComponentStyles(colors)`
+
+**Ejemplo**:
+```typescript
+// component-name.styles.ts
+export const createComponentStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+  },
+  // Estilos base para variantes dinámicas
+  containerBase: {
+    padding: 12,
+    borderRadius: 8,
+  },
+  containerActive: {
+    borderColor: colors.primary,
+  },
+});
+
+// component-name.tsx
+const styles = createComponentStyles(colors);
+const dynamicStyle = [
+  styles.containerBase,
+  isActive && styles.containerActive,
+  { backgroundColor: isActive ? colors.primary : colors.surface }
+];
+```
 
 ---
 
-## 5. Multi-Company Integration
+## 4. Sistema de Traducciones (i18n)
 
-* Multi-company context: `src/domains/shared/contexts/multi-company.context.tsx`.  
-  Provides `useMultiCompany()` hook for current company & branch awareness.
-* User forms rely on this context to pre-select company and filter available branches.
-* Services accept optional `companyId` parameters; queries include them when provided.
+### 4.1 Ubicación
+
+- Traducciones: `src/infrastructure/i18n/translations/[lang].ts`
+- Tipos: `src/infrastructure/i18n/types.ts`
+- Hook: `useTranslation()` desde `src/infrastructure/i18n`
+
+### 4.2 Uso
+
+```typescript
+const { t } = useTranslation();
+
+// Con optional chaining para evitar errores TypeScript
+const menuAdminTranslations = t.security?.menuAdmin || {};
+
+// Uso con fallback
+<Text>{menuAdminTranslations.title || 'Título por defecto'}</Text>
+```
+
+### 4.3 Regla
+
+**NUNCA usar strings hardcodeados**. Todos los textos visibles al usuario deben venir de traducciones.
 
 ---
 
-## 6. Error & Toast Handling
+## 5. Servicios y API
 
-* `useAlert()` (`src/infrastructure/messages/alert.service.ts`) abstracts platform-specific alerts and toast notifications.
-* Network errors are surfaced via `ToastContainer` (overlays in web using a transparent modal) ensuring visibility above modals.
+### 5.1 Cliente API Centralizado
+
+- Ubicación: `src/infrastructure/api/api.client.ts`
+- Instancia singleton: `apiClient`
+- Funcionalidades:
+  - Gestión automática de tokens (refresh automático)
+  - Headers automáticos (Authorization, Accept-Language, company-code, user-id)
+  - Manejo centralizado de errores
+  - Redirecciones automáticas en caso de 401
+
+### 5.2 Servicios de Dominio
+
+- Patrón Singleton para servicios compartidos
+- Ubicación según alcance:
+  - `src/domains/[domain]/services/` - Servicios compartidos del dominio
+  - `src/features/[domain]/[feature]/services/` - Servicios específicos de la feature
+
+**Ejemplo**:
+```typescript
+export class ThemeService {
+  private static instance: ThemeService;
+  
+  static getInstance(): ThemeService {
+    if (!ThemeService.instance) {
+      ThemeService.instance = new ThemeService();
+    }
+    return ThemeService.instance;
+  }
+}
+```
 
 ---
 
-## 7. Testing & Extensibility Guidelines
+## 6. Flujo de Datos
 
-* Prefer creating new domain folders under `src/domains/<module>` for future modules.
-* Share UI components via `src/domains/shared/components` or `components/ui` to keep consistency.
-* When adding new routes, create the screen under `app/<feature>/` and keep route-specific logic inside the screen while delegating business logic to domain services.
-* Follow the status system (see ADR) when introducing new entities with lifecycle states.
+### 6.1 Flujo Típico
+
+```
+Screen (src/features/.../screens/)
+  ↓
+Service (src/features/.../services/)
+  ↓
+Adapter (src/features/.../adapters/) - Transforma API → Dominio
+  ↓
+API Client (src/infrastructure/api/)
+  ↓
+Backend API
+```
+
+### 6.2 Tipos
+
+- **Tipos de API** (`types/api/`): Estructura exacta de la respuesta del backend
+- **Tipos de Dominio** (`types/domain/`): Modelos de negocio puros, independientes del backend
+- **Adapters**: Transforman tipos de API a tipos de dominio
 
 ---
 
-For implementation details and functional behaviour refer to `SystemOverview.md`. Critical decisions are catalogued in `ADR.md`. Design and theming instructions live in `DesignSystem.md`.
+## 7. Estado y Contextos
 
+### 7.1 Estado Local
+
+- Usar `useState` para estado local del componente
+- Usar `useRef` para valores que no deben causar re-renders
+
+### 7.2 Estado Compartido
+
+- **Contextos**: `src/domains/shared/contexts/` (ej: `MultiCompanyContext`)
+- **Hooks**: `src/domains/shared/hooks/` (ej: `useMultiCompany`)
+
+### 7.3 Patrón de Contexto
+
+```typescript
+// Contexto
+export const MultiCompanyContext = createContext<MultiCompanyContextType | undefined>(undefined);
+
+// Provider
+export function MultiCompanyProvider({ children }: Props) {
+  // Lógica del contexto
+  return <MultiCompanyContext.Provider value={value}>{children}</MultiCompanyContext.Provider>;
+}
+
+// Hook de uso
+export function useMultiCompany() {
+  const context = useContext(MultiCompanyContext);
+  if (!context) throw new Error('useMultiCompany must be used within MultiCompanyProvider');
+  return context;
+}
+```
+
+---
+
+## 8. Navegación
+
+### 8.1 Expo Router
+
+- `app/` contiene solo rutas (file-based routing)
+- Cada ruta es un wrapper delgado que importa el screen correspondiente
+
+**Ejemplo**:
+```typescript
+// app/security/users/index.tsx
+import { UsersListScreen } from '@/src/features/security/users/screens/users-list.screen';
+
+export default function UsersListPage() {
+  return <UsersListScreen />;
+}
+```
+
+### 8.2 Layouts
+
+- Layout global: `app/_layout.tsx`
+- Wraps la app con providers: `ThemeProvider`, `LanguageProvider`, `MultiCompanyProvider`, `ToastProvider`
+
+---
+
+## 9. Manejo de Errores
+
+### 9.1 Alertas y Toasts
+
+- Hook: `useAlert()` desde `src/infrastructure/messages/alert.service.ts`
+- Métodos:
+  - `alert.showError(message)` - Muestra error
+  - `alert.showSuccess(message)` - Muestra éxito
+  - `alert.showConfirm(title, message, onConfirm, onCancel)` - Confirmación
+
+### 9.2 Errores de API
+
+- El `apiClient` maneja automáticamente:
+  - Refresh de tokens expirados
+  - Redirecciones en caso de 401
+  - Parsing de errores del backend
+
+---
+
+## 10. Guía para Nuevos Desarrollos
+
+### 10.1 Crear una Nueva Feature
+
+1. **Crear estructura en `src/features/[domain]/[feature]/`**:
+   ```
+   feature-name/
+   ├── adapters/
+   ├── components/
+   ├── screens/
+   ├── services/
+   ├── types/
+   │   ├── domain/
+   │   └── api/
+   └── hooks/
+   ```
+
+2. **Crear tipos**:
+   - `types/domain/feature.types.ts` - Modelos de negocio
+   - `types/api/feature-api.types.ts` - Contratos de API
+
+3. **Crear servicio**:
+   - `services/feature.service.ts` - Usa `apiClient` para llamadas API
+
+4. **Crear adapter** (si es necesario):
+   - `adapters/feature.adapter.ts` - Transforma API → Dominio
+
+5. **Crear componentes**:
+   - Seguir patrón: `component-name.tsx`, `component-name.styles.ts`, `component-name.types.ts`
+   - Usar estilos del archivo `.styles.ts`
+   - Usar traducciones (nunca strings hardcodeados)
+
+6. **Crear screen**:
+   - `screens/feature-list.screen.tsx`
+   - Usar estilos de `src/styles/pages/` o crear archivo propio
+
+7. **Crear ruta**:
+   - `app/[domain]/[feature]/index.tsx` - Wrapper delgado que importa el screen
+
+### 10.2 Crear un Componente Compartido
+
+**Si es compartido dentro de un dominio**:
+- `src/domains/[domain]/components/component-name/`
+
+**Si es compartido cross-domain**:
+- `src/domains/shared/components/component-name/`
+
+**Si es componente UI base**:
+- `components/ui/component-name/`
+
+### 10.3 Agregar Traducciones
+
+1. Agregar en `src/infrastructure/i18n/types.ts` (si es nueva sección)
+2. Agregar en `src/infrastructure/i18n/translations/es.ts`
+3. Agregar en `src/infrastructure/i18n/translations/en.ts`
+4. Usar con optional chaining: `t.security?.menuAdmin?.title`
+
+---
+
+## 11. Convenciones de Código
+
+### 11.1 Nombres de Archivos
+
+- Componentes: `kebab-case` (ej: `user-create-form.tsx`)
+- Servicios: `kebab-case.service.ts` (ej: `users.service.ts`)
+- Tipos: `kebab-case.types.ts` (ej: `user.types.ts`)
+- Estilos: `kebab-case.styles.ts` (ej: `user-create-form.styles.ts`)
+
+### 11.2 Nombres de Funciones/Clases
+
+- Componentes: `PascalCase` (ej: `UserCreateForm`)
+- Servicios: `PascalCase` + `Service` (ej: `UsersService`)
+- Hooks: `camelCase` con prefijo `use` (ej: `useUsers`)
+- Funciones: `camelCase` (ej: `loadUsers`)
+
+### 11.3 Imports
+
+- Usar paths absolutos con `@/` (configurado en `tsconfig.json`)
+- Agrupar imports: React → Librerías externas → Componentes internos → Hooks → Servicios → Tipos → Estilos
+
+---
+
+## 12. Checklist para Nuevos Desarrollos
+
+Antes de considerar un desarrollo completo, verificar:
+
+- [ ] ¿Los estilos están en archivo `.styles.ts` separado?
+- [ ] ¿No hay strings hardcodeados? (todos usan traducciones)
+- [ ] ¿Los tipos están separados en archivos `.types.ts`?
+- [ ] ¿El componente sigue el patrón `component-name.tsx`, `.styles.ts`, `.types.ts`?
+- [ ] ¿Los servicios usan `apiClient` centralizado?
+- [ ] ¿Los errores se manejan con `useAlert()`?
+- [ ] ¿La feature está en `src/features/[domain]/[feature]/`?
+- [ ] ¿Los componentes compartidos están en `domains/shared/` o `domains/[domain]/` según corresponda?
+- [ ] ¿La ruta en `app/` es un wrapper delgado?
+
+---
+
+## 13. Referencias
+
+- **Decisiones arquitectónicas**: `docs/ADR.md`
+- **Vista funcional del sistema**: `docs/SystemOverview.md`
+- **Sistema de diseño**: `docs/DesignSystem.md`
+- **Patrón de componentes**: `docs/COMPONENT_ORGANIZATION_PATTERN.md`
+- **Estructura del proyecto**: `docs/ESTRUCTURA_PROYECTO.md`
+
+---
+
+**Última actualización**: 2025-01-XX  
+**Versión del documento**: 2.0
