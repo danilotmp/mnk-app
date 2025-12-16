@@ -401,6 +401,13 @@ export const es: Translations = {
       errorLoadingMenu: 'Error al cargar el menú',
       errorSavingMenu: 'Error al guardar el menú',
       errorOpeningIconsDoc: 'Error al abrir la documentación de iconos',
+      inactive: 'Inactivo',
+      noItemsInMenu: 'No hay items en el menú',
+      changePending: 'cambio pendiente',
+      changesPending: 'cambios pendientes',
+      selectIcon: 'Seleccionar Icono',
+      selectIconDescription: 'Elige un icono para este item del menú',
+      apply: 'Aplicar',
     },
   },
 };

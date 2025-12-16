@@ -401,6 +401,13 @@ export const en: Translations = {
       errorLoadingMenu: 'Error loading menu',
       errorSavingMenu: 'Error saving menu',
       errorOpeningIconsDoc: 'Error opening icons documentation',
+      inactive: 'Inactive',
+      noItemsInMenu: 'No items in menu',
+      changePending: 'pending change',
+      changesPending: 'pending changes',
+      selectIcon: 'Select Icon',
+      selectIconDescription: 'Choose an icon for this menu item',
+      apply: 'Apply',
     },
   },
 };

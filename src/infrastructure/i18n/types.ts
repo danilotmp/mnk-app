@@ -400,6 +400,13 @@ export interface Translations {
       errorLoadingMenu: string;
       errorSavingMenu: string;
       errorOpeningIconsDoc: string;
+      inactive: string;
+      noItemsInMenu: string;
+      changePending: string;
+      changesPending: string;
+      selectIcon: string;
+      selectIconDescription: string;
+      apply: string;
     };
   };
 }

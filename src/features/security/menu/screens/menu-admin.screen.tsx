@@ -104,7 +104,17 @@ export function MenuAdminScreen() {
 
   // Convertir MenuItem[] a MenuAdminItem[]
   const convertToAdminItems = (items: MenuItem[], level: number = 0, parentId?: string): MenuAdminItem[] => {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return [];
+    }
+    
     return items.map((item, index) => {
+      // Validar que el item tenga las propiedades mínimas requeridas
+      if (!item || !item.id) {
+        console.warn('Item inválido encontrado en convertToAdminItems:', item);
+        return null;
+      }
+      
       // Convertir status a número si viene como string, y usar valor por defecto si no viene
       const statusValue = item.status !== undefined && item.status !== null 
         ? Number(item.status) 
@@ -112,25 +122,31 @@ export function MenuAdminScreen() {
       
       return {
         id: item.id,
-        label: item.label,
-        route: item.route,
-        description: item.description,
-        icon: item.icon,
-        isPublic: item.isPublic,
+        label: item.label || '',
+        route: item.route || '',
+        description: item.description || '',
+        icon: item.icon || '',
+        isPublic: item.isPublic || false,
         status: statusValue, // Usar el status convertido a número
         order: index,
         level,
         parentId,
-        submenu: item.submenu ? convertToAdminItems(item.submenu, level + 1, item.id) : undefined,
-        columns: item.columns ? item.columns.map((col, colIndex) => ({
-          id: `col-${item.id}-${colIndex}`,
-          title: col.title,
-          order: colIndex,
-          parentId: item.id,
-          items: convertToAdminItems(col.items, level + 1, item.id),
-        })) : undefined,
+        submenu: item.submenu && Array.isArray(item.submenu) && item.submenu.length > 0 
+          ? convertToAdminItems(item.submenu, level + 1, item.id) 
+          : undefined,
+        columns: item.columns && Array.isArray(item.columns) && item.columns.length > 0
+          ? item.columns
+              .filter(col => col && col.title && col.items && Array.isArray(col.items) && col.items.length > 0)
+              .map((col, colIndex) => ({
+                id: `col-${item.id}-${colIndex}`,
+                title: col.title || '',
+                order: colIndex,
+                parentId: item.id,
+                items: convertToAdminItems(col.items, level + 1, item.id),
+              }))
+          : undefined,
       };
-    });
+    }).filter((item): item is MenuAdminItem => item !== null);
   };
 
   // Verificar si algún hijo tiene estado pendiente (2)
@@ -2285,7 +2301,7 @@ export function MenuAdminScreen() {
                               { fontSize: 12 }
                             ]}
                           >
-                            Pendiente
+                            {menuAdminTranslations.pending}
                           </ThemedText>
                         </TouchableOpacity>
 
@@ -2313,7 +2329,7 @@ export function MenuAdminScreen() {
                               { fontSize: 12 }
                             ]}
                           >
-                            Eliminado
+                            {menuAdminTranslations.deleted}
                           </ThemedText>
                         </TouchableOpacity>
                       </View>
@@ -2334,7 +2350,7 @@ export function MenuAdminScreen() {
             {/* Botones de acción */}
             <View style={styles.actionButtons}>
               <Button 
-                title="Cancelar" 
+                title={menuAdminTranslations.cancel} 
                 onPress={() => {
                   // Si es un item nuevo, eliminarlo del estado
                   if (item.id.startsWith('new-')) {
@@ -2747,18 +2763,18 @@ export function MenuAdminScreen() {
           }}
         >
           <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-            {getModifiedItems().size} {getModifiedItems().size === 1 ? 'cambio pendiente' : 'cambios pendientes'} de guardar
+            {getModifiedItems().size} {getModifiedItems().size === 1 ? menuAdminTranslations.changePending : menuAdminTranslations.changesPending} {t.common.toSave || 'de guardar'}
           </ThemedText>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <Button
-              title="Cancelar"
+              title={menuAdminTranslations.cancel}
               onPress={handleCancelChanges}
               variant="outlined"
               size="md"
               disabled={savingChanges}
             />
             <Button
-              title="Guardar cambios"
+              title={t.common.saveChanges || 'Guardar cambios'}
               onPress={handleSaveChanges}
               variant="primary"
               size="md"
@@ -2822,7 +2838,7 @@ export function MenuAdminScreen() {
 
             <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
               <Button
-                title="Cancelar"
+                title={menuAdminTranslations.cancel}
                 onPress={() => {
                   setShowIconModal(false);
                   setIconModalItemId(null);
@@ -2831,7 +2847,7 @@ export function MenuAdminScreen() {
                 size="md"
               />
               <Button
-                title="Aplicar"
+                title={menuAdminTranslations.apply}
                 onPress={() => {
                   handleIconSelect(formData.icon || '');
                 }}
