@@ -13,7 +13,7 @@ export function Logo({ size = 'medium', style }: LogoProps) {
   const logoSize = useMemo(() => {
     switch (size) {
       case 'small':
-        return { width: 40, height: 40 };
+        return { width: 32, height: 32 }; // Reducido de 40x40 a 32x32 para mejor presentación en header
       case 'large':
         return { width: 80, height: 80 };
       default:

@@ -1,2 +1,3 @@
-// Componentes de auth se pueden agregar aquí cuando se migren
+export * from './register-form';
+export * from './verify-email-form';
 

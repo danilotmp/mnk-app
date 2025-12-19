@@ -1,13 +1,13 @@
 /**
  * Configuración centralizada de la API
- * Ahora usa valores de app.config.ts para mantener todo centralizado
+ * Usa AppConfig como única fuente de verdad
  */
 
-import { APP_CONFIG } from '@/src/config/app.config';
+import { AppConfig } from '@/src/config';
 
 export const API_CONFIG = {
   // URL base del backend (desde configuración centralizada)
-  BASE_URL: APP_CONFIG.API.BASE_URL,
+  BASE_URL: AppConfig.api.baseUrl,
   
   // Claves de almacenamiento
   STORAGE_KEYS: {
@@ -19,13 +19,13 @@ export const API_CONFIG = {
   
   // Configuración de tokens (desde configuración centralizada)
   TOKENS: {
-    ACCESS_TOKEN_DURATION: APP_CONFIG.AUTH.ACCESS_TOKEN_DURATION,
-    REFRESH_TOKEN_DURATION: APP_CONFIG.AUTH.REFRESH_TOKEN_DURATION,
-    TOKEN_REFRESH_THRESHOLD: APP_CONFIG.AUTH.TOKEN_REFRESH_THRESHOLD,
+    ACCESS_TOKEN_DURATION: AppConfig.auth.accessTokenDuration,
+    REFRESH_TOKEN_DURATION: AppConfig.auth.refreshTokenDuration,
+    TOKEN_REFRESH_THRESHOLD: AppConfig.auth.tokenRefreshThreshold,
   },
   
   // Timeout para requests (desde configuración centralizada)
-  TIMEOUT: APP_CONFIG.API.TIMEOUT,
+  TIMEOUT: AppConfig.api.timeout,
   
   // Endpoints
   ENDPOINTS: {
@@ -48,7 +48,7 @@ export class ApiConfig {
   private static instance: ApiConfig;
   
   private baseUrl: string;
-  private storage: any;
+  private readonly storage: any;
   private currentLanguage: string = 'es';
   private userContext: any = null;
   

@@ -1,70 +1,54 @@
 /**
- * Configuración centralizada de la aplicación
- * Valores configurables que pueden venir de app.json o variables de entorno
+ * @deprecated Este archivo se mantiene solo para compatibilidad hacia atrás.
+ * Por favor, usa AppConfig desde '@/src/config' en su lugar.
+ * 
+ * Este archivo re-exporta la configuración desde AppConfig para mantener
+ * compatibilidad con código existente que usa APP_CONFIG.
  */
 
-import Constants from 'expo-constants';
+import { AppConfig } from './index';
 
 /**
- * Configuración de la aplicación cargada desde app.json y variables de entorno
+ * Configuración de la aplicación (compatibilidad hacia atrás)
+ * @deprecated Usa AppConfig desde '@/src/config' en su lugar
  */
 export const APP_CONFIG = {
   // API Configuration
   API: {
-    BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 
-             Constants.expoConfig?.extra?.apiBaseUrl || 
-             'http://localhost:3000/api',
-    TIMEOUT: Constants.expoConfig?.extra?.apiTimeout || 30000, // 30 segundos por defecto
+    BASE_URL: AppConfig.api.baseUrl,
+    TIMEOUT: AppConfig.api.timeout,
   },
 
   // Authentication Configuration
   AUTH: {
-    // Tiempo de expiración del access token (en milisegundos)
-    ACCESS_TOKEN_DURATION: Constants.expoConfig?.extra?.accessTokenDuration || 
-                          15 * 60 * 1000, // 15 minutos
-    
-    // Tiempo de expiración del refresh token (en milisegundos)
-    REFRESH_TOKEN_DURATION: Constants.expoConfig?.extra?.refreshTokenDuration || 
-                           7 * 24 * 60 * 60 * 1000, // 7 días
-    
-    // Tiempo antes de expirar para refrescar automáticamente (en milisegundos)
-    TOKEN_REFRESH_THRESHOLD: Constants.expoConfig?.extra?.tokenRefreshThreshold || 
-                            5 * 60 * 1000, // 5 minutos antes de expirar
+    ACCESS_TOKEN_DURATION: AppConfig.auth.accessTokenDuration,
+    REFRESH_TOKEN_DURATION: AppConfig.auth.refreshTokenDuration,
+    TOKEN_REFRESH_THRESHOLD: AppConfig.auth.tokenRefreshThreshold,
   },
 
   // Cache Configuration
   CACHE: {
-    // Tiempo de expiración de cache de datos de usuario (en milisegundos)
-    USER_DATA_CACHE_DURATION: Constants.expoConfig?.extra?.userDataCacheDuration || 
-                              30 * 60 * 1000, // 30 minutos
-    
-    // Tiempo de expiración de cache de configuración (en milisegundos)
-    CONFIG_CACHE_DURATION: Constants.expoConfig?.extra?.configCacheDuration || 
-                          24 * 60 * 60 * 1000, // 24 horas
-    
-    // Tiempo de expiración de cache de listas y catálogos (en milisegundos)
-    CATALOG_CACHE_DURATION: Constants.expoConfig?.extra?.catalogCacheDuration || 
-                           60 * 60 * 1000, // 1 hora
+    USER_DATA_CACHE_DURATION: AppConfig.cache.userDataCacheDuration,
+    CONFIG_CACHE_DURATION: AppConfig.cache.configCacheDuration,
+    CATALOG_CACHE_DURATION: AppConfig.cache.catalogCacheDuration,
   },
 
   // App Information
   APP: {
-    NAME: Constants.expoConfig?.name || 'mnk-app',
-    VERSION: Constants.expoConfig?.version || '1.0.0',
-    ENVIRONMENT: process.env.NODE_ENV || 'development',
+    NAME: AppConfig.app.name,
+    VERSION: AppConfig.app.version,
+    ENVIRONMENT: AppConfig.app.environment,
   },
 
   // External URLs
   EXTERNAL_URLS: {
-    // URL de la documentación de iconos de Expo
-    ICONS_DOCUMENTATION: process.env.EXPO_PUBLIC_ICONS_DOCUMENTATION_URL || 
-                        Constants.expoConfig?.extra?.iconsDocumentationUrl || 
-                        'https://icons.expo.fyi/Index',
+    ICONS_DOCUMENTATION: AppConfig.externalUrls.iconsDocumentation,
   },
 };
 
 /**
  * Helper para obtener valores de configuración de forma segura
+ * @deprecated Usa AppConfig directamente en su lugar
  */
 export function getConfig<T>(path: string, defaultValue: T): T {
   const keys = path.split('.');

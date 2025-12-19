@@ -380,8 +380,25 @@ export function DataTable<T = any>({
    * Renderizar celda
    */
   const renderCell = (item: T, column: TableColumn<T>, index: number) => {
+    // Si hay render custom, normalizamos para mantener color tipográfico del tema
     if (column.render) {
-      return column.render(item, index);
+      const rendered = column.render(item, index);
+      if (React.isValidElement(rendered)) {
+        return rendered;
+      }
+      if (typeof rendered === 'string' || typeof rendered === 'number') {
+        return (
+          <ThemedText
+            type="body2"
+            style={styles.cellText}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {rendered}
+          </ThemedText>
+        );
+      }
+      return rendered;
     }
 
     const value = (item as any)[column.key];

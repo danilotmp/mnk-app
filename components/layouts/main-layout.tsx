@@ -1,5 +1,5 @@
 import { Header } from '@/components/header';
-import { HorizontalMenu, VerticalMenu, MenuItem } from '@/components/navigation';
+import { HorizontalMenu, MenuItem, VerticalMenu } from '@/components/navigation';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -7,8 +7,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { AppConfig } from '@/src/config';
 import { useCompany, useMultiCompany, UserProfileHeader } from '@/src/domains/shared';
 import { useMenu } from '@/src/infrastructure/menu';
-import { MenuService } from '@/src/infrastructure/menu/menu.service';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { createMainLayoutStyles } from '@/src/styles/components/main-layout.styles';
 import { useRouter } from 'expo-router';
 import React, { ReactNode, useState } from 'react';
@@ -215,6 +213,13 @@ export function MainLayout({
   // Filtrar items según el modo de menú
   const publicMenuItems = useMixMenu ? filterPublicItems(finalMenuItems) : [];
   const privateMenuItems = useMixMenu ? filterPrivateItems(finalMenuItems) : finalMenuItems;
+
+  // Determinar si realmente se debe mostrar el menú vertical
+  // En modo mix, solo se muestra si hay items privados
+  // En modo vertical, solo se muestra si hay items
+  const shouldShowVerticalMenu = (useVerticalMenu || useMixMenu) && 
+                                 showNavigation && 
+                                 (useMixMenu ? privateMenuItems.length > 0 : finalMenuItems.length > 0);
 
   const router = useRouter();
 
@@ -480,9 +485,9 @@ export function MainLayout({
       )}
 
       {/* Contenedor del body: Menú vertical (si aplica) + Content */}
-      <View style={[styles.bodyContainer, (useVerticalMenu || useMixMenu) && styles.bodyContainerWithVerticalMenu]}>
+      <View style={[styles.bodyContainer, shouldShowVerticalMenu && styles.bodyContainerWithVerticalMenu]}>
         {/* Menú vertical (solo cuando está autenticado y configurado, o en modo mix) */}
-        {(useVerticalMenu || useMixMenu) && showNavigation && (
+        {shouldShowVerticalMenu && (
           <VerticalMenu
             items={useMixMenu ? privateMenuItems : finalMenuItems}
             onItemPress={handleMenuItemPress}

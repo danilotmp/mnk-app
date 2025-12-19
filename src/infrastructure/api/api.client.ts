@@ -315,6 +315,25 @@ export class ApiClient {
       await this.clearTokens();
     }
   }
+
+  /**
+   * Helpers para métodos HTTP comunes
+   */
+  async get<T = any>(endpoint: string, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, endpoint, method: 'GET' });
+  }
+
+  async post<T = any>(endpoint: string, body?: any, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, endpoint, method: 'POST', body });
+  }
+
+  async put<T = any>(endpoint: string, body?: any, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, endpoint, method: 'PUT', body });
+  }
+
+  async delete<T = any>(endpoint: string, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, endpoint, method: 'DELETE' });
+  }
 }
 
 /**
