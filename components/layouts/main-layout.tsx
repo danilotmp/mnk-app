@@ -42,7 +42,7 @@ export function MainLayout({
   const styles = createMainLayoutStyles();
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [titleWidth, setTitleWidth] = useState<number>(0);
-  const [verticalMenuCollapsed, setVerticalMenuCollapsed] = useState(false);
+  const [verticalMenuCollapsed, setVerticalMenuCollapsed] = useState(true); // Inicia colapsado por defecto
 
   // Determinar el tipo de menú según configuración y estado de autenticación
   // El menú horizontal siempre se muestra antes del login
