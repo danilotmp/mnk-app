@@ -8,15 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { UserSessionService, UserContextService } from '@/src/domains/shared/services';
+import { UserContextService, UserSessionService } from '@/src/domains/shared/services';
+import { UserResponse } from '@/src/domains/shared/types/api/user-response.types';
 import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { extractErrorMessage, extractErrorDetail } from '@/src/infrastructure/messages/error-utils';
+import { extractErrorDetail, extractErrorMessage } from '@/src/infrastructure/messages/error-utils';
 import { authService } from '@/src/infrastructure/services/auth.service';
 import { mapUserResponseToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
 import { useSession } from '@/src/infrastructure/session';
-import { UserResponse } from '@/src/domains/shared/types/api/user-response.types';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -47,6 +47,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -207,7 +208,12 @@ export default function LoginPage() {
                   styles.inputContainer,
                   { 
                     backgroundColor: colors.surface,
-                    borderColor: errors.email ? colors.error : colors.border,
+                    borderColor: errors.email 
+                      ? colors.error 
+                      : focusedInput === 'email' 
+                        ? colors.primary 
+                        : colors.border,
+                    borderWidth: focusedInput === 'email' && !errors.email ? 2 : 1,
                   }
                 ]}>
                   <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
@@ -222,11 +228,14 @@ export default function LoginPage() {
                         setErrors({ ...errors, email: undefined });
                       }
                     }}
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => setFocusedInput(null)}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
                     textContentType="emailAddress"
                     editable={!isLoading}
+                    underlineColorAndroid="transparent"
                   />
                 </View>
                 {errors.email && (
@@ -245,7 +254,12 @@ export default function LoginPage() {
                   styles.inputContainer,
                   { 
                     backgroundColor: colors.surface,
-                    borderColor: errors.password ? colors.error : colors.border,
+                    borderColor: errors.password 
+                      ? colors.error 
+                      : focusedInput === 'password' 
+                        ? colors.primary 
+                        : colors.border,
+                    borderWidth: focusedInput === 'password' && !errors.password ? 2 : 1,
                   }
                 ]}>
                   <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
@@ -260,11 +274,14 @@ export default function LoginPage() {
                         setErrors({ ...errors, password: undefined });
                       }
                     }}
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => setFocusedInput(null)}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoComplete="password"
                     textContentType="password"
                     editable={!isLoading}
+                    underlineColorAndroid="transparent"
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
@@ -401,11 +418,11 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    overflow: 'hidden', // Prevenir que el borde interno se muestre
   },
   inputIcon: {
     marginRight: 0,
@@ -413,6 +430,20 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    ...(Platform.OS === 'web' ? {
+      outline: 'none',
+      outlineStyle: 'none',
+      outlineWidth: 0,
+      outlineColor: 'transparent',
+      borderWidth: 0,
+      borderStyle: 'none',
+      WebkitAppearance: 'none',
+      appearance: 'none',
+      backgroundColor: 'transparent',
+    } : {
+      borderWidth: 0,
+      padding: 0,
+    }),
   },
   eyeIcon: {
     padding: 4,

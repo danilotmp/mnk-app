@@ -1,0 +1,349 @@
+/**
+ * Pantalla Pública de Productos/Funcionalidades del Sistema
+ * Muestra todos los productos disponibles (Chat IA, etc.) y redirige inteligentemente
+ * según el estado del usuario (logueado, empresa, etc.)
+ */
+
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Card } from '@/components/ui/card';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
+import { useCompany } from '@/src/domains/shared';
+import { useTranslation } from '@/src/infrastructure/i18n';
+import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+
+interface ProductCard {
+  id: string;
+  title: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  enabled: boolean;
+  image?: string; // URL o path de imagen
+}
+
+export function CapabilitiesScreen() {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const { isMobile, width } = useResponsive();
+  const router = useRouter();
+  const alert = useAlert();
+  const { company, user, branch } = useCompany();
+
+  // Productos/Funcionalidades disponibles del sistema
+  const products: ProductCard[] = [
+    {
+      id: 'chat-ia',
+      title: 'Chat IA',
+      description: 'Asistente inteligente que interactúa con tus clientes por WhatsApp. Responde preguntas, brinda información sobre tu negocio, precios, métodos de pago y ayuda con recomendaciones personalizadas.',
+      icon: 'chatbubbles-outline',
+      enabled: true,
+      image: 'https://img.freepik.com/vector-premium/inteligencia-artificial-telefono-inteligente-bot-chat-linea-movil-robot-asistente-correspondencia_178863-2199.jpg?w=360',
+    },
+    // Futuros productos se agregarán aquí
+    // {
+    //   id: 'inventory',
+    //   title: 'Inventario',
+    //   description: 'Gestiona productos, stock y proveedores',
+    //   icon: 'cube-outline',
+    //   enabled: false,
+    // },
+  ];
+
+  /**
+   * Detecta si la empresa actual es "Perfil de Invitado" o una empresa real
+   * Lógica: Si el código o nombre contiene "GUEST", "INVITADO", o es muy genérico
+   */
+  const isGuestCompany = (): boolean => {
+    if (!company) return true;
+    
+    const code = (company.code || '').toUpperCase();
+    const name = (company.name || '').toUpperCase();
+    
+    return (
+      code.includes('GUEST') ||
+      code.includes('INVITADO') ||
+      name.includes('GUEST') ||
+      name.includes('INVITADO') ||
+      code === 'DEFAULT' ||
+      name === 'EMPRESA POR DEFECTO'
+    );
+  };
+
+  /**
+   * Detecta si el usuario necesita crear empresa/sucursal (Capa 0)
+   */
+  const needsCompanySetup = (): boolean => {
+    // Si no está logueado, necesita crear empresa
+    if (!user) return true;
+    
+    // Si no tiene empresa, necesita crear
+    if (!company) return true;
+    
+    // Si tiene empresa pero es de invitado, necesita crear empresa real
+    if (isGuestCompany()) return true;
+    
+    // Si tiene empresa pero no tiene sucursal, necesita crear sucursal
+    if (!branch) return true;
+    
+    return false;
+  };
+
+  /**
+   * Maneja el click en un producto
+   * Redirige inteligentemente según el estado del usuario
+   */
+  const handleProductPress = (product: ProductCard) => {
+    if (!product.enabled) return;
+
+    // Si no está logueado → Login primero, luego redirigir al wizard
+    if (!user) {
+      router.push('/auth/login?redirect=' + encodeURIComponent(`/commercial/setup?product=${product.id}`));
+      return;
+    }
+
+    // Si necesita setup de empresa (Capa 0) → Wizard con Capa 0
+    if (needsCompanySetup()) {
+      // Redirigir al wizard que iniciará en Capa 0
+      router.push(`/commercial/setup?product=${product.id}&layer=0`);
+      return;
+    }
+
+    // Si tiene empresa real y sucursal → Directo a Capa 1 del wizard
+    router.push(`/commercial/setup?product=${product.id}&layer=institutional`);
+  };
+
+  /**
+   * Calcula el estilo dinámico para el grid de productos
+   * Ajusta el número de columnas según el ancho de la pantalla
+   */
+  const createProductsGridStyle = () => {
+    return {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      justifyContent: 'flex-start' as const,
+      gap: 16,
+    };
+  };
+
+  /**
+   * Calcula el ancho dinámico de cada tarjeta de producto
+   * Mobile: 1 columna (100%)
+   * Tablet: 2 columnas (48% cada una)
+   * Desktop pequeño: 3 columnas (31% cada una)
+   * Desktop grande: 4 columnas (23% cada una)
+   */
+  const createProductCardStyle = (screenWidth: number, isMobileDevice: boolean) => {
+    if (isMobileDevice || screenWidth < 600) {
+      // Mobile: 1 columna
+      return { width: '100%' };
+    } else if (screenWidth < 900) {
+      // Tablet: 2 columnas (48% para dejar espacio al gap)
+      return { width: '48%' };
+    } else if (screenWidth < 1200) {
+      // Desktop pequeño: 3 columnas (31% para dejar espacio al gap)
+      return { width: '31%' };
+    } else {
+      // Desktop grande: 4 columnas (23% para dejar espacio al gap)
+      return { width: '23%' };
+    }
+  };
+
+  return (
+    <ThemedView style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText type="h2" style={styles.title}>
+            Productos del Sistema
+          </ThemedText>
+          <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Activa y configura las funcionalidades disponibles para tu negocio
+          </ThemedText>
+        </View>
+
+        {/* Cards de Productos */}
+        <View style={[styles.productsGrid, createProductsGridStyle()]}>
+          {products.map((product) => (
+            <TouchableOpacity
+              key={product.id}
+              onPress={() => handleProductPress(product)}
+              disabled={!product.enabled}
+              activeOpacity={0.7}
+            >
+              <Card 
+                variant="elevated" 
+                style={[
+                  styles.productCard,
+                  createProductCardStyle(width, isMobile),
+                  !product.enabled && styles.productCardDisabled
+                ]}
+              >
+                {/* Imagen o Icono */}
+                <View style={styles.cardImageContainer}>
+                  {product.image ? (
+                    <Image 
+                      source={{ uri: product.image }} 
+                      style={styles.cardImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+                      <Ionicons 
+                        name={product.icon} 
+                        size={48} 
+                        color={product.enabled ? colors.primary : colors.textSecondary} 
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* Contenido */}
+                <View style={styles.cardContent}>
+                  <ThemedText type="h4" style={styles.cardTitle}>
+                    {product.title}
+                  </ThemedText>
+                  <ThemedText type="body2" style={[styles.cardDescription, { color: colors.textSecondary }]}>
+                    {product.description}
+                  </ThemedText>
+
+                  {/* Badge de Estado */}
+                  <View style={styles.cardFooter}>
+                    {product.enabled ? (
+                      <View style={[styles.badge, { backgroundColor: '#10b981' + '20' }]}>
+                        <ThemedText type="caption" style={{ color: '#10b981', fontWeight: '600' }}>
+                          Disponible
+                        </ThemedText>
+                      </View>
+                    ) : (
+                      <View style={[styles.badge, { backgroundColor: colors.textSecondary + '20' }]}>
+                        <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                          Próximamente
+                        </ThemedText>
+                      </View>
+                    )}
+                    
+                    <Ionicons 
+                      name="chevron-forward" 
+                      size={20} 
+                      color={product.enabled ? colors.primary : colors.textSecondary} 
+                    />
+                  </View>
+                </View>
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Mensaje informativo */}
+        <Card variant="outlined" style={styles.infoCard}>
+          <View style={styles.infoContent}>
+            <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
+            <View style={styles.infoText}>
+              <ThemedText type="body2" style={{ fontWeight: '600', marginBottom: 4 }}>
+                ¿Cómo funcionan los productos?
+              </ThemedText>
+              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                Cada producto tiene un wizard de configuración que te guía paso a paso. 
+                Si no tienes empresa configurada, el sistema te ayudará a crearla. 
+                Puedes completar la información cuando lo necesites, sin restricciones.
+              </ThemedText>
+            </View>
+          </View>
+        </Card>
+      </ScrollView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  header: {
+    marginBottom: 24,
+    gap: 8,
+  },
+  title: {
+    marginBottom: 4,
+  },
+  subtitle: {
+    lineHeight: 20,
+  },
+  productsGrid: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  productCard: {
+    padding: 20,
+    gap: 16,
+  },
+  productCardDisabled: {
+    opacity: 0.6,
+  },
+  cardImageContainer: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  iconContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  cardContent: {
+    gap: 12,
+  },
+  cardTitle: {
+    marginBottom: 4,
+  },
+  cardDescription: {
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  infoCard: {
+    padding: 16,
+  },
+  infoContent: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+    gap: 4,
+  },
+});

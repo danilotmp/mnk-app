@@ -120,17 +120,33 @@ export class MenuService {
       finalMenu.push(homeItem);
     }
 
-    // 2. Menú autorizado del backend (remover Home si está incluido para evitar duplicados)
-    const backendMenuWithoutHome = backendMenu.filter(item => item.route !== '/');
-    finalMenu.push(...backendMenuWithoutHome);
-
-    // 3. Resto de páginas públicas por defecto (sin Home, solo las que faltan)
-    // Preservar las del backend si existen, usar las por defecto solo si no están
+    // 2. Páginas públicas en el orden correcto (Productos antes de Contacto)
+    // Insertar ANTES del menú del backend para garantizar el orden
     const finalMenuRoutes = new Set(finalMenu.map(item => item.route));
-    const missingOtherPublicPages = otherPublicItems.filter(
-      item => item.route && !finalMenuRoutes.has(item.route)
+    
+    // Insertar cada página pública en el orden definido: Productos, luego Contacto
+    for (const publicItem of otherPublicItems) {
+      if (!publicItem.route) continue;
+      
+      // Buscar si el backend ya tiene esta página pública
+      const backendPublicItem = backendMenu.find(item => item.route === publicItem.route);
+      
+      if (backendPublicItem && !finalMenuRoutes.has(publicItem.route)) {
+        // Si el backend tiene la página, usarla (preserva datos del backend)
+        finalMenu.push(backendPublicItem);
+        finalMenuRoutes.add(publicItem.route);
+      } else if (!finalMenuRoutes.has(publicItem.route)) {
+        // Si no está en el backend ni en el menú final, usar la por defecto
+        finalMenu.push(publicItem);
+        finalMenuRoutes.add(publicItem.route);
+      }
+    }
+
+    // 3. Menú autorizado del backend (remover Home y páginas públicas ya agregadas)
+    const backendMenuFiltered = backendMenu.filter(
+      item => item.route !== '/' && !finalMenuRoutes.has(item.route || '')
     );
-    finalMenu.push(...missingOtherPublicPages);
+    finalMenu.push(...backendMenuFiltered);
 
     return finalMenu;
   }
@@ -141,6 +157,7 @@ export class MenuService {
    * 
    * Las páginas públicas son:
    * - / (home)
+   * - /capabilities (productos del sistema)
    * - /main/contact (contacto)
    */
   static getDefaultMenu(): MenuItem[] {
@@ -149,6 +166,12 @@ export class MenuService {
         id: 'home',
         label: 'Inicio',
         route: '/',
+        isPublic: true, // Página pública
+      },
+      {
+        id: 'capabilities',
+        label: 'Productos',
+        route: '/capabilities',
         isPublic: true, // Página pública
       },
       {

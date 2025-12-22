@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
-import { CompaniesService } from '../../services';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { CompaniesService } from '../../services';
 import { createCompanyFormStyles } from './company-create-form.styles';
 import { CompanyCreateFormProps, CompanyFormData } from './company-create-form.types';
 
@@ -322,7 +322,10 @@ export function CompanyCreateForm({
 
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.companies?.phone || 'Teléfono'}
+            {t.security?.companies?.phone || 'Teléfono / WhatsApp'}
+          </ThemedText>
+          <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+            Número de WhatsApp para Chat IA (opcional pero recomendado)
           </ThemedText>
           <InputWithFocus
             containerStyle={[

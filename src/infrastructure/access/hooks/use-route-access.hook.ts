@@ -8,7 +8,7 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 
 import { AccessService } from '../access.service';
 
-const PUBLIC_ROUTES = new Set<string>(['/', '/main/contact']);
+const PUBLIC_ROUTES = new Set<string>(['/', '/main/contact', '/capabilities']);
 
 interface UseRouteAccessOptions {
   redirectTo?: string;
