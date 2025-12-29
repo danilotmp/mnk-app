@@ -88,3 +88,44 @@ export interface CatalogItemPayload {
   status?: number;
 }
 
+// ===== Catalog Query (Nuevo endpoint) =====
+
+/**
+ * Entrada de catálogo (item) desde el endpoint de query
+ */
+export interface CatalogEntry {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  parentId?: string | null;
+  externalCode?: string | null;
+  metadata?: {
+    icon?: string;
+    [key: string]: any;
+  } | null;
+  status: number;
+  statusDescription?: string;
+  details: CatalogEntry[]; // Estructura recursiva para catálogos jerárquicos
+}
+
+/**
+ * Respuesta de consulta de catálogo
+ * POST /api/catalogs/query
+ */
+export interface CatalogQueryResponse {
+  code: string;
+  name: string;
+  description?: string;
+  companyId?: string | null;
+  isHierarchical: boolean;
+  details: CatalogEntry[]; // Cambiado de entries a details
+}
+
+/**
+ * Payload para consultar catálogo
+ */
+export interface CatalogQueryPayload {
+  code: string;
+}
+

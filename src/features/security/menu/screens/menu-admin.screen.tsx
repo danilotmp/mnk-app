@@ -134,16 +134,15 @@ export function MenuAdminScreen() {
         submenu: item.submenu && Array.isArray(item.submenu) && item.submenu.length > 0 
           ? convertToAdminItems(item.submenu, level + 1, item.id) 
           : undefined,
-        // Mantener columnas aunque aún no tengan items, para que se rendericen y permitan agregar.
         columns: item.columns && Array.isArray(item.columns) && item.columns.length > 0
           ? item.columns
-              .filter(col => col && col.title)
+              .filter(col => col && col.title && col.items && Array.isArray(col.items) && col.items.length > 0)
               .map((col, colIndex) => ({
                 id: `col-${item.id}-${colIndex}`,
                 title: col.title || '',
                 order: colIndex,
                 parentId: item.id,
-                items: convertToAdminItems(col.items || [], level + 1, item.id),
+                items: convertToAdminItems(col.items, level + 1, item.id),
               }))
           : undefined,
       };

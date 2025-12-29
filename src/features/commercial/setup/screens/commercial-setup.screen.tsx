@@ -5,13 +5,13 @@
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CommercialService } from '@/src/domains/commercial';
 import { CommercialCapabilities, LayerProgress } from '@/src/domains/commercial/types';
 import { useCompany } from '@/src/domains/shared';
+import { SearchFilterBar } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { CompanySetupLayer } from '../components/company-setup-layer/company-setup-layer';
 import { InstitutionalLayer } from '../components/institutional-layer/institutional-layer';
+import { InteractionGuidelinesLayer } from '../components/interaction-guidelines-layer';
 import { OperationalLayer } from '../components/operational-layer/operational-layer';
 import { PaymentsLayer } from '../components/payments-layer/payments-layer';
 import { RecommendationsLayer } from '../components/recommendations-layer/recommendations-layer';
@@ -38,6 +39,8 @@ export function CommercialSetupScreen() {
   const [layerProgress, setLayerProgress] = useState<LayerProgress[]>([]);
   const [currentLayer, setCurrentLayer] = useState<string>('institutional');
   const [showLayer0, setShowLayer0] = useState(false);
+  const [recommendationsFilter, setRecommendationsFilter] = useState('');
+  const [interactionGuidelinesFilter, setInteractionGuidelinesFilter] = useState('');
 
   // Detectar si necesita Capa 0 (crear empresa/sucursal)
   const needsCompanySetup = (): boolean => {
@@ -102,7 +105,7 @@ export function CommercialSetupScreen() {
       const capabilityMap: Record<string, keyof CommercialCapabilities> = {
         'institutional': 'canAnswerAboutBusiness', // También puede activar canAnswerAboutLocation
         'offerings': 'canAnswerAboutPrices',
-        'promotions': 'canAnswerAboutPrices', // Las promociones también afectan precios
+        'interactionGuidelines': 'canAnswerAboutBusiness', // Las directrices mejoran la interacción general
         'payments': 'canAnswerAboutPayment',
         'recommendations': 'canRecommend', // También puede activar canSuggestProducts
       };
@@ -116,9 +119,11 @@ export function CommercialSetupScreen() {
       }
       
       // Actualizar el progreso local
+      // Cuando se completa u omite una capa, siempre se marca como completada al 100%
+      // (completada con datos = 100%, completada sin datos/omitida = 100% también)
       setLayerProgress(prev => {
         const updated = prev.map(l => l.layer === layer 
-          ? { ...l, completed: true, completionPercentage: hasData ? 100 : 50, skipped: !hasData }
+          ? { ...l, completed: true, completionPercentage: 100, skipped: !hasData }
           : l
         );
         // Si no existe la capa en el progreso, agregarla
@@ -126,7 +131,7 @@ export function CommercialSetupScreen() {
           updated.push({
             layer: layer as any,
             completed: true,
-            completionPercentage: hasData ? 100 : 50,
+            completionPercentage: 100, // Siempre 100% cuando se completa u omite
             enabledCapabilities: capabilityKey ? [capabilityKey] : [],
             missingFields: hasData ? [] : [layer],
             skipped: !hasData,
@@ -150,47 +155,46 @@ export function CommercialSetupScreen() {
     try {
       const progress = await CommercialService.getLayerProgress(company.id);
       
-      // Usar el estado actual de currentLayer para determinar la siguiente capa
-      setCurrentLayer(prevLayer => {
-        // Determinar qué capa mostrar:
-        // 1. Si la capa actual está completa, avanzar a la siguiente incompleta
-        // 2. Si la capa actual no existe en el progreso, buscar la primera incompleta
-        // 3. Si todas están completas, quedarse en la última
-        const currentLayerProgress = progress.find(p => p.layer === prevLayer);
-        let targetLayer = prevLayer;
-        
-        // Filtrar capa 'operational' del progreso
-        const filteredProgress = progress.filter(p => p.layer !== 'operational');
-        
-        if (currentLayerProgress?.completed) {
-          // La capa actual está completa, avanzar a la siguiente incompleta
-          const nextIncomplete = filteredProgress.find(p => !p.completed && p.layer !== 'operational');
-          if (nextIncomplete) {
-            targetLayer = nextIncomplete.layer;
-          } else {
-            // Todas están completas, quedarse en la última
-            const lastLayer = filteredProgress[filteredProgress.length - 1];
-            if (lastLayer) {
-              targetLayer = lastLayer.layer;
-            }
-          }
-        } else if (!currentLayerProgress) {
-          // La capa actual no existe en el progreso, buscar la primera incompleta
-          const firstIncomplete = filteredProgress.find(p => !p.completed && p.layer !== 'operational');
-          if (firstIncomplete) {
-            targetLayer = firstIncomplete.layer;
-          }
-        }
-        // Si la capa actual existe y no está completa, mantenerla
-        
-        return targetLayer;
-      });
+      // Definir el orden de las capas
+      const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
       
-      // Actualizar el estado con el progreso, pero preservar el progreso de capas que ya están al 100%
-      // (para evitar que se sobrescriba el progreso que se estableció después de guardar)
+      // Filtrar capa 'operational' del progreso
+      const filteredProgress = progress.filter(p => p.layer !== 'operational');
+      
+      // Encontrar la última etapa completada
+      let lastCompletedIndex = -1;
+      for (let i = layerOrder.length - 1; i >= 0; i--) {
+        const layerId = layerOrder[i];
+        const layerProgress = filteredProgress.find(p => p.layer === layerId);
+        if (layerProgress?.completed) {
+          lastCompletedIndex = i;
+          break;
+        }
+      }
+      
+      // Determinar qué capa mostrar:
+      // 1. Si hay etapas completadas, mostrar la última completada
+      // 2. Si no hay etapas completadas, mostrar la primera (institutional)
+      let targetLayer = 'institutional';
+      if (lastCompletedIndex >= 0) {
+        targetLayer = layerOrder[lastCompletedIndex];
+      }
+      
+      setCurrentLayer(targetLayer);
+      
+      // Actualizar el estado con el progreso, pero preservar el progreso de capas que ya están completadas
+      // (para evitar que se sobrescriba el progreso que se estableció después de completar/omitir)
       setLayerProgress(prev => {
         const updated = progress.map(newLayer => {
           const existingLayer = prev.find(l => l.layer === newLayer.layer);
+          // Si la capa existente ya está marcada como completada, mantenerla (no sobrescribir)
+          if (existingLayer && existingLayer.completed) {
+            return existingLayer;
+          }
+          // Si la nueva capa está completada, usar la nueva
+          if (newLayer.completed) {
+            return newLayer;
+          }
           // Si la capa existente ya está al 100%, mantenerla
           if (existingLayer && existingLayer.completionPercentage === 100) {
             return existingLayer;
@@ -237,7 +241,7 @@ export function CommercialSetupScreen() {
   const defaultSteps: WizardStep[] = [
     { id: 'institutional', label: 'Contexto Institucional', layer: 'institutional', completed: false, enabled: true, completionPercentage: 0 },
     { id: 'offerings', label: 'Ofertas', layer: 'offerings', completed: false, enabled: true, completionPercentage: 0 },
-    { id: 'promotions', label: 'Promociones', layer: 'promotions', completed: false, enabled: true, completionPercentage: 0 },
+    { id: 'interactionGuidelines', label: 'Directrices de Interacción', layer: 'interactionGuidelines', completed: false, enabled: true, completionPercentage: 0 },
     { id: 'payments', label: 'Pagos', layer: 'payments', completed: false, enabled: true, completionPercentage: 0 },
     { id: 'recommendations', label: 'Recomendaciones', layer: 'recommendations', completed: false, enabled: true, completionPercentage: 0 },
   ];
@@ -254,8 +258,8 @@ export function CommercialSetupScreen() {
               ? 'Contexto Institucional'
               : layer.layer === 'offerings'
               ? 'Ofertas'
-              : layer.layer === 'promotions'
-              ? 'Promociones'
+              : layer.layer === 'interactionGuidelines'
+              ? 'Directrices de Interacción'
               : layer.layer === 'payments'
               ? 'Pagos'
               : 'Recomendaciones', // Incluye todos los tipos: informational, orientation, suggestion, upsell
@@ -268,7 +272,24 @@ export function CommercialSetupScreen() {
     : defaultSteps;
 
   const handleStepPress = (step: WizardStep) => {
-    setCurrentLayer(step.layer);
+    // Definir el orden de las capas
+    const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+    
+    const currentIndex = layerOrder.indexOf(currentLayer);
+    const targetIndex = layerOrder.indexOf(step.layer);
+    
+    // Obtener el estado de la etapa actual
+    const currentStep = wizardSteps.find(s => s.layer === currentLayer);
+    const isCurrentCompleted = currentStep?.completed || false;
+    
+    // Permitir navegación si:
+    // 1. Es una etapa anterior (targetIndex < currentIndex) - siempre permitido
+    // 2. Es la etapa actual (targetIndex === currentIndex) - siempre permitido
+    // 3. Es una etapa futura (targetIndex > currentIndex) - solo si la actual está completada
+    if (targetIndex <= currentIndex || isCurrentCompleted) {
+      setCurrentLayer(step.layer);
+    }
+    // Si es una etapa futura y la actual no está completada, no hacer nada (no permitir navegación)
   };
 
   const handleBack = () => {
@@ -329,25 +350,70 @@ export function CommercialSetupScreen() {
         ) : (
           <>
             {/* Contenido de la Capa Actual */}
-            <Card variant="elevated" style={styles.contentCard}>
-              <ThemedText type="h4" style={styles.contentTitle}>
-                {wizardSteps.find(s => s.id === currentLayer)?.label || 'Capa'}
-              </ThemedText>
-              <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary }]}>
-                {currentLayer === 'institutional' && 
-                  'Cuéntanos sobre tu empresa: a qué se dedica, en qué industria está, y cómo opera.'}
-                {currentLayer === 'offerings' && 
-                  'Configura tus ofertas (productos, servicios y paquetes) y precios para que la IA pueda informar valores a los clientes.'}
-                {currentLayer === 'promotions' && 
-                  'Define promociones e incentivos temporales para tus ofertas.'}
-                {currentLayer === 'payments' && 
-                  'Define los métodos de pago aceptados y cómo los clientes pueden realizar pagos.'}
-                {currentLayer === 'recommendations' && 
-                  'Crea recomendaciones informativas, de orientación, sugerencias y upsell que la IA puede ofrecer durante las conversaciones.'}
-              </ThemedText>
+            <Card variant="elevated" style={[styles.contentCard, currentLayer === 'interactionGuidelines' && { gap: 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: currentLayer === 'interactionGuidelines' ? 0 : 16 }}>
+                <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                  <ThemedText type="h4" style={styles.contentTitle}>
+                    {wizardSteps.find(s => s.id === currentLayer)?.label || 'Capa'}
+                  </ThemedText>
+                  {currentLayer === 'recommendations' && (
+                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
+                      Crea recomendaciones informativas, de orientación, sugerencias y upsell que la IA puede ofrecer durante las conversaciones.
+                    </ThemedText>
+                  )}
+                  {currentLayer === 'interactionGuidelines' && (
+                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
+                      Configura la personalidad y el estilo de comunicación de tu asistente IA. Define cómo debe saludar, despedirse y el tono que debe usar en cada interacción.
+                    </ThemedText>
+                  )}
+                  {currentLayer === 'institutional' && (
+                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
+                      Cuéntanos sobre tu empresa: a qué se dedica, en qué industria está, y cómo opera.
+                    </ThemedText>
+                  )}
+                  {currentLayer === 'offerings' && (
+                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
+                      Configura tus ofertas (productos, servicios y paquetes) y precios para que la IA pueda informar valores a los clientes.
+                    </ThemedText>
+                  )}
+                  {currentLayer === 'payments' && (
+                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
+                      Define los métodos de pago aceptados y cómo los clientes pueden realizar pagos.
+                    </ThemedText>
+                  )}
+                </View>
+                {currentLayer === 'recommendations' && (
+                  <View style={{ flex: 1, marginLeft: 16, maxWidth: 400 }}>
+                    <SearchFilterBar
+                      filterValue={recommendationsFilter}
+                      onFilterChange={setRecommendationsFilter}
+                      onSearchSubmit={(search) => setRecommendationsFilter(search)}
+                      filterPlaceholder="Filtrar por mensaje..."
+                      searchPlaceholder="Buscar recomendaciones..."
+                      filters={[]}
+                      showClearButton={false}
+                      showSearchHint={false}
+                    />
+                  </View>
+                )}
+                {currentLayer === 'interactionGuidelines' && (
+                  <View style={{ flex: 1, marginLeft: 16, maxWidth: 400 }}>
+                    <SearchFilterBar
+                      filterValue={interactionGuidelinesFilter}
+                      onFilterChange={setInteractionGuidelinesFilter}
+                      onSearchSubmit={(search) => setInteractionGuidelinesFilter(search)}
+                      filterPlaceholder="Filtrar por título o descripción..."
+                      searchPlaceholder="Buscar directrices..."
+                      filters={[]}
+                      showClearButton={false}
+                      showSearchHint={false}
+                    />
+                  </View>
+                )}
+              </View>
 
               {/* Renderizar componente de la capa actual */}
-              <View style={styles.layerContent}>
+              <View style={[styles.layerContent, currentLayer === 'interactionGuidelines' && { paddingTop: 0, marginTop: 0 }]}>
                 {currentLayer === 'institutional' && (
                   <InstitutionalLayer
                     onProgressUpdate={(progress) => {
@@ -377,7 +443,7 @@ export function CommercialSetupScreen() {
                       await loadProgress();
                       // Luego avanzar a la siguiente capa en la secuencia
                       setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'promotions', 'payments', 'recommendations'];
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
                         const currentIndex = layerOrder.indexOf(prevLayer);
                         if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
                           return layerOrder[currentIndex + 1];
@@ -416,7 +482,7 @@ export function CommercialSetupScreen() {
                       // que se estableció después de guardar exitosamente
                       // await loadProgress();
                       setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'promotions', 'payments', 'recommendations'];
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
                         const currentIndex = layerOrder.indexOf(prevLayer);
                         if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
                           return layerOrder[currentIndex + 1];
@@ -426,64 +492,70 @@ export function CommercialSetupScreen() {
                     }}
                   />
                 )}
-                {currentLayer === 'promotions' && (
-                  <View style={{ padding: 20 }}>
-                    <ThemedText type="body1" style={{ color: colors.textSecondary, textAlign: 'center' }}>
-                      La gestión de promociones estará disponible próximamente.
-                    </ThemedText>
-                    <ThemedText type="body2" style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>
-                      Esta funcionalidad permitirá crear promociones e incentivos temporales para tus ofertas.
-                    </ThemedText>
-                    
-                    {/* Botones Continuar y Omitir */}
-                    <View style={{ marginTop: 24, gap: 12 }}>
-                      <Button
-                        title="Continuar"
-                        onPress={async () => {
-                          // Marcar como completada (sin datos porque no está implementada)
-                          await markLayerAsCompleted('promotions', false);
-                          setCurrentLayer(prevLayer => {
-                            const layerOrder = ['institutional', 'offerings', 'promotions', 'payments', 'recommendations'];
-                            const currentIndex = layerOrder.indexOf(prevLayer);
-                            if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
-                              return layerOrder[currentIndex + 1];
-                            }
-                            return prevLayer;
+                {currentLayer === 'interactionGuidelines' && (
+                  <InteractionGuidelinesLayer
+                    searchFilter={interactionGuidelinesFilter}
+                    onProgressUpdate={(progress) => {
+                      setLayerProgress(prev => {
+                        const existingLayer = prev.find(l => l.layer === 'interactionGuidelines');
+                        // Si la capa ya está marcada como completada, no sobrescribir el estado
+                        if (existingLayer && existingLayer.completed) {
+                          return prev; // Mantener el estado de completado
+                        }
+                        // Solo actualizar el progreso si no está completada
+                        const updated = prev.map(l => l.layer === 'interactionGuidelines' 
+                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
+                          : l
+                        );
+                        if (!updated.find(l => l.layer === 'interactionGuidelines')) {
+                          updated.push({
+                            layer: 'interactionGuidelines',
+                            completed: progress === 100,
+                            completionPercentage: progress,
+                            enabledCapabilities: [],
+                            missingFields: progress === 100 ? [] : ['interactionGuidelines'],
                           });
-                        }}
-                        variant="primary"
-                        size="lg"
-                        style={{ width: '100%' }}
-                      >
-                        <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                      </Button>
-                      <Button
-                        title="Omitir"
-                        onPress={async () => {
-                          // Marcar como omitida (sin datos)
-                          await markLayerAsCompleted('promotions', false);
-                          setCurrentLayer(prevLayer => {
-                            const layerOrder = ['institutional', 'offerings', 'promotions', 'payments', 'recommendations'];
-                            const currentIndex = layerOrder.indexOf(prevLayer);
-                            if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
-                              return layerOrder[currentIndex + 1];
-                            }
-                            return prevLayer;
-                          });
-                        }}
-                        variant="outlined"
-                        size="lg"
-                        style={{ width: '100%' }}
-                      >
-                        <Ionicons name="skip-forward-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
-                      </Button>
-                    </View>
-                  </View>
+                        }
+                        return updated;
+                      });
+                    }}
+                    onDataChange={(hasData) => {
+                      // Actualizar capacidades cuando hay datos
+                    }}
+                    onComplete={async (hasData) => {
+                      await markLayerAsCompleted('interactionGuidelines', hasData || false);
+                      setCurrentLayer(prevLayer => {
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+                        const currentIndex = layerOrder.indexOf(prevLayer);
+                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                          return layerOrder[currentIndex + 1];
+                        }
+                        return prevLayer;
+                      });
+                    }}
+                    onSkip={async () => {
+                      await markLayerAsCompleted('interactionGuidelines', false);
+                      setCurrentLayer(prevLayer => {
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+                        const currentIndex = layerOrder.indexOf(prevLayer);
+                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                          return layerOrder[currentIndex + 1];
+                        }
+                        return prevLayer;
+                      });
+                    }}
+                  />
                 )}
                 {currentLayer === 'payments' && (
                   <PaymentsLayer
                     onProgressUpdate={(progress) => {
                       setLayerProgress(prev => {
+                        const existingLayer = prev.find(l => l.layer === 'payments');
+                        // Si la capa ya está marcada como completada, no sobrescribir el estado
+                        if (existingLayer && existingLayer.completed) {
+                          return prev; // Mantener el estado de completado
+                        }
+                        // Solo actualizar el progreso si no está completada
                         const updated = prev.map(l => l.layer === 'payments' 
                           ? { ...l, completionPercentage: progress, completed: progress === 100 }
                           : l
@@ -508,7 +580,7 @@ export function CommercialSetupScreen() {
                       // Marcar como completada con los datos proporcionados
                       await markLayerAsCompleted('payments', hasData);
                       setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'promotions', 'payments', 'recommendations'];
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
                         const currentIndex = layerOrder.indexOf(prevLayer);
                         if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
                           return layerOrder[currentIndex + 1];
@@ -520,7 +592,7 @@ export function CommercialSetupScreen() {
                       // Marcar como omitida sin datos
                       await markLayerAsCompleted('payments', false);
                       setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'promotions', 'payments', 'recommendations'];
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
                         const currentIndex = layerOrder.indexOf(prevLayer);
                         if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
                           return layerOrder[currentIndex + 1];
@@ -532,8 +604,15 @@ export function CommercialSetupScreen() {
                 )}
                 {currentLayer === 'recommendations' && (
                   <RecommendationsLayer
+                    searchFilter={recommendationsFilter}
                     onProgressUpdate={(progress) => {
                       setLayerProgress(prev => {
+                        const existingLayer = prev.find(l => l.layer === 'recommendations');
+                        // Si la capa ya está marcada como completada, no sobrescribir el estado
+                        if (existingLayer && existingLayer.completed) {
+                          return prev; // Mantener el estado de completado
+                        }
+                        // Solo actualizar el progreso si no está completada
                         const updated = prev.map(l => l.layer === 'recommendations' 
                           ? { ...l, completionPercentage: progress, completed: progress === 100 }
                           : l
@@ -639,7 +718,7 @@ const styles = StyleSheet.create({
   },
   stepperCard: {
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 0,
   },
   contentCard: {
     padding: 24,
@@ -647,7 +726,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   contentTitle: {
-    marginBottom: 4,
+    marginBottom: 0,
   },
   contentDescription: {
     lineHeight: 20,

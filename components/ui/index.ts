@@ -2,6 +2,7 @@ export { Button } from './button';
 export { Card } from './card';
 export { CenteredModal } from './centered-modal';
 export { Collapsible } from './collapsible';
+export { CurrencyInput } from './currency-input';
 export { IconSymbol } from './icon-symbol';
 export { Select } from './select';
 export type { SelectOption } from './select';

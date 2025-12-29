@@ -6,9 +6,10 @@
 import { apiClient } from '@/src/infrastructure/api/api.client';
 import type {
     CommercialCapabilities,
-    CommercialContext,
     CommercialProfile,
     CommercialProfilePayload,
+    InteractionGuideline,
+    InteractionGuidelinePayload,
     LayerProgress,
     Offering,
     OfferingComposition,
@@ -82,7 +83,8 @@ export const CommercialService = {
    */
   async upsertProfile(payload: CommercialProfilePayload): Promise<CommercialProfile> {
     const res = await apiClient.put<CommercialProfile>(`${BASE_COMMERCIAL}/profile`, payload);
-    return res.data;
+    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
+    return mapObject<CommercialProfile>(res.data, { deep: true }) as CommercialProfile;
   },
 
   // Métodos legacy mantenidos para compatibilidad (ahora usan upsertProfile internamente)
@@ -100,20 +102,63 @@ export const CommercialService = {
   },
 
   // ===== Payment Methods =====
-  async getPaymentMethods(companyId: string): Promise<PaymentMethod[]> {
-    const endpoint = buildQuery(`${BASE_COMMERCIAL}/payments/methods`, { companyId });
-    const res = await apiClient.get<PaymentMethod[]>(endpoint);
-    return res.data || [];
+  async getPaymentMethods(companyId: string, admin?: boolean): Promise<PaymentMethod[]> {
+    const params: Record<string, any> = { companyId };
+    if (admin) {
+      params.admin = 'true';
+    }
+    const endpoint = buildQuery(`${BASE_COMMERCIAL}/payments/methods`, params);
+    const res = await apiClient.get<{ methods: any[]; currency?: string }>(endpoint);
+    // La respuesta viene con { methods: [...], currency: "USD" }
+    // Cada method ya incluye accounts e instructions
+    // Asegurar que methods sea un array
+    const methodsData = res.data?.methods || res.data?.data?.methods || (Array.isArray(res.data) ? res.data : []);
+    const methods = (Array.isArray(methodsData) ? methodsData : []).map((item: any) => ({
+      id: item.id,
+      companyId: item.company_id || companyId,
+      method: item.method,
+      isActive: item.is_active ?? item.isActive ?? true,
+                accounts: (item.accounts || []).map((acc: any) => ({
+                  id: acc.id,
+                  paymentMethodId: acc.payment_method_id || acc.paymentMethodId || item.id,
+                  name: acc.name || acc.label, // Soporte temporal para label (legacy)
+                  provider: acc.provider,
+                  accountNumber: acc.account_number || acc.accountNumber,
+                  accountHolder: acc.account_holder || acc.accountHolder,
+                  identification: acc.identification,
+                  additionalData: acc.additional_data || acc.additionalData,
+                  status: acc.status ?? (acc.is_active ? 1 : 0), // Mapear isActive legacy a status
+                  statusDescription: acc.status_description || acc.statusDescription,
+                  createdAt: acc.created_at || acc.createdAt,
+                  updatedAt: acc.updated_at || acc.updatedAt,
+                } as PaymentAccount)),
+                instructions: (item.instructions || []).map((inst: any) => ({
+                  id: inst.id,
+                  paymentMethodId: inst.payment_method_id || inst.paymentMethodId || item.id,
+                  paymentAccountId: inst.payment_account_id || inst.paymentAccountId || null,
+                  instructionType: inst.instruction_type || inst.instructionType || 'general',
+                  message: inst.message,
+                  status: inst.status ?? (inst.is_active !== false ? 1 : 0), // Mapear isActive legacy a status
+                  statusDescription: inst.status_description || inst.statusDescription,
+                  createdAt: inst.created_at || inst.createdAt,
+                } as PaymentInstruction)),
+      createdAt: item.created_at || item.createdAt,
+      updatedAt: item.updated_at || item.updatedAt,
+    } as PaymentMethod));
+    return methods;
   },
 
   async createPaymentMethod(payload: PaymentMethodPayload): Promise<PaymentMethod> {
     const res = await apiClient.post<PaymentMethod>(`${BASE_COMMERCIAL}/payments/methods`, payload);
-    return res.data;
+    // Si el backend devuelve camelCase directamente, usar mapper
+    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
+    return mapObject<PaymentMethod>(res.data, { deep: true }) as PaymentMethod;
   },
 
   async updatePaymentMethod(id: string, payload: Partial<PaymentMethodPayload>): Promise<PaymentMethod> {
     const res = await apiClient.put<PaymentMethod>(`${BASE_COMMERCIAL}/payments/methods/${id}`, payload);
-    return res.data;
+    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
+    return mapObject<PaymentMethod>(res.data, { deep: true }) as PaymentMethod;
   },
 
   async deletePaymentMethod(id: string): Promise<void> {
@@ -121,12 +166,21 @@ export const CommercialService = {
   },
 
   // ===== Payment Accounts =====
+  async getPaymentAccounts(paymentMethodId: string): Promise<PaymentAccount[]> {
+    const res = await apiClient.get<PaymentAccount[]>(
+      `${BASE_COMMERCIAL}/payments/methods/${paymentMethodId}/accounts`
+    );
+    return res.data || [];
+  },
+
   async createPaymentAccount(paymentMethodId: string, payload: PaymentAccountPayload): Promise<PaymentAccount> {
+    // El endpoint es /payments/methods/{paymentMethodId}/accounts según la especificación de Postman
     const res = await apiClient.post<PaymentAccount>(
       `${BASE_COMMERCIAL}/payments/methods/${paymentMethodId}/accounts`,
       payload
     );
-    return res.data;
+    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
+    return mapObject<PaymentAccount>(res.data, { deep: true }) as PaymentAccount;
   },
 
   async updatePaymentAccount(
@@ -134,27 +188,40 @@ export const CommercialService = {
     accountId: string,
     payload: Partial<PaymentAccountPayload>
   ): Promise<PaymentAccount> {
+    // El endpoint es /payments/accounts/{accountId} según la especificación de Postman
     const res = await apiClient.put<PaymentAccount>(
-      `${BASE_COMMERCIAL}/payments/methods/${paymentMethodId}/accounts/${accountId}`,
+      `${BASE_COMMERCIAL}/payments/accounts/${accountId}`,
       payload
     );
-    return res.data;
+    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
+    return mapObject<PaymentAccount>(res.data, { deep: true }) as PaymentAccount;
   },
 
   async deletePaymentAccount(paymentMethodId: string, accountId: string): Promise<void> {
-    await apiClient.delete(`${BASE_COMMERCIAL}/payments/methods/${paymentMethodId}/accounts/${accountId}`);
+    // El endpoint es /payments/accounts/{accountId} según la especificación de Postman
+    await apiClient.delete(`${BASE_COMMERCIAL}/payments/accounts/${accountId}`);
   },
 
   // ===== Payment Instructions =====
+  async getPaymentInstructions(paymentMethodId: string): Promise<PaymentInstruction[]> {
+    const res = await apiClient.get<PaymentInstruction[]>(
+      `${BASE_COMMERCIAL}/payments/methods/${paymentMethodId}/instructions`
+    );
+    return res.data || [];
+  },
+
   async createPaymentInstruction(
     paymentMethodId: string,
     payload: PaymentInstructionPayload
   ): Promise<PaymentInstruction> {
+    // El endpoint es /payments/instructions según el usuario
+    // El payload ya incluye paymentMethodId, no necesitamos agregarlo de nuevo
     const res = await apiClient.post<PaymentInstruction>(
-      `${BASE_COMMERCIAL}/payments/methods/${paymentMethodId}/instructions`,
+      `${BASE_COMMERCIAL}/payments/instructions`,
       payload
     );
-    return res.data;
+    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
+    return mapObject<PaymentInstruction>(res.data, { deep: true }) as PaymentInstruction;
   },
 
   async updatePaymentInstruction(
@@ -179,7 +246,8 @@ export const CommercialService = {
     try {
       const res = await apiClient.get<any[]>(endpoint);
       // Mapear datos del backend a formato frontend (snake_case a camelCase y asegurar type)
-      const offerings: Offering[] = (res.data || []).map((item: any) => {
+      const offeringsData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      const offerings: Offering[] = (Array.isArray(offeringsData) ? offeringsData : []).map((item: any) => {
         // Mapear precios si vienen en la respuesta
         const prices: OfferingPrice[] = (item.prices || []).map((price: any) => ({
           id: price.id,
@@ -369,7 +437,8 @@ export const CommercialService = {
     const endpoint = `${BASE_COMMERCIAL}/pricing/offerings/${offeringId}`;
     const res = await apiClient.get<any[]>(endpoint);
     // Mapear datos del backend asegurando que basePrice sea número
-    return (res.data || []).map((item: any) => ({
+    const pricesData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    return (Array.isArray(pricesData) ? pricesData : []).map((item: any) => ({
       id: item.id,
       offeringId: item.offering_id || item.offeringId,
       branchId: item.branch_id || item.branchId || null,
@@ -459,23 +528,220 @@ export const CommercialService = {
     await apiClient.delete(`${BASE_COMMERCIAL}/pricing/prices/${offeringPriceId}/adjustments/${adjustmentId}`);
   },
 
+  // ===== Interaction Guidelines =====
+  async getInteractionGuidelines(commercialProfileId: string): Promise<InteractionGuideline[]> {
+    const endpoint = buildQuery(`${BASE_COMMERCIAL}/interaction-guidelines`, { commercialProfileId });
+    const res = await apiClient.get<any[]>(endpoint);
+    const guidelinesData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    const guidelines: InteractionGuideline[] = (Array.isArray(guidelinesData) ? guidelinesData : []).map((item: any) => {
+      // Convertir status a número si viene como string
+      let statusNum = typeof item.status === 'number' ? item.status : 
+        item.status === 'active' ? 1 : 
+        item.status === 'inactive' ? 0 : 
+        item.status === 'pending' ? 2 : 
+        item.status === 'suspended' ? 3 : 1; // Default: Activo
+      
+      return {
+        id: item.id,
+        commercialProfileId: item.commercial_profile_id || item.commercialProfileId,
+        title: item.title,
+        description: item.description,
+        status: statusNum,
+        statusDescription: item.status_description || item.statusDescription || 
+          (statusNum === 1 ? 'Activo' : statusNum === 0 ? 'Inactivo' : statusNum === 2 ? 'Pendiente' : 'Suspendido'),
+        createdAt: item.created_at || item.createdAt,
+        updatedAt: item.updated_at || item.updatedAt,
+        createdBy: item.created_by || item.createdBy,
+        updatedBy: item.updated_by || item.updatedBy,
+      };
+    });
+    return guidelines;
+  },
+
+  async createInteractionGuideline(payload: InteractionGuidelinePayload): Promise<InteractionGuideline> {
+    const res = await apiClient.post<any>(`${BASE_COMMERCIAL}/interaction-guidelines`, payload);
+    const item = res.data;
+    // Convertir status a número si viene como string
+    const statusNum = typeof item.status === 'number' ? item.status : 
+      item.status === 'active' ? 1 : 
+      item.status === 'inactive' ? 0 : 
+      item.status === 'pending' ? 2 : 
+      item.status === 'suspended' ? 3 : 1; // Default: Activo
+    
+    // Asegurar que statusDescription sea siempre una cadena
+    let statusDesc = '';
+    if (typeof item.status_description === 'string' && item.status_description.trim() !== '') {
+      statusDesc = item.status_description;
+    } else if (typeof item.statusDescription === 'string' && item.statusDescription.trim() !== '') {
+      statusDesc = item.statusDescription;
+    } else {
+      statusDesc = statusNum === 1 ? 'Activo' : statusNum === 0 ? 'Inactivo' : statusNum === 2 ? 'Pendiente' : 'Suspendido';
+    }
+    
+    return {
+      id: item.id,
+      commercialProfileId: item.commercial_profile_id || item.commercialProfileId,
+      title: item.title,
+      description: item.description,
+      status: statusNum,
+      statusDescription: statusDesc,
+      createdAt: item.created_at || item.createdAt,
+      updatedAt: item.updated_at || item.updatedAt,
+      createdBy: item.created_by || item.createdBy,
+      updatedBy: item.updated_by || item.updatedBy,
+    };
+  },
+
+  async updateInteractionGuideline(guidelineId: string, payload: Partial<InteractionGuidelinePayload>): Promise<InteractionGuideline> {
+    const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/interaction-guidelines/${guidelineId}`, payload);
+    const item = res.data;
+    // Convertir status a número si viene como string
+    const statusNum = typeof item.status === 'number' ? item.status : 
+      item.status === 'active' ? 1 : 
+      item.status === 'inactive' ? 0 : 
+      item.status === 'pending' ? 2 : 
+      item.status === 'suspended' ? 3 : 1; // Default: Activo
+    
+    return {
+      id: item.id,
+      commercialProfileId: item.commercial_profile_id || item.commercialProfileId,
+      title: item.title,
+      description: item.description,
+        status: statusNum,
+        statusDescription: (() => {
+          if (typeof item.status_description === 'string' && item.status_description.trim() !== '') {
+            return item.status_description;
+          }
+          if (typeof item.statusDescription === 'string' && item.statusDescription.trim() !== '') {
+            return item.statusDescription;
+          }
+          return statusNum === 1 ? 'Activo' : statusNum === 0 ? 'Inactivo' : statusNum === 2 ? 'Pendiente' : 'Suspendido';
+        })(),
+      createdAt: item.created_at || item.createdAt,
+      updatedAt: item.updated_at || item.updatedAt,
+      createdBy: item.created_by || item.createdBy,
+      updatedBy: item.updated_by || item.updatedBy,
+    };
+  },
+
+  async deleteInteractionGuideline(guidelineId: string): Promise<void> {
+    await apiClient.delete(`${BASE_COMMERCIAL}/interaction-guidelines/${guidelineId}`);
+  },
+
   // ===== Recommendations =====
-  async getRecommendations(companyId: string, branchId?: string): Promise<Recommendation[]> {
+  async getRecommendations(companyId: string): Promise<Recommendation[]> {
+    // ❌ CAMBIO V1.0: branchId removido del query parameter
     const params: Record<string, any> = { companyId };
-    if (branchId) params.branchId = branchId;
     const endpoint = buildQuery(`${BASE_COMMERCIAL}/recommendations`, params);
-    const res = await apiClient.get<Recommendation[]>(endpoint);
-    return res.data || [];
+    const res = await apiClient.get<any>(endpoint);
+    // El apiClient.get devuelve ApiResponse<T> = { data: T, result: {...} }
+    // El backend devuelve: { data: { recommendations: [...] }, result: {...} }
+    // Entonces res.data = { recommendations: [...] }
+    // O puede venir como res.data = [...] directamente
+    let recommendationsData: any[] = [];
+    
+    // Primero verificar si res.data es un array directo
+    if (Array.isArray(res.data)) {
+      recommendationsData = res.data;
+    } 
+    // Si res.data es un objeto, buscar recommendations dentro
+    else if (res.data && typeof res.data === 'object') {
+      // Caso: res.data = { recommendations: [...] }
+      if (Array.isArray(res.data.recommendations)) {
+        recommendationsData = res.data.recommendations;
+      }
+      // Caso: res.data = { data: { recommendations: [...] } }
+      else if (Array.isArray(res.data.data?.recommendations)) {
+        recommendationsData = res.data.data.recommendations;
+      }
+      // Caso: res.data = { data: [...] }
+      else if (Array.isArray(res.data.data)) {
+        recommendationsData = res.data.data;
+      }
+    }
+    // Mapear respuesta: el backend ahora devuelve todos los campos (status, statusDescription, campos de administración)
+    // Según Postman actualizado: Response incluye id, type, message, order, status, statusDescription, offeringId, createdAt, updatedAt, createdBy, updatedBy
+    return (Array.isArray(recommendationsData) ? recommendationsData : []).map((item: any) => ({
+      id: item.id,
+      companyId: item.company_id || item.companyId || companyId, // Fallback al companyId del parámetro
+      offeringId: item.offering_id || item.offeringId || null,
+      type: item.type,
+      message: item.message,
+      order: item.order ?? item.priority ?? 0, // Mapear priority legacy a order si es necesario
+      status: item.status ?? (item.is_active !== undefined ? (item.is_active ? 1 : 0) : 1), // Fallback para compatibilidad legacy
+      statusDescription: item.status_description || item.statusDescription,
+      createdAt: item.created_at || item.createdAt,
+      createdBy: item.created_by || item.createdBy,
+      updatedAt: item.updated_at || item.updatedAt,
+      updatedBy: item.updated_by || item.updatedBy,
+    }));
   },
 
   async createRecommendation(payload: RecommendationPayload): Promise<Recommendation> {
-    const res = await apiClient.post<Recommendation>(`${BASE_COMMERCIAL}/recommendations`, payload);
-    return res.data;
+    // ❌ CAMBIO V1.0: branchId, priority, isActive, title, description removidos
+    // Campos requeridos: companyId, type, message
+    // Campos opcionales: offeringId, order (default: 0)
+    // ❌ NO ENVIAR: status (se asigna automáticamente como ACTIVE en el backend)
+    const cleanPayload: any = {
+      companyId: payload.companyId,
+      type: payload.type,
+      message: payload.message,
+      order: payload.order ?? 0, // Default: 0
+    };
+    // Solo agregar offeringId si tiene un valor válido (no null, no undefined, no string vacío)
+    if (payload.offeringId && typeof payload.offeringId === 'string' && payload.offeringId.trim() !== '') {
+      cleanPayload.offeringId = payload.offeringId;
+    } else {
+      cleanPayload.offeringId = null;
+    }
+    const res = await apiClient.post<any>(`${BASE_COMMERCIAL}/recommendations`, cleanPayload);
+    // La respuesta puede venir como res.data directamente o como res.data.data
+    const item = res.data?.data || res.data;
+    // Mapear respuesta: el backend ahora devuelve todos los campos
+    return {
+      id: item.id,
+      companyId: item.company_id || item.companyId || payload.companyId,
+      offeringId: item.offering_id || item.offeringId || null,
+      type: item.type,
+      message: item.message,
+      order: item.order ?? item.priority ?? 0, // Mapear priority legacy a order si es necesario
+      status: item.status ?? (item.is_active !== undefined ? (item.is_active ? 1 : 0) : 1), // Fallback para compatibilidad legacy
+      statusDescription: item.status_description || item.statusDescription,
+      createdAt: item.created_at || item.createdAt,
+      createdBy: item.created_by || item.createdBy,
+      updatedAt: item.updated_at || item.updatedAt,
+      updatedBy: item.updated_by || item.updatedBy,
+    };
   },
 
   async updateRecommendation(recommendationId: string, payload: Partial<RecommendationPayload>): Promise<Recommendation> {
-    const res = await apiClient.put<Recommendation>(`${BASE_COMMERCIAL}/recommendations/${recommendationId}`, payload);
-    return res.data;
+    // ❌ CAMBIO V1.0: companyId, branchId, priority, isActive, title, description removidos
+    // Campos actualizables: type, message, order, offeringId
+    const cleanPayload: any = {};
+    if (payload.type !== undefined) cleanPayload.type = payload.type;
+    if (payload.message !== undefined) cleanPayload.message = payload.message;
+    if (payload.order !== undefined) cleanPayload.order = payload.order;
+    if (payload.offeringId !== undefined) cleanPayload.offeringId = payload.offeringId || null;
+    if (payload.status !== undefined) cleanPayload.status = payload.status;
+    
+    const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/recommendations/${recommendationId}`, cleanPayload);
+    // La respuesta puede venir como res.data directamente o como res.data.data
+    const item = res.data?.data || res.data;
+    // Mapear respuesta: el backend ahora devuelve todos los campos
+    return {
+      id: item.id,
+      companyId: item.company_id || item.companyId,
+      offeringId: item.offering_id || item.offeringId || null,
+      type: item.type,
+      message: item.message,
+      order: item.order ?? item.priority ?? 0, // Mapear priority legacy a order si es necesario
+      status: item.status ?? (item.is_active !== undefined ? (item.is_active ? 1 : 0) : 1), // Fallback para compatibilidad legacy
+      statusDescription: item.status_description || item.statusDescription,
+      createdAt: item.created_at || item.createdAt,
+      createdBy: item.created_by || item.createdBy,
+      updatedAt: item.updated_at || item.updatedAt,
+      updatedBy: item.updated_by || item.updatedBy,
+    };
   },
 
   async deleteRecommendation(recommendationId: string): Promise<void> {
@@ -565,12 +831,8 @@ export const CommercialService = {
     await apiClient.delete(`${BASE_COMMERCIAL}/promotions/${promotionId}/offerings/${offeringId}`);
   },
 
-  // ===== Context & Capabilities =====
-  async getFullContext(companyId: string): Promise<CommercialContext> {
-    const res = await apiClient.get<CommercialContext>(`${BASE_COMMERCIAL}/context/${companyId}`);
-    return res.data;
-  },
-
+  // ===== Capabilities =====
+  // Nota: getFullContext fue eliminado - usar endpoints específicos en su lugar
   async getCapabilities(companyId: string): Promise<CommercialCapabilities> {
     const res = await apiClient.get<CommercialCapabilities>(`${BASE_COMMERCIAL}/context/${companyId}/capabilities`);
     return res.data;
@@ -583,13 +845,18 @@ export const CommercialService = {
 
   async getLayerProgress(companyId: string): Promise<LayerProgress[]> {
     // Calcular progreso basado en los datos existentes según documento técnico V1.0
-    const context = await this.getFullContext(companyId);
-    const capabilities = await this.getCapabilities(companyId);
+    // Usar endpoints específicos en lugar de getFullContext para evitar llamadas innecesarias
+    const [profile, capabilities, offerings, paymentMethods, recommendations] = await Promise.all([
+      this.getProfile(companyId).catch(() => null),
+      this.getCapabilities(companyId),
+      this.getOfferings(companyId).catch(() => []),
+      this.getPaymentMethods(companyId).catch(() => []),
+      this.getRecommendations(companyId).catch(() => []),
+    ]);
     
     const layers: LayerProgress[] = [];
     
     // Capa 1: Contexto Institucional
-    const profile = context.institutional?.profile;
     const institutionalFields = [
       profile?.businessDescription,
       profile?.industry,
@@ -623,8 +890,9 @@ export const CommercialService = {
     });
     
     // Capa 2: Ofertas (offering, offering_price, price_adjustment, service_condition, offering_composition)
-    const hasOfferings = await this.getOfferings(companyId).then(o => o.length > 0).catch(() => false);
-    const hasPrices = !!(context.operational?.prices && context.operational.prices.length > 0);
+    // Los precios ya vienen incluidos en las ofertas, así que si hay ofertas, hay precios
+    const hasOfferings = offerings.length > 0;
+    const hasPrices = hasOfferings && offerings.some(o => o.prices && o.prices.length > 0);
     const offeringsFields = [hasOfferings, hasPrices];
     const offeringsCompleted = offeringsFields.filter(f => f).length;
     const offeringsProgress = Math.round((offeringsCompleted / offeringsFields.length) * 100);
@@ -641,23 +909,29 @@ export const CommercialService = {
       ],
     });
     
-    // Capa 3: Promociones (promotion, promotion_offering)
-    // TODO: Implementar cuando el backend esté listo
-    const hasPromotions = false; // await this.getPromotions(companyId).then(p => p.length > 0).catch(() => false);
-    const promotionsProgress = hasPromotions ? 100 : 0;
+    // Capa 3: Directrices de Interacción (interaction_guidelines)
+    // Necesitamos obtener el commercialProfileId del perfil
+    const profileId = profile?.companyId || companyId;
+    const interactionGuidelines = profile 
+      ? await this.getInteractionGuidelines(profileId).catch(() => [])
+      : [];
+    const hasInteractionGuidelines = interactionGuidelines.length > 0;
+    const interactionGuidelinesProgress = hasInteractionGuidelines ? 100 : 0;
     
     layers.push({
-      layer: 'promotions',
-      completed: hasPromotions,
-      completionPercentage: promotionsProgress,
-      enabledCapabilities: [], // Las promociones no activan capacidades específicas
-      missingFields: hasPromotions ? [] : ['promotions'],
-      skipped: hasPromotions ? false : undefined,
+      layer: 'interactionGuidelines',
+      completed: hasInteractionGuidelines,
+      completionPercentage: interactionGuidelinesProgress,
+      enabledCapabilities: [], // Las directrices mejoran la interacción pero no activan capacidades específicas
+      missingFields: hasInteractionGuidelines ? [] : ['interactionGuidelines'],
+      skipped: hasInteractionGuidelines ? false : undefined,
     });
     
     // Capa 4: Pagos (payment_method, payment_account, payment_instruction)
-    const hasPaymentMethods = !!(context.payments?.methods && context.payments.methods.length > 0);
-    const hasPaymentAccounts = !!(context.payments?.methods?.some((m: any) => m.accounts && m.accounts.length > 0));
+    const hasPaymentMethods = paymentMethods.length > 0;
+    // Para verificar cuentas, necesitaríamos cargar los métodos con sus cuentas
+    // Por ahora, asumimos que si hay métodos, puede haber cuentas
+    const hasPaymentAccounts = hasPaymentMethods; // Simplificado: si hay métodos, puede haber cuentas
     const paymentsFields = [hasPaymentMethods, hasPaymentAccounts];
     const paymentsCompleted = paymentsFields.filter(f => f).length;
     const paymentsProgress = Math.round((paymentsCompleted / paymentsFields.length) * 100);
@@ -679,8 +953,7 @@ export const CommercialService = {
     });
     
     // Capa 5: Recomendaciones (todos los tipos: informational, orientation, suggestion, upsell)
-    const allRecommendations = context.recommendations || [];
-    const hasRecommendations = allRecommendations.length > 0;
+    const hasRecommendations = recommendations.length > 0;
     const recommendationsProgress = hasRecommendations ? 100 : 0;
     // Si las capacidades están activas pero no hay recomendaciones, fue omitida
     const recommendationsSkipped = (capabilities.canRecommend || capabilities.canSuggestProducts) && !hasRecommendations;

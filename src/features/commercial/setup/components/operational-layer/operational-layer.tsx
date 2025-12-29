@@ -7,11 +7,13 @@
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useTheme } from '@/hooks/use-theme';
+import { CatalogService } from '@/src/domains/catalog';
 import { CommercialService } from '@/src/domains/commercial';
-import { Offering, OfferingPrice, OfferingPricePayload } from '@/src/domains/commercial/types';
+import { CommercialProfile, Offering, OfferingPrice, OfferingPricePayload } from '@/src/domains/commercial/types';
 import { useCompany } from '@/src/domains/shared';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
@@ -45,8 +47,13 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
   const [originalOfferingsPrices, setOriginalOfferingsPrices] = useState<Record<string, OfferingPrice | null>>({}); // Precios originales para detectar cambios
   const [saving, setSaving] = useState(false);
   const [isLoadingOfferings, setIsLoadingOfferings] = useState(false); // Flag para evitar llamados repetitivos
+  const [commercialProfile, setCommercialProfile] = useState<CommercialProfile | null>(null); // Perfil comercial para obtener defaultTaxMode, currency, timezone, language
+  const [currentPage, setCurrentPage] = useState(1); // Página actual de la paginación
+  const itemsPerPage = 5; // Registros por página
 
   const [offeringType, setOfferingType] = useState<'product' | 'service'>('product');
+  const [productTypeOptions, setProductTypeOptions] = useState<Array<{ value: string; label: string; icon?: string }>>([]);
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
   // requiresConditions removido del estado - siempre se envía como false
   const [offeringForm, setOfferingForm] = useState({
     name: '',
@@ -55,12 +62,68 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
   });
   const [uploadingBulk, setUploadingBulk] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Inicializar priceForm con defaultTaxMode del perfil (se actualizará cuando se cargue el perfil)
   const [priceForm, setPriceForm] = useState({
     basePrice: '',
-    taxMode: 'included' as 'included' | 'excluded',
+    taxMode: 'included' as 'included' | 'excluded', // Se actualizará con defaultTaxMode del perfil
     validFrom: new Date().toISOString().split('T')[0],
     validTo: '',
   });
+
+  // Cargar perfil comercial para obtener defaultTaxMode
+  const loadProfile = useCallback(async () => {
+    if (!company?.id) return;
+    
+    try {
+      const profile = await CommercialService.getProfile(company.id);
+      setCommercialProfile(profile);
+    } catch (error: any) {
+      // Si no existe perfil (404), es normal - usar valor por defecto
+      if (error?.statusCode !== 404) {
+        console.error('Error al cargar perfil comercial:', error);
+      }
+    }
+  }, [company?.id]);
+
+  // Currency, timezone y language vienen del perfil comercial, no del contexto
+
+  // Cargar catálogo de tipos de producto
+  useEffect(() => {
+    if (!company?.id || isLoadingCatalogs) return;
+
+    const loadCatalogs = async () => {
+      setIsLoadingCatalogs(true);
+      try {
+        const productTypesResponse = await CatalogService.queryCatalog('PRODUCT_TYPES', company.id, false);
+        // Mapear opciones con iconos y convertir códigos a formato esperado
+        const options = productTypesResponse.details
+          .filter(entry => entry.status === 1)
+          .map(entry => {
+            const codeLower = entry.code.toLowerCase();
+            // Convertir "producto" -> "product", "servicio" -> "service"
+            const mappedValue = codeLower === 'producto' ? 'product' : codeLower === 'servicio' ? 'service' : codeLower;
+            return {
+              value: mappedValue,
+              label: entry.name,
+              icon: codeLower === 'producto' ? 'cube-outline' : codeLower === 'servicio' ? 'construct-outline' : 'ellipse-outline',
+            };
+          });
+        setProductTypeOptions(options);
+        // Establecer tipo inicial basado en la primera opción
+        if (options.length > 0) {
+          setOfferingType(options[0].value as 'product' | 'service');
+        }
+      } catch (error: any) {
+        console.error('Error al cargar catálogo de tipos de producto:', error);
+        alert.showError('Error al cargar tipos de producto', error.message);
+        setProductTypeOptions([]);
+      } finally {
+        setIsLoadingCatalogs(false);
+      }
+    };
+
+    loadCatalogs();
+  }, [company?.id]);
 
   // Cargar ofertas - evitar llamados repetitivos
   const loadOfferings = useCallback(async () => {
@@ -100,11 +163,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
         ? JSON.stringify(error.details) 
         : error?.details || error?.result?.description || error?.result?.details;
       
-      setGeneralError({ 
-        message: errorMessage,
-        detail: errorDetail || `Error del servidor: ${error?.statusCode || 'Desconocido'}`
-      });
-      // No mostrar toast - solo InlineAlert en la pantalla
+      alert.showError(errorMessage, errorDetail || `Error del servidor: ${error?.statusCode || 'Desconocido'}`);
     } finally {
       setLoading(false);
       setIsLoadingOfferings(false);
@@ -131,6 +190,24 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     loadOfferings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]); // Solo depender de company.id
+
+  // Cargar perfil comercial al inicio
+  useEffect(() => {
+    if (company?.id) {
+      loadProfile();
+    }
+  }, [company?.id, loadProfile]);
+
+  // Actualizar priceForm cuando se carga el perfil comercial
+  useEffect(() => {
+    if (commercialProfile?.defaultTaxMode && !expandedOfferingId) {
+      // Solo actualizar si no hay una oferta expandida (para no sobrescribir datos de edición)
+      setPriceForm(prev => ({
+        ...prev,
+        taxMode: commercialProfile.defaultTaxMode || 'included',
+      }));
+    }
+  }, [commercialProfile?.defaultTaxMode, expandedOfferingId]);
 
   useEffect(() => {
     if (selectedOffering) {
@@ -179,9 +256,11 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
             validTo: mainPrice.validTo || '',
           });
         } else {
+          // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
+          const defaultTaxMode = commercialProfile?.defaultTaxMode || 'included';
           setPriceForm({
             basePrice: '',
-            taxMode: 'included',
+            taxMode: defaultTaxMode,
             validFrom: new Date().toISOString().split('T')[0],
             validTo: '',
           });
@@ -190,15 +269,25 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     } else {
       // Resetear formulario cuando se cierra el acordeón
       setOfferingForm({ name: '', description: '', code: '' });
+      // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
+      const defaultTaxMode = commercialProfile?.defaultTaxMode || 'included';
       setPriceForm({
         basePrice: '',
-        taxMode: 'included',
+        taxMode: defaultTaxMode,
         validFrom: new Date().toISOString().split('T')[0],
         validTo: '',
       });
       setOfferingType('product');
     }
-  }, [expandedOfferingId, offerings, offeringsPrices, modifiedOfferings]);
+  }, [expandedOfferingId, offerings, offeringsPrices, modifiedOfferings, commercialProfile]);
+
+  // Ajustar página actual si es necesario cuando cambia la cantidad de ofertas
+  useEffect(() => {
+    const totalPages = Math.ceil(offerings.length / itemsPerPage);
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [offerings.length, currentPage, itemsPerPage]);
 
   // Detectar si hay cambios pendientes
   const hasPendingChanges = useMemo(() => {
@@ -243,9 +332,11 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
       requiresConditions: false, // Siempre false por ahora
     };
 
+    // Usar defaultTaxMode del perfil comercial para todas las ofertas
+    const defaultTaxMode = commercialProfile?.defaultTaxMode || 'included';
     const updatedPrice = {
       basePrice: parseFloat(priceForm.basePrice),
-      taxMode: priceForm.taxMode,
+      taxMode: defaultTaxMode, // Siempre usar el valor del perfil comercial
     };
 
     if (isNewOffering) {
@@ -413,12 +504,14 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
       status: 'active',
     };
 
+    // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
+    const defaultTaxMode = commercialProfile?.defaultTaxMode || 'included';
     const newPrice: OfferingPrice = {
       id: '',
       offeringId: tempId,
       branchId: null,
       basePrice: 0,
-      taxMode: 'included',
+      taxMode: defaultTaxMode,
       validFrom: new Date().toISOString().split('T')[0],
       validTo: null,
       status: 'active',
@@ -436,7 +529,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     setOfferingForm({ name: '', description: '', code: '' });
     setPriceForm({
       basePrice: '',
-      taxMode: 'included',
+      taxMode: defaultTaxMode,
       validFrom: new Date().toISOString().split('T')[0],
       validTo: '',
     });
@@ -517,7 +610,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
           price: {
             id: originalPrice?.id,
             basePrice: originalPrice?.basePrice || 0,
-            taxMode: originalPrice?.taxMode || 'included',
+            taxMode: originalPrice?.taxMode || commercialProfile?.defaultTaxMode || 'included',
             branchId: null,
             validFrom: today,
             validTo: null,
@@ -633,7 +726,6 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     if (!file || !company?.id) return;
 
     setUploadingBulk(true);
-    setGeneralError(null);
 
     try {
       const data = await TemplateService.parseFile(file);
@@ -677,10 +769,8 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
             throw new Error('El precio base es requerido y debe ser un número válido');
           }
 
-          const modoImpuestos = (row['Modo de Impuestos'] || row['modo_impuestos'] || 'included').toLowerCase().trim();
-          if (modoImpuestos !== 'included' && modoImpuestos !== 'excluded') {
-            throw new Error('El modo de impuestos debe ser "included" o "excluded"');
-          }
+          // Usar defaultTaxMode del perfil comercial en lugar de leer de la fila
+          const modoImpuestos = (commercialProfile?.defaultTaxMode || 'included') as 'included' | 'excluded';
 
           // Mapear tipo: convertir español a inglés (solo producto y servicio para wizard)
           const tipoStr = (row['Tipo'] || row['tipo'] || 'producto').toLowerCase().trim();
@@ -701,7 +791,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
             requiresConditions: type === 'service' ? false : undefined, // Por defecto false para servicios
             price: {
               basePrice: parseFloat(String(precioBase)),
-              taxMode: modoImpuestos === 'included' ? 'included' : 'excluded',
+              taxMode: modoImpuestos, // Usa defaultTaxMode del perfil comercial
               branchId: null, // Siempre null para precio global en wizard
               validFrom: today, // Siempre fecha actual
               validTo: null, // Siempre null (sin caducidad)
@@ -714,7 +804,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
       }
 
       if (offeringsPayload.length === 0) {
-        setGeneralError({ message: 'No se pudo procesar ninguna oferta del archivo' });
+        alert.showError('No se pudo procesar ninguna oferta del archivo');
         setUploadingBulk(false);
         return;
       }
@@ -756,20 +846,21 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     if (!company?.id || !selectedOffering) return;
 
     if (!priceForm.basePrice || parseFloat(priceForm.basePrice) <= 0) {
-      setGeneralError({ message: 'El precio base debe ser mayor a 0' });
+      alert.showError('El precio base debe ser mayor a 0');
       return;
     }
 
     setSaving(true);
-    setGeneralError(null);
 
     try {
       // ❌ CAMBIO V1.0: companyId y currency removidos del payload
+      // Usar defaultTaxMode del perfil comercial
+      const defaultTaxMode = commercialProfile?.defaultTaxMode || 'included';
       const payload: OfferingPricePayload = {
         offeringId: selectedOffering.id,
         branchId: null, // NULL = precio global, NOT NULL = precio por sucursal
         basePrice: parseFloat(priceForm.basePrice),
-        taxMode: priceForm.taxMode,
+        taxMode: defaultTaxMode, // Usar defaultTaxMode del perfil comercial (no se muestra en UI)
         validFrom: priceForm.validFrom, // Formato YYYY-MM-DD según V1.0
         validTo: priceForm.validTo || null, // Formato YYYY-MM-DD o null
       };
@@ -824,14 +915,29 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
               Ofertas
             </ThemedText>
           </View>
-          <ThemedText type="body2" style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Define los productos, servicios o paquetes que ofreces
-          </ThemedText>
+          <View style={styles.sectionDescriptionContainer}>
+            <ThemedText type="body2" style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+              Define los productos, servicios o paquetes que ofreces
+            </ThemedText>
+            {offerings.length > 0 && (
+              <ThemedText type="body2" style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                {offerings.length} {offerings.length === 1 ? 'registro' : 'registros'}
+              </ThemedText>
+            )}
+          </View>
 
-          {/* Lista de ofertas */}
-          {offerings.length > 0 && (
-            <View style={styles.listContainer}>
-              {offerings.map((offering) => {
+          {/* Lista de ofertas con paginación */}
+          {offerings.length > 0 && (() => {
+            const totalPages = Math.ceil(offerings.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const currentOfferings = offerings.slice(startIndex, endIndex);
+
+            return (
+              <>
+                <View style={styles.paginatedListContainer}>
+                  <View style={styles.listContainer}>
+                    {currentOfferings.map((offering) => {
                 const mainPrice = offeringsPrices[offering.id];
                 // Icono según el tipo de oferta
                 const typeIcon = offering.type === 'service' ? 'construct-outline' : 'cube-outline';
@@ -879,7 +985,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                           {mainPrice && mainPrice.basePrice > 0 ? (
                             <>
                               <ThemedText type="h4" style={{ fontWeight: '700', color: colors.primary }}>
-                                ${Number(mainPrice.basePrice).toFixed(2)}
+                                {commercialProfile?.currency || 'USD'} {Number(mainPrice.basePrice).toFixed(2)}
                               </ThemedText>
                               <ThemedText type="body2" style={{ color: colors.textSecondary, marginTop: 4, fontSize: 12 }}>
                                 Impuestos: {mainPrice.taxMode === 'included' ? 'Incluidos' : 'Excluidos'}
@@ -903,70 +1009,52 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                     {/* Acordeón: Formulario de edición debajo de la oferta */}
                     {isExpanded && (
                       <Card variant="outlined" style={styles.accordionCard}>
-                        {/* Fila 1: Tipo de oferta (selector tipo estados) y Nombre */}
+                        {/* Fila 1: Tipo de oferta (selector tipo estados) */}
+                        <View style={styles.inputGroup}>
+                          <View style={styles.typeSelector}>
+                            {productTypeOptions.map((option) => {
+                              const isSelected = offeringType === option.value;
+                              
+                              return (
+                                <TouchableOpacity
+                                  key={option.value}
+                                  style={[
+                                    styles.typeOption,
+                                    {
+                                      backgroundColor: isSelected ? colors.primary : 'transparent',
+                                      borderColor: isSelected ? colors.primary : colors.border,
+                                    },
+                                  ]}
+                                  onPress={() => setOfferingType(option.value as 'product' | 'service')}
+                                >
+                                  {option.icon && (
+                                    <Ionicons 
+                                      name={option.icon as any} 
+                                      size={18} 
+                                      color={isSelected ? '#FFFFFF' : colors.textSecondary} 
+                                    />
+                                  )}
+                                  <ThemedText 
+                                    type="body2" 
+                                    style={{ 
+                                      color: isSelected ? '#FFFFFF' : colors.text,
+                                      marginLeft: 6,
+                                      fontWeight: isSelected ? '600' : '400',
+                                    }}
+                                  >
+                                    {option.label}
+                                  </ThemedText>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+
+                        {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea */}
                         <View style={styles.rowContainer}>
                           <View style={styles.halfWidth}>
-                            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-                              Tipo de Oferta *
-                            </ThemedText>
-                            <View style={styles.typeSelector}>
-                              <TouchableOpacity
-                                style={[
-                                  styles.typeOption,
-                                  {
-                                    backgroundColor: offeringType === 'product' ? colors.primary : 'transparent',
-                                    borderColor: offeringType === 'product' ? colors.primary : colors.border,
-                                  },
-                                ]}
-                                onPress={() => setOfferingType('product')}
-                              >
-                                <Ionicons 
-                                  name="cube-outline" 
-                                  size={18} 
-                                  color={offeringType === 'product' ? '#FFFFFF' : colors.textSecondary} 
-                                />
-                                <ThemedText 
-                                  type="body2" 
-                                  style={{ 
-                                    color: offeringType === 'product' ? '#FFFFFF' : colors.text,
-                                    marginLeft: 6,
-                                    fontWeight: offeringType === 'product' ? '600' : '400',
-                                  }}
-                                >
-                                  Producto
-                                </ThemedText>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[
-                                  styles.typeOption,
-                                  {
-                                    backgroundColor: offeringType === 'service' ? colors.primary : 'transparent',
-                                    borderColor: offeringType === 'service' ? colors.primary : colors.border,
-                                  },
-                                ]}
-                                onPress={() => setOfferingType('service')}
-                              >
-                                <Ionicons 
-                                  name="construct-outline" 
-                                  size={18} 
-                                  color={offeringType === 'service' ? '#FFFFFF' : colors.textSecondary} 
-                                />
-                                <ThemedText 
-                                  type="body2" 
-                                  style={{ 
-                                    color: offeringType === 'service' ? '#FFFFFF' : colors.text,
-                                    marginLeft: 6,
-                                    fontWeight: offeringType === 'service' ? '600' : '400',
-                                  }}
-                                >
-                                  Servicio
-                                </ThemedText>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                          <View style={styles.halfWidth}>
-                            <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-                              Nombre de la oferta *
+                            <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                              Nombre *
                             </ThemedText>
                             <InputWithFocus
                               containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -981,74 +1069,16 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                               />
                             </InputWithFocus>
                           </View>
-                        </View>
-
-                        {/* Fila 2: Precio Base y Modo de Impuestos */}
-                        <View style={styles.rowContainer}>
                           <View style={styles.halfWidth}>
                             <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                               Precio Base *
                             </ThemedText>
-                            <InputWithFocus
-                              containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                              primaryColor={colors.primary}
-                            >
-                              <TextInput
-                                style={[styles.input, { color: colors.text }]}
-                                placeholder="0.00"
-                                placeholderTextColor={colors.textSecondary}
-                                value={priceForm.basePrice}
-                                onChangeText={(val) => setPriceForm(prev => ({ ...prev, basePrice: val }))}
-                                keyboardType="decimal-pad"
-                              />
-                            </InputWithFocus>
-                          </View>
-                          <View style={styles.halfWidth}>
-                            <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                              Modo de Impuestos *
-                            </ThemedText>
-                            <View style={styles.taxModeSelector}>
-                              <TouchableOpacity
-                                style={[
-                                  styles.taxModeOption,
-                                  {
-                                    backgroundColor: priceForm.taxMode === 'included' ? colors.primary : 'transparent',
-                                    borderColor: priceForm.taxMode === 'included' ? colors.primary : colors.border,
-                                  },
-                                ]}
-                                onPress={() => setPriceForm(prev => ({ ...prev, taxMode: 'included' }))}
-                              >
-                                <ThemedText 
-                                  type="body2" 
-                                  style={{ 
-                                    color: priceForm.taxMode === 'included' ? '#FFFFFF' : colors.text,
-                                    fontWeight: priceForm.taxMode === 'included' ? '600' : '400',
-                                  }}
-                                >
-                                  Incluidos
-                                </ThemedText>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[
-                                  styles.taxModeOption,
-                                  {
-                                    backgroundColor: priceForm.taxMode === 'excluded' ? colors.primary : 'transparent',
-                                    borderColor: priceForm.taxMode === 'excluded' ? colors.primary : colors.border,
-                                  },
-                                ]}
-                                onPress={() => setPriceForm(prev => ({ ...prev, taxMode: 'excluded' }))}
-                              >
-                                <ThemedText 
-                                  type="body2" 
-                                  style={{ 
-                                    color: priceForm.taxMode === 'excluded' ? '#FFFFFF' : colors.text,
-                                    fontWeight: priceForm.taxMode === 'excluded' ? '600' : '400',
-                                  }}
-                                >
-                                  Excluidos
-                                </ThemedText>
-                              </TouchableOpacity>
-                            </View>
+                            <CurrencyInput
+                              value={priceForm.basePrice}
+                              onChangeText={(val) => setPriceForm(prev => ({ ...prev, basePrice: val }))}
+                              currency={commercialProfile?.currency || 'USD'}
+                              disabled={saving}
+                            />
                           </View>
                         </View>
 
@@ -1094,8 +1124,107 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                   </View>
                 );
               })}
-            </View>
-          )}
+                  </View>
+                </View>
+
+                {/* Controles de paginación */}
+                {totalPages > 1 && (
+                  <View style={styles.paginationContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.paginationButton,
+                        {
+                          backgroundColor: currentPage === 1 ? colors.surface : colors.primary,
+                          borderColor: currentPage === 1 ? colors.border : colors.primary,
+                        },
+                      ]}
+                      onPress={() => {
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
+                        }
+                      }}
+                      disabled={currentPage === 1}
+                    >
+                      <Ionicons 
+                        name="chevron-back" 
+                        size={18} 
+                        color={currentPage === 1 ? colors.textSecondary : '#FFFFFF'} 
+                      />
+                    </TouchableOpacity>
+
+                    <View style={styles.paginationNumbers}>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        // Mostrar solo algunas páginas alrededor de la actual
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <TouchableOpacity
+                              key={page}
+                              style={[
+                                styles.paginationNumber,
+                                {
+                                  backgroundColor: currentPage === page ? colors.primary : 'transparent',
+                                  borderColor: currentPage === page ? colors.primary : colors.border,
+                                },
+                              ]}
+                              onPress={() => {
+                                setCurrentPage(page);
+                                setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
+                              }}
+                            >
+                              <ThemedText
+                                type="body2"
+                                style={{
+                                  color: currentPage === page ? '#FFFFFF' : colors.text,
+                                  fontWeight: currentPage === page ? '600' : '400',
+                                }}
+                              >
+                                {page}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          );
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                          return (
+                            <ThemedText key={page} type="body2" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
+                              ...
+                            </ThemedText>
+                          );
+                        }
+                        return null;
+                      })}
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.paginationButton,
+                        {
+                          backgroundColor: currentPage === totalPages ? colors.surface : colors.primary,
+                          borderColor: currentPage === totalPages ? colors.border : colors.primary,
+                        },
+                      ]}
+                      onPress={() => {
+                        if (currentPage < totalPages) {
+                          setCurrentPage(currentPage + 1);
+                          setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
+                        }
+                      }}
+                      disabled={currentPage === totalPages}
+                    >
+                      <Ionicons 
+                        name="chevron-forward" 
+                        size={18} 
+                        color={currentPage === totalPages ? colors.textSecondary : '#FFFFFF'} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            );
+          })()}
 
           {/* Input de archivo oculto (solo web) - siempre presente para acceso directo */}
           {Platform.OS === 'web' && (
@@ -1111,42 +1240,17 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
             </>
           )}
 
-          {/* Botones Guardar/Cancelar Global (solo se muestra si hay cambios pendientes) */}
-          {hasPendingChanges && (
-            <View style={styles.saveAllContainer}>
-              <Button
-                title="Cancelar"
-                onPress={handleCancelAll}
-                variant="outlined"
-                size="lg"
-                disabled={saving}
-                style={styles.cancelAllButton}
-              >
-                <Ionicons name="close-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
-              </Button>
-              <Button
-                title={saving ? 'Guardando...' : `Guardar Cambios (${newOfferings.length + Object.keys(modifiedOfferings).length + deletedOfferings.length})`}
-                onPress={handleSaveAll}
-                variant="primary"
-                size="lg"
-                disabled={saving}
-                style={styles.saveAllButton}
-              >
-                {saving && (
-                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-                )}
-                <Ionicons name="save-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-              </Button>
-            </View>
-          )}
 
           {/* Botón Continuar/Guardar (solo se muestra si hay al menos una oferta) */}
           {offerings.length > 0 && (
             <View style={styles.continueButtonContainer}>
               <Button
-                title={hasPendingChanges 
-                  ? 'Guardar Información' 
-                  : 'Continuar'}
+                title={
+                  saving 
+                    ? 'Guardando...' 
+                    : hasPendingChanges
+                    ? `Guardar Cambios (${newOfferings.length + Object.keys(modifiedOfferings).length + deletedOfferings.length})` 
+                    : 'Continuar'}
                 onPress={async () => {
                   if (hasPendingChanges) {
                     await handleSaveAll();
@@ -1161,6 +1265,9 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                 disabled={saving}
                 style={styles.continueButton}
               >
+                {saving && (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                )}
                 <Ionicons 
                   name={hasPendingChanges ? "save-outline" : "arrow-forward-outline"} 
                   size={20} 
@@ -1255,7 +1362,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                   >
                     <View style={styles.listItemContent}>
                       <ThemedText type="body1" style={{ fontWeight: '600' }}>
-                        ${price.basePrice.toFixed(2)}
+                        {commercialProfile?.currency || 'USD'} {price.basePrice.toFixed(2)}
                       </ThemedText>
                       <ThemedText type="body2" style={{ color: colors.textSecondary, marginTop: 4 }}>
                         Impuestos: {price.taxMode === 'included' ? 'Incluidos' : 'Excluidos'}
@@ -1281,75 +1388,13 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                 <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                   Precio Base *
                 </ThemedText>
-                <InputWithFocus
-                  containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  primaryColor={colors.primary}
-                >
-                  <Ionicons name="cash-outline" size={20} color={colors.textSecondary} />
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    placeholder="0.00"
-                    placeholderTextColor={colors.textSecondary}
-                    value={priceForm.basePrice}
-                    onChangeText={(val) => setPriceForm(prev => ({ ...prev, basePrice: val }))}
-                    keyboardType="decimal-pad"
-                  />
-                </InputWithFocus>
+                <CurrencyInput
+                  value={priceForm.basePrice}
+                  onChangeText={(val) => setPriceForm(prev => ({ ...prev, basePrice: val }))}
+                  currency={commercialProfile?.currency || 'USD'}
+                  disabled={saving}
+                />
 
-                <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                  ¿Los impuestos están incluidos?
-                </ThemedText>
-                <View style={styles.radioGroup}>
-                  <TouchableOpacity
-                    style={[
-                      styles.radioOption,
-                      {
-                        borderColor: priceForm.taxMode === 'included' ? colors.primary : colors.border,
-                        backgroundColor: priceForm.taxMode === 'included' ? colors.primary + '20' : 'transparent',
-                      },
-                    ]}
-                    onPress={() => setPriceForm(prev => ({ ...prev, taxMode: 'included' }))}
-                  >
-                    <View
-                      style={[
-                        styles.radioCircle,
-                        { borderColor: priceForm.taxMode === 'included' ? colors.primary : colors.border },
-                      ]}
-                    >
-                      {priceForm.taxMode === 'included' && (
-                        <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                      )}
-                    </View>
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 12 }}>
-                      Sí, incluidos
-                    </ThemedText>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.radioOption,
-                      {
-                        borderColor: priceForm.taxMode === 'excluded' ? colors.primary : colors.border,
-                        backgroundColor: priceForm.taxMode === 'excluded' ? colors.primary + '20' : 'transparent',
-                      },
-                    ]}
-                    onPress={() => setPriceForm(prev => ({ ...prev, taxMode: 'excluded' }))}
-                  >
-                    <View
-                      style={[
-                        styles.radioCircle,
-                        { borderColor: priceForm.taxMode === 'excluded' ? colors.primary : colors.border },
-                      ]}
-                    >
-                      {priceForm.taxMode === 'excluded' && (
-                        <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                      )}
-                    </View>
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 12 }}>
-                      No, se agregan aparte
-                    </ThemedText>
-                  </TouchableOpacity>
-                </View>
 
                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                   Válido desde *
@@ -1390,9 +1435,11 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                     title="Cancelar"
                     onPress={() => {
                       setShowPriceForm(false);
+                      // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
+                      const defaultTaxMode = commercialProfile?.defaultTaxMode || 'included';
                       setPriceForm({
                         basePrice: '',
-                        taxMode: 'included',
+                        taxMode: defaultTaxMode,
                         validFrom: new Date().toISOString().split('T')[0],
                         validTo: '',
                       });
@@ -1428,7 +1475,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
           <Card variant="outlined" style={styles.infoCard}>
             <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
             <ThemedText type="body2" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
-              Selecciona una oferta para configurar sus precios
+              Si deseas generar Paquetes, promociones o descuentos, puedes realizarlos desde la pantalla de administración de Chat IA
             </ThemedText>
           </Card>
         )}
@@ -1460,6 +1507,8 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     padding: 20,
+    paddingLeft: 0,
+    paddingRight: 0,
     gap: 16,
   },
   sectionHeader: {
@@ -1470,17 +1519,28 @@ const styles = StyleSheet.create({
   sectionTitle: {
     flex: 1,
   },
+  sectionDescriptionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   sectionDescription: {
     lineHeight: 20,
+    flex: 1,
+  },
+  paginatedListContainer: {
+    marginTop: 8,
+    minHeight: 400, // Altura mínima para mantener consistencia visual
   },
   listContainer: {
     gap: 12,
-    marginTop: 8,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
     gap: 12,
@@ -1574,21 +1634,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
   },
-  taxModeSelector: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  taxModeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    flex: 1,
-  },
   radioGroup: {
     gap: 12,
     marginTop: 8,
@@ -1645,5 +1690,34 @@ const styles = StyleSheet.create({
   continueButton: {
     minWidth: 200,
     width: '100%',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  paginationButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paginationNumbers: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  paginationNumber: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
 });

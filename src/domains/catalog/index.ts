@@ -7,8 +7,11 @@
 export * from './types';
 
 // Services
-export { CatalogService } from './services/catalog.service';
 export { CatalogItemService } from './services/catalog-item.service';
+export { CatalogService } from './services/catalog.service';
+
+// Utils
+export * from './utils';
 
 // TODO: Exportar componentes cuando estén creados
 // export { CatalogCreateForm } from './components/catalog-create-form';

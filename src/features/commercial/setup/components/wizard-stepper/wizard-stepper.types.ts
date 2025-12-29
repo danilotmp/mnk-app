@@ -1,7 +1,7 @@
 export interface WizardStep {
   id: string;
   label: string;
-  layer: 'institutional' | 'offerings' | 'promotions' | 'payments' | 'recommendations';
+  layer: 'institutional' | 'offerings' | 'interactionGuidelines' | 'payments' | 'recommendations';
   completed: boolean;
   enabled: boolean;
   completionPercentage: number;

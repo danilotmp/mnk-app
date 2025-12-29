@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select, SelectOption } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
+import { CatalogService, catalogDetailsToSelectOptions } from '@/src/domains/catalog';
 import { CommercialService } from '@/src/domains/commercial';
 import { CommercialProfile, CommercialProfilePayload } from '@/src/domains/commercial/types';
 import { useCompany } from '@/src/domains/shared';
@@ -21,45 +22,10 @@ import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity,
 interface InstitutionalLayerProps {
   onProgressUpdate?: (progress: number) => void;
   onDataChange?: (hasData: boolean) => void;
+  onComplete?: () => void;
 }
 
-// Lista de industrias comunes
-const INDUSTRIES: SelectOption[] = [
-  { value: 'Tecnología', label: 'Tecnología' },
-  { value: 'Retail', label: 'Retail / Comercio' },
-  { value: 'Servicios', label: 'Servicios' },
-  { value: 'Salud', label: 'Salud' },
-  { value: 'Educación', label: 'Educación' },
-  { value: 'Finanzas', label: 'Finanzas' },
-  { value: 'Inmobiliaria', label: 'Inmobiliaria' },
-  { value: 'Manufactura', label: 'Manufactura' },
-  { value: 'Alimentación', label: 'Alimentación / Restaurantes' },
-  { value: 'Turismo', label: 'Turismo / Hotelería' },
-  { value: 'Transporte', label: 'Transporte / Logística' },
-  { value: 'Construcción', label: 'Construcción' },
-  { value: 'Marketing', label: 'Marketing / Publicidad' },
-  { value: 'Legal', label: 'Legal' },
-  { value: 'Consultoría', label: 'Consultoría' },
-  { value: 'Otro', label: 'Otro' },
-];
-
-// Lista de zonas horarias comunes (América Latina y principales)
-const TIMEZONES: SelectOption[] = [
-  { value: 'America/Guayaquil', label: 'Ecuador (America/Guayaquil)' },
-  { value: 'America/Lima', label: 'Perú (America/Lima)' },
-  { value: 'America/Bogota', label: 'Colombia (America/Bogota)' },
-  { value: 'America/Caracas', label: 'Venezuela (America/Caracas)' },
-  { value: 'America/Santiago', label: 'Chile (America/Santiago)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (America/Argentina/Buenos_Aires)' },
-  { value: 'America/Mexico_City', label: 'México (America/Mexico_City)' },
-  { value: 'America/New_York', label: 'Estados Unidos - Este (America/New_York)' },
-  { value: 'America/Chicago', label: 'Estados Unidos - Centro (America/Chicago)' },
-  { value: 'America/Denver', label: 'Estados Unidos - Montaña (America/Denver)' },
-  { value: 'America/Los_Angeles', label: 'Estados Unidos - Pacífico (America/Los_Angeles)' },
-  { value: 'America/Sao_Paulo', label: 'Brasil (America/Sao_Paulo)' },
-  { value: 'Europe/Madrid', label: 'España (Europe/Madrid)' },
-  { value: 'UTC', label: 'UTC' },
-];
+// Las listas de INDUSTRIES y TIMEZONES ahora se cargan desde catálogos
 
 // Función para obtener la zona horaria del sistema
 const getSystemTimezone = (): string => {
@@ -84,15 +50,18 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<CommercialProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false); // Flag para evitar llamados repetitivos
-  // Obtener valores por defecto del sistema
-  const systemTimezone = getSystemTimezone();
-  const systemLanguage = currentLanguage || 'es';
+  const [industries, setIndustries] = useState<SelectOption[]>([]);
+  const [timezones, setTimezones] = useState<SelectOption[]>([]);
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
+  // Obtener valores por defecto: timezone del sistema/navegador (normalizado a lowercase para coincidir con catálogo)
+  const systemTimezone = getSystemTimezone().toLowerCase();
+  const systemLanguage = currentLanguage || company?.settings?.language || 'es';
 
   const [formData, setFormData] = useState({
     businessDescription: '',
     industry: '',
     language: systemLanguage,
-    timezone: systemTimezone,
+    timezone: systemTimezone, // Usar zona horaria del sistema/navegador por defecto (normalizada a lowercase)
     is24_7: false,
     defaultTaxMode: 'included' as 'included' | 'excluded',
     allowsBranchPricing: false,
@@ -100,6 +69,52 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   // Guardar los datos originales para comparar cambios
   const [originalFormData, setOriginalFormData] = useState<typeof formData | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Los valores de currency, timezone y language vienen del perfil, no del contexto
+
+  // Cargar catálogos de industrias y timezones
+  useEffect(() => {
+    if (!company?.id || isLoadingCatalogs) return;
+
+    const loadCatalogs = async () => {
+      setIsLoadingCatalogs(true);
+      try {
+        // Cargar catálogos en paralelo
+        const [industriesResponse, timezonesResponse] = await Promise.all([
+          CatalogService.queryCatalog('INDUSTRIES', company.id, false),
+          CatalogService.queryCatalog('TIMEZONES', company.id, false),
+        ]);
+
+        setIndustries(catalogDetailsToSelectOptions(industriesResponse.details));
+        setTimezones(catalogDetailsToSelectOptions(timezonesResponse.details));
+      } catch (error: any) {
+        console.error('Error al cargar catálogos:', error);
+        alert.showError('Error al cargar catálogos', error.message);
+        // En caso de error, mantener arrays vacíos
+        setIndustries([]);
+        setTimezones([]);
+      } finally {
+        setIsLoadingCatalogs(false);
+      }
+    };
+
+    loadCatalogs();
+  }, [company?.id]);
+
+  // Sincronizar timezone del formulario con las opciones del catálogo cuando se cargan
+  // Normalizar el valor a lowercase para que coincida con las opciones del catálogo
+  useEffect(() => {
+    if (timezones.length === 0 || !formData.timezone) return;
+
+    // Buscar si el timezone actual coincide con alguna opción (comparación case-insensitive)
+    const currentTimezoneLower = formData.timezone.toLowerCase();
+    const matchingTimezone = timezones.find(opt => opt.value.toLowerCase() === currentTimezoneLower);
+    
+    // Si encontramos una coincidencia, asegurarnos de que el formato coincida exactamente
+    if (matchingTimezone && formData.timezone !== matchingTimezone.value) {
+      setFormData(prev => ({ ...prev, timezone: matchingTimezone.value }));
+    }
+  }, [timezones, formData.timezone]);
 
   // Cargar perfil existente - solo una vez cuando cambia company.id
   useEffect(() => {
@@ -121,7 +136,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           businessDescription: existingProfile.businessDescription || '',
           industry: existingProfile.industry || '',
           language: existingProfile.language || systemLanguage,
-          timezone: existingProfile.timezone || company.settings?.timezone || systemTimezone,
+          timezone: existingProfile.timezone || systemTimezone,
           is24_7: existingProfile.is24_7 ?? false,
           defaultTaxMode: (existingProfile.defaultTaxMode || 'included') as 'included' | 'excluded',
           allowsBranchPricing: existingProfile.allowsBranchPricing ?? false,
@@ -133,17 +148,18 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         setFormData(newFormData);
         // Guardar los datos originales para comparar cambios
         setOriginalFormData(newFormData);
-        setGeneralError(null); // Limpiar errores previos si se carga correctamente
       } catch (error: any) {
         // Si no existe perfil (404), es normal (primera vez) - no es un error
         if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
           // Perfil no existe, es la primera vez - inicializar con valores por defecto
           setProfile(null);
+          
+          // Usar valores por defecto: timezone del sistema/navegador, language del sistema o empresa
           const defaultFormData = {
             businessDescription: '',
             industry: '',
             language: systemLanguage,
-            timezone: company.settings?.timezone || systemTimezone,
+            timezone: systemTimezone, // Usar zona horaria del sistema/navegador por defecto
             is24_7: false,
             defaultTaxMode: 'included' as 'included' | 'excluded',
             allowsBranchPricing: false,
@@ -165,7 +181,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company?.id]); // Solo depender de company.id para evitar llamados repetitivos
+  }, [company?.id]); // Solo depender de company.id
 
   // Calcular progreso
   useEffect(() => {
@@ -222,7 +238,6 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     if (!company?.id) return;
 
     setSaving(true);
-    setGeneralError(null);
 
     try {
       // Construir payload - asegurar que los campos se envíen correctamente
@@ -265,7 +280,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           businessDescription: updated.businessDescription || '',
           industry: updated.industry || '',
           language: updated.language || systemLanguage,
-          timezone: updated.timezone || company.settings?.timezone || systemTimezone,
+          timezone: updated.timezone?.toLowerCase() || systemTimezone,
           is24_7: updated.is24_7 || false,
           defaultTaxMode: (updated.defaultTaxMode || 'included') as 'included' | 'excluded',
           allowsBranchPricing: updated.allowsBranchPricing || false,
@@ -321,20 +336,25 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
 
       <View style={styles.formContainer}>
-        {/* Industria - Movida antes de la descripción */}
+        {/* Industria y Atención 24/7 - En la misma línea */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            ¿En qué industria está tu empresa?
-          </ThemedText>
-          <Select
-            value={formData.industry}
-            options={INDUSTRIES}
-            onSelect={(val) => handleChange('industry', val as string)}
-            placeholder="Selecciona una industria"
-            searchable={true}
-            error={!!errors.industry}
-            errorMessage={errors.industry}
-          />
+          <View style={styles.rowContainer}>
+            {/* Industria */}
+            <View style={styles.halfWidth}>
+              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                ¿En qué industria está tu empresa?
+              </ThemedText>
+              <Select
+                value={formData.industry}
+                options={industries}
+                onSelect={(val) => handleChange('industry', val as string)}
+                placeholder="Selecciona una industria"
+                searchable={true}
+                error={!!errors.industry}
+                errorMessage={errors.industry}
+              />
+            </View>
+          </View>
         </View>
 
         {/* Descripción del Negocio */}
@@ -370,57 +390,29 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           )}
         </View>
 
-        {/* Idioma y Zona Horaria - En la misma línea */}
+        {/* Atención 24/7 y Precios por sucursal - En la misma línea */}
         <View style={styles.inputGroup}>
           <View style={styles.rowContainer}>
-            {/* Idioma - Obtenido automáticamente del sistema */}
+            {/* Atención 24/7 */}
             <View style={styles.halfWidth}>
-              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-                Idioma principal
-              </ThemedText>
-              <Select
-                value={formData.language}
-                options={[
-                  { value: 'es', label: 'Español' },
-                  { value: 'en', label: 'English' },
-                ]}
-                onSelect={(val) => handleChange('language', val as string)}
-                placeholder="Selecciona un idioma"
-                searchable={false}
+              <CustomSwitch
+                value={formData.is24_7}
+                onValueChange={(val) => handleChange('is24_7', val)}
+                label="¿Atiendes 24 horas al día, 7 días a la semana?"
               />
-              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
-                Se toma automáticamente del idioma configurado en el sistema
-              </ThemedText>
             </View>
 
-            {/* Zona Horaria - Obtenida automáticamente del sistema */}
+            {/* Precios por sucursal */}
             <View style={styles.halfWidth}>
-              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-                Zona horaria
-              </ThemedText>
-              <Select
-                value={formData.timezone}
-                options={TIMEZONES}
-                onSelect={(val) => handleChange('timezone', val as string)}
-                placeholder="Selecciona una zona horaria"
-                searchable={true}
+              <CustomSwitch
+                value={formData.allowsBranchPricing}
+                onValueChange={(val) => handleChange('allowsBranchPricing', val)}
+                label="¿Tus ofertas tienen precios diferentes por sucursal?"
               />
-              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
-                Se toma automáticamente de la zona horaria del sistema ({systemTimezone})
-              </ThemedText>
             </View>
           </View>
         </View>
-
-        {/* Atención 24/7 */}
-        <View style={styles.inputGroup}>
-          <CustomSwitch
-            value={formData.is24_7}
-            onValueChange={(val) => handleChange('is24_7', val)}
-            label="¿Atiendes 24 horas al día, 7 días a la semana?"
-          />
-        </View>
-
+        
         {/* Modo de impuestos por defecto */}
         <View style={styles.inputGroup}>
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
@@ -483,13 +475,46 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           </View>
         </View>
 
-        {/* Precios por sucursal */}
+        {/* Idioma y Zona Horaria - En la misma línea */}
         <View style={styles.inputGroup}>
-          <CustomSwitch
-            value={formData.allowsBranchPricing}
-            onValueChange={(val) => handleChange('allowsBranchPricing', val)}
-            label="¿Tus ofertas tienen precios diferentes por sucursal?"
-          />
+          <View style={styles.rowContainer}>
+            {/* Idioma - Obtenido automáticamente del sistema */}
+            <View style={styles.halfWidth}>
+              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                Idioma principal
+              </ThemedText>
+              <Select
+                value={formData.language}
+                options={[
+                  { value: 'es', label: 'Español' },
+                  { value: 'en', label: 'English' },
+                ]}
+                onSelect={(val) => handleChange('language', val as string)}
+                placeholder="Selecciona un idioma"
+                searchable={false}
+              />
+              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                Se toma automáticamente del idioma configurado en el sistema
+              </ThemedText>
+            </View>
+
+            {/* Zona Horaria - Obtenida automáticamente del sistema */}
+            <View style={styles.halfWidth}>
+              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                Zona horaria
+              </ThemedText>
+              <Select
+                value={formData.timezone}
+                options={timezones}
+                onSelect={(val) => handleChange('timezone', val as string)}
+                placeholder="Selecciona una zona horaria"
+                searchable={true}
+              />
+              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                Se toma automáticamente de la zona horaria del sistema/navegador ({getSystemTimezone()})
+              </ThemedText>
+            </View>
+          </View>
         </View>
 
         {/* Botón Guardar */}

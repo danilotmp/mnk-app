@@ -24,11 +24,21 @@ export function ThemedText({
       return lightColor || darkColor;
     }
     
+    // Si el tipo es 'subtitle', siempre usar el color de subtítulo (gris)
+    if (type === 'subtitle') {
+      return colors.subtitle || colors.textSecondary;
+    }
+    
     if (variant) {
       switch (variant) {
         case 'primary':
           return colors.primary;
         case 'secondary':
+          // Para subtítulos, usar color gris en lugar de verde
+          // Si el tipo es body2 o caption (comúnmente usados para subtítulos), usar textSecondary
+          if (type === 'body2' || type === 'caption') {
+            return colors.textSecondary;
+          }
           return colors.secondary;
         case 'accent':
           return colors.accent;

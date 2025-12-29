@@ -8,16 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
+import { Select, SelectOption } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { CommercialService } from '@/src/domains/commercial';
 import {
-    Offering,
-    Recommendation,
-    RecommendationPayload,
-    RecommendationType,
+  Offering,
+  Recommendation,
+  RecommendationPayload,
+  RecommendationType,
 } from '@/src/domains/commercial/types';
+import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { useCompany } from '@/src/domains/shared';
-import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
+import { RecordStatus } from '@/src/domains/shared/types/status.types';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,14 +35,10 @@ interface RecommendationsLayerProps {
   allowedTypes?: RecommendationType[]; // Filtrar tipos de recomendación según la capa
   layerTitle?: string; // Título personalizado para la capa
   layerDescription?: string; // Descripción personalizada para la capa
+  searchFilter?: string; // Filtro de búsqueda
 }
 
-const RECOMMENDATION_TYPE_OPTIONS: { value: RecommendationType; label: string; description: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'informational', label: 'Informativa', description: 'Información útil para el cliente', icon: 'information-circle-outline' },
-  { value: 'orientation', label: 'Orientación', description: 'Guía o consejo general', icon: 'compass-outline' },
-  { value: 'suggestion', label: 'Sugerencia', description: 'Sugerencia suave de producto/servicio', icon: 'bulb-outline' },
-  { value: 'upsell', label: 'Upsell', description: 'Sugerencia comercial más directa', icon: 'trending-up-outline' },
-];
+// Las listas de RECOMMENDATION_TYPE_OPTIONS ahora se cargan desde catálogos
 
 export function RecommendationsLayer({ 
   onProgressUpdate, 
@@ -49,11 +48,15 @@ export function RecommendationsLayer({
   allowedTypes,
   layerTitle,
   layerDescription,
+  searchFilter = '',
 }: RecommendationsLayerProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const alert = useAlert();
   const { company } = useCompany();
+
+  // Color para iconos de acción: primaryDark en dark theme, primary en light theme
+  const actionIconColor = isDark ? colors.primaryDark : colors.primary;
 
   const [loading, setLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -62,19 +65,47 @@ export function RecommendationsLayer({
   const [saving, setSaving] = useState(false);
   const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false); // Flag para evitar llamados repetitivos
+  
+  // Opciones locales de tipo de recomendación (temporal, hasta implementar en BDD)
+  type LocalRecommendationType = 'general' | 'offer_specific' | 'warning';
+  const localRecommendationTypeOptions: Array<{ value: LocalRecommendationType; label: string; description: string }> = [
+    {
+      value: 'general',
+      label: 'General',
+      description: 'Recomendaciones generales para todos los clientes',
+    },
+    {
+      value: 'offer_specific',
+      label: 'Por Oferta',
+      description: 'Recomendaciones específicas para una oferta',
+    },
+    {
+      value: 'warning',
+      label: 'Advertencia',
+      description: 'Aclaraciones o advertencias importantes',
+    },
+  ];
 
-  // Filtrar opciones de tipo según allowedTypes
-  const availableTypeOptions = allowedTypes && allowedTypes.length > 0
-    ? RECOMMENDATION_TYPE_OPTIONS.filter(opt => allowedTypes.includes(opt.value))
-    : RECOMMENDATION_TYPE_OPTIONS;
+  // Mapeo de tipos locales a tipos de recomendación del backend
+  const mapLocalTypeToBackendType = (localType: LocalRecommendationType): RecommendationType => {
+    // Por ahora, mapear todos a 'informational' hasta que el backend esté listo
+    // TODO: Actualizar cuando el backend implemente los nuevos tipos
+    return 'informational';
+  };
+
+  const [localRecommendationType, setLocalRecommendationType] = useState<LocalRecommendationType>('general');
 
   const [formData, setFormData] = useState({
     type: (allowedTypes && allowedTypes.length > 0 ? allowedTypes[0] : 'informational') as RecommendationType,
     message: '',
     offeringId: '',
-    priority: 10,
-    isActive: true,
+    order: 0, // Cambiado de priority a order, default: 0
   });
+  const [previousRecommendationType, setPreviousRecommendationType] = useState<RecommendationType | null>(null); // Guarda el tipo anterior antes de seleccionar una oferta
+  const [editingRecommendationId, setEditingRecommendationId] = useState<string | null>(null); // ID de la recomendación en edición
+  const [editingRecommendationData, setEditingRecommendationData] = useState<Record<string, { type: RecommendationType; message: string; order: number; status: number; offeringId?: string | null }>>({}); // Datos de edición
+  const [editingLocalRecommendationType, setEditingLocalRecommendationType] = useState<Record<string, LocalRecommendationType>>({}); // Tipo local de recomendación en edición
+  const [editingPreviousRecommendationType, setEditingPreviousRecommendationType] = useState<Record<string, LocalRecommendationType | null>>({}); // Tipo anterior guardado en edición
 
   // Cargar recomendaciones - evitar llamados repetitivos
   const loadRecommendations = useCallback(async () => {
@@ -162,14 +193,16 @@ export function RecommendationsLayer({
     setGeneralError(null);
 
     try {
+      // Mapear el tipo local al tipo del backend
+      const backendType = mapLocalTypeToBackendType(localRecommendationType);
+      
       const payload: RecommendationPayload = {
         companyId: company.id,
-        branchId: null,
-        offeringId: formData.offeringId || null,
-        type: formData.type,
+        offeringId: formData.offeringId && formData.offeringId.trim() !== '' ? formData.offeringId : null,
+        type: backendType,
         message: formData.message.trim(),
-        priority: formData.priority,
-        isActive: formData.isActive,
+        order: formData.order ?? 0, // Cambiado de priority a order
+        // status no se envía - se asigna automáticamente como ACTIVE en el backend
       };
 
       await CommercialService.createRecommendation(payload);
@@ -179,9 +212,10 @@ export function RecommendationsLayer({
         type: (allowedTypes && allowedTypes.length > 0 ? allowedTypes[0] : 'informational') as RecommendationType,
         message: '',
         offeringId: '',
-        priority: 10,
-        isActive: true,
+        order: 0, // Cambiado de priority a order
       });
+      setLocalRecommendationType('general'); // Resetear al tipo por defecto
+      setPreviousRecommendationType(null); // Limpiar el tipo guardado
       // Recargar recomendaciones sin mostrar toast de error si falla
       try {
         await loadRecommendations();
@@ -199,6 +233,87 @@ export function RecommendationsLayer({
     } finally {
       setSaving(false);
     }
+  };
+
+  // Guardar una recomendación editada
+  const handleSaveRecommendation = async (recommendationId: string) => {
+    if (!company?.id) {
+      alert.showError('No se pudo obtener la información necesaria');
+      return;
+    }
+
+    const formData = editingRecommendationData[recommendationId];
+    if (!formData) return;
+
+    if (!formData.message.trim()) {
+      alert.showError('El mensaje de recomendación es requerido');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      // Mapear el tipo local al tipo del backend
+      const editingLocalType = editingLocalRecommendationType[recommendationId] || 'general';
+      const backendType = mapLocalTypeToBackendType(editingLocalType);
+      
+      const payload: Partial<RecommendationPayload> = {
+        type: backendType,
+        message: formData.message.trim(),
+        order: formData.order ?? 0, // Cambiado de priority a order
+        status: formData.status,
+        offeringId: formData.offeringId || null,
+      };
+
+      await CommercialService.updateRecommendation(recommendationId, payload);
+      alert.showSuccess('Recomendación actualizada correctamente');
+      setEditingRecommendationId(null);
+      setEditingRecommendationData({});
+      setEditingLocalRecommendationType({});
+      setEditingPreviousRecommendationType({});
+      // Recargar recomendaciones
+      await loadRecommendations();
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Error al actualizar recomendación';
+      const errorDetail = typeof error?.details === 'object' 
+        ? JSON.stringify(error.details) 
+        : error?.details || error?.result?.description || error?.result?.details;
+      
+      alert.showError(errorMessage, errorDetail);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Eliminar una recomendación
+  const handleDeleteRecommendation = async (recommendationId: string) => {
+    if (!company?.id) {
+      alert.showError('No se pudo obtener la información necesaria');
+      return;
+    }
+
+    // Confirmar eliminación
+    alert.showConfirm(
+      '¿Estás seguro?',
+      'Esta acción no se puede deshacer',
+      async () => {
+        setSaving(true);
+        try {
+          await CommercialService.deleteRecommendation(recommendationId);
+          alert.showSuccess('Recomendación eliminada correctamente');
+          await loadRecommendations();
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Error al eliminar recomendación';
+          const errorDetail = typeof error?.details === 'object' 
+            ? JSON.stringify(error.details) 
+            : error?.details || error?.result?.description || error?.result?.details;
+          
+          alert.showError(errorMessage, errorDetail);
+        } finally {
+          setSaving(false);
+        }
+      }
+    );
   };
 
   if (loading && recommendations.length === 0) {
@@ -225,19 +340,6 @@ export function RecommendationsLayer({
       )}
 
       <View style={styles.formContainer}>
-        {/* Información sobre recomendaciones */}
-        <Card variant="outlined" style={styles.infoCard}>
-          <Ionicons name="bulb-outline" size={24} color={colors.primary} />
-          <View style={styles.infoContent}>
-            <ThemedText type="body2" style={{ fontWeight: '600', marginBottom: 4 }}>
-              {layerTitle || '¿Qué son las recomendaciones?'}
-            </ThemedText>
-            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-              {layerDescription || 'Las recomendaciones son mensajes que la IA puede compartir con los clientes durante las conversaciones. Pueden ser informativas (sin relación comercial) o sugerencias de productos/servicios.'}
-            </ThemedText>
-          </View>
-        </Card>
-
         {/* Lista de recomendaciones */}
         {recommendations.length > 0 && (
           <Card variant="elevated" style={styles.sectionCard}>
@@ -249,11 +351,58 @@ export function RecommendationsLayer({
             </View>
 
             <View style={styles.listContainer}>
-              {recommendations.map((recommendation) => {
-                const typeOption = RECOMMENDATION_TYPE_OPTIONS.find(opt => opt.value === recommendation.type);
+              {/* Separar recomendaciones generales de las que tienen oferta */}
+              {(() => {
+                // Filtrar recomendaciones según el término de búsqueda
+                const filteredRecommendations = searchFilter.trim()
+                  ? recommendations.filter(r => {
+                      const searchLower = searchFilter.toLowerCase().trim();
+                      const message = (r.message || '').toLowerCase();
+                      const offeringName = r.offeringId 
+                        ? (offerings.find(o => o.id === r.offeringId)?.name || '').toLowerCase()
+                        : '';
+                      return message.includes(searchLower) || offeringName.includes(searchLower);
+                    })
+                  : recommendations;
+                
+                const generalRecommendations = filteredRecommendations.filter(r => !r.offeringId);
+                const offerRecommendations = filteredRecommendations.filter(r => r.offeringId);
+                
+                // Agrupar recomendaciones por offeringId
+                const groupedByOffering = offerRecommendations.reduce((acc, rec) => {
+                  const offeringId = rec.offeringId || 'unknown';
+                  if (!acc[offeringId]) {
+                    acc[offeringId] = [];
+                  }
+                  acc[offeringId].push(rec);
+                  return acc;
+                }, {} as Record<string, Recommendation[]>);
+
+                return (
+                  <>
+                    {/* Recomendaciones generales */}
+                    {generalRecommendations.map((recommendation) => {
+                const isEditing = editingRecommendationId === recommendation.id;
+                const formData = isEditing ? editingRecommendationData[recommendation.id] : null;
+                const currentStatus = formData?.status ?? (recommendation as any).status ?? RecordStatus.ACTIVE;
+                const currentStatusDescription = recommendation.statusDescription || 'Activo'; // Fallback si no viene del backend
+                
+                // Mapear el tipo del backend a tipo local para mostrar
+                const getLocalTypeFromBackend = (backendType: RecommendationType): LocalRecommendationType => {
+                  // Por ahora, todos los tipos del backend se mapean a 'general'
+                  // TODO: Actualizar cuando el backend implemente los nuevos tipos
+                  return 'general';
+                };
+                const localType = getLocalTypeFromBackend(recommendation.type);
+                const typeOption = localRecommendationTypeOptions.find(opt => opt.value === localType);
                 const relatedOffering = recommendation.offeringId 
                   ? offerings.find(o => o.id === recommendation.offeringId)
                   : null;
+                
+                // Obtener el tipo local en edición (o el tipo actual si no está en edición)
+                const editingLocalType = isEditing 
+                  ? (editingLocalRecommendationType[recommendation.id] ?? (recommendation.offeringId ? 'offer_specific' : localType))
+                  : (recommendation.offeringId ? 'offer_specific' : localType);
 
                 return (
                   <View
@@ -271,50 +420,751 @@ export function RecommendationsLayer({
                           {typeOption?.label || recommendation.type}
                         </ThemedText>
                       </View>
-                      <View style={styles.recommendationMeta}>
-                        <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                          Prioridad: {recommendation.priority}
-                        </ThemedText>
-                        {recommendation.isActive ? (
-                          <View style={[styles.badge, { backgroundColor: '#10b981' + '20' }]}>
-                            <ThemedText type="caption" style={{ color: '#10b981', fontWeight: '600' }}>
-                              Activa
-                            </ThemedText>
-                          </View>
+                      <View style={styles.badgeActionsContainer}>
+                        {isEditing ? (
+                          <>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                              <View style={styles.statusOptionsContainer}>
+                                {/* Activo */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.statusOption,
+                                    { borderColor: colors.border },
+                                    currentStatus === RecordStatus.ACTIVE && {
+                                      backgroundColor: '#10b981',
+                                      borderColor: '#10b981',
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setEditingRecommendationData(prev => ({
+                                      ...prev,
+                                      [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.ACTIVE }
+                                    }));
+                                  }}
+                                  disabled={saving}
+                                >
+                                  <ThemedText
+                                    type="caption"
+                                    style={currentStatus === RecordStatus.ACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                                  >
+                                    {t.security?.users?.active || 'Activo'}
+                                  </ThemedText>
+                                </TouchableOpacity>
+
+                                {/* Inactivo */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.statusOption,
+                                    { borderColor: colors.border },
+                                    currentStatus === RecordStatus.INACTIVE && {
+                                      backgroundColor: '#ef4444',
+                                      borderColor: '#ef4444',
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setEditingRecommendationData(prev => ({
+                                      ...prev,
+                                      [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.INACTIVE }
+                                    }));
+                                  }}
+                                  disabled={saving}
+                                >
+                                  <ThemedText
+                                    type="caption"
+                                    style={currentStatus === RecordStatus.INACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                                  >
+                                    {t.security?.users?.inactive || 'Inactivo'}
+                                  </ThemedText>
+                                </TouchableOpacity>
+
+                                {/* Pendiente */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.statusOption,
+                                    { borderColor: colors.border },
+                                    currentStatus === RecordStatus.PENDING && {
+                                      backgroundColor: '#f59e0b',
+                                      borderColor: '#f59e0b',
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setEditingRecommendationData(prev => ({
+                                      ...prev,
+                                      [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.PENDING }
+                                    }));
+                                  }}
+                                  disabled={saving}
+                                >
+                                  <ThemedText
+                                    type="caption"
+                                    style={currentStatus === RecordStatus.PENDING ? { color: '#FFFFFF' } : { color: colors.text }}
+                                  >
+                                    {t.security?.users?.pending || 'Pendiente'}
+                                  </ThemedText>
+                                </TouchableOpacity>
+
+                                {/* Suspendido */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.statusOption,
+                                    { borderColor: colors.border },
+                                    currentStatus === RecordStatus.SUSPENDED && {
+                                      backgroundColor: '#f97316',
+                                      borderColor: '#f97316',
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setEditingRecommendationData(prev => ({
+                                      ...prev,
+                                      [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.SUSPENDED }
+                                    }));
+                                  }}
+                                  disabled={saving}
+                                >
+                                  <ThemedText
+                                    type="caption"
+                                    style={currentStatus === RecordStatus.SUSPENDED ? { color: '#FFFFFF' } : { color: colors.text }}
+                                  >
+                                    {t.security?.users?.suspended || 'Suspendido'}
+                                  </ThemedText>
+                                </TouchableOpacity>
+                              </View>
+                            </ScrollView>
+                            <TouchableOpacity
+                              style={styles.cancelButton}
+                              onPress={() => {
+                                setEditingRecommendationId(null);
+                                setEditingRecommendationData(prev => {
+                                  const next = { ...prev };
+                                  delete next[recommendation.id];
+                                  return next;
+                                });
+                              }}
+                              disabled={saving}
+                            >
+                              <Ionicons name="close" size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                          </>
                         ) : (
-                          <View style={[styles.badge, { backgroundColor: colors.textSecondary + '20' }]}>
-                            <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: '600' }}>
-                              Inactiva
-                            </ThemedText>
-                          </View>
+                          <>
+                            <StatusBadge status={currentStatus} statusDescription={currentStatusDescription} />
+                            <TouchableOpacity
+                              onPress={() => {
+                                setEditingRecommendationId(recommendation.id);
+                                // Inicializar el tipo local en edición
+                                const initialLocalType: LocalRecommendationType = recommendation.offeringId ? 'offer_specific' : localType;
+                                setEditingLocalRecommendationType(prev => ({
+                                  ...prev,
+                                  [recommendation.id]: initialLocalType
+                                }));
+                                setEditingRecommendationData(prev => ({
+                                  ...prev,
+                                  [recommendation.id]: {
+                                    type: recommendation.type,
+                                    message: recommendation.message,
+                                    order: recommendation.order ?? 0,
+                                    status: currentStatus,
+                                    offeringId: recommendation.offeringId || null,
+                                  }
+                                }));
+                              }}
+                              style={{ marginLeft: 8 }}
+                            >
+                              <Ionicons name="pencil" size={20} color={actionIconColor} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => handleDeleteRecommendation(recommendation.id)}
+                              style={{ marginLeft: 8 }}
+                              disabled={saving}
+                            >
+                              <Ionicons name="trash-outline" size={20} color={actionIconColor} />
+                            </TouchableOpacity>
+                          </>
                         )}
                       </View>
                     </View>
 
-                    <ThemedText type="body2" style={{ color: colors.text, marginTop: 12 }}>
-                      {recommendation.message}
-                    </ThemedText>
-
-                    {relatedOffering && (
-                      <View style={styles.relatedOffering}>
-                        <Ionicons name="cube-outline" size={16} color={colors.textSecondary} />
-                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginLeft: 4 }}>
-                          Relacionada con: {relatedOffering.name}
+                    {isEditing ? (
+                      <>
+                        {/* Tipo de recomendación en edición */}
+                        <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 12 }]}>
+                          Tipo de recomendación
                         </ThemedText>
-                      </View>
+                        <View style={styles.radioGroupContainer}>
+                          <View style={styles.radioGroupRow}>
+                            {localRecommendationTypeOptions.map((option) => {
+                              const isOfferSpecific = option.value === 'offer_specific';
+                              const isSelected = editingLocalType === option.value;
+                              return (
+                                <TouchableOpacity
+                                  key={option.value}
+                                  style={[
+                                    styles.radioOptionHorizontal,
+                                    {
+                                      borderColor: isSelected ? colors.primary : colors.border,
+                                      backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
+                                      flex: 1,
+                                      opacity: isOfferSpecific && !isSelected ? 0.5 : 1,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    if (!isOfferSpecific) {
+                                      setEditingLocalRecommendationType(prev => ({
+                                        ...prev,
+                                        [recommendation.id]: option.value
+                                      }));
+                                      // Si se cambia a General o Advertencia y hay una oferta seleccionada, limpiar la oferta
+                                      if (formData?.offeringId) {
+                                        setEditingRecommendationData(prev => ({
+                                          ...prev,
+                                          [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, offeringId: null }
+                                        }));
+                                        setEditingPreviousRecommendationType(prev => {
+                                          const next = { ...prev };
+                                          delete next[recommendation.id];
+                                          return next;
+                                        });
+                                      }
+                                    }
+                                  }}
+                                  disabled={isOfferSpecific || saving}
+                                >
+                                  <View
+                                    style={[
+                                      styles.radioCircle,
+                                      { 
+                                        borderColor: isSelected 
+                                          ? colors.primary 
+                                          : (isDark ? colors.text : colors.border)
+                                      },
+                                    ]}
+                                  >
+                                    {isSelected && (
+                                      <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                                    )}
+                                  </View>
+                                  <View style={styles.radioLabelHorizontal}>
+                                    <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                                      {option.label}
+                                    </ThemedText>
+                                    <ThemedText type="caption" style={{ color: colors.textSecondary }} numberOfLines={2}>
+                                      {option.description}
+                                    </ThemedText>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+
+                        {/* Selector de oferta en edición */}
+                        {offerings.length > 0 && (
+                          <>
+                            <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16, marginBottom: 0 }]}>
+                              Ofertas
+                            </ThemedText>
+                            <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                              Deja vacío para recomendación general, o selecciona una oferta para recomendación específica
+                            </ThemedText>
+                            <Select
+                              value={formData?.offeringId || ''}
+                              options={[
+                                {
+                                  value: '',
+                                  label: (() => {
+                                    const currentType = editingPreviousRecommendationType[recommendation.id] || editingLocalType;
+                                    if (currentType === 'general') return 'Recomendación General';
+                                    if (currentType === 'warning') return 'Advertencia General';
+                                    return 'Recomendación General';
+                                  })(),
+                                },
+                                ...offerings.map((offering) => ({
+                                  value: offering.id,
+                                  label: offering.name,
+                                })),
+                              ]}
+                              onSelect={(val) => {
+                                if (val === '') {
+                                  // Restaurar el tipo de recomendación anterior cuando se selecciona la opción 0
+                                  const restoredType = editingPreviousRecommendationType[recommendation.id] || editingLocalType;
+                                  setEditingLocalRecommendationType(prev => ({
+                                    ...prev,
+                                    [recommendation.id]: restoredType === 'offer_specific' ? 'general' : restoredType
+                                  }));
+                                  setEditingRecommendationData(prev => ({
+                                    ...prev,
+                                    [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, offeringId: null }
+                                  }));
+                                  setEditingPreviousRecommendationType(prev => {
+                                    const next = { ...prev };
+                                    delete next[recommendation.id];
+                                    return next;
+                                  });
+                                } else {
+                                  // Si se selecciona una oferta específica, guardar el tipo actual y cambiar a "Por Oferta"
+                                  if (!formData?.offeringId) {
+                                    setEditingPreviousRecommendationType(prev => ({
+                                      ...prev,
+                                      [recommendation.id]: editingLocalType
+                                    }));
+                                  }
+                                  setEditingLocalRecommendationType(prev => ({
+                                    ...prev,
+                                    [recommendation.id]: 'offer_specific'
+                                  }));
+                                  setEditingRecommendationData(prev => ({
+                                    ...prev,
+                                    [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, offeringId: val as string }
+                                  }));
+                                }
+                              }}
+                              placeholder="Selecciona una oferta"
+                              searchable={true}
+                            />
+                          </>
+                        )}
+
+                        <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                          Mensaje de recomendación *
+                        </ThemedText>
+                        <InputWithFocus
+                          containerStyle={[styles.textAreaContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          primaryColor={colors.primary}
+                        >
+                          <TextInput
+                            style={[styles.textArea, { color: colors.text }]}
+                            placeholder="Describe el mensaje de recomendación..."
+                            placeholderTextColor={colors.textSecondary}
+                            value={formData?.message || ''}
+                            onChangeText={(text) => {
+                              setEditingRecommendationData(prev => ({
+                                ...prev,
+                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, message: text }
+                              }));
+                            }}
+                            multiline
+                            numberOfLines={6}
+                            textAlignVertical="top"
+                            editable={!saving}
+                          />
+                        </InputWithFocus>
+                        <View style={{ marginTop: 12 }}>
+                          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                            Orden
+                          </ThemedText>
+                          <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                            Menor número = más importante (default: 0)
+                          </ThemedText>
+                          <InputWithFocus
+                            containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                            primaryColor={colors.primary}
+                          >
+                            <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
+                            <TextInput
+                              style={[styles.input, { color: colors.text }]}
+                              placeholder="0"
+                              placeholderTextColor={colors.textSecondary}
+                              value={formData?.order?.toString() || '0'}
+                              onChangeText={(val) => {
+                                const num = parseInt(val, 10);
+                                if (!isNaN(num) && num >= 0) {
+                                  setEditingRecommendationData(prev => ({
+                                    ...prev,
+                                    [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: num }
+                                  }));
+                                } else if (val === '') {
+                                  setEditingRecommendationData(prev => ({
+                                    ...prev,
+                                    [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: 0 }
+                                  }));
+                                }
+                              }}
+                              keyboardType="number-pad"
+                              editable={!saving}
+                            />
+                          </InputWithFocus>
+                        </View>
+                      </>
+                    ) : (
+                      <ThemedText type="body2" style={{ color: colors.text, marginTop: 12 }}>
+                        {recommendation.message}
+                      </ThemedText>
                     )}
 
-                    {!recommendation.offeringId && (
-                      <View style={styles.relatedOffering}>
-                        <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
-                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginLeft: 4 }}>
-                          Recomendación general
-                        </ThemedText>
+
+                    {isEditing && (
+                      <View style={styles.formActions}>
+                        <Button
+                          title="Cancelar"
+                          onPress={() => {
+                            setEditingRecommendationId(null);
+                            setEditingRecommendationData(prev => {
+                              const next = { ...prev };
+                              delete next[recommendation.id];
+                              return next;
+                            });
+                            setEditingLocalRecommendationType(prev => {
+                              const next = { ...prev };
+                              delete next[recommendation.id];
+                              return next;
+                            });
+                            setEditingPreviousRecommendationType(prev => {
+                              const next = { ...prev };
+                              delete next[recommendation.id];
+                              return next;
+                            });
+                          }}
+                          variant="outline"
+                          size="md"
+                          disabled={saving}
+                        />
+                        <Button
+                          title="Aceptar"
+                          onPress={() => handleSaveRecommendation(recommendation.id)}
+                          variant="primary"
+                          size="md"
+                          disabled={saving}
+                        />
                       </View>
                     )}
                   </View>
                 );
               })}
+
+                    {/* Título para recomendaciones por oferta */}
+                    {Object.keys(groupedByOffering).length > 0 && (
+                      <View style={[styles.sectionHeader, { marginTop: generalRecommendations.length > 0 ? 24 : 0, marginBottom: 16 }]}>
+                        <Ionicons name="cube-outline" size={24} color={colors.primary} />
+                        <ThemedText type="h4" style={styles.sectionTitle}>
+                          Recomendaciones por Oferta
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    {/* Recomendaciones agrupadas por oferta */}
+                    {Object.entries(groupedByOffering).map(([offeringId, offeringRecommendations]) => {
+                      const offering = offerings.find(o => o.id === offeringId);
+                      if (!offering) return null;
+
+                      return (
+                        <View
+                          key={offeringId}
+                          style={[styles.recommendationCard, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 16 }]}
+                        >
+                          {/* Header con nombre de la oferta */}
+                          <View style={styles.recommendationHeader}>
+                            <View style={styles.recommendationType}>
+                              <Ionicons
+                                name="cube-outline"
+                                size={20}
+                                color={colors.primary}
+                              />
+                              <ThemedText type="body2" style={{ fontWeight: '600', marginLeft: 8 }}>
+                                {offering.name}
+                              </ThemedText>
+                            </View>
+                          </View>
+
+                          {/* Lista de mensajes de recomendaciones para esta oferta */}
+                          {offeringRecommendations.map((recommendation, index) => {
+                            const isEditing = editingRecommendationId === recommendation.id;
+                            const formData = isEditing ? editingRecommendationData[recommendation.id] : null;
+                            const currentStatus = formData?.status ?? (recommendation as any).status ?? RecordStatus.ACTIVE;
+                            const currentStatusDescription = recommendation.statusDescription || 'Activo';
+                            
+                            const getLocalTypeFromBackend = (backendType: RecommendationType): LocalRecommendationType => {
+                              return 'general';
+                            };
+                            const localType = getLocalTypeFromBackend(recommendation.type);
+                            const editingLocalType = isEditing 
+                              ? (editingLocalRecommendationType[recommendation.id] ?? 'offer_specific')
+                              : 'offer_specific';
+
+                            return (
+                              <View key={recommendation.id} style={{ marginTop: index > 0 ? 16 : 12 }}>
+                                {!isEditing ? (
+                                  /* Vista colapsada: mensaje con estado e iconos al mismo nivel */
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <View style={{ flex: 1, marginRight: 8 }}>
+                                      <ThemedText type="body2" style={{ color: colors.text }}>
+                                        {recommendation.message}
+                                      </ThemedText>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                      <StatusBadge status={currentStatus} statusDescription={currentStatusDescription} />
+                                      <TouchableOpacity
+                                        onPress={() => {
+                                          setEditingRecommendationId(recommendation.id);
+                                          const initialLocalType: LocalRecommendationType = 'offer_specific';
+                                          setEditingLocalRecommendationType(prev => ({
+                                            ...prev,
+                                            [recommendation.id]: initialLocalType
+                                          }));
+                                          setEditingRecommendationData(prev => ({
+                                            ...prev,
+                                            [recommendation.id]: {
+                                              type: recommendation.type,
+                                              message: recommendation.message,
+                                              order: recommendation.order ?? 0,
+                                              status: currentStatus,
+                                              offeringId: recommendation.offeringId || null,
+                                            }
+                                          }));
+                                        }}
+                                      >
+                                        <Ionicons name="pencil" size={20} color={actionIconColor} />
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        onPress={() => handleDeleteRecommendation(recommendation.id)}
+                                        disabled={saving}
+                                      >
+                                        <Ionicons name="trash-outline" size={20} color={actionIconColor} />
+                                      </TouchableOpacity>
+                                    </View>
+                                  </View>
+                                ) : (
+                                  /* Vista de edición completa */
+                                  <>
+                                    {/* Tipo de recomendación en edición */}
+                                    <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 0 }]}>
+                                      Tipo de recomendación
+                                    </ThemedText>
+                                    <View style={styles.radioGroupContainer}>
+                                      <View style={styles.radioGroupRow}>
+                                        {localRecommendationTypeOptions.map((option) => {
+                                          const isOfferSpecific = option.value === 'offer_specific';
+                                          const isSelected = editingLocalType === option.value;
+                                          return (
+                                            <TouchableOpacity
+                                              key={option.value}
+                                              style={[
+                                                styles.radioOptionHorizontal,
+                                                {
+                                                  borderColor: isSelected ? colors.primary : colors.border,
+                                                  backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
+                                                  flex: 1,
+                                                  opacity: isOfferSpecific && !isSelected ? 0.5 : 1,
+                                                },
+                                              ]}
+                                              onPress={() => {
+                                                if (!isOfferSpecific) {
+                                                  setEditingLocalRecommendationType(prev => ({
+                                                    ...prev,
+                                                    [recommendation.id]: option.value
+                                                  }));
+                                                  if (formData?.offeringId) {
+                                                    setEditingRecommendationData(prev => ({
+                                                      ...prev,
+                                                      [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, offeringId: null }
+                                                    }));
+                                                    setEditingPreviousRecommendationType(prev => {
+                                                      const next = { ...prev };
+                                                      delete next[recommendation.id];
+                                                      return next;
+                                                    });
+                                                  }
+                                                }
+                                              }}
+                                              disabled={isOfferSpecific || saving}
+                                            >
+                                              <View
+                                                style={[
+                                                  styles.radioCircle,
+                                                  { 
+                                                    borderColor: isSelected 
+                                                      ? colors.primary 
+                                                      : (isDark ? colors.text : colors.border)
+                                                  },
+                                                ]}
+                                              >
+                                                {isSelected && (
+                                                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                                                )}
+                                              </View>
+                                              <View style={styles.radioLabelHorizontal}>
+                                                <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                                                  {option.label}
+                                                </ThemedText>
+                                                <ThemedText type="caption" style={{ color: colors.textSecondary }} numberOfLines={2}>
+                                                  {option.description}
+                                                </ThemedText>
+                                              </View>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                      </View>
+                                    </View>
+
+                                    {/* Selector de oferta en edición */}
+                                    {offerings.length > 0 && (
+                                      <>
+                                        <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16, marginBottom: 0 }]}>
+                                          Ofertas
+                                        </ThemedText>
+                                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                                          Deja vacío para recomendación general, o selecciona una oferta para recomendación específica
+                                        </ThemedText>
+                                        <Select
+                                          value={formData?.offeringId || ''}
+                                          options={[
+                                            {
+                                              value: '',
+                                              label: (() => {
+                                                const currentType = editingPreviousRecommendationType[recommendation.id] || editingLocalType;
+                                                if (currentType === 'general') return 'Recomendación General';
+                                                if (currentType === 'warning') return 'Advertencia General';
+                                                return 'Recomendación General';
+                                              })(),
+                                            },
+                                            ...offerings.map((off) => ({
+                                              value: off.id,
+                                              label: off.name,
+                                            })),
+                                          ]}
+                                          onSelect={(val) => {
+                                            if (val === '') {
+                                              const restoredType = editingPreviousRecommendationType[recommendation.id] || editingLocalType;
+                                              setEditingLocalRecommendationType(prev => ({
+                                                ...prev,
+                                                [recommendation.id]: restoredType === 'offer_specific' ? 'general' : restoredType
+                                              }));
+                                              setEditingRecommendationData(prev => ({
+                                                ...prev,
+                                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, offeringId: null }
+                                              }));
+                                              setEditingPreviousRecommendationType(prev => {
+                                                const next = { ...prev };
+                                                delete next[recommendation.id];
+                                                return next;
+                                              });
+                                            } else {
+                                              if (!formData?.offeringId) {
+                                                setEditingPreviousRecommendationType(prev => ({
+                                                  ...prev,
+                                                  [recommendation.id]: editingLocalType
+                                                }));
+                                              }
+                                              setEditingLocalRecommendationType(prev => ({
+                                                ...prev,
+                                                [recommendation.id]: 'offer_specific'
+                                              }));
+                                              setEditingRecommendationData(prev => ({
+                                                ...prev,
+                                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, offeringId: val as string }
+                                              }));
+                                            }
+                                          }}
+                                          placeholder="Selecciona una oferta"
+                                          searchable={true}
+                                        />
+                                      </>
+                                    )}
+
+                                    <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                                      Mensaje de recomendación *
+                                    </ThemedText>
+                                    <InputWithFocus
+                                      containerStyle={[styles.textAreaContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                                      primaryColor={colors.primary}
+                                    >
+                                      <TextInput
+                                        style={[styles.textArea, { color: colors.text }]}
+                                        placeholder="Describe el mensaje de recomendación..."
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={formData?.message || ''}
+                                        onChangeText={(text) => {
+                                          setEditingRecommendationData(prev => ({
+                                            ...prev,
+                                            [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, message: text }
+                                          }));
+                                        }}
+                                        multiline
+                                        numberOfLines={6}
+                                        textAlignVertical="top"
+                                        editable={!saving}
+                                      />
+                                    </InputWithFocus>
+                                    <View style={{ marginTop: 12 }}>
+                                      <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                                        Orden
+                                      </ThemedText>
+                                      <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                                        Menor número = más importante (default: 0)
+                                      </ThemedText>
+                                      <InputWithFocus
+                                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                                        primaryColor={colors.primary}
+                                      >
+                                        <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
+                                        <TextInput
+                                          style={[styles.input, { color: colors.text }]}
+                                          placeholder="0"
+                                          placeholderTextColor={colors.textSecondary}
+                                          value={formData?.order?.toString() || '0'}
+                                          onChangeText={(val) => {
+                                            const num = parseInt(val, 10);
+                                            if (!isNaN(num) && num >= 0) {
+                                              setEditingRecommendationData(prev => ({
+                                                ...prev,
+                                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: num }
+                                              }));
+                                            } else if (val === '') {
+                                              setEditingRecommendationData(prev => ({
+                                                ...prev,
+                                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: 0 }
+                                              }));
+                                            }
+                                          }}
+                                          keyboardType="number-pad"
+                                          editable={!saving}
+                                        />
+                                      </InputWithFocus>
+                                    </View>
+
+                                    <View style={styles.formActions}>
+                                      <Button
+                                        title="Cancelar"
+                                        onPress={() => {
+                                          setEditingRecommendationId(null);
+                                          setEditingRecommendationData(prev => {
+                                            const next = { ...prev };
+                                            delete next[recommendation.id];
+                                            return next;
+                                          });
+                                          setEditingLocalRecommendationType(prev => {
+                                            const next = { ...prev };
+                                            delete next[recommendation.id];
+                                            return next;
+                                          });
+                                          setEditingPreviousRecommendationType(prev => {
+                                            const next = { ...prev };
+                                            delete next[recommendation.id];
+                                            return next;
+                                          });
+                                        }}
+                                        variant="outline"
+                                        size="md"
+                                        disabled={saving}
+                                      />
+                                      <Button
+                                        title="Aceptar"
+                                        onPress={() => handleSaveRecommendation(recommendation.id)}
+                                        variant="primary"
+                                        size="md"
+                                        disabled={saving}
+                                      />
+                                    </View>
+                                  </>
+                                )}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </View>
           </Card>
         )}
@@ -332,95 +1182,118 @@ export function RecommendationsLayer({
             <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
               Tipo de recomendación
             </ThemedText>
-            <View style={styles.optionsGrid}>
-              {RECOMMENDATION_TYPE_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.optionCard,
-                    {
-                      borderColor: formData.type === option.value ? colors.primary : colors.border,
-                      backgroundColor: formData.type === option.value ? colors.primary + '20' : colors.surface,
-                    },
-                  ]}
-                  onPress={() => setFormData(prev => ({ ...prev, type: option.value }))}
-                >
-                  <Ionicons
-                    name={option.icon}
-                    size={24}
-                    color={formData.type === option.value ? colors.primary : colors.textSecondary}
-                  />
-                  <ThemedText
-                    type="body2"
-                    style={{
-                      marginTop: 8,
-                      fontWeight: formData.type === option.value ? '600' : '400',
-                      color: formData.type === option.value ? colors.primary : colors.text,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {option.label}
-                  </ThemedText>
-                  <ThemedText
-                    type="caption"
-                    style={{
-                      marginTop: 4,
-                      color: colors.textSecondary,
-                      textAlign: 'center',
-                      fontSize: 10,
-                    }}
-                  >
-                    {option.description}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Selector de oferta (opcional) */}
-            {offerings.length > 0 && (
-              <>
-                <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                  ¿Relacionar con una oferta? (opcional)
-                </ThemedText>
-                <View style={styles.selectContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.selectOption,
-                      {
-                        borderColor: formData.offeringId === '' ? colors.primary : colors.border,
-                        backgroundColor: formData.offeringId === '' ? colors.primary + '20' : colors.surface,
-                      },
-                    ]}
-                    onPress={() => setFormData(prev => ({ ...prev, offeringId: '' }))}
-                  >
-                    <ThemedText type="body2" style={{ color: colors.text }}>
-                      Recomendación general (sin oferta)
-                    </ThemedText>
-                    {formData.offeringId === '' && (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                  {offerings.map((offering) => (
+            <View style={styles.radioGroupContainer}>
+              <View style={styles.radioGroupRow}>
+                {localRecommendationTypeOptions.map((option) => {
+                  const isOfferSpecific = option.value === 'offer_specific';
+                  const isSelected = localRecommendationType === option.value;
+                  return (
                     <TouchableOpacity
-                      key={offering.id}
+                      key={option.value}
                       style={[
-                        styles.selectOption,
+                        styles.radioOptionHorizontal,
                         {
-                          borderColor: formData.offeringId === offering.id ? colors.primary : colors.border,
-                          backgroundColor: formData.offeringId === offering.id ? colors.primary + '20' : colors.surface,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                          backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
+                          flex: 1,
+                          opacity: isOfferSpecific && !isSelected ? 0.5 : 1, // Hacer más transparente cuando no está seleccionada
                         },
                       ]}
-                      onPress={() => setFormData(prev => ({ ...prev, offeringId: offering.id }))}
+                      onPress={() => {
+                        // "Por Oferta" no puede ser seleccionada directamente por el usuario
+                        // Solo se selecciona automáticamente al elegir una oferta
+                        if (!isOfferSpecific) {
+                          setLocalRecommendationType(option.value);
+                          // Si se cambia a General o Advertencia y hay una oferta seleccionada,
+                          // limpiar la oferta (seleccionar opción 0)
+                          if (formData.offeringId) {
+                            setFormData(prev => ({ ...prev, offeringId: '' }));
+                            setPreviousRecommendationType(null); // Limpiar el tipo guardado
+                          }
+                        }
+                      }}
+                      disabled={isOfferSpecific} // "Por Oferta" siempre está deshabilitada para clicks directos
                     >
-                      <ThemedText type="body2" style={{ color: colors.text }}>
-                        {offering.name}
-                      </ThemedText>
-                      {formData.offeringId === offering.id && (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                      )}
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          { 
+                            borderColor: isSelected 
+                              ? colors.primary 
+                              : (isDark ? colors.text : colors.border)
+                          },
+                        ]}
+                      >
+                        {isSelected && (
+                          <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                        )}
+                      </View>
+                      <View style={styles.radioLabelHorizontal}>
+                        <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                          {option.label}
+                        </ThemedText>
+                        <ThemedText type="caption" style={{ color: colors.textSecondary }} numberOfLines={2}>
+                          {option.description}
+                        </ThemedText>
+                      </View>
                     </TouchableOpacity>
-                  ))}
-                </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Selector de oferta */}
+            {offerings.length > 0 && (
+              <>
+                <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16, marginBottom: 0 }]}>
+                  Ofertas
+                </ThemedText>
+                <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                  Deja vacío para recomendación general, o selecciona una oferta para recomendación específica
+                </ThemedText>
+                <Select
+                  value={formData.offeringId || ''}
+                  options={[
+                    {
+                      value: '',
+                      label: (() => {
+                        const currentType = previousRecommendationType || localRecommendationType;
+                        if (currentType === 'general') return 'Recomendación General';
+                        if (currentType === 'warning') return 'Advertencia General';
+                        return 'Recomendación General';
+                      })(),
+                    },
+                    ...offerings.map((offering) => ({
+                      value: offering.id,
+                      label: offering.name,
+                    })),
+                  ]}
+                  onSelect={(val) => {
+                    if (val === '') {
+                      // Restaurar el tipo de recomendación anterior cuando se selecciona la opción 0
+                      const restoredType = previousRecommendationType || localRecommendationType;
+                      setLocalRecommendationType(restoredType);
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        offeringId: ''
+                      }));
+                      setPreviousRecommendationType(null); // Limpiar el tipo guardado
+                    } else {
+                      // Si se selecciona una oferta específica, guardar el tipo actual y cambiar a "Por Oferta"
+                      // Guardar el tipo anterior solo si no hay oferta seleccionada previamente
+                      if (!formData.offeringId) {
+                        setPreviousRecommendationType(localRecommendationType);
+                      }
+                      setLocalRecommendationType('offer_specific');
+                      setFormData(prev => ({
+                        ...prev,
+                        offeringId: val as string
+                      }));
+                    }
+                  }}
+                  placeholder="Selecciona una oferta"
+                  searchable={true}
+                />
               </>
             )}
 
@@ -449,7 +1322,10 @@ export function RecommendationsLayer({
             </InputWithFocus>
 
             <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-              Prioridad (1-100)
+              Orden
+            </ThemedText>
+            <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
+              Menor número = más importante (default: 0)
             </ThemedText>
             <InputWithFocus
               containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -458,15 +1334,15 @@ export function RecommendationsLayer({
               <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="10"
+                placeholder="0"
                 placeholderTextColor={colors.textSecondary}
-                value={formData.priority.toString()}
+                value={formData.order.toString()}
                 onChangeText={(val) => {
                   const num = parseInt(val, 10);
-                  if (!isNaN(num) && num >= 1 && num <= 100) {
-                    setFormData(prev => ({ ...prev, priority: num }));
+                  if (!isNaN(num) && num >= 0) {
+                    setFormData(prev => ({ ...prev, order: num }));
                   } else if (val === '') {
-                    setFormData(prev => ({ ...prev, priority: 10 }));
+                    setFormData(prev => ({ ...prev, order: 0 }));
                   }
                 }}
                 keyboardType="number-pad"
@@ -475,14 +1351,6 @@ export function RecommendationsLayer({
             <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
               Mayor número = mayor prioridad. La IA mostrará primero las recomendaciones con mayor prioridad.
             </ThemedText>
-
-            <View style={styles.switchRow}>
-              <CustomSwitch
-                value={formData.isActive}
-                onValueChange={(val) => setFormData(prev => ({ ...prev, isActive: val }))}
-                label="Recomendación activa"
-              />
-            </View>
 
             <View style={styles.formActions}>
               <Button
@@ -493,9 +1361,10 @@ export function RecommendationsLayer({
                     type: 'informational',
                     message: '',
                     offeringId: '',
-                    priority: 10,
-                    isActive: true,
+                    order: 0, // Cambiado de priority a order
                   });
+                  setLocalRecommendationType('general'); // Resetear al tipo por defecto
+                  setPreviousRecommendationType(null); // Limpiar el tipo guardado
                 }}
                 variant="outlined"
                 size="md"
@@ -550,12 +1419,21 @@ export function RecommendationsLayer({
             disabled={saving}
             style={styles.continueButton}
           >
-            <Ionicons 
-              name={recommendations.length > 0 ? "arrow-forward-outline" : "skip-forward-outline"} 
-              size={20} 
-              color="#FFFFFF" 
-              style={{ marginRight: 8 }} 
-            />
+            {recommendations.length > 0 ? (
+              <Ionicons 
+                name="arrow-forward-outline" 
+                size={20} 
+                color="#FFFFFF" 
+                style={{ marginRight: 8 }} 
+              />
+            ) : (
+              <DynamicIcon 
+                name="MaterialCommunityIcons.skip-forward-outline" 
+                size={20} 
+                color="#FFFFFF" 
+                style={{ marginRight: 8 }} 
+              />
+            )}
           </Button>
           {recommendations.length > 0 && onSkip && (
             <Button
@@ -568,7 +1446,7 @@ export function RecommendationsLayer({
               disabled={saving}
               style={styles.skipButton}
             >
-              <Ionicons name="skip-forward-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
+              <DynamicIcon name="MaterialCommunityIcons.skip-forward-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
             </Button>
           )}
         </View>
@@ -602,7 +1480,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionCard: {
-    padding: 20,
+    padding: 20,  
+    paddingLeft: 0,
+    paddingRight: 0,
     gap: 16,
   },
   sectionHeader: {
@@ -648,6 +1528,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  badgeActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusOptionsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  cancelButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 16,
+  },
   formCard: {
     padding: 20,
     gap: 16,
@@ -656,19 +1561,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  radioGroupContainer: {
     marginTop: 8,
   },
-  optionCard: {
-    flex: 1,
-    minWidth: '45%',
+  radioGroupRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'stretch',
+  },
+  radioOptionHorizontal: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
     borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  radioLabelHorizontal: {
+    marginLeft: 12,
+    flex: 1,
   },
   selectContainer: {
     gap: 8,
@@ -708,11 +1631,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   switchRow: {
-    marginTop: 8,
-  },
-  formActions: {
-    flexDirection: 'row',
-    gap: 12,
     marginTop: 8,
   },
   addButton: {

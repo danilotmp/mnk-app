@@ -9,13 +9,13 @@
  * - "MaterialIcons:payment" -> usa MaterialIcons
  */
 
-import Ionicons from '@expo/vector-icons/Ionicons';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
+import Feather from '@expo/vector-icons/Feather';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleProp, TextStyle } from 'react-native';
 
@@ -61,16 +61,27 @@ const DEFAULT_FAMILIES = [
 
 /**
  * Parsea el nombre del icono para extraer familia y nombre
- * Formato: "Familia:nombre" o solo "nombre"
+ * Formatos soportados: "Familia:nombre", "Familia.nombre" o solo "nombre"
  */
 function parseIconName(iconName: string): { family: string | null; name: string } {
-  const parts = iconName.split(':');
-  if (parts.length === 2) {
+  // Intentar con dos puntos primero
+  const colonParts = iconName.split(':');
+  if (colonParts.length === 2) {
     return {
-      family: parts[0].trim(),
-      name: parts[1].trim(),
+      family: colonParts[0].trim(),
+      name: colonParts[1].trim(),
     };
   }
+  
+  // Intentar con punto
+  const dotParts = iconName.split('.');
+  if (dotParts.length === 2) {
+    return {
+      family: dotParts[0].trim(),
+      name: dotParts[1].trim(),
+    };
+  }
+  
   return {
     family: null,
     name: iconName.trim(),

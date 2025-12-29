@@ -117,8 +117,6 @@ export class TemplateService {
           return 'Descripción del producto';
         case 'precio_base':
           return 100;
-        case 'modo_impuestos':
-          return 'included';
         default:
           return '';
       }

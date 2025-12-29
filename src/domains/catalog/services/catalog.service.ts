@@ -2,9 +2,20 @@
  * Servicio para gestión de Catálogos (Cabeceras)
  */
 
-import { apiClient } from '@/src/infrastructure/api/api-client';
-import { Catalog, CatalogFilters, CatalogPayload } from '../types';
 import { PaginatedResponse } from '@/src/domains/shared/types';
+import { mapObject } from '@/src/domains/shared/utils/object-mapper';
+import { apiClient } from '@/src/infrastructure/api/api.client';
+import { Catalog, CatalogFilters, CatalogPayload, CatalogQueryPayload, CatalogQueryResponse } from '../types';
+
+// Helper para construir querystring
+const buildQuery = (base: string, params?: Record<string, any>): string => {
+  if (!params) return base;
+  const qs = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .join('&');
+  return qs ? `${base}?${qs}` : base;
+};
 
 export class CatalogService {
   private static readonly BASE_ENDPOINT = '/seguridades/catalogos';
@@ -99,6 +110,39 @@ export class CatalogService {
       return response.data || [];
     } catch (error: any) {
       throw new Error(error.message || 'Error al obtener catálogos activos');
+    }
+  }
+
+  /**
+   * Consultar catálogo por código
+   * POST /api/catalogs/query?companyId=uuid&admin=false
+   * 
+   * @param code Código del catálogo a consultar (ej: "INDUSTRIES")
+   * @param companyId ID de la empresa
+   * @param admin Si es true, incluye datos administrativos
+   * @returns Respuesta con el catálogo y sus detalles
+   */
+  static async queryCatalog(
+    code: string,
+    companyId: string,
+    admin: boolean = false
+  ): Promise<CatalogQueryResponse> {
+    try {
+      const endpoint = buildQuery('/catalogs/query', { 
+        companyId, 
+        admin: admin.toString() 
+      });
+      
+      const payload: CatalogQueryPayload = { code };
+      const response = await apiClient.post<CatalogQueryResponse>(endpoint, payload);
+      
+      // Usar mapper para auto-mapear campos con mismo nombre
+      // El backend devuelve details (no entries), y el mapper lo maneja automáticamente
+      return mapObject<CatalogQueryResponse>(response.data, {
+        deep: true, // Mapear recursivamente details
+      }) as CatalogQueryResponse;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al consultar catálogo');
     }
   }
 }

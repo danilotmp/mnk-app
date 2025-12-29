@@ -40,6 +40,8 @@ export interface PaymentMethod {
   companyId: string;
   method: PaymentMethodType;
   isActive: boolean;
+  accounts?: PaymentAccount[]; // Cuentas del método de pago
+  instructions?: PaymentInstruction[]; // Instrucciones del método de pago
   createdAt?: string;
   updatedAt?: string;
 }
@@ -54,28 +56,27 @@ export interface PaymentMethodPayload {
 export interface PaymentAccount {
   id: string;
   paymentMethodId: string;
-  label?: string | null;
+  name?: string | null;
   provider?: string | null;
   accountNumber?: string | null;
   accountHolder?: string | null;
   identification?: string | null;
-  swiftCode?: string | null;
   additionalData?: Record<string, any> | null;
-  isActive: boolean;
+  status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
+  statusDescription?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface PaymentAccountPayload {
   paymentMethodId: string;
-  label?: string;
+  name?: string;
   provider?: string;
   accountNumber?: string;
   accountHolder?: string;
   identification?: string;
-  swiftCode?: string;
   additionalData?: Record<string, any>;
-  isActive?: boolean;
+  status?: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
 }
 
 // ===== Payment Instructions =====
@@ -87,6 +88,8 @@ export interface PaymentInstruction {
   paymentMethodId: string;
   instructionType: PaymentInstructionType;
   message: string;
+  status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
+  statusDescription?: string;
   createdAt?: string;
 }
 
@@ -95,6 +98,7 @@ export interface PaymentInstructionPayload {
   paymentAccountId?: string | null;
   instructionType: PaymentInstructionType;
   message: string;
+  status?: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
 }
 
 // ===== Offerings =====
@@ -254,18 +258,40 @@ export interface PromotionOfferingPayload {
   offeringId: string;
 }
 
+// ===== Interaction Guidelines =====
+export interface InteractionGuideline {
+  id: string;
+  commercialProfileId: string;
+  title: string;
+  description: string;
+  status: number; // 1=Activo, 0=Inactivo, 2=Pendiente, 3=Suspendido
+  statusDescription?: string; // Descripción traducida del estado
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+}
+
+export interface InteractionGuidelinePayload {
+  companyId?: string; // Recomendado: el backend lo convierte automáticamente al commercialProfileId
+  commercialProfileId?: string; // Opcional: solo si se conoce el commercialProfileId válido
+  title: string;
+  description: string;
+  status?: number; // 1=Activo, 0=Inactivo, 2=Pendiente, 3=Suspendido
+}
+
 // ===== Recommendations =====
 export type RecommendationType = 'informational' | 'orientation' | 'suggestion' | 'upsell';
 
 export interface Recommendation {
   id: string;
   companyId: string;
-  branchId?: string | null;
   offeringId?: string | null;
   type: RecommendationType;
   message: string;
-  priority: number;
-  isActive: boolean;
+  order: number; // Menor = más importante (reemplaza a priority)
+  status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
+  statusDescription?: string; // Descripción traducida del estado
   createdAt?: string;
   createdBy?: string;
   updatedAt?: string;
@@ -273,13 +299,12 @@ export interface Recommendation {
 }
 
 export interface RecommendationPayload {
-  companyId: string;
-  branchId?: string | null;
+  companyId: string; // Requerido para crear, no se envía en update
   offeringId?: string | null;
   type: RecommendationType;
   message: string;
-  priority?: number;
-  isActive?: boolean;
+  order?: number; // Menor = más importante (default: 0)
+  status?: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
 }
 
 // ===== Context & Capabilities =====
@@ -299,6 +324,11 @@ export interface CommercialContext {
   };
   recommendations?: Recommendation[];
   capabilities?: CommercialCapabilities;
+  settings?: {
+    currency?: string;
+    timezone?: string;
+    language?: string;
+  };
 }
 
 export interface CommercialCapabilities {
@@ -320,7 +350,7 @@ export interface CommercialCapabilities {
 // Capa 5: Pagos (payment_method, payment_account, payment_instruction)
 // Capa 6: Recomendaciones y upsell (recommendation: suggestion, upsell)
 export interface LayerProgress {
-  layer: 'institutional' | 'operational' | 'offerings' | 'promotions' | 'payments' | 'recommendations';
+  layer: 'institutional' | 'operational' | 'offerings' | 'interactionGuidelines' | 'payments' | 'recommendations';
   completed: boolean;
   completionPercentage: number;
   enabledCapabilities: string[];
