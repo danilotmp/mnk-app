@@ -3,9 +3,9 @@
  */
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { UserContextService, UserSessionService } from '@/src/domains/shared/services';
@@ -16,27 +16,27 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorDetail, extractErrorMessage } from '@/src/infrastructure/messages/error-utils';
 import { authService } from '@/src/infrastructure/services/auth.service';
 import { mapUserResponseToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
-import { useSession } from '@/src/infrastructure/session';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function LoginPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const { isDesktop } = useResponsive();
   const router = useRouter();
   const { setUserContext } = useMultiCompany();
-  const { saveSession } = useSession();
   const alert = useAlert();
   const userSessionService = UserSessionService.getInstance();
   const userContextService = UserContextService.getInstance();
@@ -173,28 +173,47 @@ export default function LoginPage() {
           headerShown: false,
         }} 
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+      <View style={styles.container}>
+        {/* Layout de dos columnas en desktop, apilado en mobile */}
+        <View style={styles.layoutContainer}>
+          {/* Columna Izquierda: Formulario */}
+          <View style={[styles.leftColumn, { backgroundColor: colors.background }]}>
+            {/* Botón de regresar */}
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+              disabled={isLoading}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.formContainer}
         >
-          <ThemedView style={styles.content}>
             {/* Logo/Header */}
             <View style={styles.header}>
-              <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-                <ThemedText type="h1" style={{ color: '#FFFFFF', fontWeight: 'bold' }}>
-                  MNK
-                </ThemedText>
+              <View style={styles.headerContent}>
+                <View style={styles.logoContainer}>
+                  <Image
+                    source={require('@/assets/images/icon.png')}
+                    style={styles.logoImage}
+                    contentFit="contain"
+                  />
+                </View>
+                <View style={styles.headerText}>
+                  <ThemedText type="h2" style={styles.title}>
+                    {t.auth.login}
+                  </ThemedText>
+                  <ThemedText type="body2" variant="secondary" style={styles.subtitle}>
+                    Ingresa tus credenciales para continuar
+                  </ThemedText>
+                </View>
               </View>
-              <ThemedText type="h2" style={styles.title}>
-                {t.auth.login}
-              </ThemedText>
-              <ThemedText type="body2" variant="secondary" style={styles.subtitle}>
-                Ingresa tus credenciales para continuar
-              </ThemedText>
             </View>
 
             {/* Formulario */}
@@ -364,9 +383,33 @@ export default function LoginPage() {
                 </TouchableOpacity>
               </View>
             </Card>
-          </ThemedView>
+              </KeyboardAvoidingView>
         </ScrollView>
-      </KeyboardAvoidingView>
+          </View>
+
+          {/* Columna Derecha: Imagen de Fondo */}
+          {isDesktop && (
+            <View style={styles.rightColumn}>
+              <Image
+                source={require('@/assets/images/backgroud.jpg')}
+                style={styles.backgroundImage}
+                contentFit="cover"
+              />
+              {/* Overlay con texto opcional */}
+              <View style={styles.overlay}>
+                <View style={styles.overlayContent}>
+                  <ThemedText type="h1" style={styles.overlayTitle}>
+                    MNK
+                  </ThemedText>
+                  <ThemedText type="body1" style={styles.overlaySubtitle}>
+                    Una nueva generación de soluciones empresariales, diseñada para evolucionar, conectar y transformar.
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
     </>
   );
 }
@@ -375,33 +418,102 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  layoutContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1,
+    ...(Platform.OS === 'web' ? {
+      maxWidth: '50%',
+      minWidth: 500,
+    } : {}),
+  },
+  rightColumn: {
+    flex: 1,
+    position: 'relative',
+    ...(Platform.OS === 'web' ? {
+      maxWidth: '50%',
+    } : {}),
+  },
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  overlayContent: {
+    gap: 16,
+  },
+  overlayTitle: {
+    color: '#FFFFFF',
+    fontSize: 48,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  overlaySubtitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    lineHeight: 28,
+    opacity: 0.95,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
     padding: 20,
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 20 : 40,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+    borderRadius: 8,
+  },
+  formContainer: {
+    flex: 1,
     justifyContent: 'center',
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
-    alignItems: 'center',
     marginBottom: 32,
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginLeft: 20,
+  },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
+  },
+  headerText: {
+    flex: 1,
+    gap: 4,
   },
   title: {
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 0,
+    textAlign: 'left',
   },
   subtitle: {
-    textAlign: 'center',
+    textAlign: 'left',
     opacity: 0.8,
   },
   card: {
@@ -436,11 +548,10 @@ const styles = StyleSheet.create({
       outlineWidth: 0,
       outlineColor: 'transparent',
       borderWidth: 0,
-      borderStyle: 'none',
       WebkitAppearance: 'none',
       appearance: 'none',
       backgroundColor: 'transparent',
-    } : {
+    } as any : {
       borderWidth: 0,
       padding: 0,
     }),

@@ -42,8 +42,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+      // "reactCompiler": true  // Deshabilitado temporalmente - causa lentitud en compilación
     },
     "extra": {
       "apiBaseUrl": "http://localhost:3000/api",

@@ -4,8 +4,8 @@
  */
 
 const { getDefaultConfig } = require('expo/metro-config');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
@@ -13,11 +13,10 @@ const config = getDefaultConfig(__dirname);
 // Configurar para ignorar FontFaceObserver si causa problemas
 config.resolver = {
   ...config.resolver,
-  extraNodeModules: {
-    ...(config.resolver?.extraNodeModules || {}),
-  },
   // Ignorar módulos problemáticos en web
   platformExtensions: ['web.js', 'web.ts', 'web.tsx', 'js', 'ts', 'tsx', 'json'],
+  // Optimización: cachear resoluciones de módulos
+  unstable_enablePackageExports: true,
 };
 
 // Configuración de transformación
@@ -35,7 +34,7 @@ config.transformer = {
   getTransformOptions: async () => ({
     transform: {
       experimentalImportSupport: false,
-      inlineRequires: true,
+      inlineRequires: true, // Optimización: cargar módulos bajo demanda
     },
   }),
   // Habilitar require.context para Expo Router (necesario para web)
@@ -46,6 +45,10 @@ config.transformer = {
 if (!config.serializer) {
   config.serializer = {};
 }
+
+// Optimización: Configurar watchman (si está disponible)
+// Watchman acelera significativamente la detección de cambios de archivos
+config.watchFolders = [__dirname];
 
 // Interceptar readFileSync para manejar archivos anónimos de forma silenciosa
 const originalReadFileSync = fs.readFileSync;

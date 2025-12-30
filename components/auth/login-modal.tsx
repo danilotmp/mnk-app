@@ -19,16 +19,17 @@ import { mapApiUserToMultiCompanyUser } from '@/src/infrastructure/services/user
 import { useSession } from '@/src/infrastructure/session';
 import { createLoginModalStyles } from '@/src/styles/components/login-modal.styles';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 /**
@@ -213,6 +214,13 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
             <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
               <View style={styles.modalHeader}>
                 <View style={styles.headerContent}>
+                  <View style={styles.logoContainer}>
+                    <Image
+                      source={require('@/assets/images/icon.png')}
+                      style={styles.logoImage}
+                      contentFit="contain"
+                    />
+                  </View>
                   <View style={styles.headerText}>
                     <ThemedText type="h3" style={styles.title}>{header.title}</ThemedText>
                     <ThemedText type="body2" variant="secondary" style={styles.subtitle}>{header.subtitle}</ThemedText>

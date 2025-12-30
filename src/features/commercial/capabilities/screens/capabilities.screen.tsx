@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   header: {
-    marginBottom: 24,
+    margin: 24,
     gap: 8,
   },
   title: {
@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
   },
   productsGrid: {
     gap: 16,
+    marginHorizontal: 26,
     marginBottom: 24,
   },
   productCard: {
@@ -336,6 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   infoCard: {
+    margin: 24,
     padding: 16,
   },
   infoContent: {
