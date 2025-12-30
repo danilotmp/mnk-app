@@ -36,6 +36,7 @@ import type {
 } from './types';
 
 const BASE_COMMERCIAL = '/commercial';
+const BASE_INTERACCIONES = '/interacciones';
 
 // Helper para construir querystring
 const buildQuery = (base: string, params?: Record<string, any>): string => {
@@ -50,7 +51,7 @@ const buildQuery = (base: string, params?: Record<string, any>): string => {
 export const CommercialService = {
   // ===== Commercial Profile =====
   async getProfile(companyId: string): Promise<CommercialProfile> {
-    const res = await apiClient.get<any>(`${BASE_COMMERCIAL}/profile/${companyId}`);
+    const res = await apiClient.get<any>(`${BASE_INTERACCIONES}/profile/${companyId}`);
     
     // El API devuelve { data: { commercial: {...} }, result: {...} }
     // Necesitamos extraer y mapear de snake_case a camelCase
@@ -82,7 +83,7 @@ export const CommercialService = {
    * companyId debe estar en el body, no en la URL
    */
   async upsertProfile(payload: CommercialProfilePayload): Promise<CommercialProfile> {
-    const res = await apiClient.put<CommercialProfile>(`${BASE_COMMERCIAL}/profile`, payload);
+    const res = await apiClient.put<CommercialProfile>(`${BASE_INTERACCIONES}/profile`, payload);
     const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
     return mapObject<CommercialProfile>(res.data, { deep: true }) as CommercialProfile;
   },
@@ -529,8 +530,8 @@ export const CommercialService = {
   },
 
   // ===== Interaction Guidelines =====
-  async getInteractionGuidelines(commercialProfileId: string): Promise<InteractionGuideline[]> {
-    const endpoint = buildQuery(`${BASE_COMMERCIAL}/interaction-guidelines`, { commercialProfileId });
+  async getInteractionGuidelines(companyId: string): Promise<InteractionGuideline[]> {
+    const endpoint = buildQuery(`${BASE_INTERACCIONES}/interaction-guidelines`, { companyId });
     const res = await apiClient.get<any[]>(endpoint);
     const guidelinesData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
     const guidelines: InteractionGuideline[] = (Array.isArray(guidelinesData) ? guidelinesData : []).map((item: any) => {
@@ -559,7 +560,7 @@ export const CommercialService = {
   },
 
   async createInteractionGuideline(payload: InteractionGuidelinePayload): Promise<InteractionGuideline> {
-    const res = await apiClient.post<any>(`${BASE_COMMERCIAL}/interaction-guidelines`, payload);
+    const res = await apiClient.post<any>(`${BASE_INTERACCIONES}/interaction-guidelines`, payload);
     const item = res.data;
     // Convertir status a número si viene como string
     const statusNum = typeof item.status === 'number' ? item.status : 
@@ -593,7 +594,7 @@ export const CommercialService = {
   },
 
   async updateInteractionGuideline(guidelineId: string, payload: Partial<InteractionGuidelinePayload>): Promise<InteractionGuideline> {
-    const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/interaction-guidelines/${guidelineId}`, payload);
+    const res = await apiClient.put<any>(`${BASE_INTERACCIONES}/interaction-guidelines/${guidelineId}`, payload);
     const item = res.data;
     // Convertir status a número si viene como string
     const statusNum = typeof item.status === 'number' ? item.status : 
@@ -625,7 +626,7 @@ export const CommercialService = {
   },
 
   async deleteInteractionGuideline(guidelineId: string): Promise<void> {
-    await apiClient.delete(`${BASE_COMMERCIAL}/interaction-guidelines/${guidelineId}`);
+    await apiClient.delete(`${BASE_INTERACCIONES}/interaction-guidelines/${guidelineId}`);
   },
 
   // ===== Recommendations =====
@@ -834,12 +835,12 @@ export const CommercialService = {
   // ===== Capabilities =====
   // Nota: getFullContext fue eliminado - usar endpoints específicos en su lugar
   async getCapabilities(companyId: string): Promise<CommercialCapabilities> {
-    const res = await apiClient.get<CommercialCapabilities>(`${BASE_COMMERCIAL}/context/${companyId}/capabilities`);
+    const res = await apiClient.get<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`);
     return res.data;
   },
 
   async updateCapabilities(companyId: string, capabilities: Partial<CommercialCapabilities>): Promise<CommercialCapabilities> {
-    const res = await apiClient.put<CommercialCapabilities>(`${BASE_COMMERCIAL}/context/${companyId}/capabilities`, capabilities);
+    const res = await apiClient.put<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`, capabilities);
     return res.data;
   },
 

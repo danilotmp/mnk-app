@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CommercialService } from '@/src/domains/commercial';
 import {
@@ -40,6 +41,7 @@ export function InteractionGuidelinesLayer({
   searchFilter = '',
 }: InteractionGuidelinesLayerProps) {
   const { colors, isDark } = useTheme();
+  const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const alert = useAlert();
   const { company } = useCompany();
@@ -352,7 +354,7 @@ export function InteractionGuidelinesLayer({
                     style={[styles.guidelineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
                     <View style={styles.guidelineHeader}>
-                      <View style={styles.guidelineTitleRow}>
+                      <View style={[styles.guidelineTitleRow, isMobile && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
                         {isEditing ? (
                           <InputWithFocus
                             containerStyle={[
@@ -361,6 +363,7 @@ export function InteractionGuidelinesLayer({
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
                                 flex: 1,
+                                width: isMobile ? '100%' : undefined,
                               },
                             ]}
                             primaryColor={colors.primary}
@@ -379,7 +382,7 @@ export function InteractionGuidelinesLayer({
                           </InputWithFocus>
                         ) : (
                           <TouchableOpacity
-                            style={{ flex: 1 }}
+                            style={{ flex: 1, width: isMobile ? '100%' : undefined }}
                             onPress={() => handleTitleClick(guideline)}
                             activeOpacity={0.7}
                           >
@@ -388,7 +391,7 @@ export function InteractionGuidelinesLayer({
                             </ThemedText>
                           </TouchableOpacity>
                         )}
-                        <View style={styles.badgeActionsContainer}>
+                        <View style={[styles.badgeActionsContainer, isMobile && { width: '100%' }]}>
                           {isEditing ? (
                             <>
                               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -602,7 +605,7 @@ export function InteractionGuidelinesLayer({
         {showNewForm ? (
           <Card variant="outlined" style={styles.accordionCard}>
             <View style={styles.guidelineHeader}>
-              <View style={styles.guidelineTitleRow}>
+              <View style={[styles.guidelineTitleRow, isMobile && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
                 <Ionicons name="add-circle-outline" size={24} color={colors.primary} style={{ marginRight: 8 }} />
                 <InputWithFocus
                   containerStyle={[
@@ -611,6 +614,7 @@ export function InteractionGuidelinesLayer({
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
                       flex: 1,
+                      width: isMobile ? '100%' : undefined,
                     },
                   ]}
                   primaryColor={colors.primary}
@@ -624,7 +628,7 @@ export function InteractionGuidelinesLayer({
                     editable={!saving}
                   />
                 </InputWithFocus>
-                <View style={styles.badgeActionsContainer}>
+                <View style={[styles.badgeActionsContainer, isMobile && { width: '100%' }]}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={styles.statusOptionsContainer}>
                       {/* Activo */}

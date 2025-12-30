@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { Select, SelectOption } from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CommercialService } from '@/src/domains/commercial';
 import {
@@ -51,6 +52,7 @@ export function RecommendationsLayer({
   searchFilter = '',
 }: RecommendationsLayerProps) {
   const { colors, isDark } = useTheme();
+  const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const alert = useAlert();
   const { company } = useCompany();
@@ -409,8 +411,8 @@ export function RecommendationsLayer({
                     key={recommendation.id}
                     style={[styles.recommendationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
-                    <View style={styles.recommendationHeader}>
-                      <View style={styles.recommendationType}>
+                    <View style={[styles.recommendationHeader, isMobile && isEditing && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
+                      <View style={[styles.recommendationType, isMobile && isEditing && { width: '100%' }]}>
                         <Ionicons
                           name={typeOption?.icon || 'information-circle-outline'}
                           size={20}
@@ -420,10 +422,10 @@ export function RecommendationsLayer({
                           {typeOption?.label || recommendation.type}
                         </ThemedText>
                       </View>
-                      <View style={styles.badgeActionsContainer}>
+                      <View style={[styles.badgeActionsContainer, isMobile && isEditing && { width: '100%' }]}>
                         {isEditing ? (
                           <>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {isMobile ? (
                               <View style={styles.statusOptionsContainer}>
                                 {/* Activo */}
                                 <TouchableOpacity
@@ -529,9 +531,117 @@ export function RecommendationsLayer({
                                   </ThemedText>
                                 </TouchableOpacity>
                               </View>
-                            </ScrollView>
+                            ) : (
+                              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={styles.statusOptionsContainer}>
+                                  {/* Activo */}
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.statusOption,
+                                      { borderColor: colors.border },
+                                      currentStatus === RecordStatus.ACTIVE && {
+                                        backgroundColor: '#10b981',
+                                        borderColor: '#10b981',
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      setEditingRecommendationData(prev => ({
+                                        ...prev,
+                                        [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.ACTIVE }
+                                      }));
+                                    }}
+                                    disabled={saving}
+                                  >
+                                    <ThemedText
+                                      type="caption"
+                                      style={currentStatus === RecordStatus.ACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                                    >
+                                      {t.security?.users?.active || 'Activo'}
+                                    </ThemedText>
+                                  </TouchableOpacity>
+
+                                  {/* Inactivo */}
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.statusOption,
+                                      { borderColor: colors.border },
+                                      currentStatus === RecordStatus.INACTIVE && {
+                                        backgroundColor: '#ef4444',
+                                        borderColor: '#ef4444',
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      setEditingRecommendationData(prev => ({
+                                        ...prev,
+                                        [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.INACTIVE }
+                                      }));
+                                    }}
+                                    disabled={saving}
+                                  >
+                                    <ThemedText
+                                      type="caption"
+                                      style={currentStatus === RecordStatus.INACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                                    >
+                                      {t.security?.users?.inactive || 'Inactivo'}
+                                    </ThemedText>
+                                  </TouchableOpacity>
+
+                                  {/* Pendiente */}
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.statusOption,
+                                      { borderColor: colors.border },
+                                      currentStatus === RecordStatus.PENDING && {
+                                        backgroundColor: '#f59e0b',
+                                        borderColor: '#f59e0b',
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      setEditingRecommendationData(prev => ({
+                                        ...prev,
+                                        [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.PENDING }
+                                      }));
+                                    }}
+                                    disabled={saving}
+                                  >
+                                    <ThemedText
+                                      type="caption"
+                                      style={currentStatus === RecordStatus.PENDING ? { color: '#FFFFFF' } : { color: colors.text }}
+                                    >
+                                      {t.security?.users?.pending || 'Pendiente'}
+                                    </ThemedText>
+                                  </TouchableOpacity>
+
+                                  {/* Suspendido */}
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.statusOption,
+                                      { borderColor: colors.border },
+                                      currentStatus === RecordStatus.SUSPENDED && {
+                                        backgroundColor: '#f97316',
+                                        borderColor: '#f97316',
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      setEditingRecommendationData(prev => ({
+                                        ...prev,
+                                        [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, status: RecordStatus.SUSPENDED }
+                                      }));
+                                    }}
+                                    disabled={saving}
+                                  >
+                                    <ThemedText
+                                      type="caption"
+                                      style={currentStatus === RecordStatus.SUSPENDED ? { color: '#FFFFFF' } : { color: colors.text }}
+                                    >
+                                      {t.security?.users?.suspended || 'Suspendido'}
+                                    </ThemedText>
+                                  </TouchableOpacity>
+                                </View>
+                              </ScrollView>
+                            )}
                             <TouchableOpacity
-                              style={styles.cancelButton}
+                              style={[styles.cancelButton, isMobile && { alignSelf: 'flex-end' }]}
                               onPress={() => {
                                 setEditingRecommendationId(null);
                                 setEditingRecommendationData(prev => {
@@ -591,7 +701,7 @@ export function RecommendationsLayer({
                           Tipo de recomendación
                         </ThemedText>
                         <View style={styles.radioGroupContainer}>
-                          <View style={styles.radioGroupRow}>
+                          <View style={[styles.radioGroupRow, isMobile && { flexDirection: 'column', gap: 12 }]}>
                             {localRecommendationTypeOptions.map((option) => {
                               const isOfferSpecific = option.value === 'offer_specific';
                               const isSelected = editingLocalType === option.value;
@@ -603,7 +713,8 @@ export function RecommendationsLayer({
                                     {
                                       borderColor: isSelected ? colors.primary : colors.border,
                                       backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
-                                      flex: 1,
+                                      flex: isMobile ? undefined : 1,
+                                      width: isMobile ? '100%' : undefined,
                                       opacity: isOfferSpecific && !isSelected ? 0.5 : 1,
                                     },
                                   ]}
@@ -930,7 +1041,7 @@ export function RecommendationsLayer({
                                       Tipo de recomendación
                                     </ThemedText>
                                     <View style={styles.radioGroupContainer}>
-                                      <View style={styles.radioGroupRow}>
+                                      <View style={[styles.radioGroupRow, isMobile && { flexDirection: 'column', gap: 12 }]}>
                                         {localRecommendationTypeOptions.map((option) => {
                                           const isOfferSpecific = option.value === 'offer_specific';
                                           const isSelected = editingLocalType === option.value;
@@ -942,7 +1053,8 @@ export function RecommendationsLayer({
                                                 {
                                                   borderColor: isSelected ? colors.primary : colors.border,
                                                   backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
-                                                  flex: 1,
+                                                  flex: isMobile ? undefined : 1,
+                                                  width: isMobile ? '100%' : undefined,
                                                   opacity: isOfferSpecific && !isSelected ? 0.5 : 1,
                                                 },
                                               ]}
@@ -1183,7 +1295,7 @@ export function RecommendationsLayer({
               Tipo de recomendación
             </ThemedText>
             <View style={styles.radioGroupContainer}>
-              <View style={styles.radioGroupRow}>
+              <View style={[styles.radioGroupRow, isMobile && { flexDirection: 'column', gap: 12 }]}>
                 {localRecommendationTypeOptions.map((option) => {
                   const isOfferSpecific = option.value === 'offer_specific';
                   const isSelected = localRecommendationType === option.value;
@@ -1195,7 +1307,8 @@ export function RecommendationsLayer({
                         {
                           borderColor: isSelected ? colors.primary : colors.border,
                           backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
-                          flex: 1,
+                          flex: isMobile ? undefined : 1,
+                          width: isMobile ? '100%' : undefined,
                           opacity: isOfferSpecific && !isSelected ? 0.5 : 1, // Hacer más transparente cuando no está seleccionada
                         },
                       ]}

@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CatalogService, catalogDetailsToInstructionTypeOptions, catalogDetailsToPaymentMethodOptions, catalogDetailsToSimpleOptions } from '@/src/domains/catalog';
 import { CommercialService } from '@/src/domains/commercial';
@@ -43,6 +44,7 @@ interface PaymentsLayerProps {
 
 export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSkip }: PaymentsLayerProps) {
   const { colors, isDark } = useTheme();
+  const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const alert = useAlert();
   const { company } = useCompany();
@@ -882,7 +884,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                       style={styles.guidelineCard}
                     >
                       <View style={styles.guidelineHeader}>
-                        <View style={styles.guidelineTitleRow}>
+                        <View style={[styles.guidelineTitleRow, isMobile && isEditing && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
                           {isEditing ? (
                             <InputWithFocus
                               containerStyle={[
@@ -891,6 +893,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                                   backgroundColor: colors.surface,
                                   borderColor: colors.border,
                                   flex: 1,
+                                  width: isMobile ? '100%' : undefined,
                                 },
                               ]}
                               primaryColor={colors.primary}
@@ -908,7 +911,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                               />
                             </InputWithFocus>
                           ) : (
-                            <View style={{ flex: 1 }}>
+                            <View style={{ flex: 1, width: isMobile ? '100%' : undefined }}>
                               <TouchableOpacity
                                 style={{ flex: 1 }}
                                 onPress={() => handleAccountClick(account)}
@@ -925,10 +928,10 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                               )}
                             </View>
                           )}
-                          <View style={styles.badgeActionsContainer}>
+                          <View style={[styles.badgeActionsContainer, isMobile && isEditing && { width: '100%' }]}>
                             {isEditing ? (
                               <>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                {isMobile ? (
                                   <View style={styles.statusOptionsContainer}>
                                     {/* Activo */}
                                     <TouchableOpacity
@@ -1034,9 +1037,117 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                                       </ThemedText>
                                     </TouchableOpacity>
                                   </View>
-                                </ScrollView>
+                                ) : (
+                                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    <View style={styles.statusOptionsContainer}>
+                                      {/* Activo */}
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.statusOption,
+                                          { borderColor: colors.border },
+                                          currentStatus === RecordStatus.ACTIVE && {
+                                            backgroundColor: '#10b981',
+                                            borderColor: '#10b981',
+                                          },
+                                        ]}
+                                        onPress={() => {
+                                          setEditingAccountData(prev => ({
+                                            ...prev,
+                                            [account.id]: { ...prev[account.id] || { name: account.name || '', provider: account.provider || '', accountNumber: account.accountNumber || '', accountHolder: account.accountHolder || '', identification: account.identification || '', status: account.status }, status: RecordStatus.ACTIVE }
+                                          }));
+                                        }}
+                                        disabled={saving}
+                                      >
+                                        <ThemedText
+                                          type="caption"
+                                          style={currentStatus === RecordStatus.ACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                                        >
+                                          {t.security?.users?.active || 'Activo'}
+                                        </ThemedText>
+                                      </TouchableOpacity>
+
+                                      {/* Inactivo */}
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.statusOption,
+                                          { borderColor: colors.border },
+                                          currentStatus === RecordStatus.INACTIVE && {
+                                            backgroundColor: '#ef4444',
+                                            borderColor: '#ef4444',
+                                          },
+                                        ]}
+                                        onPress={() => {
+                                          setEditingAccountData(prev => ({
+                                            ...prev,
+                                            [account.id]: { ...prev[account.id] || { name: account.name || '', provider: account.provider || '', accountNumber: account.accountNumber || '', accountHolder: account.accountHolder || '', identification: account.identification || '', status: account.status }, status: RecordStatus.INACTIVE }
+                                          }));
+                                        }}
+                                        disabled={saving}
+                                      >
+                                        <ThemedText
+                                          type="caption"
+                                          style={currentStatus === RecordStatus.INACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                                        >
+                                          {t.security?.users?.inactive || 'Inactivo'}
+                                        </ThemedText>
+                                      </TouchableOpacity>
+
+                                      {/* Pendiente */}
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.statusOption,
+                                          { borderColor: colors.border },
+                                          currentStatus === RecordStatus.PENDING && {
+                                            backgroundColor: '#f59e0b',
+                                            borderColor: '#f59e0b',
+                                          },
+                                        ]}
+                                        onPress={() => {
+                                          setEditingAccountData(prev => ({
+                                            ...prev,
+                                            [account.id]: { ...prev[account.id] || { name: account.name || '', provider: account.provider || '', accountNumber: account.accountNumber || '', accountHolder: account.accountHolder || '', identification: account.identification || '', status: account.status }, status: RecordStatus.PENDING }
+                                          }));
+                                        }}
+                                        disabled={saving}
+                                      >
+                                        <ThemedText
+                                          type="caption"
+                                          style={currentStatus === RecordStatus.PENDING ? { color: '#FFFFFF' } : { color: colors.text }}
+                                        >
+                                          {t.security?.users?.pending || 'Pendiente'}
+                                        </ThemedText>
+                                      </TouchableOpacity>
+
+                                      {/* Suspendido */}
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.statusOption,
+                                          { borderColor: colors.border },
+                                          currentStatus === RecordStatus.SUSPENDED && {
+                                            backgroundColor: '#f97316',
+                                            borderColor: '#f97316',
+                                          },
+                                        ]}
+                                        onPress={() => {
+                                          setEditingAccountData(prev => ({
+                                            ...prev,
+                                            [account.id]: { ...prev[account.id] || { name: account.name || '', provider: account.provider || '', accountNumber: account.accountNumber || '', accountHolder: account.accountHolder || '', identification: account.identification || '', status: account.status }, status: RecordStatus.SUSPENDED }
+                                          }));
+                                        }}
+                                        disabled={saving}
+                                      >
+                                        <ThemedText
+                                          type="caption"
+                                          style={currentStatus === RecordStatus.SUSPENDED ? { color: '#FFFFFF' } : { color: colors.text }}
+                                        >
+                                          {t.security?.users?.suspended || 'Suspendido'}
+                                        </ThemedText>
+                                      </TouchableOpacity>
+                                    </View>
+                                  </ScrollView>
+                                )}
                                 <TouchableOpacity
-                                  style={styles.cancelButton}
+                                  style={[styles.cancelButton, isMobile && { alignSelf: 'flex-end' }]}
                                   onPress={() => handleCancelAccount(account.id)}
                                   disabled={saving}
                                 >
@@ -1087,8 +1198,8 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                       {isEditing ? (
                         <>
                           {/* Primera fila: Proveedor */}
-                          <View style={styles.twoColumnRow}>
-                            <View style={styles.columnField}>
+                          <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                            <View style={[styles.columnField, isMobile && { width: '100%' }]}>
                               <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 12 }]}>
                                 Proveedor/Banco *
                               </ThemedText>
@@ -1112,9 +1223,9 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                           </View>
 
                           {/* Segunda fila: Tipo de cuenta (solo transfer) y Número de cuenta / Link de Pago */}
-                          <View style={styles.twoColumnRow}>
+                          <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
                             {selectedMethodType === 'transfer' && (
-                              <View style={styles.columnField}>
+                              <View style={[styles.columnField, isMobile && { width: '100%' }]}>
                                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                                   Tipo de cuenta *
                                 </ThemedText>
@@ -1185,7 +1296,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                                 </View>
                               </View>
                             )}
-                            <View style={styles.columnField}>
+                            <View style={[styles.columnField, isMobile && { width: '100%' }]}>
                               <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                                 {selectedMethodType === 'online' ? 'Link de Pago *' : 'Número de cuenta *'}
                               </ThemedText>
@@ -1228,8 +1339,8 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
 
                           {/* Tercera fila: Identificación (solo transfer) y Titular */}
                           {selectedMethodType === 'transfer' && (
-                            <View style={styles.twoColumnRow}>
-                              <View style={styles.columnField}>
+                            <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                              <View style={[styles.columnField, isMobile && { width: '100%' }]}>
                                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                                   Identificación *
                                 </ThemedText>
@@ -1250,7 +1361,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                                   />
                                 </InputWithFocus>
                               </View>
-                              <View style={styles.columnField}>
+                              <View style={[styles.columnField, isMobile && { width: '100%' }]}>
                                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                                   Titular de la cuenta *
                                 </ThemedText>
@@ -1274,8 +1385,8 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                             </View>
                           )}
                           {selectedMethodType === 'online' && (
-                            <View style={styles.twoColumnRow}>
-                              <View style={styles.columnField}>
+                            <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                              <View style={[styles.columnField, isMobile && { width: '100%' }]}>
                                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                                   Titular de la cuenta
                                 </ThemedText>
@@ -1755,6 +1866,244 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                 })}
               </View>
             )}
+
+            {/* Formulario de nueva cuenta */}
+            {showAccountForm ? (
+              <Card variant="outlined" style={styles.formCard}>
+                {/* Primera fila: Nombre y Proveedor */}
+                <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                  <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                    <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                      Nombre de la cuenta *
+                    </ThemedText>
+                    <InputWithFocus
+                      containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        placeholder="Ej: Cuenta Principal"
+                        placeholderTextColor={colors.textSecondary}
+                        value={accountForm.name}
+                        onChangeText={(val) => setAccountForm(prev => ({ ...prev, name: val }))}
+                      />
+                    </InputWithFocus>
+                  </View>
+                  <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                    <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: isMobile ? 16 : 0 }]}>
+                      Proveedor/Banco *
+                    </ThemedText>
+                    <InputWithFocus
+                      containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        placeholder="Ej: Banco Pichincha"
+                        placeholderTextColor={colors.textSecondary}
+                        value={accountForm.provider}
+                        onChangeText={(val) => setAccountForm(prev => ({ ...prev, provider: val }))}
+                      />
+                    </InputWithFocus>
+                  </View>
+                </View>
+
+                {/* Segunda fila: Tipo de cuenta (solo transfer) y Número de cuenta / Link de Pago */}
+                <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                  {selectedMethodType === 'transfer' && (
+                    <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                        Tipo de cuenta
+                      </ThemedText>
+                      <View style={styles.accountTypeSelector}>
+                        {accountTypeOptions.map((option, index) => {
+                          // La opción 0 siempre debe estar seleccionada si no hay valor
+                          const isOption0 = index === 0;
+                          const currentType = accountForm.accountType || '';
+                          // Si no hay tipo seleccionado, la opción 0 debe estar seleccionada
+                          const shouldBeSelected = !currentType && isOption0;
+                          const isSelected = currentType === option.value || shouldBeSelected;
+                          
+                          return (
+                            <TouchableOpacity
+                              key={option.value}
+                              style={[
+                                styles.accountTypeOption,
+                                {
+                                  borderColor: shouldBeSelected ? colors.primary : (isSelected ? colors.primary : colors.border),
+                                  backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
+                                },
+                              ]}
+                              onPress={() => {
+                                // Si se intenta deseleccionar la opción 0 cuando está preseleccionada, mantenerla seleccionada
+                                if (shouldBeSelected && currentType === '') {
+                                  // Ya está preseleccionada, confirmar la selección
+                                  setAccountForm(prev => ({ ...prev, accountType: option.value }));
+                                } else if (isOption0 && currentType === option.value) {
+                                  // No permitir deseleccionar la opción 0
+                                  return;
+                                } else {
+                                  // Toggle normal: si está seleccionada, deseleccionar; si no, seleccionar
+                                  setAccountForm(prev => ({ ...prev, accountType: prev.accountType === option.value ? accountTypeOptions[0].value : option.value }));
+                                }
+                              }}
+                            >
+                              <View
+                                style={[
+                                  styles.radioCircle,
+                                  { 
+                                    borderColor: isSelected 
+                                      ? colors.primary 
+                                      : (isDark ? colors.text : colors.border)
+                                  },
+                                ]}
+                              >
+                                {isSelected && (
+                                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                                )}
+                              </View>
+                              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
+                                {option.label}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                  <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                    <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                      {selectedMethodType === 'online' ? 'Link de Pago *' : 'Número de cuenta *'}
+                    </ThemedText>
+                    <InputWithFocus
+                      containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        placeholder={selectedMethodType === 'online' ? 'https://ejemplo.com/pago' : 'Número de cuenta'}
+                        placeholderTextColor={colors.textSecondary}
+                        value={accountForm.accountNumber}
+                        keyboardType={selectedMethodType === 'online' ? 'url' : 'numeric'}
+                        autoCapitalize={selectedMethodType === 'online' ? 'none' : 'sentences'}
+                        onChangeText={(val) => {
+                          if (selectedMethodType === 'online') {
+                            // Para online, agregar https:// automáticamente si no empieza con http:// o https://
+                            let urlText = val.trim();
+                            if (urlText && !urlText.startsWith('http://') && !urlText.startsWith('https://')) {
+                              urlText = 'https://' + urlText;
+                            }
+                            setAccountForm(prev => ({ ...prev, accountNumber: urlText }));
+                          } else {
+                            // Solo permitir números para transfer
+                            const numericVal = val.replace(/\D/g, '');
+                            setAccountForm(prev => ({ ...prev, accountNumber: numericVal }));
+                          }
+                        }}
+                      />
+                    </InputWithFocus>
+                  </View>
+                </View>
+
+                {/* Tercera fila: Identificación (solo transfer) y Titular */}
+                {selectedMethodType === 'transfer' && (
+                  <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                    <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                        Identificación *
+                      </ThemedText>
+                      <InputWithFocus
+                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        primaryColor={colors.primary}
+                      >
+                        <TextInput
+                          style={[styles.input, { color: colors.text }]}
+                          placeholder="Identificación del titular"
+                          placeholderTextColor={colors.textSecondary}
+                          value={accountForm.identification}
+                          onChangeText={(val) => setAccountForm(prev => ({ ...prev, identification: val }))}
+                        />
+                      </InputWithFocus>
+                    </View>
+                    <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                        Titular de la cuenta *
+                      </ThemedText>
+                      <InputWithFocus
+                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        primaryColor={colors.primary}
+                      >
+                        <TextInput
+                          style={[styles.input, { color: colors.text }]}
+                          placeholder="Nombre del titular"
+                          placeholderTextColor={colors.textSecondary}
+                          value={accountForm.accountHolder}
+                          onChangeText={(val) => setAccountForm(prev => ({ ...prev, accountHolder: val }))}
+                        />
+                      </InputWithFocus>
+                    </View>
+                  </View>
+                )}
+                {selectedMethodType === 'online' && (
+                  <View style={[styles.twoColumnRow, isMobile && { flexDirection: 'column', gap: 0 }]}>
+                    <View style={[styles.columnField, isMobile && { width: '100%' }]}>
+                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
+                        Titular de la cuenta *
+                      </ThemedText>
+                      <InputWithFocus
+                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        primaryColor={colors.primary}
+                      >
+                        <TextInput
+                          style={[styles.input, { color: colors.text }]}
+                          placeholder="Nombre del titular"
+                          placeholderTextColor={colors.textSecondary}
+                          value={accountForm.accountHolder}
+                          onChangeText={(val) => setAccountForm(prev => ({ ...prev, accountHolder: val }))}
+                        />
+                      </InputWithFocus>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.formActions}>
+                  <Button
+                    title="Cancelar"
+                    onPress={() => {
+                      setShowAccountForm(false);
+                      setAccountForm({
+                        name: '',
+                        provider: '',
+                        accountType: '',
+                        accountNumber: '',
+                        accountHolder: '',
+                        identification: '',
+                      });
+                    }}
+                    variant="outlined"
+                    size="md"
+                    disabled={saving}
+                  />
+                  <Button
+                    title={saving ? 'Guardando...' : 'Crear Cuenta'}
+                    onPress={handleCreateAccount}
+                    variant="primary"
+                    size="md"
+                    disabled={saving}
+                  />
+                </View>
+              </Card>
+            ) : (
+              <Button
+                title="Agregar Cuenta"
+                onPress={() => setShowAccountForm(true)}
+                variant="outlined"
+                size="md"
+                style={styles.addButton}
+              >
+                <Ionicons name="add" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              </Button>
+            )}
           </Card>
         )}
 
@@ -1787,93 +2136,95 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                       style={styles.guidelineCard}
                     >
                       <View style={styles.guidelineHeader}>
-                        <View style={styles.guidelineTitleRow}>
+                        <View style={[styles.guidelineTitleRow, isMobile && isEditing && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
                           {isEditing ? (
-                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={[isMobile ? { flexDirection: 'column', width: '100%', gap: 12 } : { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                               {/* Selector de tipo de instrucción */}
-                              {instructionTypeOptions
-                                .filter(option => {
-                                  // "Por Cuenta" solo disponible para transfer y online
-                                  if (option.value === 'account_specific') {
-                                    return selectedMethodType === 'transfer' || selectedMethodType === 'online';
-                                  }
-                                  return true;
-                                })
-                                .map((option) => {
-                                  const currentType = formData?.instructionType ?? instruction.instructionType;
-                                  const isAccountSpecific = option.value === 'account_specific';
-                                  return (
-                                    <TouchableOpacity
-                                      key={option.value}
-                                      style={[
-                                        styles.radioOptionHorizontal,
-                                        {
-                                          borderColor: currentType === option.value ? colors.primary : colors.border,
-                                          backgroundColor: currentType === option.value ? colors.primary + '20' : colors.surface,
-                                          flex: 1,
-                                          opacity: isAccountSpecific && currentType !== option.value ? 0.5 : 1, // Hacer más transparente cuando no está seleccionada
-                                        },
-                                      ]}
-                                      onPress={() => {
-                                        // "Por Cuenta" no puede ser seleccionada directamente por el usuario
-                                        // Solo se selecciona automáticamente al elegir una cuenta
-                                        if (!isAccountSpecific) {
-                                          setEditingInstructionData(prev => {
-                                            const currentFormData = prev[instruction.id] || { instructionType: instruction.instructionType, message: instruction.message, status: instruction.status, paymentAccountId: instruction.paymentAccountId || null };
-                                            // Si se cambia a General o Advertencia y hay una cuenta seleccionada, limpiar la cuenta
-                                            if (currentFormData.paymentAccountId) {
-                                              return {
-                                                ...prev,
-                                                [instruction.id]: {
-                                                  ...currentFormData,
-                                                  instructionType: option.value,
-                                                  paymentAccountId: ''
-                                                }
-                                              };
-                                            }
-                                            return {
-                                              ...prev,
-                                              [instruction.id]: { ...currentFormData, instructionType: option.value }
-                                            };
-                                          });
-                                          // Limpiar el tipo guardado si se cambia el tipo
-                                          setEditingPreviousInstructionType(prev => {
-                                            const next = { ...prev };
-                                            delete next[instruction.id];
-                                            return next;
-                                          });
-                                        }
-                                      }}
-                                      disabled={isAccountSpecific} // "Por Cuenta" siempre está deshabilitada para clicks directos
-                                    >
-                                      <View
+                              <View style={[isMobile ? { width: '100%' } : { flex: 1, flexDirection: 'row', gap: 8 }]}>
+                                {instructionTypeOptions
+                                  .filter(option => {
+                                    // "Por Cuenta" solo disponible para transfer y online
+                                    if (option.value === 'account_specific') {
+                                      return selectedMethodType === 'transfer' || selectedMethodType === 'online';
+                                    }
+                                    return true;
+                                  })
+                                  .map((option) => {
+                                    const currentType = formData?.instructionType ?? instruction.instructionType;
+                                    const isAccountSpecific = option.value === 'account_specific';
+                                    return (
+                                      <TouchableOpacity
+                                        key={option.value}
                                         style={[
-                                          styles.radioCircle,
-                                          { 
-                                            borderColor: currentType === option.value 
-                                              ? colors.primary 
-                                              : (isDark ? colors.text : colors.border)
+                                          styles.radioOptionHorizontal,
+                                          {
+                                            borderColor: currentType === option.value ? colors.primary : colors.border,
+                                            backgroundColor: currentType === option.value ? colors.primary + '20' : colors.surface,
+                                            flex: 1,
+                                            opacity: isAccountSpecific && currentType !== option.value ? 0.5 : 1, // Hacer más transparente cuando no está seleccionada
                                           },
                                         ]}
+                                        onPress={() => {
+                                          // "Por Cuenta" no puede ser seleccionada directamente por el usuario
+                                          // Solo se selecciona automáticamente al elegir una cuenta
+                                          if (!isAccountSpecific) {
+                                            setEditingInstructionData(prev => {
+                                              const currentFormData = prev[instruction.id] || { instructionType: instruction.instructionType, message: instruction.message, status: instruction.status, paymentAccountId: instruction.paymentAccountId || null };
+                                              // Si se cambia a General o Advertencia y hay una cuenta seleccionada, limpiar la cuenta
+                                              if (currentFormData.paymentAccountId) {
+                                                return {
+                                                  ...prev,
+                                                  [instruction.id]: {
+                                                    ...currentFormData,
+                                                    instructionType: option.value,
+                                                    paymentAccountId: ''
+                                                  }
+                                                };
+                                              }
+                                              return {
+                                                ...prev,
+                                                [instruction.id]: { ...currentFormData, instructionType: option.value }
+                                              };
+                                            });
+                                            // Limpiar el tipo guardado si se cambia el tipo
+                                            setEditingPreviousInstructionType(prev => {
+                                              const next = { ...prev };
+                                              delete next[instruction.id];
+                                              return next;
+                                            });
+                                          }
+                                        }}
+                                        disabled={isAccountSpecific} // "Por Cuenta" siempre está deshabilitada para clicks directos
                                       >
-                                        {currentType === option.value && (
-                                          <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                                        )}
-                                      </View>
-                                      <View style={styles.radioLabelHorizontal}>
-                                        <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-                                          {option.label}
-                                        </ThemedText>
-                                        <ThemedText type="caption" style={{ color: colors.textSecondary }} numberOfLines={2}>
-                                          {option.description}
-                                        </ThemedText>
-                                      </View>
-                                    </TouchableOpacity>
-                                  );
-                                })}
+                                        <View
+                                          style={[
+                                            styles.radioCircle,
+                                            { 
+                                              borderColor: currentType === option.value 
+                                                ? colors.primary 
+                                                : (isDark ? colors.text : colors.border)
+                                            },
+                                          ]}
+                                        >
+                                          {currentType === option.value && (
+                                            <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                                          )}
+                                        </View>
+                                        <View style={styles.radioLabelHorizontal}>
+                                          <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                                            {option.label}
+                                          </ThemedText>
+                                          <ThemedText type="caption" style={{ color: colors.textSecondary }} numberOfLines={2}>
+                                            {option.description}
+                                          </ThemedText>
+                                        </View>
+                                      </TouchableOpacity>
+                                    );
+                                  })}
+                              </View>
                               
                               {/* Botones de estado */}
-                              <View style={styles.statusOptionsContainer}>
+                              <View style={[styles.statusOptionsContainer, isMobile && { width: '100%' }]}>
                                 {/* Activo */}
                                 <TouchableOpacity
                                   style={[
@@ -1981,7 +2332,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
 
                               {/* Icono de cerrar */}
                               <TouchableOpacity
-                                style={styles.cancelButton}
+                                style={[styles.cancelButton, isMobile && { alignSelf: 'flex-end' }]}
                                 onPress={() => handleCancelInstruction(instruction.id)}
                                 disabled={saving}
                               >
@@ -2187,7 +2538,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                   Tipo de instrucción
                 </ThemedText>
                 <View style={styles.radioGroupContainer}>
-                  <View style={styles.radioGroupRow}>
+                  <View style={[styles.radioGroupRow, isMobile && { flexDirection: 'column', gap: 12 }]}>
                     {instructionTypeOptions
                       .filter(option => {
                         // "Por Cuenta" solo disponible para transfer y online
@@ -2207,7 +2558,8 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
                           {
                             borderColor: isSelected ? colors.primary : colors.border,
                             backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
-                            flex: 1,
+                            flex: isMobile ? undefined : 1,
+                            width: isMobile ? '100%' : undefined,
                             opacity: isAccountSpecific && !isSelected ? 0.5 : 1, // Hacer más transparente cuando no está seleccionada
                           },
                         ]}
@@ -2370,243 +2722,6 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
               <Button
                 title="Agregar Instrucción"
                 onPress={() => setShowInstructionForm(true)}
-                variant="outlined"
-                size="md"
-                style={styles.addButton}
-              >
-                <Ionicons name="add" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-              </Button>
-            )}
-            {/* Formulario de nueva cuenta */}
-            {showAccountForm ? (
-              <Card variant="outlined" style={styles.formCard}>
-                {/* Primera fila: Nombre y Proveedor */}
-                <View style={styles.twoColumnRow}>
-                  <View style={styles.columnField}>
-                    <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-                      Nombre de la cuenta *
-                    </ThemedText>
-                    <InputWithFocus
-                      containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      primaryColor={colors.primary}
-                    >
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        placeholder="Ej: Cuenta Principal"
-                        placeholderTextColor={colors.textSecondary}
-                        value={accountForm.name}
-                        onChangeText={(val) => setAccountForm(prev => ({ ...prev, name: val }))}
-                      />
-                    </InputWithFocus>
-                  </View>
-                  <View style={styles.columnField}>
-                    <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-                      Proveedor/Banco *
-                    </ThemedText>
-                    <InputWithFocus
-                      containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      primaryColor={colors.primary}
-                    >
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        placeholder="Ej: Banco Pichincha"
-                        placeholderTextColor={colors.textSecondary}
-                        value={accountForm.provider}
-                        onChangeText={(val) => setAccountForm(prev => ({ ...prev, provider: val }))}
-                      />
-                    </InputWithFocus>
-                  </View>
-                </View>
-
-                {/* Segunda fila: Tipo de cuenta (solo transfer) y Número de cuenta / Link de Pago */}
-                <View style={styles.twoColumnRow}>
-                  {selectedMethodType === 'transfer' && (
-                    <View style={styles.columnField}>
-                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                        Tipo de cuenta
-                      </ThemedText>
-                      <View style={styles.accountTypeSelector}>
-                        {accountTypeOptions.map((option, index) => {
-                          // La opción 0 siempre debe estar seleccionada si no hay valor
-                          const isOption0 = index === 0;
-                          const currentType = accountForm.accountType || '';
-                          // Si no hay tipo seleccionado, la opción 0 debe estar seleccionada
-                          const shouldBeSelected = !currentType && isOption0;
-                          const isSelected = currentType === option.value || shouldBeSelected;
-                          
-                          return (
-                            <TouchableOpacity
-                              key={option.value}
-                              style={[
-                                styles.accountTypeOption,
-                                {
-                                  borderColor: shouldBeSelected ? colors.primary : (isSelected ? colors.primary : colors.border),
-                                  backgroundColor: isSelected ? colors.primary + '20' : colors.surface,
-                                },
-                              ]}
-                              onPress={() => {
-                                // Si se intenta deseleccionar la opción 0 cuando está preseleccionada, mantenerla seleccionada
-                                if (shouldBeSelected && currentType === '') {
-                                  // Ya está preseleccionada, confirmar la selección
-                                  setAccountForm(prev => ({ ...prev, accountType: option.value }));
-                                } else if (isOption0 && currentType === option.value) {
-                                  // No permitir deseleccionar la opción 0
-                                  return;
-                                } else {
-                                  // Toggle normal: si está seleccionada, deseleccionar; si no, seleccionar
-                                  setAccountForm(prev => ({ ...prev, accountType: prev.accountType === option.value ? accountTypeOptions[0].value : option.value }));
-                                }
-                              }}
-                            >
-                              <View
-                                style={[
-                                  styles.radioCircle,
-                                  { 
-                                    borderColor: isSelected 
-                                      ? colors.primary 
-                                      : (isDark ? colors.text : colors.border)
-                                  },
-                                ]}
-                              >
-                                {isSelected && (
-                                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                                )}
-                              </View>
-                              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                                {option.label}
-                              </ThemedText>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  )}
-                  <View style={styles.columnField}>
-                    <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                      {selectedMethodType === 'online' ? 'Link de Pago *' : 'Número de cuenta *'}
-                    </ThemedText>
-                    <InputWithFocus
-                      containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      primaryColor={colors.primary}
-                    >
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        placeholder={selectedMethodType === 'online' ? 'https://ejemplo.com/pago' : 'Número de cuenta'}
-                        placeholderTextColor={colors.textSecondary}
-                        value={accountForm.accountNumber}
-                        keyboardType={selectedMethodType === 'online' ? 'url' : 'numeric'}
-                        autoCapitalize={selectedMethodType === 'online' ? 'none' : 'sentences'}
-                        onChangeText={(val) => {
-                          if (selectedMethodType === 'online') {
-                            // Para online, agregar https:// automáticamente si no empieza con http:// o https://
-                            let urlText = val.trim();
-                            if (urlText && !urlText.startsWith('http://') && !urlText.startsWith('https://')) {
-                              urlText = 'https://' + urlText;
-                            }
-                            setAccountForm(prev => ({ ...prev, accountNumber: urlText }));
-                          } else {
-                            // Solo permitir números para transfer
-                            const numericVal = val.replace(/\D/g, '');
-                            setAccountForm(prev => ({ ...prev, accountNumber: numericVal }));
-                          }
-                        }}
-                      />
-                    </InputWithFocus>
-                  </View>
-                </View>
-
-                {/* Tercera fila: Identificación (solo transfer) y Titular */}
-                {selectedMethodType === 'transfer' && (
-                  <View style={styles.twoColumnRow}>
-                    <View style={styles.columnField}>
-                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                        Identificación *
-                      </ThemedText>
-                      <InputWithFocus
-                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                        primaryColor={colors.primary}
-                      >
-                        <TextInput
-                          style={[styles.input, { color: colors.text }]}
-                          placeholder="Identificación del titular"
-                          placeholderTextColor={colors.textSecondary}
-                          value={accountForm.identification}
-                          onChangeText={(val) => setAccountForm(prev => ({ ...prev, identification: val }))}
-                        />
-                      </InputWithFocus>
-                    </View>
-                    <View style={styles.columnField}>
-                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                        Titular de la cuenta *
-                      </ThemedText>
-                      <InputWithFocus
-                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                        primaryColor={colors.primary}
-                      >
-                        <TextInput
-                          style={[styles.input, { color: colors.text }]}
-                          placeholder="Nombre del titular"
-                          placeholderTextColor={colors.textSecondary}
-                          value={accountForm.accountHolder}
-                          onChangeText={(val) => setAccountForm(prev => ({ ...prev, accountHolder: val }))}
-                        />
-                      </InputWithFocus>
-                    </View>
-                  </View>
-                )}
-                {selectedMethodType === 'online' && (
-                  <View style={styles.twoColumnRow}>
-                    <View style={styles.columnField}>
-                      <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
-                        Titular de la cuenta *
-                      </ThemedText>
-                      <InputWithFocus
-                        containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                        primaryColor={colors.primary}
-                      >
-                        <TextInput
-                          style={[styles.input, { color: colors.text }]}
-                          placeholder="Nombre del titular"
-                          placeholderTextColor={colors.textSecondary}
-                          value={accountForm.accountHolder}
-                          onChangeText={(val) => setAccountForm(prev => ({ ...prev, accountHolder: val }))}
-                        />
-                      </InputWithFocus>
-                    </View>
-                  </View>
-                )}
-
-                <View style={styles.formActions}>
-                  <Button
-                    title="Cancelar"
-                    onPress={() => {
-                      setShowAccountForm(false);
-                      setAccountForm({
-                        name: '',
-                        provider: '',
-                        accountType: '',
-                        accountNumber: '',
-                        accountHolder: '',
-                        identification: '',
-                      });
-                    }}
-                    variant="outlined"
-                    size="md"
-                    disabled={saving}
-                  />
-                  <Button
-                    title={saving ? 'Guardando...' : 'Crear Cuenta'}
-                    onPress={handleCreateAccount}
-                    variant="primary"
-                    size="md"
-                    disabled={saving}
-                  />
-                </View>
-              </Card>
-            ) : (
-              <Button
-                title="Agregar Cuenta"
-                onPress={() => setShowAccountForm(true)}
                 variant="outlined"
                 size="md"
                 style={styles.addButton}

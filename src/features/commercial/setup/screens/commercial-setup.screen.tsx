@@ -41,6 +41,7 @@ export function CommercialSetupScreen() {
   const [showLayer0, setShowLayer0] = useState(false);
   const [recommendationsFilter, setRecommendationsFilter] = useState('');
   const [interactionGuidelinesFilter, setInteractionGuidelinesFilter] = useState('');
+  const [offeringsFilter, setOfferingsFilter] = useState('');
 
   // Detectar si necesita Capa 0 (crear empresa/sucursal)
   const needsCompanySetup = (): boolean => {
@@ -351,8 +352,14 @@ export function CommercialSetupScreen() {
           <>
             {/* Contenido de la Capa Actual */}
             <Card variant="elevated" style={[styles.contentCard, currentLayer === 'interactionGuidelines' && { gap: 0 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: currentLayer === 'interactionGuidelines' ? 0 : 16 }}>
-                <View style={{ flex: 1, alignItems: 'flex-start' }}>
+              <View style={{ 
+                flexDirection: isMobile ? 'column' : 'row', 
+                alignItems: 'flex-start', 
+                justifyContent: 'space-between', 
+                marginBottom: currentLayer === 'interactionGuidelines' ? 0 : 16,
+                gap: isMobile ? 16 : 0
+              }}>
+                <View style={{ flex: 1, alignItems: 'flex-start', width: isMobile ? '100%' : undefined }}>
                   <ThemedText type="h4" style={styles.contentTitle}>
                     {wizardSteps.find(s => s.id === currentLayer)?.label || 'Capa'}
                   </ThemedText>
@@ -382,8 +389,34 @@ export function CommercialSetupScreen() {
                     </ThemedText>
                   )}
                 </View>
+                {currentLayer === 'offerings' && (
+                  <View style={{ 
+                    flex: isMobile ? undefined : 1, 
+                    marginLeft: isMobile ? 0 : 16, 
+                    marginTop: isMobile ? 0 : 0,
+                    maxWidth: isMobile ? '100%' : 400,
+                    width: isMobile ? '100%' : undefined
+                  }}>
+                    <SearchFilterBar
+                      filterValue={offeringsFilter}
+                      onFilterChange={setOfferingsFilter}
+                      onSearchSubmit={(search) => setOfferingsFilter(search)}
+                      filterPlaceholder="Filtrar por nombre o código..."
+                      searchPlaceholder="Buscar ofertas..."
+                      filters={[]}
+                      showClearButton={false}
+                      showSearchHint={false}
+                    />
+                  </View>
+                )}
                 {currentLayer === 'recommendations' && (
-                  <View style={{ flex: 1, marginLeft: 16, maxWidth: 400 }}>
+                  <View style={{ 
+                    flex: isMobile ? undefined : 1, 
+                    marginLeft: isMobile ? 0 : 16, 
+                    marginTop: isMobile ? 0 : 0,
+                    maxWidth: isMobile ? '100%' : 400,
+                    width: isMobile ? '100%' : undefined
+                  }}>
                     <SearchFilterBar
                       filterValue={recommendationsFilter}
                       onFilterChange={setRecommendationsFilter}
@@ -397,7 +430,13 @@ export function CommercialSetupScreen() {
                   </View>
                 )}
                 {currentLayer === 'interactionGuidelines' && (
-                  <View style={{ flex: 1, marginLeft: 16, maxWidth: 400 }}>
+                  <View style={{ 
+                    flex: isMobile ? undefined : 1, 
+                    marginLeft: isMobile ? 0 : 16, 
+                    marginTop: isMobile ? 0 : 0,
+                    maxWidth: isMobile ? '100%' : 400,
+                    width: isMobile ? '100%' : undefined
+                  }}>
                     <SearchFilterBar
                       filterValue={interactionGuidelinesFilter}
                       onFilterChange={setInteractionGuidelinesFilter}
@@ -455,6 +494,7 @@ export function CommercialSetupScreen() {
                 )}
                 {currentLayer === 'offerings' && (
                   <OperationalLayer
+                    searchFilter={offeringsFilter}
                     onProgressUpdate={(progress) => {
                       setLayerProgress(prev => {
                         const updated = prev.map(l => l.layer === 'offerings' 

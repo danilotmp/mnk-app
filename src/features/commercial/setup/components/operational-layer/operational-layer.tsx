@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CatalogService } from '@/src/domains/catalog';
 import { CommercialService } from '@/src/domains/commercial';
@@ -26,10 +27,12 @@ interface OperationalLayerProps {
   onProgressUpdate?: (progress: number) => void;
   onDataChange?: (hasData: boolean) => void;
   onComplete?: () => void; // Callback cuando la capa se completa al 100%
+  searchFilter?: string; // Filtro de búsqueda
 }
 
-export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }: OperationalLayerProps) {
+export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete, searchFilter = '' }: OperationalLayerProps) {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const alert = useAlert();
   const { company } = useCompany();
@@ -171,6 +174,20 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]); // Solo depender de company.id para evitar loops
 
+  // Filtrar ofertas según el término de búsqueda
+  const filteredOfferings = useMemo(() => {
+    if (!searchFilter.trim()) {
+      return offerings;
+    }
+    const searchLower = searchFilter.toLowerCase().trim();
+    return offerings.filter(offering => {
+      const name = (offering.name || '').toLowerCase();
+      const code = (offering.code || '').toLowerCase();
+      const description = (offering.description || '').toLowerCase();
+      return name.includes(searchLower) || code.includes(searchLower) || description.includes(searchLower);
+    });
+  }, [offerings, searchFilter]);
+
   // Cargar precios de una oferta
   // ❌ CAMBIO V1.0: companyId removido del endpoint
   const loadPrices = useCallback(async (offeringId: string) => {
@@ -281,13 +298,13 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
     }
   }, [expandedOfferingId, offerings, offeringsPrices, modifiedOfferings, commercialProfile]);
 
-  // Ajustar página actual si es necesario cuando cambia la cantidad de ofertas
+  // Ajustar página actual si es necesario cuando cambia la cantidad de ofertas filtradas
   useEffect(() => {
-    const totalPages = Math.ceil(offerings.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredOfferings.length / itemsPerPage);
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
-  }, [offerings.length, currentPage, itemsPerPage]);
+  }, [filteredOfferings.length, currentPage, itemsPerPage]);
 
   // Detectar si hay cambios pendientes
   const hasPendingChanges = useMemo(() => {
@@ -919,19 +936,19 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
             <ThemedText type="body2" style={[styles.sectionDescription, { color: colors.textSecondary }]}>
               Define los productos, servicios o paquetes que ofreces
             </ThemedText>
-            {offerings.length > 0 && (
+            {filteredOfferings.length > 0 && (
               <ThemedText type="body2" style={{ color: colors.textSecondary, fontWeight: '600' }}>
-                {offerings.length} {offerings.length === 1 ? 'registro' : 'registros'}
+                {filteredOfferings.length} {filteredOfferings.length === 1 ? 'registro' : 'registros'}
               </ThemedText>
             )}
           </View>
 
           {/* Lista de ofertas con paginación */}
-          {offerings.length > 0 && (() => {
-            const totalPages = Math.ceil(offerings.length / itemsPerPage);
+          {filteredOfferings.length > 0 && (() => {
+            const totalPages = Math.ceil(filteredOfferings.length / itemsPerPage);
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
-            const currentOfferings = offerings.slice(startIndex, endIndex);
+            const currentOfferings = filteredOfferings.slice(startIndex, endIndex);
 
             return (
               <>
@@ -1010,7 +1027,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                     {isExpanded && (
                       <Card variant="outlined" style={styles.accordionCard}>
                         {/* Fila 1: Tipo de oferta (selector tipo estados) */}
-                        <View style={styles.inputGroup}>
+                        <View>
                           <View style={styles.typeSelector}>
                             {productTypeOptions.map((option) => {
                               const isSelected = offeringType === option.value;
@@ -1050,9 +1067,9 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                           </View>
                         </View>
 
-                        {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea */}
-                        <View style={styles.rowContainer}>
-                          <View style={styles.halfWidth}>
+                        {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea (desktop) o apilados (móvil) */}
+                        <View style={[styles.rowContainer, isMobile && { flexDirection: 'column' }]}>
+                          <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
                             <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                               Nombre *
                             </ThemedText>
@@ -1069,7 +1086,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
                               />
                             </InputWithFocus>
                           </View>
-                          <View style={styles.halfWidth}>
+                          <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
                             <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                               Precio Base *
                             </ThemedText>
@@ -1480,11 +1497,19 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete }:
           </Card>
         )}
 
-        {offerings.length === 0 && (
+        {offerings.length === 0 && !loading && (
           <Card variant="outlined" style={styles.infoCard}>
             <Ionicons name="bulb-outline" size={20} color={colors.primary} />
             <ThemedText type="body2" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
               Comienza creando tu primera oferta. Puede ser un producto, servicio o paquete.
+            </ThemedText>
+          </Card>
+        )}
+        {offerings.length > 0 && filteredOfferings.length === 0 && searchFilter.trim() && (
+          <Card variant="outlined" style={styles.infoCard}>
+            <Ionicons name="search-outline" size={20} color={colors.primary} />
+            <ThemedText type="body2" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
+              No se encontraron ofertas que coincidan con el filtro "{searchFilter}".
             </ThemedText>
           </Card>
         )}
