@@ -268,7 +268,7 @@ export function Select<T = string>({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 0,
   },
   label: {
     marginBottom: 8,

@@ -31,6 +31,7 @@ interface InteractionGuidelinesLayerProps {
   onComplete?: (hasData?: boolean) => void;
   onSkip?: () => void;
   searchFilter?: string; // Filtro de búsqueda
+  isCompleted?: boolean; // Indica si la capa ya está completada
 }
 
 export function InteractionGuidelinesLayer({ 
@@ -39,6 +40,7 @@ export function InteractionGuidelinesLayer({
   onComplete,
   onSkip,
   searchFilter = '',
+  isCompleted = false,
 }: InteractionGuidelinesLayerProps) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
@@ -789,9 +791,9 @@ export function InteractionGuidelinesLayer({
         {/* Botones Continuar y Omitir - siempre visibles */}
         <View style={styles.continueButtons}>
           <Button
-            title={guidelines.length > 0 ? "Continuar" : "Omitir"}
+            title={guidelines.length > 0 || isCompleted ? "Continuar" : "Omitir"}
             onPress={() => {
-              if (guidelines.length > 0) {
+              if (guidelines.length > 0 || isCompleted) {
                 onComplete?.(true);
               } else {
                 onSkip?.();
@@ -802,13 +804,13 @@ export function InteractionGuidelinesLayer({
             disabled={saving || showNewForm || editingGuidelineId !== null}
             style={styles.continueButton}
           >
-            {guidelines.length > 0 ? (
+            {(guidelines.length > 0 || isCompleted) ? (
               <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
             ) : (
               <DynamicIcon name="MaterialCommunityIcons.skip-forward-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
             )}
           </Button>
-          {guidelines.length > 0 && onSkip && (
+          {guidelines.length > 0 && onSkip && !isCompleted && (
             <Button
               title="Omitir"
               onPress={() => {

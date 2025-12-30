@@ -588,6 +588,7 @@ export function CommercialSetupScreen() {
                 )}
                 {currentLayer === 'payments' && (
                   <PaymentsLayer
+                    isCompleted={layerProgress.find(l => l.layer === 'payments')?.completed || false}
                     onProgressUpdate={(progress) => {
                       setLayerProgress(prev => {
                         const existingLayer = prev.find(l => l.layer === 'payments');
@@ -645,6 +646,7 @@ export function CommercialSetupScreen() {
                 {currentLayer === 'recommendations' && (
                   <RecommendationsLayer
                     searchFilter={recommendationsFilter}
+                    isCompleted={layerProgress.find(l => l.layer === 'recommendations')?.completed || false}
                     onProgressUpdate={(progress) => {
                       setLayerProgress(prev => {
                         const existingLayer = prev.find(l => l.layer === 'recommendations');

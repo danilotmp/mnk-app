@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select, SelectOption } from '@/components/ui/select';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CatalogService, catalogDetailsToSelectOptions } from '@/src/domains/catalog';
 import { CommercialService } from '@/src/domains/commercial';
@@ -41,6 +42,7 @@ const getSystemTimezone = (): string => {
 
 export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete }: InstitutionalLayerProps) {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const { language: currentLanguage } = useLanguage();
   const alert = useAlert();
@@ -392,9 +394,9 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
         {/* Atención 24/7 y Precios por sucursal - En la misma línea */}
         <View style={styles.inputGroup}>
-          <View style={styles.rowContainer}>
+          <View style={[styles.rowContainer, isMobile && { flexDirection: 'column', gap: 0 }]}>
             {/* Atención 24/7 */}
-            <View style={styles.halfWidth}>
+            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
               <CustomSwitch
                 value={formData.is24_7}
                 onValueChange={(val) => handleChange('is24_7', val)}
@@ -403,7 +405,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
             </View>
 
             {/* Precios por sucursal */}
-            <View style={styles.halfWidth}>
+            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
               <CustomSwitch
                 value={formData.allowsBranchPricing}
                 onValueChange={(val) => handleChange('allowsBranchPricing', val)}
@@ -477,9 +479,9 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
         {/* Idioma y Zona Horaria - En la misma línea */}
         <View style={styles.inputGroup}>
-          <View style={styles.rowContainer}>
+          <View style={[styles.rowContainer, isMobile && { flexDirection: 'column', gap: 0 }]}>
             {/* Idioma - Obtenido automáticamente del sistema */}
-            <View style={styles.halfWidth}>
+            <View style={[styles.halfWidth, isMobile && { width: '100%', marginBottom: 0 }]}>
               <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                 Idioma principal
               </ThemedText>
@@ -499,8 +501,8 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
             </View>
 
             {/* Zona Horaria - Obtenida automáticamente del sistema */}
-            <View style={styles.halfWidth}>
-              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
+              <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: isMobile ? 16 : 0 }]}>
                 Zona horaria
               </ThemedText>
               <Select
@@ -603,6 +605,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   halfWidth: {
+    marginBottom: 20,
     flex: 1,
   },
   radioGroup: {

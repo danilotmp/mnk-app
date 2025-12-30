@@ -38,11 +38,12 @@ interface PaymentsLayerProps {
   onDataChange?: (hasData: boolean) => void;
   onComplete?: (hasData?: boolean) => void;
   onSkip?: () => void;
+  isCompleted?: boolean; // Indica si la capa ya está completada
 }
 
 // Las listas de PAYMENT_METHOD_OPTIONS, INSTRUCTION_TYPE_OPTIONS y ACCOUNT_TYPE_OPTIONS ahora se cargan desde catálogos
 
-export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSkip }: PaymentsLayerProps) {
+export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSkip, isCompleted = false }: PaymentsLayerProps) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
@@ -2753,11 +2754,11 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
         {/* Botones Continuar y Omitir */}
         <View style={styles.continueButtonContainer}>
           <Button
-            title={paymentMethods.length > 0 ? 'Continuar' : 'Omitir'}
+            title={paymentMethods.length > 0 || isCompleted ? 'Continuar' : 'Omitir'}
             onPress={async () => {
               const hasData = paymentMethods.length > 0;
-              if (hasData) {
-                // Si hay datos, marcar como completada y avanzar
+              if (hasData || isCompleted) {
+                // Si hay datos o está completada, marcar como completada y avanzar
                 onComplete?.(hasData);
               } else {
                 // Si no hay datos, marcar como omitida y avanzar
@@ -2769,7 +2770,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
             disabled={saving}
             style={styles.continueButton}
           >
-            {paymentMethods.length > 0 ? (
+            {(paymentMethods.length > 0 || isCompleted) ? (
               <Ionicons 
                 name="arrow-forward-outline" 
                 size={20} 
@@ -2785,7 +2786,7 @@ export function PaymentsLayer({ onProgressUpdate, onDataChange, onComplete, onSk
               />
             )}
           </Button>
-          {paymentMethods.length > 0 && onSkip && (
+          {paymentMethods.length > 0 && onSkip && !isCompleted && (
             <Button
               title="Omitir"
               onPress={() => {

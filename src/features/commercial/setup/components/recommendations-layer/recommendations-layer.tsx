@@ -37,6 +37,7 @@ interface RecommendationsLayerProps {
   layerTitle?: string; // Título personalizado para la capa
   layerDescription?: string; // Descripción personalizada para la capa
   searchFilter?: string; // Filtro de búsqueda
+  isCompleted?: boolean; // Indica si la capa ya está completada
 }
 
 // Las listas de RECOMMENDATION_TYPE_OPTIONS ahora se cargan desde catálogos
@@ -50,6 +51,7 @@ export function RecommendationsLayer({
   layerTitle,
   layerDescription,
   searchFilter = '',
+  isCompleted = false,
 }: RecommendationsLayerProps) {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
@@ -1516,11 +1518,11 @@ export function RecommendationsLayer({
         {/* Botones Continuar y Omitir */}
         <View style={styles.continueButtonContainer}>
           <Button
-            title={recommendations.length > 0 ? 'Continuar' : 'Omitir'}
+            title={recommendations.length > 0 || isCompleted ? 'Continuar' : 'Omitir'}
             onPress={async () => {
               const hasData = recommendations.length > 0;
-              if (hasData) {
-                // Si hay datos, marcar como completada y avanzar
+              if (hasData || isCompleted) {
+                // Si hay datos o está completada, marcar como completada y avanzar
                 onComplete?.(hasData);
               } else {
                 // Si no hay datos, marcar como omitida y avanzar
@@ -1532,7 +1534,7 @@ export function RecommendationsLayer({
             disabled={saving}
             style={styles.continueButton}
           >
-            {recommendations.length > 0 ? (
+            {(recommendations.length > 0 || isCompleted) ? (
               <Ionicons 
                 name="arrow-forward-outline" 
                 size={20} 
@@ -1548,7 +1550,7 @@ export function RecommendationsLayer({
               />
             )}
           </Button>
-          {recommendations.length > 0 && onSkip && (
+          {recommendations.length > 0 && onSkip && !isCompleted && (
             <Button
               title="Omitir"
               onPress={() => {

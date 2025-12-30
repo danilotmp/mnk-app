@@ -4,6 +4,7 @@
  */
 
 import { ThemedText } from '@/components/themed-text';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
@@ -18,9 +19,16 @@ interface WizardStepperProps {
 
 export function WizardStepper({ steps, currentStep, onStepPress }: WizardStepperProps) {
   const { colors } = useTheme();
+  const { isMobile } = useResponsive();
   
   // Crear estilos dinámicos basados en el tema
   const styles = useMemo(() => createWizardStepperStyles(colors), [colors]);
+
+  // Función helper para obtener la primera palabra del título
+  const getFirstWord = (text: string): string => {
+    const firstSpaceIndex = text.indexOf(' ');
+    return firstSpaceIndex > 0 ? text.substring(0, firstSpaceIndex) : text;
+  };
 
   const getStepStatus = (step: WizardStep, index: number) => {
     // Verificar si el paso está completado (100% o explícitamente marcado como completado)
@@ -146,9 +154,25 @@ export function WizardStepper({ steps, currentStep, onStepPress }: WizardStepper
                   },
                 ]}
               >
-                {status === 'active' && step.completionPercentage > 0 && step.completionPercentage < 100
-                  ? `${step.label} (${step.completionPercentage}%)`
-                  : step.label}
+                {(() => {
+                  // Si está activo, mostrar texto completo (con porcentaje si aplica)
+                  if (status === 'active') {
+                    return step.completionPercentage > 0 && step.completionPercentage < 100
+                      ? `${step.label} (${step.completionPercentage}%)`
+                      : step.label;
+                  }
+                  // Si es móvil y no está activo, mostrar solo la primera palabra
+                  if (isMobile) {
+                    const displayText = step.completionPercentage > 0 && step.completionPercentage < 100
+                      ? `${step.label} (${step.completionPercentage}%)`
+                      : step.label;
+                    return getFirstWord(displayText);
+                  }
+                  // Desktop: mostrar texto completo
+                  return step.completionPercentage > 0 && step.completionPercentage < 100
+                    ? `${step.label} (${step.completionPercentage}%)`
+                    : step.label;
+                })()}  
               </ThemedText>
             </View>
           </View>
