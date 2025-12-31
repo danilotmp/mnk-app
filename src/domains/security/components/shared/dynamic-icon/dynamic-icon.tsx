@@ -13,6 +13,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -39,6 +40,7 @@ type IconComponent = React.ComponentType<{
 const ICON_FAMILIES: Record<string, IconComponent> = {
   Ionicons,
   FontAwesome,
+  FontAwesome5,
   AntDesign,
   MaterialIcons,
   MaterialCommunityIcons,
