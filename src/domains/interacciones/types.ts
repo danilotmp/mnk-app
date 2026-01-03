@@ -44,6 +44,16 @@ export interface ContactPayload {
   tags?: string[];
 }
 
+export interface MessageAttachment {
+  id: string;
+  messageId?: string; // ID del mensaje (puede venir del backend)
+  filePath?: string; // Ruta relativa del archivo en el servidor (ej: "temp/messages/...")
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   contactId: string;
@@ -51,6 +61,12 @@ export interface Message {
   content: string;
   status: MessageStatus;
   metadata?: Record<string, any>;
+  attachments?: MessageAttachment[]; // Nuevo sistema de archivos adjuntos
+  isEdited?: boolean; // Indica si el mensaje fue editado
+  editedAt?: string; // Fecha de edición
+  createdBy?: string | null; // ID del usuario que creó el mensaje
+  parentMessageId?: string; // ID del mensaje al que se responde
+  parentMessage?: Message; // Mensaje original al que se responde (incluido en la respuesta del backend)
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +77,11 @@ export interface MessagePayload {
   content: string;
   status?: MessageStatus;
   metadata?: Record<string, any>;
+  parentMessageId?: string;
+  isFromBot?: boolean;
+  aiContext?: Record<string, any>;
+  // NOTA: Los campos media, mediaType, mediaFilename ya no se usan
+  // Se envían archivos mediante FormData con el campo 'files[]'
 }
 
 export interface ContextSummary {

@@ -24,8 +24,11 @@ export class ApiClient {
    */
   async request<T = any>(config: RequestConfig): Promise<ApiResponse<T>> {
     try {
+      // Detectar si el body es FormData
+      const isFormData = config.body instanceof FormData;
+
       // Construir headers automáticamente
-      const headers = await this.buildHeaders(config.headers, config.skipAuth);
+      const headers = await this.buildHeaders(config.headers, config.skipAuth, isFormData);
 
       // Convertir RequestHeaders a formato compatible con fetch
       const fetchHeaders: Record<string, string> = {};
@@ -39,11 +42,21 @@ export class ApiClient {
       // Construir URL completa
       const fullUrl = `${this.config.getBaseUrl()}${config.endpoint}`;
 
+      // Preparar body: FormData se envía directamente, otros se convierten a JSON
+      let body: any = undefined;
+      if (config.body) {
+        if (isFormData) {
+          body = config.body; // FormData se envía directamente
+        } else {
+          body = JSON.stringify(config.body);
+        }
+      }
+
       // Realizar el request
       const response = await fetch(fullUrl, {
         method: config.method,
         headers: fetchHeaders,
-        body: config.body ? JSON.stringify(config.body) : undefined,
+        body: body,
       });
 
       // Si el token expiró (401), intentar refrescar y reintentar
@@ -114,11 +127,15 @@ export class ApiClient {
    */
   private async buildHeaders(
     customHeaders?: Partial<RequestHeaders>,
-    skipAuth?: boolean
+    skipAuth?: boolean,
+    isFormData?: boolean
   ): Promise<RequestHeaders> {
-    const headers: RequestHeaders = {
-      'Content-Type': 'application/json',
-    };
+    const headers: RequestHeaders = {};
+
+    // NO establecer Content-Type para FormData (el navegador lo hace automáticamente)
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Agregar Accept-Language
     headers['Accept-Language'] = this.config.getCurrentLanguage() as any;

@@ -3,7 +3,9 @@
  * Gestiona contactos, mensajes y resúmenes de contexto
  */
 
+import { Platform } from 'react-native';
 import { apiClient } from '@/src/infrastructure/api/api.client';
+import { ApiConfig } from '@/src/infrastructure/api/config';
 import type {
   Contact,
   ContactPayload,
@@ -11,6 +13,7 @@ import type {
   ContextSummary,
   ContextSummaryPayload,
   Message,
+  MessageAttachment,
   MessagePayload,
 } from './types';
 
@@ -76,14 +79,102 @@ export const InteraccionesService = {
     return res.data;
   },
 
-  async createMessage(payload: MessagePayload): Promise<Message> {
-    const res = await apiClient.post<Message>(`${BASE_INTERACCIONES}/messages`, payload);
-    return res.data;
+  /**
+   * Crea un mensaje con o sin archivos adjuntos
+   * @param payload - Datos del mensaje
+   * @param files - Archivos opcionales (File[] para web, ImagePickerAsset[] para RN)
+   * @returns Mensaje creado con attachments si hay archivos
+   */
+  async createMessage(
+    payload: MessagePayload,
+    files?: Array<File | { uri: string; type: string; name: string }>
+  ): Promise<Message> {
+    // Si hay archivos, usar FormData
+    if (files && files.length > 0) {
+      const formData = new FormData();
+
+      // Agregar campos del mensaje
+      formData.append('contactId', payload.contactId);
+      formData.append('content', payload.content || '');
+      formData.append('direction', payload.direction);
+      if (payload.status) {
+        formData.append('status', payload.status);
+      }
+      if (payload.parentMessageId) {
+        formData.append('parentMessageId', payload.parentMessageId);
+      }
+      if (payload.isFromBot !== undefined) {
+        formData.append('isFromBot', String(payload.isFromBot));
+      }
+      if (payload.aiContext) {
+        formData.append('aiContext', JSON.stringify(payload.aiContext));
+      }
+
+      // Agregar archivos según la plataforma
+      files.forEach((file) => {
+        if (Platform.OS === 'web') {
+          // Web: usar File directamente
+          const webFile = file as File;
+          formData.append('files', webFile);
+        } else {
+          // React Native: usar formato específico
+          const rnFile = file as { uri: string; type: string; name: string };
+          formData.append('files', {
+            uri: Platform.OS === 'ios' ? rnFile.uri.replace('file://', '') : rnFile.uri,
+            type: rnFile.type,
+            name: rnFile.name,
+          } as any);
+        }
+      });
+
+      const res = await apiClient.post<Message>(`${BASE_INTERACCIONES}/messages`, formData);
+      return res.data;
+    } else {
+      // Sin archivos: usar JSON normal
+      const res = await apiClient.post<Message>(`${BASE_INTERACCIONES}/messages`, payload);
+      return res.data;
+    }
+  },
+
+  /**
+   * Obtiene la URL completa para descargar/visualizar un archivo adjunto
+   * @param messageId - ID del mensaje
+   * @param attachmentId - ID del attachment
+   * @param filePath - Ruta relativa del archivo (opcional, para construir URL alternativa)
+   * @returns URL completa del archivo
+   */
+  getAttachmentUrl(messageId: string, attachmentId: string, filePath?: string): string {
+    const apiConfig = ApiConfig.getInstance();
+    const baseUrl = apiConfig.getBaseUrl();
+    
+    // Construir URL usando el endpoint de la API: /api/interacciones/messages/:messageId/attachments/:attachmentId
+    // Este endpoint requiere autenticación JWT y sirve el archivo desde uploads/{filePath}
+    return `${baseUrl}${BASE_INTERACCIONES}/messages/${messageId}/attachments/${attachmentId}`;
   },
 
   async updateMessageStatus(id: string, status: string): Promise<Message> {
     const res = await apiClient.put<Message>(`${BASE_INTERACCIONES}/messages/${id}/status`, { status });
     return res.data;
+  },
+
+  /**
+   * Edita el contenido de un mensaje
+   * @param messageId - ID del mensaje a editar
+   * @param content - Nuevo contenido del mensaje
+   * @returns Mensaje actualizado
+   */
+  async updateMessage(messageId: string, content: string): Promise<Message> {
+    const res = await apiClient.put<Message>(`${BASE_INTERACCIONES}/messages/${messageId}`, { content });
+    return res.data;
+  },
+
+  /**
+   * Elimina un mensaje y sus archivos adjuntos
+   * @param messageId - ID del mensaje a eliminar
+   * @returns Respuesta de eliminación
+   */
+  async deleteMessage(messageId: string): Promise<void> {
+    await apiClient.delete(`${BASE_INTERACCIONES}/messages/${messageId}`);
   },
 
   // ===== Context Summaries =====
