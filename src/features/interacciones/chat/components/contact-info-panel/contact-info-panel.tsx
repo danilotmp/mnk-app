@@ -4,10 +4,12 @@
 import { ThemedText } from '@/components/themed-text';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { Animated, ScrollView, TouchableOpacity, View } from 'react-native';
 import { contactInfoPanelStyles } from './contact-info-panel.styles';
 import type { ContactInfoPanelProps } from './contact-info-panel.types';
+
+type TabType = 'cliente' | 'agendamiento' | 'ordenes' | 'pagos';
 
 export const ContactInfoPanel = React.memo(({
   contact,
@@ -17,6 +19,7 @@ export const ContactInfoPanel = React.memo(({
   onClose,
   colors,
 }: ContactInfoPanelProps) => {
+  const [activeTab, setActiveTab] = useState<TabType>('cliente');
   const containerStyle = isMobile
     ? [
         contactInfoPanelStyles.modal,
@@ -95,15 +98,21 @@ export const ContactInfoPanel = React.memo(({
               </View>
             )}
             <View style={contactInfoPanelStyles.iconItem}>
-              <Ionicons name="briefcase" size={16} color={colors.textSecondary} />
+              <Ionicons name="calendar" size={16} color={colors.textSecondary} />
               <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                Negociaciones: 0
+                Agendamientos: 0
               </ThemedText>
             </View>
             <View style={contactInfoPanelStyles.iconItem}>
-              <Ionicons name="document-text" size={16} color={colors.textSecondary} />
+              <Ionicons name="cart-outline" size={16} color={colors.textSecondary} />
               <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
                 Órdenes: 0
+              </ThemedText>
+            </View>
+            <View style={contactInfoPanelStyles.iconItem}>
+              <Ionicons name="card" size={16} color={colors.textSecondary} />
+              <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
+                Pagos: 0
               </ThemedText>
             </View>
           </View>
@@ -111,121 +120,217 @@ export const ContactInfoPanel = React.memo(({
           {/* Barra de navegación */}
           <View style={contactInfoPanelStyles.navBar}>
             <Tooltip text="Cliente" position="top">
-              <TouchableOpacity style={[contactInfoPanelStyles.navItem, { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
-                <Ionicons name="person" size={20} color={colors.primary} />
+              <TouchableOpacity 
+                style={[
+                  contactInfoPanelStyles.navItem, 
+                  activeTab === 'cliente' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
+                ]}
+                onPress={() => setActiveTab('cliente')}
+              >
+                <Ionicons 
+                  name="person" 
+                  size={20} 
+                  color={activeTab === 'cliente' ? colors.primary : colors.textSecondary} 
+                />
               </TouchableOpacity>
             </Tooltip>
             <Tooltip text="Agendamiento" position="top">
-              <TouchableOpacity style={contactInfoPanelStyles.navItem}>
-                <Ionicons name="calendar" size={20} color={colors.textSecondary} />
+              <TouchableOpacity 
+                style={[
+                  contactInfoPanelStyles.navItem,
+                  activeTab === 'agendamiento' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
+                ]}
+                onPress={() => setActiveTab('agendamiento')}
+              >
+                <Ionicons 
+                  name="calendar" 
+                  size={20} 
+                  color={activeTab === 'agendamiento' ? colors.primary : colors.textSecondary} 
+                />
               </TouchableOpacity>
             </Tooltip>
             <Tooltip text="Ordenes" position="top">
-              <TouchableOpacity style={contactInfoPanelStyles.navItem}>
-                <Ionicons name="list" size={20} color={colors.textSecondary} />
+              <TouchableOpacity 
+                style={[
+                  contactInfoPanelStyles.navItem,
+                  activeTab === 'ordenes' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
+                ]}
+                onPress={() => setActiveTab('ordenes')}
+              >
+                <Ionicons 
+                  name="cart" 
+                  size={20} 
+                  color={activeTab === 'ordenes' ? colors.primary : colors.textSecondary} 
+                />
               </TouchableOpacity>
             </Tooltip>
             <Tooltip text="Pagos" position="top">
-              <TouchableOpacity style={contactInfoPanelStyles.navItem}>
-                <Ionicons name="card" size={20} color={colors.textSecondary} />
+              <TouchableOpacity 
+                style={[
+                  contactInfoPanelStyles.navItem,
+                  activeTab === 'pagos' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
+                ]}
+                onPress={() => setActiveTab('pagos')}
+              >
+                <Ionicons 
+                  name="card" 
+                  size={20} 
+                  color={activeTab === 'pagos' ? colors.primary : colors.textSecondary} 
+                />
               </TouchableOpacity>
             </Tooltip>
           </View>
         </View>
 
-        {/* Detalles del cliente */}
-        <View style={contactInfoPanelStyles.section}>
-          <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
-            <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-              Detalles del cliente
-            </ThemedText>
-            <TouchableOpacity>
-              <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <View style={contactInfoPanelStyles.details}>
-            <View style={contactInfoPanelStyles.detailRow}>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                Nombres:
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                {contact.name}
-              </ThemedText>
+        {/* Contenido según el tab activo */}
+        {activeTab === 'cliente' && (
+          <>
+            {/* Detalles del cliente */}
+            <View style={contactInfoPanelStyles.section}>
+              <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                  Detalles del cliente
+                </ThemedText>
+                <TouchableOpacity>
+                  <Ionicons name="pencil" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={contactInfoPanelStyles.details}>
+                <View style={contactInfoPanelStyles.detailRow}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                    Nombres:
+                  </ThemedText>
+                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
+                    {contact.name}
+                  </ThemedText>
+                </View>
+                <View style={contactInfoPanelStyles.detailRow}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                    Teléfono:
+                  </ThemedText>
+                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
+                    {contact.phoneNumber}
+                  </ThemedText>
+                </View>
+                <View style={contactInfoPanelStyles.detailRow}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                    Email:
+                  </ThemedText>
+                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
+                    {contact.email || 'Sin email'}
+                  </ThemedText>
+                </View>
+                <View style={contactInfoPanelStyles.detailRow}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                    Identificación:
+                  </ThemedText>
+                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
+                    Sin identificación
+                  </ThemedText>
+                </View>
+                <View style={contactInfoPanelStyles.detailRow}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                    Fecha de Nacimiento:
+                  </ThemedText>
+                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
+                    Sin fecha
+                  </ThemedText>
+                </View>
+              </View>
+              <TouchableOpacity style={contactInfoPanelStyles.seeMore}>
+                <ThemedText type="caption" style={{ color: colors.primary }}>
+                  Ver más
+                </ThemedText>
+                <Ionicons name="chevron-down" size={16} color={colors.primary} />
+              </TouchableOpacity>
             </View>
-            <View style={contactInfoPanelStyles.detailRow}>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                Teléfono:
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                {contact.phoneNumber}
-              </ThemedText>
-            </View>
-            <View style={contactInfoPanelStyles.detailRow}>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                Email:
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                {contact.email || 'Sin email'}
-              </ThemedText>
-            </View>
-            <View style={contactInfoPanelStyles.detailRow}>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                Identificación:
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                Sin identificación
-              </ThemedText>
-            </View>
-            <View style={contactInfoPanelStyles.detailRow}>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                Fecha de Nacimiento:
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                Sin fecha
-              </ThemedText>
-            </View>
-          </View>
-          <TouchableOpacity style={contactInfoPanelStyles.seeMore}>
-            <ThemedText type="caption" style={{ color: colors.primary }}>
-              Ver más
-            </ThemedText>
-            <Ionicons name="chevron-down" size={16} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
 
-        {/* Etiquetas */}
-        <View style={contactInfoPanelStyles.section}>
-          <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
-            <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-              Etiquetas
-            </ThemedText>
-            <TouchableOpacity>
-              <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <View style={contactInfoPanelStyles.tagsContainer}>
-            {contact.tags && contact.tags.length > 0 ? (
-              contact.tags.map((tagId) => {
-                const tag = availableTags.find(t => t.id === tagId);
-                if (!tag) return null;
-                return (
-                  <View
-                    key={tagId}
-                    style={[contactInfoPanelStyles.infoTag, { backgroundColor: tag.color }]}
-                  >
-                    <ThemedText type="caption" style={{ color: '#FFFFFF' }}>
-                      {tag.label}
-                    </ThemedText>
-                  </View>
-                );
-              })
-            ) : (
-              <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                Sin etiquetas
+            {/* Etiquetas */}
+            <View style={contactInfoPanelStyles.section}>
+              <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                  Etiquetas
+                </ThemedText>
+                <TouchableOpacity>
+                  <Ionicons name="pencil" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={contactInfoPanelStyles.tagsContainer}>
+                {contact.tags && contact.tags.length > 0 ? (
+                  contact.tags.map((tagId) => {
+                    const tag = availableTags.find(t => t.id === tagId);
+                    if (!tag) return null;
+                    return (
+                      <View
+                        key={tagId}
+                        style={[contactInfoPanelStyles.infoTag, { backgroundColor: tag.color }]}
+                      >
+                        <ThemedText type="caption" style={{ color: '#FFFFFF' }}>
+                          {tag.label}
+                        </ThemedText>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <ThemedText type="caption" style={{ color: colors.textSecondary }}>
+                    Sin etiquetas
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* Panel de Agendamiento */}
+        {activeTab === 'agendamiento' && (
+          <View style={contactInfoPanelStyles.section}>
+            <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+              <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                Agendamiento
               </ThemedText>
-            )}
+            </View>
+            <View style={[contactInfoPanelStyles.emptyState, { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }]}>
+              <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
+              <ThemedText type="body2" style={{ color: colors.textSecondary, marginTop: 16, textAlign: 'center' }}>
+                No hay citas agendadas
+              </ThemedText>
+            </View>
           </View>
-        </View>
+        )}
+
+        {/* Panel de Ordenes */}
+        {activeTab === 'ordenes' && (
+          <View style={contactInfoPanelStyles.section}>
+            <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+              <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                Órdenes
+              </ThemedText>
+            </View>
+            <View style={[contactInfoPanelStyles.emptyState, { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }]}>
+              <Ionicons name="cart-outline" size={48} color={colors.textSecondary} />
+              <ThemedText type="body2" style={{ color: colors.textSecondary, marginTop: 16, textAlign: 'center' }}>
+                No hay órdenes registradas
+              </ThemedText>
+            </View>
+          </View>
+        )}
+
+        {/* Panel de Pagos */}
+        {activeTab === 'pagos' && (
+          <View style={contactInfoPanelStyles.section}>
+            <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+              <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                Pagos
+              </ThemedText>
+            </View>
+            <View style={[contactInfoPanelStyles.emptyState, { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }]}>
+              <Ionicons name="card-outline" size={48} color={colors.textSecondary} />
+              <ThemedText type="body2" style={{ color: colors.textSecondary, marginTop: 16, textAlign: 'center' }}>
+                No hay pagos registrados
+              </ThemedText>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </Animated.View>
   );

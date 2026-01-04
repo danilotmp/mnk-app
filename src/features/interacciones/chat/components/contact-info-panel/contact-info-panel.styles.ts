@@ -110,4 +110,7 @@ export const contactInfoPanelStyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
   },
+  emptyState: {
+    width: '100%',
+  },
 });
