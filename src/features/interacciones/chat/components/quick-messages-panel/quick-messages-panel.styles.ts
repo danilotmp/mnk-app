@@ -110,7 +110,7 @@ export const quickMessagesPanelStyles = StyleSheet.create({
   },
   modalFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
@@ -121,6 +121,13 @@ export const quickMessagesPanelStyles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDeleteButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

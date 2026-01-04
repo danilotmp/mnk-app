@@ -2,13 +2,14 @@
  * Componente para el panel de mensajes rápidos y recomendaciones
  */
 import { ThemedText } from '@/components/themed-text';
+import { Tooltip } from '@/components/ui';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { CatalogService } from '@/src/domains/catalog/services/catalog.service';
 import type { CatalogEntry } from '@/src/domains/catalog/types';
+import type { Recommendation } from '@/src/domains/commercial/types';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
-import type { Recommendation } from '@/src/domains/commercial/types';
 import React, { useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { quickMessagesPanelStyles } from './quick-messages-panel.styles';
@@ -136,6 +137,20 @@ export const QuickMessagesPanel = React.memo(({
     } finally {
       setSaving(false);
     }
+  };
+
+  // Confirmar eliminación de mensaje rápido
+  const confirmDeleteMessage = () => {
+    if (!editingMessage) {
+      return;
+    }
+
+    const messageText = editingMessage.name || 'este mensaje';
+    alert.showConfirm(
+      'Eliminar mensaje rápido',
+      `¿Seguro que deseas eliminar "${messageText}"? Esta acción no se puede deshacer.`,
+      handleDeleteMessage
+    );
   };
 
   // Abrir modal de edición
@@ -510,26 +525,29 @@ export const QuickMessagesPanel = React.memo(({
               quickMessagesPanelStyles.modalFooter,
               { borderTopColor: colors.border }
             ]}>
+              <Tooltip text="Eliminar" position="top">
+                <TouchableOpacity
+                  style={[
+                    quickMessagesPanelStyles.modalDeleteButton,
+                    { backgroundColor: colors.surfaceVariant }
+                  ]}
+                  onPress={confirmDeleteMessage}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Ionicons name="trash" size={24} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              </Tooltip>
               <TouchableOpacity
                 style={[
                   quickMessagesPanelStyles.modalButton,
-                  { backgroundColor: colors.error || '#DC143C', borderColor: colors.error || '#DC143C' }
-                ]}
-                onPress={handleDeleteMessage}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <ThemedText type="body2" style={{ color: '#FFFFFF' }}>
-                    Eliminar
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  quickMessagesPanelStyles.modalButton,
-                  { backgroundColor: colors.surfaceVariant, borderColor: colors.border }
+                  { 
+                    backgroundColor: 'transparent', 
+                    borderColor: colors.primary 
+                  }
                 ]}
                 onPress={() => {
                   setShowEditModal(false);
@@ -538,7 +556,7 @@ export const QuickMessagesPanel = React.memo(({
                 }}
                 disabled={saving}
               >
-                <ThemedText type="body2" style={{ color: colors.text }}>
+                <ThemedText type="body2" style={{ color: colors.primary }}>
                   Cancelar
                 </ThemedText>
               </TouchableOpacity>
