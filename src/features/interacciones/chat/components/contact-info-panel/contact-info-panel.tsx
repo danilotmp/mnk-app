@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useCompany } from '@/src/domains/shared';
-import { DatePicker } from '@/src/domains/shared/components/date-picker/date-picker';
+import { DatePicker, EmailInput } from '@/src/domains/shared/components';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -298,24 +298,16 @@ export const ContactInfoPanel = React.memo(({
                     Email:
                   </ThemedText>
                   {isEditing ? (
-                    <InputWithFocus
+                    <EmailInput
+                      value={editedValues.email}
+                      onChangeText={(text) => setEditedValues({ ...editedValues, email: text })}
+                      placeholder="Email"
+                      disabled={saving}
                       containerStyle={[
                         styles.editInput,
                         { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
                       ]}
-                      primaryColor={colors.primary}
-                    >
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        value={editedValues.email}
-                        onChangeText={(text) => setEditedValues({ ...editedValues, email: text })}
-                        placeholder="Email"
-                        placeholderTextColor={colors.textSecondary}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        editable={!saving}
-                      />
-                    </InputWithFocus>
+                    />
                   ) : (
                     <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
                       {contact.email || ''}

@@ -14,6 +14,7 @@ import { RolesService } from '../../services';
 import { CompaniesService } from '@/src/features/security/companies';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
+import { StatusSelector } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
@@ -409,89 +410,12 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
 
         {/* Estado */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.status || 'Estado'}
-          </ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.selectOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 1 && {
-                    backgroundColor: '#10b981',
-                    borderColor: '#10b981',
-                  },
-                ]}
-                onPress={() => handleChange('status', 1)}
-                disabled={isLoading}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  {t.security?.users?.active || 'Activo'}
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 0 && {
-                    backgroundColor: '#ef4444',
-                    borderColor: '#ef4444',
-                  },
-                ]}
-                onPress={() => handleChange('status', 0)}
-                disabled={isLoading}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  {t.security?.users?.inactive || 'Inactivo'}
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 2 && {
-                    backgroundColor: '#f59e0b',
-                    borderColor: '#f59e0b',
-                  },
-                ]}
-                onPress={() => handleChange('status', 2)}
-                disabled={isLoading}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  Pendiente
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 3 && {
-                    backgroundColor: '#f97316',
-                    borderColor: '#f97316',
-                  },
-                ]}
-                onPress={() => handleChange('status', 3)}
-                disabled={isLoading}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  Suspendido
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+          <StatusSelector
+            value={formData.status}
+            onChange={(value) => handleChange('status', value)}
+            label={t.security?.users?.status || 'Estado'}
+            disabled={isLoading}
+          />
         </View>
 
         {/* Is System */}

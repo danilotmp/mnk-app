@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
+import { EmailInput, PasswordInput } from '@/src/domains/shared/components';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { RegisterForm } from '@/src/features/auth/components/register-form';
 import { VerifyEmailForm } from '@/src/features/auth/components/verify-email-form';
@@ -112,7 +113,6 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   const validateForm = () => {
@@ -237,23 +237,36 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
                     <>
                       <View style={styles.inputGroup}>
                         <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>{t.auth.email}</ThemedText>
-                        <InputWithFocus containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: errors.email ? colors.error : colors.border }]} primaryColor={colors.primary} error={!!errors.email}>
-                          <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
-                          <TextInput style={[styles.input, { color: colors.text }]} placeholder={t.auth.email} placeholderTextColor={colors.textSecondary} value={email} onChangeText={val => { setEmail(val); if (errors.email) setErrors({ ...errors, email: undefined }); }} keyboardType="email-address" autoCapitalize="none" editable={!isLoading} />
-                        </InputWithFocus>
-                        {errors.email && <ThemedText type="caption" variant="error">{errors.email}</ThemedText>}
+                        <EmailInput
+                          value={email}
+                          onChangeText={(val) => {
+                            setEmail(val);
+                            if (errors.email) {
+                              setErrors({ ...errors, email: undefined });
+                            }
+                          }}
+                          placeholder={t.auth.email}
+                          error={!!errors.email}
+                          errorMessage={errors.email}
+                          disabled={isLoading}
+                        />
                       </View>
 
                       <View style={styles.inputGroup}>
                         <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>{t.auth.password}</ThemedText>
-                        <InputWithFocus containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: errors.password ? colors.error : colors.border }]} primaryColor={colors.primary} error={!!errors.password}>
-                          <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
-                          <TextInput style={[styles.input, { color: colors.text, flex: 1 }]} placeholder={t.auth.password} placeholderTextColor={colors.textSecondary} value={password} onChangeText={val => { setPassword(val); if (errors.password) setErrors({ ...errors, password: undefined }); }} secureTextEntry={!showPassword} autoCapitalize="none" editable={!isLoading} />
-                          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                            <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        </InputWithFocus>
-                        {errors.password && <ThemedText type="caption" variant="error">{errors.password}</ThemedText>}
+                        <PasswordInput
+                          value={password}
+                          onChangeText={(val) => {
+                            setPassword(val);
+                            if (errors.password) {
+                              setErrors({ ...errors, password: undefined });
+                            }
+                          }}
+                          placeholder={t.auth.password}
+                          error={!!errors.password}
+                          errorMessage={errors.password}
+                          disabled={isLoading}
+                        />
                       </View>
 
                       <View style={styles.optionsRow}>

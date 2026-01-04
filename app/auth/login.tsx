@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { EmailInput, PasswordInput } from '@/src/domains/shared/components';
 import { useMultiCompany } from '@/src/domains/shared/hooks';
 import { UserContextService, UserSessionService } from '@/src/domains/shared/services';
 import { UserResponse } from '@/src/domains/shared/types/api/user-response.types';
@@ -45,9 +46,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
-  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -223,45 +222,19 @@ export default function LoginPage() {
                 <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                   {t.auth.email}
                 </ThemedText>
-                <View style={[
-                  styles.inputContainer,
-                  { 
-                    backgroundColor: colors.surface,
-                    borderColor: errors.email 
-                      ? colors.error 
-                      : focusedInput === 'email' 
-                        ? colors.primary 
-                        : colors.border,
-                    borderWidth: focusedInput === 'email' && !errors.email ? 2 : 1,
-                  }
-                ]}>
-                  <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    placeholder={t.auth.email}
-                    placeholderTextColor={colors.textSecondary}
-                    value={email}
-                    onChangeText={(text) => {
-                      setEmail(text);
-                      if (errors.email) {
-                        setErrors({ ...errors, email: undefined });
-                      }
-                    }}
-                    onFocus={() => setFocusedInput('email')}
-                    onBlur={() => setFocusedInput(null)}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    editable={!isLoading}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.email && (
-                  <ThemedText type="caption" variant="error" style={styles.errorText}>
-                    {errors.email}
-                  </ThemedText>
-                )}
+                <EmailInput
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (errors.email) {
+                      setErrors({ ...errors, email: undefined });
+                    }
+                  }}
+                  placeholder={t.auth.email}
+                  error={!!errors.email}
+                  errorMessage={errors.email}
+                  disabled={isLoading}
+                />
               </View>
 
               {/* Password */}
@@ -269,55 +242,19 @@ export default function LoginPage() {
                 <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                   {t.auth.password}
                 </ThemedText>
-                <View style={[
-                  styles.inputContainer,
-                  { 
-                    backgroundColor: colors.surface,
-                    borderColor: errors.password 
-                      ? colors.error 
-                      : focusedInput === 'password' 
-                        ? colors.primary 
-                        : colors.border,
-                    borderWidth: focusedInput === 'password' && !errors.password ? 2 : 1,
-                  }
-                ]}>
-                  <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: colors.text, flex: 1 }]}
-                    placeholder={t.auth.password}
-                    placeholderTextColor={colors.textSecondary}
-                    value={password}
-                    onChangeText={(text) => {
-                      setPassword(text);
-                      if (errors.password) {
-                        setErrors({ ...errors, password: undefined });
-                      }
-                    }}
-                    onFocus={() => setFocusedInput('password')}
-                    onBlur={() => setFocusedInput(null)}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoComplete="password"
-                    textContentType="password"
-                    editable={!isLoading}
-                    underlineColorAndroid="transparent"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons
-                      name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                      size={20}
-                      color={colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-                {errors.password && (
-                  <ThemedText type="caption" variant="error" style={styles.errorText}>
-                    {errors.password}
-                  </ThemedText>
-                )}
+                <PasswordInput
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errors.password) {
+                      setErrors({ ...errors, password: undefined });
+                    }
+                  }}
+                  placeholder={t.auth.password}
+                  error={!!errors.password}
+                  errorMessage={errors.password}
+                  disabled={isLoading}
+                />
               </View>
 
               {/* Remember Me & Forgot Password */}

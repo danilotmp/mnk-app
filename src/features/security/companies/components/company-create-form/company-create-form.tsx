@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
+import { EmailInput } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
@@ -291,33 +292,14 @@ export function CompanyCreateForm({
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
             {t.security?.companies?.email || 'Email'} *
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.email ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
+          <EmailInput
+            value={formData.email}
+            onChangeText={(value) => handleChange('email', value)}
+            placeholder={t.security?.companies?.emailPlaceholder || 'Correo de contacto'}
+            required
             error={!!errors.email}
-          >
-            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.security?.companies?.emailPlaceholder || 'Correo de contacto'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.email}
-              onChangeText={(value) => handleChange('email', value)}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-          </InputWithFocus>
-          {errors.email ? (
-            <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
-              {errors.email}
-            </ThemedText>
-          ) : null}
+            errorMessage={errors.email}
+          />
         </View>
 
         <View style={styles.inputGroup}>
@@ -379,92 +361,12 @@ export function CompanyCreateForm({
 
         {/* Estado */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.status || 'Estado'} *
-          </ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.selectOptions}>
-              {/* Activo */}
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 1 && {
-                    backgroundColor: '#10b981',
-                    borderColor: '#10b981',
-                  },
-                ]}
-                onPress={() => handleChange('status', 1)}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  {t.security?.users?.active || 'Activo'}
-                </ThemedText>
-              </TouchableOpacity>
-
-              {/* Inactivo */}
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 0 && {
-                    backgroundColor: '#ef4444',
-                    borderColor: '#ef4444',
-                  },
-                ]}
-                onPress={() => handleChange('status', 0)}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  {t.security?.users?.inactive || 'Inactivo'}
-                </ThemedText>
-              </TouchableOpacity>
-
-              {/* Pendiente */}
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 2 && {
-                    backgroundColor: '#f59e0b',
-                    borderColor: '#f59e0b',
-                  },
-                ]}
-                onPress={() => handleChange('status', 2)}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  {t.security?.users?.pending || 'Pendiente'}
-                </ThemedText>
-              </TouchableOpacity>
-
-              {/* Suspendido */}
-              <TouchableOpacity
-                style={[
-                  styles.selectOption,
-                  { borderColor: colors.border },
-                  formData.status === 3 && {
-                    backgroundColor: '#f97316',
-                    borderColor: '#f97316',
-                  },
-                ]}
-                onPress={() => handleChange('status', 3)}
-              >
-                <ThemedText
-                  type="caption"
-                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
-                >
-                  {t.security?.users?.suspended || 'Suspendido'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+          <StatusSelector
+            value={formData.status}
+            onChange={(value) => handleChange('status', value)}
+            label={t.security?.users?.status || 'Estado'}
+            required
+          />
         </View>
       </Card>
       {footer}

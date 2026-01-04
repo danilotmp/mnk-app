@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
+import { EmailInput } from '@/src/domains/shared/components';
 import { useCompany } from '@/src/domains/shared';
 import { BranchesService } from '@/src/features/security/branches';
 import { CompaniesService } from '@/src/features/security/companies';
@@ -224,21 +225,12 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
               <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                 Email *
               </ThemedText>
-              <InputWithFocus
-                containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                primaryColor={colors.primary}
-              >
-                <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="correo@empresa.com"
-                  placeholderTextColor={colors.textSecondary}
-                  value={companyData.email}
-                  onChangeText={(val) => setCompanyData(prev => ({ ...prev, email: val }))}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </InputWithFocus>
+              <EmailInput
+                value={companyData.email}
+                onChangeText={(val) => setCompanyData(prev => ({ ...prev, email: val }))}
+                placeholder="correo@empresa.com"
+                required
+              />
             </View>
 
             <View style={styles.inputGroup}>

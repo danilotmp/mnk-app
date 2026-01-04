@@ -10,6 +10,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { useBranchOptions, useCompanyOptions } from '@/src/domains/security/hooks';
+import { PasswordInput } from '@/src/domains/shared/components';
 import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { BranchesService } from '@/src/features/security/branches';
 import { RolesService } from '@/src/features/security/roles';
@@ -47,7 +48,6 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   });
   const [password, setPassword] = useState('');
   const [changePassword, setChangePassword] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -702,47 +702,15 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
               {t.auth?.password || 'Contraseña'} *
             </ThemedText>
-            <InputWithFocus
-              containerStyle={[
-                styles.inputContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: errors.password ? colors.error : colors.border,
-                },
-              ]}
-              primaryColor={colors.primary}
+            <PasswordInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder={t.auth?.password || 'Contraseña'}
+              required
               error={!!errors.password}
-            >
-              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: colors.text, flex: 1 }]}
-                placeholder={t.auth?.password || 'Contraseña'}
-                placeholderTextColor={colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoComplete="password"
-                textContentType="password"
-                editable={!isLoading}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={{ padding: 8 }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </InputWithFocus>
-            {errors.password && (
-              <ThemedText type="caption" variant="error" style={styles.errorText}>
-                {errors.password}
-              </ThemedText>
-            )}
+              errorMessage={errors.password}
+              disabled={isLoading}
+            />
           </View>
         )}
 

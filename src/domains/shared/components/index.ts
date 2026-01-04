@@ -24,6 +24,8 @@ export { SearchFilterBar } from './search-filter-bar/search-filter-bar';
 export type { FilterConfig, FilterOption, SearchFilterBarProps } from './search-filter-bar/search-filter-bar.types';
 export { SearchInput } from './search-input/search-input';
 export type { SearchInputProps } from './search-input/search-input.types';
+export { StatusSelector } from './status-selector/status-selector';
+export type { StatusOption, StatusSelectorProps } from './status-selector/status-selector.types';
 export { UserProfileHeader } from './user-profile-header/user-profile-header';
 export type { UserProfileHeaderProps } from './user-profile-header/user-profile-header.types';
 

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
+import { EmailInput, PasswordInput } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -25,7 +26,6 @@ export function RegisterForm({ onSuccess, onLoginLink, isLoading: externalLoadin
     email: '',
     password: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
@@ -136,48 +136,28 @@ export function RegisterForm({ onSuccess, onLoginLink, isLoading: externalLoadin
 
       <View style={styles.inputGroup}>
         <ThemedText type="body2" style={styles.label}>{t.auth.email} *</ThemedText>
-        <InputWithFocus 
-          containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: errors.email ? colors.error : colors.border }]}
-          primaryColor={colors.primary}
+        <EmailInput
+          value={formData.email}
+          onChangeText={(val) => handleChange('email', val)}
+          placeholder={t.auth.email}
+          required
           error={!!errors.email}
-        >
-          <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
-          <TextInput
-            style={[styles.input, { color: colors.text }]}
-            placeholder={t.auth.email}
-            placeholderTextColor={colors.textSecondary}
-            value={formData.email}
-            onChangeText={val => handleChange('email', val)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!isLoading}
-          />
-        </InputWithFocus>
-        {errors.email && <ThemedText type="caption" variant="error">{errors.email}</ThemedText>}
+          errorMessage={errors.email}
+          disabled={isLoading}
+        />
       </View>
 
       <View style={styles.inputGroup}>
         <ThemedText type="body2" style={styles.label}>{t.auth.password} *</ThemedText>
-        <InputWithFocus 
-          containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: errors.password ? colors.error : colors.border }]}
-          primaryColor={colors.primary}
+        <PasswordInput
+          value={formData.password}
+          onChangeText={(val) => handleChange('password', val)}
+          placeholder={t.auth.password}
+          required
           error={!!errors.password}
-        >
-          <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
-          <TextInput
-            style={[styles.input, { color: colors.text }]}
-            placeholder={t.auth.password}
-            placeholderTextColor={colors.textSecondary}
-            value={formData.password}
-            onChangeText={val => handleChange('password', val)}
-            secureTextEntry={!showPassword}
-            editable={!isLoading}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </InputWithFocus>
-        {errors.password && <ThemedText type="caption" variant="error">{errors.password}</ThemedText>}
+          errorMessage={errors.password}
+          disabled={isLoading}
+        />
       </View>
 
       <Button

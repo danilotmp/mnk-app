@@ -10,6 +10,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { useCompanyOptions } from '@/src/domains/security/hooks';
+import { EmailInput, PasswordInput, StatusSelector } from '@/src/domains/shared/components';
 import { BranchesService } from '@/src/features/security/branches';
 import { RolesService } from '@/src/features/security/roles';
 import { useTranslation } from '@/src/infrastructure/i18n';
@@ -17,7 +18,7 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { startTransition, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
 import { UsersService } from '../../services';
 import { UserCreatePayload } from '../../types/domain';
 import { CompanyConfigCarousel } from '../company-config-carousel/company-config-carousel';
@@ -49,7 +50,6 @@ export function UserCreateForm({
     roleId: '', // Mantener para compatibilidad
     status: 1, // Default: Activo
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
@@ -427,36 +427,15 @@ export function UserCreateForm({
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
             {t.auth?.email || 'Email'} *
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.email ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
+          <EmailInput
+            value={formData.email}
+            onChangeText={(text) => handleChange('email', text)}
+            placeholder={t.auth?.email || 'Email'}
+            required
             error={!!errors.email}
-          >
-            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.auth?.email || 'Email'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.email}
-              onChangeText={(text) => handleChange('email', text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              editable={!isLoading}
-            />
-          </InputWithFocus>
-          {errors.email && (
-            <ThemedText type="caption" variant="error" style={styles.errorText}>
-              {errors.email}
-            </ThemedText>
-          )}
+            errorMessage={errors.email}
+            disabled={isLoading}
+          />
         </View>
 
         {/* Password */}
@@ -464,47 +443,15 @@ export function UserCreateForm({
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
             {t.auth?.password || 'Contraseña'} *
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.password ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
+          <PasswordInput
+            value={formData.password}
+            onChangeText={(text) => handleChange('password', text)}
+            placeholder={t.auth?.password || 'Contraseña'}
+            required
             error={!!errors.password}
-          >
-            <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text, flex: 1 }]}
-              placeholder={t.auth?.password || 'Contraseña'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.password}
-              onChangeText={(text) => handleChange('password', text)}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoComplete="password"
-              textContentType="password"
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              style={{ padding: 8 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                size={20}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-          </InputWithFocus>
-          {errors.password && (
-            <ThemedText type="caption" variant="error" style={styles.errorText}>
-              {errors.password}
-            </ThemedText>
-          )}
+            errorMessage={errors.password}
+            disabled={isLoading}
+          />
         </View>
 
         {/* First Name */}
@@ -647,96 +594,13 @@ export function UserCreateForm({
 
         {/* Estado */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.status || 'Estado'} *
-          </ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.selectOptions}>
-                {/* Activo */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 1 && {
-                      backgroundColor: '#10b981',
-                      borderColor: '#10b981',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 1)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.active || 'Activo'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {/* Inactivo */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 0 && {
-                      backgroundColor: '#ef4444',
-                      borderColor: '#ef4444',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 0)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.inactive || 'Inactivo'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {/* Pendiente */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 2 && {
-                      backgroundColor: '#f59e0b',
-                      borderColor: '#f59e0b',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 2)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.pending || 'Pendiente'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {/* Suspendido */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 3 && {
-                      backgroundColor: '#f97316',
-                      borderColor: '#f97316',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 3)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.suspended || 'Suspendido'}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+          <StatusSelector
+            value={formData.status}
+            onChange={(value) => handleChange('status', value)}
+            label={t.security?.users?.status || 'Estado'}
+            required
+            disabled={isLoading}
+          />
         </View>
 
         {/* Botones (solo si showFooter es true) */}

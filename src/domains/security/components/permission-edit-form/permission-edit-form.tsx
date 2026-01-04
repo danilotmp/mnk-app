@@ -120,7 +120,8 @@ export function PermissionEditForm({ permissionId, onSuccess, onCancel, showHead
     };
 
     loadPermission();
-  }, [permissionId, alert]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionId]);
 
   /**
    * Validar formulario
