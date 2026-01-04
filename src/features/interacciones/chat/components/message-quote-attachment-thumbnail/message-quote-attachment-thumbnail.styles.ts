@@ -7,9 +7,11 @@ export const messageQuoteAttachmentThumbnailStyles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
     backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fileIcon: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
   },
 });

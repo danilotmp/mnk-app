@@ -674,9 +674,13 @@ export default function ChatIAScreen() {
   // Seleccionar contacto
   const handleSelectContact = useCallback(async (contact: Contact) => {
     setSelectedContact(contact);
-    // En móvil, el panel se oculta por defecto. En web, se muestra.
+    // En móvil, el panel NO se abre automáticamente. En web, sí se abre.
     // En móvil, el panel solo se abre manualmente con el icono
-    setShowContactInfoPanel(!isMobile);
+    if (isMobile) {
+      setShowContactInfoPanel(false);
+    } else {
+      setShowContactInfoPanel(true);
+    }
     // Cargar mensajes directamente sin depender del callback
     try {
       setLoadingMessages(true);
@@ -690,7 +694,7 @@ export default function ChatIAScreen() {
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [isMobile]);
 
   // Solicitar permisos para expo-image-picker
   useEffect(() => {
@@ -2247,12 +2251,35 @@ export default function ChatIAScreen() {
                         style={{ color: colors.textSecondary, fontSize: 13 }}
                         numberOfLines={1}
                       >
-                        {replyingToMessage.attachments && replyingToMessage.attachments.some(a => a.fileType.startsWith('image/'))
-                          ? 'Foto'
-                          : replyingToMessage.content || 'Archivo adjunto'}
+                        {replyingToMessage.content 
+                          ? replyingToMessage.content
+                          : replyingToMessage.attachments && replyingToMessage.attachments.length > 0
+                            ? replyingToMessage.attachments[0].fileName || 'Archivo adjunto'
+                            : 'Archivo adjunto'}
                       </ThemedText>
                     </View>
                   </View>
+                  {/* Thumbnail del adjunto al lado derecho */}
+                  {replyingToMessage.attachments && replyingToMessage.attachments.length > 0 && (
+                    <View style={styles.replyMessageThumbnail}>
+                      <MessageQuoteAttachmentThumbnail
+                        attachment={replyingToMessage.attachments[0]}
+                        messageId={replyingToMessage.id}
+                        getFileIcon={getFileIcon}
+                        onPress={() => {
+                          // Al hacer clic en el thumbnail, abrir el visor de imágenes si es imagen
+                          const isImage = replyingToMessage.attachments?.[0]?.fileType.startsWith('image/');
+                          if (isImage && replyingToMessage.attachments) {
+                            const imageAttachments = replyingToMessage.attachments.filter(
+                              (a: MessageAttachment) => a.fileType.startsWith('image/')
+                            );
+                            const imageIndex = imageAttachments.findIndex(a => a.id === replyingToMessage.attachments?.[0]?.id);
+                            handleOpenImageViewer(imageAttachments, replyingToMessage.id, Math.max(0, imageIndex));
+                          }
+                        }}
+                      />
+                    </View>
+                  )}
                   <TouchableOpacity
                     onPress={cancelReply}
                     style={styles.replyMessageClose}
@@ -3659,6 +3686,10 @@ const styles = StyleSheet.create({
   },
   replyMessageContent: {
     flex: 1,
+  },
+  replyMessageThumbnail: {
+    marginRight: 8,
+    marginLeft: 8,
   },
   replyMessageClose: {
     padding: 4,

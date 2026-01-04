@@ -47,6 +47,8 @@ export const MessageQuoteAttachmentThumbnail = React.memo(({
           backgroundColor: colors.surfaceVariant,
           borderWidth: 1,
           borderColor: colors.border,
+          justifyContent: 'center',
+          alignItems: 'center',
         }
       ]}
     >
@@ -59,7 +61,7 @@ export const MessageQuoteAttachmentThumbnail = React.memo(({
       ) : (
         <Ionicons 
           name={fileIconInfo.icon as any} 
-          size={20} 
+          size={28} 
           color={fileIconInfo.color} 
         />
       )}
