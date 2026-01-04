@@ -15,15 +15,17 @@ import type { Contact, ContactWithLastMessage, Message, MessageAttachment } from
 import { InteraccionesService, MessageDirection } from '@/src/domains/interacciones';
 import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
 import { useCompany } from '@/src/domains/shared';
+import { ContactInfoPanel } from '@/src/features/interacciones/chat/components/contact-info-panel/contact-info-panel';
+import { EmojiPickerPanel } from '@/src/features/interacciones/chat/components/emoji-picker-panel/emoji-picker-panel';
+import { ImageWithToken } from '@/src/features/interacciones/chat/components/image-with-token/image-with-token';
+import { MessageAttachmentItem } from '@/src/features/interacciones/chat/components/message-attachment-item/message-attachment-item';
+import { MessageQuoteAttachmentThumbnail } from '@/src/features/interacciones/chat/components/message-quote-attachment-thumbnail/message-quote-attachment-thumbnail';
+import { QuickMessagesPanel } from '@/src/features/interacciones/chat/components/quick-messages-panel/quick-messages-panel';
+import { formatRelativeTime } from '@/src/features/interacciones/chat/utils/format-relative-time';
 import { API_CONFIG } from '@/src/infrastructure/api/config';
 import { getStorageAdapter } from '@/src/infrastructure/api/storage.adapter';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { formatRelativeTime } from '@/src/features/interacciones/chat/utils/format-relative-time';
-import { ImageWithToken } from '@/src/features/interacciones/chat/components/image-with-token/image-with-token';
-import { MessageQuoteImageThumbnail } from '@/src/features/interacciones/chat/components/message-quote-image-thumbnail/message-quote-image-thumbnail';
-import { MessageQuoteAttachmentThumbnail } from '@/src/features/interacciones/chat/components/message-quote-attachment-thumbnail/message-quote-attachment-thumbnail';
-import { MessageAttachmentItem } from '@/src/features/interacciones/chat/components/message-attachment-item/message-attachment-item';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
@@ -126,12 +128,9 @@ export default function ChatIAScreen() {
   
   // Estado del selector de emojis
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const emojiPickerAnim = useRef(new Animated.Value(0)).current;
-  const [emojiFilter, setEmojiFilter] = useState('');
   
   // Estado del selector de mensajes rápidos
   const [showQuickMessages, setShowQuickMessages] = useState(false);
-  const quickMessagesAnim = useRef(new Animated.Value(0)).current;
   
   // Lista de mensajes rápidos
   const quickMessages = [
@@ -144,8 +143,6 @@ export default function ChatIAScreen() {
   // Estado para recomendaciones
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
-  const [isQuickMessagesExpanded, setIsQuickMessagesExpanded] = useState(true);
-  const [isRecommendationsExpanded, setIsRecommendationsExpanded] = useState(true);
   
   // Lista de emojis populares con palabras clave para búsqueda
   const emojisWithKeywords: Array<{ emoji: string; keywords: string[] }> = [
@@ -1201,24 +1198,6 @@ export default function ChatIAScreen() {
     }).start();
   }, [showContactInfoPanel, contactInfoPanelAnim]);
 
-  // Animación del emoji picker
-  useEffect(() => {
-    Animated.timing(emojiPickerAnim, {
-      toValue: showEmojiPicker ? 1 : 0,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-  }, [showEmojiPicker, emojiPickerAnim]);
-
-  // Animación del panel de mensajes rápidos
-  useEffect(() => {
-    Animated.timing(quickMessagesAnim, {
-      toValue: showQuickMessages ? 1 : 0,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-  }, [showQuickMessages, quickMessagesAnim]);
-
   // Navegación con teclado en el modal de imágenes (solo en web)
   useEffect(() => {
     if (!imageViewerVisible || Platform.OS !== 'web') return;
@@ -2151,6 +2130,19 @@ export default function ChatIAScreen() {
               {/* Archivos adjuntos - Thumbnails (fuera del contenedor del input) */}
               {attachedFiles.length > 0 && (
                 <View style={[styles.attachedFilesContainer, { backgroundColor: colors.surfaceVariant, borderBottomColor: colors.border }]}>
+                  {/* Header con botón cerrar */}
+                  <View style={[styles.attachedFilesHeader, { borderBottomColor: colors.border }]}>
+                    <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
+                      Archivos adjuntos ({attachedFiles.length})
+                    </ThemedText>
+                    <TouchableOpacity
+                      style={styles.attachedFilesCloseButton}
+                      onPress={() => setAttachedFiles([])}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="close" size={24} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
                   <ScrollView 
                     horizontal 
                     showsHorizontalScrollIndicator={false}
@@ -2277,7 +2269,6 @@ export default function ChatIAScreen() {
                 { 
                   backgroundColor: colors.surfaceVariant, 
                   borderTopColor: colors.border,
-                  marginBottom: (showEmojiPicker || showQuickMessages) ? 350 : 0,
                 },
                 { position: 'relative' }
               ]}>
@@ -2664,198 +2655,31 @@ export default function ChatIAScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Panel de emojis */}
+              {/* Panel de emojis - Renderizado después del input */}
               {showEmojiPicker && (
-                <Animated.View
-                  style={[
-                    styles.emojiPickerContainer,
-                    {
-                      backgroundColor: colors.surface,
-                      borderTopColor: colors.border,
-                      opacity: emojiPickerAnim,
-                      transform: [
-                        {
-                          translateY: emojiPickerAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [50, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  {/* Buscador de emoticones */}
-                  <View style={[styles.emojiPickerFilterContainer, { borderBottomColor: colors.border }]}>
-                    <InputWithFocus
-                      containerStyle={{
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 6,
-                        backgroundColor: colors.background,
-                        paddingLeft: 12,
-                        paddingRight: 12,
-                        height: 36,
-                        flex: 1,
-                      }}
-                      primaryColor={colors.primary}
-                    >
-                      <TextInput
-                        placeholder="Buscar emoticones..."
-                        value={emojiFilter}
-                        onChangeText={setEmojiFilter}
-                        style={{
-                          padding: 8,
-                          color: colors.text,
-                          fontSize: 14,
-                        }}
-                        placeholderTextColor={colors.textSecondary}
-                      />
-                    </InputWithFocus>
-                  </View>
-
-                  <ScrollView
-                    style={styles.emojiPickerScroll}
-                    contentContainerStyle={styles.emojiPickerContent}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    <View style={styles.emojiGrid}>
-                      {emojisWithKeywords
-                        .filter(item => {
-                          if (emojiFilter === '') return true;
-                          const filterLower = emojiFilter.toLowerCase();
-                          return item.keywords.some(keyword => keyword.toLowerCase().includes(filterLower));
-                        })
-                        .map((item, index) => (
-                          <TouchableOpacity
-                            key={`emoji-${index}`}
-                            style={styles.emojiButton}
-                            onPress={() => handleEmojiSelect(item.emoji)}
-                            activeOpacity={0.7}
-                          >
-                            <ThemedText type="h4" style={{ fontSize: 28 }}>
-                              {item.emoji}
-                            </ThemedText>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  </ScrollView>
-                </Animated.View>
+                <EmojiPickerPanel
+                  emojisWithKeywords={emojisWithKeywords}
+                  onEmojiSelect={handleEmojiSelect}
+                  onClose={() => setShowEmojiPicker(false)}
+                  isMobile={isMobile}
+                  colors={colors}
+                />
               )}
 
-              {/* Panel de mensajes rápidos */}
+              {/* Panel de mensajes rápidos - Renderizado después del input */}
               {showQuickMessages && (
-                <Animated.View
-                  style={[
-                    styles.emojiPickerContainer,
-                    {
-                      backgroundColor: colors.surface,
-                      borderTopColor: colors.border,
-                      opacity: quickMessagesAnim,
-                      transform: [
-                        {
-                          translateY: quickMessagesAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [50, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <ScrollView
-                    style={styles.emojiPickerScroll}
-                    contentContainerStyle={styles.quickMessagesContent}
-                    showsVerticalScrollIndicator={false}
-                    showsHorizontalScrollIndicator={false}
-                  >
-                    {/* Sección de Mensajes Rápidos */}
-                    <TouchableOpacity
-                      style={[styles.collapsibleSectionHeader, { borderBottomColor: colors.border }]}
-                      onPress={() => setIsQuickMessagesExpanded(!isQuickMessagesExpanded)}
-                      activeOpacity={0.7}
-                    >
-                      <ThemedText type="body1" style={{ color: colors.text, fontWeight: '600' }}>
-                        Mensajes Rápidos
-                      </ThemedText>
-                      <Ionicons
-                        name={isQuickMessagesExpanded ? "chevron-up" : "chevron-down"}
-                        size={20}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-
-                    {isQuickMessagesExpanded && (
-                      <View style={styles.quickMessagesGrid}>
-                        {quickMessages && quickMessages.length > 0 ? (
-                          quickMessages
-                            .filter(msg => messageText === '' || msg.toLowerCase().includes(messageText.toLowerCase()))
-                            .map((message, index) => (
-                              <TouchableOpacity
-                                key={`quick-msg-${index}`}
-                                style={[styles.quickMessageCard, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
-                                onPress={() => handleQuickMessageSelect(message)}
-                                activeOpacity={0.7}
-                              >
-                                <ThemedText type="body2" style={{ color: colors.text, textAlign: 'center' }}>
-                                  {message}
-                                </ThemedText>
-                              </TouchableOpacity>
-                            ))
-                        ) : (
-                          <ThemedText type="body2" style={{ color: colors.textSecondary, textAlign: 'center', padding: 20 }}>
-                            No hay mensajes rápidos disponibles
-                          </ThemedText>
-                        )}
-                      </View>
-                    )}
-
-                    {/* Sección de Recomendaciones */}
-                    <TouchableOpacity
-                      style={[styles.collapsibleSectionHeader, { borderBottomColor: colors.border, marginTop: 16 }]}
-                      onPress={() => setIsRecommendationsExpanded(!isRecommendationsExpanded)}
-                      activeOpacity={0.7}
-                    >
-                      <ThemedText type="body1" style={{ color: colors.text, fontWeight: '600' }}>
-                        Recomendaciones
-                      </ThemedText>
-                      <Ionicons
-                        name={isRecommendationsExpanded ? "chevron-up" : "chevron-down"}
-                        size={20}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-
-                    {isRecommendationsExpanded && (
-                      <View style={styles.quickMessagesGrid}>
-                        {loadingRecommendations ? (
-                          <View style={{ padding: 20, alignItems: 'center' }}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                          </View>
-                        ) : recommendations && recommendations.length > 0 ? (
-                          recommendations
-                            .filter(rec => messageText === '' || rec.message.toLowerCase().includes(messageText.toLowerCase()))
-                            .map((recommendation) => (
-                              <TouchableOpacity
-                                key={`recommendation-${recommendation.id}`}
-                                style={[styles.quickMessageCard, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
-                                onPress={() => handleRecommendationSelect(recommendation)}
-                                activeOpacity={0.7}
-                              >
-                                <ThemedText type="body2" style={{ color: colors.text, textAlign: 'center' }}>
-                                  {recommendation.message}
-                                </ThemedText>
-                              </TouchableOpacity>
-                            ))
-                        ) : (
-                          <ThemedText type="body2" style={{ color: colors.textSecondary, textAlign: 'center', padding: 20 }}>
-                            No hay recomendaciones disponibles
-                          </ThemedText>
-                        )}
-                      </View>
-                    )}
-                  </ScrollView>
-                </Animated.View>
+                <QuickMessagesPanel
+                  quickMessages={quickMessages}
+                  recommendations={recommendations}
+                  loadingRecommendations={loadingRecommendations}
+                  onQuickMessageSelect={handleQuickMessageSelect}
+                  onRecommendationSelect={handleRecommendationSelect}
+                  onClose={() => setShowQuickMessages(false)}
+                  isMobile={isMobile}
+                  colors={colors}
+                />
               )}
+              
             </View>
             ) : (
               <View style={[styles.emptyChat, { backgroundColor: colors.background }]}>
@@ -2870,390 +2694,16 @@ export default function ChatIAScreen() {
             )
           )}
 
-          {/* Panel de información del contacto (lateral derecho) - Solo en web */}
-          {selectedContact && !isMobile && showContactInfoPanel && (
-            <Animated.View
-              style={[
-                styles.contactInfoPanel,
-                {
-                  backgroundColor: colors.surfaceVariant,
-                  borderLeftWidth: 1,
-                  borderLeftColor: colors.border,
-                  width: contactInfoPanelAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [350, 0], // Ancho del panel: 350px visible, 0px oculto
-                  }),
-                  overflow: 'hidden',
-                },
-              ]}
-            >
-              <ScrollView style={styles.contactInfoScroll} showsVerticalScrollIndicator={false}>
-                {/* Header con avatar y nombre */}
-                <View style={styles.contactInfoHeaderSection}>
-                  {/* Botón para cerrar el panel en la esquina superior derecha */}
-                  <TouchableOpacity
-                    style={styles.contactInfoHeaderCloseButton}
-                    onPress={() => setShowContactInfoPanel(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="close" size={24} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  
-                  <View style={[styles.contactInfoAvatarSmall, { backgroundColor: colors.primary + '30' }]}>
-                    <Ionicons name="person" size={32} color={colors.primary} />
-                  </View>
-                  <ThemedText type="body2" style={{ marginTop: 12, color: colors.text, fontWeight: '600', fontSize: 16 }}>
-                    {selectedContact.name}
-                  </ThemedText>
-                  
-                  {/* Información con iconos */}
-                  <View style={styles.contactInfoIconsRow}>
-                    <View style={styles.contactInfoIconItem}>
-                      <Ionicons name="call" size={16} color={colors.textSecondary} />
-                      <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                        {selectedContact.phoneNumber}
-                      </ThemedText>
-                    </View>
-                    {selectedContact.email && (
-                      <View style={styles.contactInfoIconItem}>
-                        <Ionicons name="mail" size={16} color={colors.textSecondary} />
-                        <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                          {selectedContact.email}
-                        </ThemedText>
-                      </View>
-                    )}
-                    <View style={styles.contactInfoIconItem}>
-                      <Ionicons name="briefcase" size={16} color={colors.textSecondary} />
-                      <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                        Negociaciones: 0
-                      </ThemedText>
-                    </View>
-                    <View style={styles.contactInfoIconItem}>
-                      <Ionicons name="document-text" size={16} color={colors.textSecondary} />
-                      <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                        Órdenes: 0
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  {/* Barra de navegación */}
-                  <View style={styles.contactInfoNavBar}>
-                    <Tooltip text="Cliente" position="top">
-                    <TouchableOpacity style={[styles.contactInfoNavItem, { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
-                        <Ionicons name="person" size={20} color={colors.primary} />
-                    </TouchableOpacity>
-                    </Tooltip>
-                    <Tooltip text="Agendamiento" position="top">
-                    <TouchableOpacity style={styles.contactInfoNavItem}>
-                      <Ionicons name="calendar" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    </Tooltip>
-                    <Tooltip text="Ordenes" position="top">
-                    <TouchableOpacity style={styles.contactInfoNavItem}>
-                        <Ionicons name="list" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    </Tooltip>
-                    <Tooltip text="Pagos" position="top">
-                    <TouchableOpacity style={styles.contactInfoNavItem}>
-                        <Ionicons name="card" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    </Tooltip>
-                  </View>
-                </View>
-
-                {/* Detalles del cliente */}
-                <View style={styles.contactInfoSection}>
-                  <View style={[styles.contactInfoSectionHeader, { borderBottomColor: colors.border }]}>
-                    <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-                      Detalles del cliente
-                    </ThemedText>
-                    <TouchableOpacity>
-                      <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.contactInfoDetails}>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Nombres:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        {selectedContact.name}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Teléfono:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        {selectedContact.phoneNumber}
-                      </ThemedText>
-                    </View>
-                      <View style={styles.contactInfoDetailRow}>
-                        <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                          Email:
-                        </ThemedText>
-                        <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        {selectedContact.email || 'Sin email'}
-                        </ThemedText>
-                      </View>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Identificación:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        Sin identificación
-                      </ThemedText>
-                    </View>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Fecha de Nacimiento:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        Sin fecha
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.contactInfoSeeMore}>
-                    <ThemedText type="caption" style={{ color: colors.primary }}>
-                      Ver más
-                    </ThemedText>
-                    <Ionicons name="chevron-down" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Etiquetas */}
-                <View style={styles.contactInfoSection}>
-                  <View style={[styles.contactInfoSectionHeader, { borderBottomColor: colors.border }]}>
-                    <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-                      Etiquetas
-                    </ThemedText>
-                    <TouchableOpacity>
-                      <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.tagsContainer}>
-                    {selectedContact.tags && selectedContact.tags.length > 0 ? (
-                      selectedContact.tags.map((tagId) => {
-                        const tag = availableTags.find(t => t.id === tagId);
-                        if (!tag) return null;
-                        return (
-                          <View
-                            key={tagId}
-                            style={[styles.infoTag, { backgroundColor: tag.color }]}
-                          >
-                            <ThemedText type="caption" style={{ color: '#FFFFFF' }}>
-                              {tag.label}
-                            </ThemedText>
-                          </View>
-                        );
-                      })
-                    ) : (
-                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                        Sin etiquetas
-                      </ThemedText>
-                    )}
-                  </View>
-                </View>
-
-              </ScrollView>
-            </Animated.View>
-          )}
-
-          {/* Modal de información del contacto (móvil) */}
-          {/* Panel de información del contacto (modal móvil) - Solo se muestra cuando showContactInfoPanel es true */}
-          {selectedContact && isMobile && showContactInfoPanel && (
-            <Animated.View
-              style={[
-                styles.contactInfoModal,
-                {
-                  backgroundColor: colors.surfaceVariant,
-                  opacity: contactInfoPanelAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [1, 0],
-                  }),
-                  transform: [
-                    {
-                      translateX: contactInfoPanelAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 400],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <ScrollView 
-                style={styles.contactInfoScroll} 
-                contentContainerStyle={{ paddingBottom: 20, width: '100%' }}
-                showsVerticalScrollIndicator={false}
-                showsHorizontalScrollIndicator={false}
-                bounces={false}
-                nestedScrollEnabled={false}
-              >
-                {/* Header con avatar y nombre */}
-                <View style={styles.contactInfoHeaderSection}>
-                  {/* Botón para cerrar el panel en la esquina superior derecha */}
-                  <TouchableOpacity
-                    style={styles.contactInfoHeaderCloseButton}
-                    onPress={() => setShowContactInfoPanel(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="close" size={24} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  
-                  <View style={[styles.contactInfoAvatarSmall, { backgroundColor: colors.primary + '30' }]}>
-                    <Ionicons name="person" size={32} color={colors.primary} />
-                  </View>
-                  <ThemedText type="body2" style={{ marginTop: 12, color: colors.text, fontWeight: '600', fontSize: 16 }}>
-                    {selectedContact.name}
-                  </ThemedText>
-                  
-                  {/* Información con iconos */}
-                  <View style={styles.contactInfoIconsRow}>
-                    <View style={styles.contactInfoIconItem}>
-                      <Ionicons name="call" size={16} color={colors.textSecondary} />
-                      <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                        {selectedContact.phoneNumber}
-                    </ThemedText>
-                  </View>
-                    {selectedContact.email && (
-                      <View style={styles.contactInfoIconItem}>
-                        <Ionicons name="mail" size={16} color={colors.textSecondary} />
-                        <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                          {selectedContact.email}
-                        </ThemedText>
-                </View>
-                    )}
-                    <View style={styles.contactInfoIconItem}>
-                      <Ionicons name="briefcase" size={16} color={colors.textSecondary} />
-                      <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                        Negociaciones: 0
-                    </ThemedText>
-                  </View>
-                    <View style={styles.contactInfoIconItem}>
-                      <Ionicons name="document-text" size={16} color={colors.textSecondary} />
-                      <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                        Órdenes: 0
-                    </ThemedText>
-                  </View>
-                </View>
-
-                  {/* Barra de navegación */}
-                  <View style={styles.contactInfoNavBar}>
-                    <Tooltip text="Cliente" position="top">
-                      <TouchableOpacity style={[styles.contactInfoNavItem, { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
-                        <Ionicons name="person" size={20} color={colors.primary} />
-                  </TouchableOpacity>
-                    </Tooltip>
-                    <Tooltip text="Agendamiento" position="top">
-                      <TouchableOpacity style={styles.contactInfoNavItem}>
-                        <Ionicons name="calendar" size={20} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    </Tooltip>
-                    <Tooltip text="Ordenes" position="top">
-                      <TouchableOpacity style={styles.contactInfoNavItem}>
-                        <Ionicons name="list" size={20} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    </Tooltip>
-                    <Tooltip text="Pagos" position="top">
-                      <TouchableOpacity style={styles.contactInfoNavItem}>
-                        <Ionicons name="card" size={20} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    </Tooltip>
-              </View>
-                </View>
-                <View style={styles.contactInfoSection}>
-                  <View style={[styles.contactInfoSectionHeader, { borderBottomColor: colors.border }]}>
-                    <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-                      Detalles del cliente
-                    </ThemedText>
-                    <TouchableOpacity>
-                      <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.contactInfoDetails}>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Nombres:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        {selectedContact.name}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Teléfono:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        {selectedContact.phoneNumber}
-                      </ThemedText>
-                    </View>
-                      <View style={styles.contactInfoDetailRow}>
-                        <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                          Email:
-                        </ThemedText>
-                        <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        {selectedContact.email || 'Sin email'}
-                        </ThemedText>
-                      </View>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Identificación:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        Sin identificación
-                      </ThemedText>
-                  </View>
-                    <View style={styles.contactInfoDetailRow}>
-                      <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                        Fecha de Nacimiento:
-                      </ThemedText>
-                      <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                        Sin fecha
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.contactInfoSeeMore}>
-                    <ThemedText type="caption" style={{ color: colors.primary }}>
-                      Ver más
-                    </ThemedText>
-                    <Ionicons name="chevron-down" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.contactInfoSection}>
-                  <View style={[styles.contactInfoSectionHeader, { borderBottomColor: colors.border }]}>
-                    <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
-                      Etiquetas
-                    </ThemedText>
-                    <TouchableOpacity>
-                      <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.tagsContainer}>
-                    {selectedContact.tags && selectedContact.tags.length > 0 ? (
-                      selectedContact.tags.map((tagId) => {
-                        const tag = availableTags.find(t => t.id === tagId);
-                        if (!tag) return null;
-                        return (
-                          <View
-                            key={tagId}
-                            style={[styles.infoTag, { backgroundColor: tag.color }]}
-                          >
-                            <ThemedText type="caption" style={{ color: '#FFFFFF' }}>
-                              {tag.label}
-                            </ThemedText>
-                          </View>
-                        );
-                      })
-                    ) : (
-                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                        Sin etiquetas
-                      </ThemedText>
-                    )}
-                  </View>
-                </View>
-              </ScrollView>
-            </Animated.View>
+          {/* Panel de información del contacto */}
+          {selectedContact && showContactInfoPanel && (
+            <ContactInfoPanel
+              contact={selectedContact}
+              availableTags={availableTags}
+              isMobile={isMobile}
+              panelAnim={contactInfoPanelAnim}
+              onClose={() => setShowContactInfoPanel(false)}
+              colors={colors}
+            />
           )}
         </View>
       </ThemedView>
@@ -3869,85 +3319,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 8,
   },
-  contactInfoPanel: {
-    borderLeftWidth: 1,
-    flexDirection: 'column',
-    minWidth: 0,
-    maxWidth: 350,
-  },
-  contactInfoScroll: {
-    flex: 1,
-    width: '100%',
-  },
-  contactInfoToggleButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  contactInfoCloseButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-  },
-  contactInfoHeaderSection: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-    position: 'relative',
-    width: '100%',
-  },
-  contactInfoHeaderCloseButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  contactInfoAvatarSmall: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  contactInfoIconsRow: {
-    marginTop: 12,
-    gap: 8,
-    width: '100%',
-  },
-  contactInfoIconItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  contactInfoNavBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-    width: '100%',
-  },
-  contactInfoNavItem: {
-    padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contactInfoSeeMore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    gap: 4,
-  },
   contactInfoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -3978,19 +3349,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-  },
-  contactInfoSection: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  contactInfoSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    marginBottom: 12,
   },
   contactInfoCollapsibleHeader: {
     flexDirection: 'row',
@@ -4025,17 +3383,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
   },
-  contactInfoModal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-  },
   contactInfoModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -4043,76 +3390,31 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
   },
-  emojiPickerContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 350,
-    borderTopWidth: 1,
-    zIndex: 5,
-  },
-  emojiPickerFilterContainer: {
-    padding: 12,
-    borderBottomWidth: 1,
-  },
-  emojiPickerScroll: {
-    flex: 1,
-  },
-  emojiPickerContent: {
-    padding: 12,
-  },
-  emojiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
-  emojiButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    margin: 4,
-  },
-  quickMessagesContent: {
-    padding: 12,
-  },
-  quickMessagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'flex-start',
-  },
-  quickMessageCard: {
-    padding: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 40,
-    maxWidth: '48%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  collapsibleSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-  },
   attachedFilesContainer: {
-    padding: 8,
-    paddingBottom: 12,
+    padding: 0,
     marginBottom: 0,
     borderRadius: 0,
     width: '100%',
     borderBottomWidth: 1,
+  },
+  attachedFilesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+  },
+  attachedFilesCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   attachedFilesScrollContent: {
+    padding: 8,
+    paddingTop: 12,
     gap: 8,
     paddingHorizontal: 8,
     alignItems: 'center',
