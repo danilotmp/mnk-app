@@ -5,7 +5,7 @@
 import { PaginatedResponse } from '@/src/domains/shared/types';
 import { mapObject } from '@/src/domains/shared/utils/object-mapper';
 import { apiClient } from '@/src/infrastructure/api/api.client';
-import { Catalog, CatalogFilters, CatalogPayload, CatalogQueryPayload, CatalogQueryResponse } from '../types';
+import { Catalog, CatalogDetailCreatePayload, CatalogDetailUpdatePayload, CatalogFilters, CatalogPayload, CatalogQueryPayload, CatalogQueryResponse, CatalogEntry } from '../types';
 
 // Helper para construir querystring
 const buildQuery = (base: string, params?: Record<string, any>): string => {
@@ -118,20 +118,26 @@ export class CatalogService {
    * POST /api/catalogs/query?companyId=uuid&admin=false
    * 
    * @param code Código del catálogo a consultar (ej: "INDUSTRIES")
-   * @param companyId ID de la empresa
+   * @param companyId ID de la empresa (opcional). Si se proporciona, combina detalles públicos + específicos
    * @param admin Si es true, incluye datos administrativos
    * @returns Respuesta con el catálogo y sus detalles
    */
   static async queryCatalog(
     code: string,
-    companyId: string,
+    companyId?: string | null,
     admin: boolean = false
   ): Promise<CatalogQueryResponse> {
     try {
-      const endpoint = buildQuery('/catalogs/query', { 
-        companyId, 
-        admin: admin.toString() 
-      });
+      const queryParams: Record<string, any> = {
+        admin: admin.toString()
+      };
+      
+      // Solo agregar companyId si está definido y no es null
+      if (companyId !== undefined && companyId !== null) {
+        queryParams.companyId = companyId;
+      }
+      
+      const endpoint = buildQuery('/catalogs/query', queryParams);
       
       const payload: CatalogQueryPayload = { code };
       const response = await apiClient.post<CatalogQueryResponse>(endpoint, payload);
@@ -143,6 +149,57 @@ export class CatalogService {
       }) as CatalogQueryResponse;
     } catch (error: any) {
       throw new Error(error.message || 'Error al consultar catálogo');
+    }
+  }
+
+
+  /**
+   * Crear detalle de catálogo
+   * POST /api/catalogs/:catalogId/details
+   */
+  static async createCatalogDetail(
+    catalogId: string,
+    data: CatalogDetailCreatePayload
+  ): Promise<CatalogEntry> {
+    try {
+      const response = await apiClient.post<CatalogEntry>(
+        `/catalogs/${catalogId}/details`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al crear detalle de catálogo');
+    }
+  }
+
+  /**
+   * Actualizar detalle de catálogo
+   * PUT /api/catalogs/details/:id
+   */
+  static async updateCatalogDetail(
+    detailId: string,
+    data: CatalogDetailUpdatePayload
+  ): Promise<CatalogEntry> {
+    try {
+      const response = await apiClient.put<CatalogEntry>(
+        `/catalogs/details/${detailId}`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar detalle de catálogo');
+    }
+  }
+
+  /**
+   * Eliminar detalle de catálogo (soft delete, cambia status)
+   * DELETE /api/catalogs/details/:id
+   */
+  static async deleteCatalogDetail(detailId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/catalogs/details/${detailId}`);
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al eliminar detalle de catálogo');
     }
   }
 }

@@ -100,6 +100,7 @@ export interface CatalogEntry {
   description?: string | null;
   parentId?: string | null;
   externalCode?: string | null;
+  companyId?: string | null; // null = público, "uuid" = específico de empresa
   metadata?: {
     icon?: string;
     [key: string]: any;
@@ -114,6 +115,7 @@ export interface CatalogEntry {
  * POST /api/catalogs/query
  */
 export interface CatalogQueryResponse {
+  id: string; // ID del catálogo
   code: string;
   name: string;
   description?: string;
@@ -127,5 +129,28 @@ export interface CatalogQueryResponse {
  */
 export interface CatalogQueryPayload {
   code: string;
+}
+
+/**
+ * Payload para crear detalle de catálogo
+ */
+export interface CatalogDetailCreatePayload {
+  code: string;
+  name: string;
+  description?: string | null;
+  companyId?: string | null;
+  parentId?: string | null;
+  externalCode?: string | null;
+  metadata?: any;
+}
+
+/**
+ * Payload para actualizar detalle de catálogo
+ */
+export interface CatalogDetailUpdatePayload {
+  name?: string;
+  description?: string | null;
+  companyId?: string | null;
+  status?: number;
 }
 

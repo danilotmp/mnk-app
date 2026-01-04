@@ -9,6 +9,8 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { CatalogService } from '@/src/domains/catalog/services/catalog.service';
+import type { CatalogEntry } from '@/src/domains/catalog/types';
 import { CommercialService } from '@/src/domains/commercial';
 import type { Recommendation } from '@/src/domains/commercial/types';
 import type { Contact, ContactWithLastMessage, Message, MessageAttachment } from '@/src/domains/interacciones';
@@ -132,13 +134,10 @@ export default function ChatIAScreen() {
   // Estado del selector de mensajes rápidos
   const [showQuickMessages, setShowQuickMessages] = useState(false);
   
-  // Lista de mensajes rápidos
-  const quickMessages = [
-    'Buenos días, ¿en qué puedo ayudarle?',
-    'Gracias por contactarnos',
-    '¿Necesita más información?',
-    'Estaremos encantados de atenderle',
-  ];
+  // Lista de mensajes rápidos desde catálogo (detalles completos)
+  const [quickMessages, setQuickMessages] = useState<CatalogEntry[]>([]);
+  const [loadingQuickMessages, setLoadingQuickMessages] = useState(false);
+  const [quickMessagesCatalogId, setQuickMessagesCatalogId] = useState<string | null>(null);
 
   // Estado para recomendaciones
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -400,6 +399,43 @@ export default function ChatIAScreen() {
       setLoadingRecommendations(false);
     }
   }, [company?.id]);
+
+  // Cargar mensajes rápidos desde catálogo
+  const loadQuickMessages = useCallback(async () => {
+    if (!company?.id || loadingQuickMessages) return;
+    
+    setLoadingQuickMessages(true);
+    try {
+      const catalog = await CatalogService.queryCatalog('QUICK_MESSAGES', company.id, false);
+      // Guardar los detalles completos activos (status === 1)
+      const messages = catalog.details.filter(detail => detail.status === 1);
+      setQuickMessages(messages);
+      
+      // Guardar el catalogId directamente de la respuesta (ya viene incluido)
+      if (catalog.id) {
+        setQuickMessagesCatalogId(catalog.id);
+      }
+    } catch (error) {
+      console.error('Error al cargar mensajes rápidos:', error);
+      setQuickMessages([]);
+    } finally {
+      setLoadingQuickMessages(false);
+    }
+  }, [company?.id]);
+
+  // Cargar mensajes rápidos cuando hay companyId disponible o cuando se abre el panel
+  useEffect(() => {
+    if (company?.id && !loadingQuickMessages) {
+      loadQuickMessages();
+    }
+  }, [company?.id]);
+  
+  // Recargar cuando se abre el panel de mensajes rápidos
+  useEffect(() => {
+    if (showQuickMessages && company?.id) {
+      loadQuickMessages();
+    }
+  }, [showQuickMessages, company?.id]);
 
   // Cargar recomendaciones cuando se abre el panel por primera vez
   useEffect(() => {
@@ -2702,6 +2738,10 @@ export default function ChatIAScreen() {
                   onQuickMessageSelect={handleQuickMessageSelect}
                   onRecommendationSelect={handleRecommendationSelect}
                   onClose={() => setShowQuickMessages(false)}
+                  onRefresh={loadQuickMessages}
+                  catalogId={quickMessagesCatalogId}
+                  companyId={company?.id || null}
+                  companyCode={company?.code || null}
                   isMobile={isMobile}
                   colors={colors}
                 />
