@@ -237,20 +237,12 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
               <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                 Número de WhatsApp *
               </ThemedText>
-              <InputWithFocus
-                containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                primaryColor={colors.primary}
-              >
-                <Ionicons name="logo-whatsapp" size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="+593 99 999 9999"
-                  placeholderTextColor={colors.textSecondary}
-                  value={companyData.phone}
-                  onChangeText={(val) => setCompanyData(prev => ({ ...prev, phone: val }))}
-                  keyboardType="phone-pad"
-                />
-              </InputWithFocus>
+              <PhoneInput
+                value={companyData.phone}
+                onChangeText={(val) => setCompanyData(prev => ({ ...prev, phone: val }))}
+                placeholder="+593 99 999 9999"
+                required
+              />
               <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
                 Este número se usará para conectar Chat IA con tus clientes
               </ThemedText>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
-import { EmailInput, StatusSelector } from '@/src/domains/shared/components';
+import { EmailInput, PhoneInput, StatusSelector } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
@@ -328,28 +328,14 @@ export function CompanyEditForm({
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
             {t.security?.companies?.phone || 'Teléfono'}
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: errors.phone ? colors.error : colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
+          <PhoneInput
+            value={formData.phone}
+            onChangeText={(value) => handleChange('phone', value)}
+            placeholder={t.security?.companies?.phonePlaceholder || 'Teléfono de contacto'}
             error={!!errors.phone}
-          >
-            <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.security?.companies?.phonePlaceholder || 'Teléfono de contacto'}
-              placeholderTextColor={colors.textSecondary}
-              value={formData.phone}
-              onChangeText={(value) => handleChange('phone', value)}
-              keyboardType="phone-pad"
-              editable={!isSubmitting}
-            />
-          </InputWithFocus>
+            errorMessage={errors.phone}
+            disabled={isSubmitting}
+          />
         </View>
 
         <View style={styles.inputGroup}>

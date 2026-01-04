@@ -10,7 +10,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { useCompanyOptions } from '@/src/domains/security/hooks';
-import { EmailInput, PasswordInput, StatusSelector } from '@/src/domains/shared/components';
+import { EmailInput, PasswordInput, PhoneInput, StatusSelector } from '@/src/domains/shared/components';
 import { BranchesService } from '@/src/features/security/branches';
 import { RolesService } from '@/src/features/security/roles';
 import { useTranslation } from '@/src/infrastructure/i18n';
@@ -527,31 +527,16 @@ export function UserCreateForm({
           <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
             {t.security?.users?.phone || 'Teléfono'}
           </ThemedText>
-          <InputWithFocus
-            containerStyle={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-              },
-            ]}
-            primaryColor={colors.primary}
-          >
-            <Ionicons name="call-outline" size={20} color={colors.textSecondary || '#999'} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={t.security?.users?.phone || 'Teléfono'}
-              placeholderTextColor={colors.textSecondary || '#999'}
-              value={formData.phone}
-              onChangeText={(text) => {
-                // Solo permitir números, espacios y algunos caracteres de teléfono
-                const cleaned = text.replace(/[^\d\s+()-]/g, '');
-                handleChange('phone', cleaned);
-              }}
-              keyboardType="phone-pad"
-              editable={!isLoading}
-            />
-          </InputWithFocus>
+          <PhoneInput
+            value={formData.phone}
+            onChangeText={(text) => {
+              // Solo permitir números, espacios y algunos caracteres de teléfono
+              const cleaned = text.replace(/[^\d\s+()-]/g, '');
+              handleChange('phone', cleaned);
+            }}
+            placeholder={t.security?.users?.phone || 'Teléfono'}
+            disabled={isLoading}
+          />
         </View>
 
         {/* Companies */}

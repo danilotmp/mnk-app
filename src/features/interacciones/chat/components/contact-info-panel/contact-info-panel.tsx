@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useCompany } from '@/src/domains/shared';
-import { DatePicker, EmailInput } from '@/src/domains/shared/components';
+import { DatePicker, EmailInput, PhoneInput } from '@/src/domains/shared/components';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -270,23 +270,16 @@ export const ContactInfoPanel = React.memo(({
                     Teléfono:
                   </ThemedText>
                   {isEditing ? (
-                    <InputWithFocus
+                    <PhoneInput
+                      value={editedValues.phoneNumber}
+                      onChangeText={(text) => setEditedValues({ ...editedValues, phoneNumber: text })}
+                      placeholder="Teléfono"
+                      disabled={saving}
                       containerStyle={[
                         styles.editInput,
                         { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
                       ]}
-                      primaryColor={colors.primary}
-                    >
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        value={editedValues.phoneNumber}
-                        onChangeText={(text) => setEditedValues({ ...editedValues, phoneNumber: text })}
-                        placeholder="Teléfono"
-                        placeholderTextColor={colors.textSecondary}
-                        keyboardType="phone-pad"
-                        editable={!saving}
-                      />
-                    </InputWithFocus>
+                    />
                   ) : (
                     <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
                       {contact.phoneNumber}

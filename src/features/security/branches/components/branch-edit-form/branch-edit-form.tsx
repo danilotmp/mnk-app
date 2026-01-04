@@ -167,7 +167,7 @@ export function BranchEditForm({
     } finally {
       setLoadingBranch(false);
     }
-  }, [alert, branchId]);
+  }, [branchId]);
 
   useEffect(() => {
     loadBranch();
