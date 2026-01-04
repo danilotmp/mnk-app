@@ -7,7 +7,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CurrencyInput } from '@/src/domains/shared/components';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -16,6 +15,7 @@ import { CatalogService } from '@/src/domains/catalog';
 import { CommercialService } from '@/src/domains/commercial';
 import { CommercialProfile, Offering, OfferingPrice, OfferingPricePayload } from '@/src/domains/commercial/types';
 import { useCompany } from '@/src/domains/shared';
+import { CurrencyInput, DatePicker } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { TemplateService } from '@/src/infrastructure/templates/template.service';
@@ -72,6 +72,7 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete, s
     validFrom: new Date().toISOString().split('T')[0],
     validTo: '',
   });
+  const [showPriceForm, setShowPriceForm] = useState(false);
 
   // Cargar perfil comercial para obtener defaultTaxMode
   const loadProfile = useCallback(async () => {
@@ -1416,36 +1417,21 @@ export function OperationalLayer({ onProgressUpdate, onDataChange, onComplete, s
                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                   Válido desde *
                 </ThemedText>
-                <InputWithFocus
-                  containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  primaryColor={colors.primary}
-                >
-                  <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.textSecondary}
-                    value={priceForm.validFrom}
-                    onChangeText={(val) => setPriceForm(prev => ({ ...prev, validFrom: val }))}
-                  />
-                </InputWithFocus>
+                <DatePicker
+                  value={priceForm.validFrom}
+                  onChange={(date) => setPriceForm(prev => ({ ...prev, validFrom: date || '' }))}
+                  placeholder="YYYY-MM-DD"
+                  required
+                />
 
                 <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: 16 }]}>
                   Válido hasta (opcional)
                 </ThemedText>
-                <InputWithFocus
-                  containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  primaryColor={colors.primary}
-                >
-                  <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.textSecondary}
-                    value={priceForm.validTo}
-                    onChangeText={(val) => setPriceForm(prev => ({ ...prev, validTo: val }))}
-                  />
-                </InputWithFocus>
+                <DatePicker
+                  value={priceForm.validTo}
+                  onChange={(date) => setPriceForm(prev => ({ ...prev, validTo: date || '' }))}
+                  placeholder="YYYY-MM-DD"
+                />
 
                 <View style={styles.formActions}>
                   <Button

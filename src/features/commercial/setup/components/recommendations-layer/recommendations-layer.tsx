@@ -19,7 +19,7 @@ import {
   RecommendationPayload,
   RecommendationType,
 } from '@/src/domains/commercial/types';
-import { DynamicIcon } from '@/src/domains/shared/components';
+import { DynamicIcon, NumericInput } from '@/src/domains/shared/components';
 import { useCompany } from '@/src/domains/shared';
 import { RecordStatus } from '@/src/domains/shared/types/status.types';
 import { useTranslation } from '@/src/infrastructure/i18n';
@@ -868,34 +868,28 @@ export function RecommendationsLayer({
                           <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
                             Menor número = más importante (default: 0)
                           </ThemedText>
-                          <InputWithFocus
+                          <NumericInput
+                            value={formData?.order?.toString() || '0'}
+                            onChangeText={(val) => {
+                              const num = parseInt(val, 10);
+                              if (!isNaN(num) && num >= 0) {
+                                setEditingRecommendationData(prev => ({
+                                  ...prev,
+                                  [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: num }
+                                }));
+                              } else if (val === '') {
+                                setEditingRecommendationData(prev => ({
+                                  ...prev,
+                                  [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: 0 }
+                                }));
+                              }
+                            }}
+                            placeholder="0"
+                            disabled={saving}
                             containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                            primaryColor={colors.primary}
-                          >
-                            <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
-                            <TextInput
-                              style={[styles.input, { color: colors.text }]}
-                              placeholder="0"
-                              placeholderTextColor={colors.textSecondary}
-                              value={formData?.order?.toString() || '0'}
-                              onChangeText={(val) => {
-                                const num = parseInt(val, 10);
-                                if (!isNaN(num) && num >= 0) {
-                                  setEditingRecommendationData(prev => ({
-                                    ...prev,
-                                    [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: num }
-                                  }));
-                                } else if (val === '') {
-                                  setEditingRecommendationData(prev => ({
-                                    ...prev,
-                                    [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: 0 }
-                                  }));
-                                }
-                              }}
-                              keyboardType="number-pad"
-                              editable={!saving}
-                            />
-                          </InputWithFocus>
+                            inputStyle={styles.input}
+                            min={0}
+                          />
                         </View>
                       </>
                     ) : (
@@ -1205,34 +1199,28 @@ export function RecommendationsLayer({
                                       <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
                                         Menor número = más importante (default: 0)
                                       </ThemedText>
-                                      <InputWithFocus
+                                      <NumericInput
+                                        value={formData?.order?.toString() || '0'}
+                                        onChangeText={(val) => {
+                                          const num = parseInt(val, 10);
+                                          if (!isNaN(num) && num >= 0) {
+                                            setEditingRecommendationData(prev => ({
+                                              ...prev,
+                                              [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: num }
+                                            }));
+                                          } else if (val === '') {
+                                            setEditingRecommendationData(prev => ({
+                                              ...prev,
+                                              [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: 0 }
+                                            }));
+                                          }
+                                        }}
+                                        placeholder="0"
+                                        disabled={saving}
                                         containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                                        primaryColor={colors.primary}
-                                      >
-                                        <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
-                                        <TextInput
-                                          style={[styles.input, { color: colors.text }]}
-                                          placeholder="0"
-                                          placeholderTextColor={colors.textSecondary}
-                                          value={formData?.order?.toString() || '0'}
-                                          onChangeText={(val) => {
-                                            const num = parseInt(val, 10);
-                                            if (!isNaN(num) && num >= 0) {
-                                              setEditingRecommendationData(prev => ({
-                                                ...prev,
-                                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: num }
-                                              }));
-                                            } else if (val === '') {
-                                              setEditingRecommendationData(prev => ({
-                                                ...prev,
-                                                [recommendation.id]: { ...prev[recommendation.id] || { type: recommendation.type, message: recommendation.message, order: recommendation.order ?? 0, status: currentStatus, offeringId: recommendation.offeringId || null }, order: 0 }
-                                              }));
-                                            }
-                                          }}
-                                          keyboardType="number-pad"
-                                          editable={!saving}
-                                        />
-                                      </InputWithFocus>
+                                        inputStyle={styles.input}
+                                        min={0}
+                                      />
                                     </View>
 
                                     <View style={styles.formActions}>
@@ -1442,27 +1430,21 @@ export function RecommendationsLayer({
             <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8 }}>
               Menor número = más importante (default: 0)
             </ThemedText>
-            <InputWithFocus
+            <NumericInput
+              value={formData.order.toString()}
+              onChangeText={(val) => {
+                const num = parseInt(val, 10);
+                if (!isNaN(num) && num >= 0) {
+                  setFormData(prev => ({ ...prev, order: num }));
+                } else if (val === '') {
+                  setFormData(prev => ({ ...prev, order: 0 }));
+                }
+              }}
+              placeholder="0"
               containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              primaryColor={colors.primary}
-            >
-              <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="0"
-                placeholderTextColor={colors.textSecondary}
-                value={formData.order.toString()}
-                onChangeText={(val) => {
-                  const num = parseInt(val, 10);
-                  if (!isNaN(num) && num >= 0) {
-                    setFormData(prev => ({ ...prev, order: num }));
-                  } else if (val === '') {
-                    setFormData(prev => ({ ...prev, order: 0 }));
-                  }
-                }}
-                keyboardType="number-pad"
-              />
-            </InputWithFocus>
+              inputStyle={styles.input}
+              min={0}
+            />
             <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
               Mayor número = mayor prioridad. La IA mostrará primero las recomendaciones con mayor prioridad.
             </ThemedText>

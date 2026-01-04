@@ -90,22 +90,14 @@ export function VerifyEmailForm({ email, onSuccess, onBack }: VerifyEmailFormPro
       )}
 
       <View style={styles.inputGroup}>
-        <InputWithFocus 
-          containerStyle={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          primaryColor={colors.primary}
-        >
-          <TextInput
-            style={[styles.input, { color: colors.text }]}
-            placeholder="000000"
-            placeholderTextColor={colors.textSecondary}
-            value={code}
-            onChangeText={val => setCode(val.replace(/[^0-9]/g, '').substring(0, 6))}
-            keyboardType="number-pad"
-            maxLength={6}
-            editable={!isLoading}
-            letterSpacing={8}
-          />
-        </InputWithFocus>
+        <NumericInput
+          value={code}
+          onChangeText={(val) => setCode(val)}
+          placeholder="000000"
+          maxLength={6}
+          disabled={isLoading}
+          letterSpacing={8}
+        />
       </View>
 
       <Button

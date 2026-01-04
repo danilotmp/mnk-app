@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { InlineAlert } from '@/components/ui/inline-alert';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
-import { EmailInput } from '@/src/domains/shared/components';
+import { EmailInput, PhoneInput } from '@/src/domains/shared/components';
 import { useCompany } from '@/src/domains/shared';
 import { BranchesService } from '@/src/features/security/branches';
 import { CompaniesService } from '@/src/features/security/companies';

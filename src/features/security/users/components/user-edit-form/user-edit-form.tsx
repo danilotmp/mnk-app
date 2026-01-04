@@ -10,7 +10,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Select } from '@/components/ui/select';
 import { useTheme } from '@/hooks/use-theme';
 import { useBranchOptions, useCompanyOptions } from '@/src/domains/security/hooks';
-import { PasswordInput } from '@/src/domains/shared/components';
+import { PasswordInput, StatusSelector } from '@/src/domains/shared/components';
 import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { BranchesService } from '@/src/features/security/branches';
 import { RolesService } from '@/src/features/security/roles';
@@ -21,7 +21,7 @@ import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
 import { Ionicons } from '@expo/vector-icons';
 import React, { startTransition, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
 import { UsersService } from '../../services';
 import { UserUpdatePayload } from '../../types/domain';
 import { CompanyConfigCarousel } from '../company-config-carousel/company-config-carousel';
@@ -854,96 +854,13 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
 
         {/* Estado */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.status || 'Estado'} *
-          </ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.selectOptions}>
-                {/* Activo */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 1 && {
-                      backgroundColor: '#10b981',
-                      borderColor: '#10b981',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 1)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.active || 'Activo'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {/* Inactivo */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 0 && {
-                      backgroundColor: '#ef4444',
-                      borderColor: '#ef4444',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 0)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.inactive || 'Inactivo'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {/* Pendiente */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 2 && {
-                      backgroundColor: '#f59e0b',
-                      borderColor: '#f59e0b',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 2)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.pending || 'Pendiente'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {/* Suspendido */}
-                <TouchableOpacity
-                  style={[
-                    styles.selectOption,
-                    { borderColor: colors.border },
-                    formData.status === 3 && {
-                      backgroundColor: '#f97316',
-                      borderColor: '#f97316',
-                    },
-                  ]}
-                  onPress={() => handleChange('status', 3)}
-                  disabled={isLoading}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
-                  >
-                    {t.security?.users?.suspended || 'Suspendido'}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+          <StatusSelector
+            value={formData.status}
+            onChange={(value) => handleChange('status', value)}
+            label={t.security?.users?.status || 'Estado'}
+            required
+            disabled={isLoading}
+          />
         </View>
 
         {/* Botones (solo si showFooter es true) */}
