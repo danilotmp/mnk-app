@@ -6,15 +6,15 @@
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { CenteredModal } from '@/components/ui/centered-modal';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import { SearchInput } from '@/src/domains/shared/components';
 import { MenuService } from '@/src/infrastructure/menu/menu.service';
 import { MenuItem } from '@/src/infrastructure/menu/types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { createPermissionFlowStyles } from '../../role-permissions-flow/role-permissions-flow.styles';
 
 export interface MenuItemSelectorModalProps {
@@ -321,29 +321,18 @@ export function MenuItemSelectorModal({
         <View style={styles.searchContainer}>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <View style={{ flex: 1 }}>
-              <InputWithFocus
+              <SearchInput
+                value={searchValue}
+                onChangeText={setSearchValue}
+                placeholder={t.security?.permissions?.filterPlaceholder || 'Filtrar por nombre, código, módulo o acción...'}
                 containerStyle={[
                   styles.searchInput,
                   { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
-                primaryColor={colors.primary}
-              >
-                <Ionicons name="search" size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.searchInputText, { color: colors.text }]}
-                  placeholder={t.security?.permissions?.filterPlaceholder || 'Filtrar por nombre, código, módulo o acción...'}
-                  placeholderTextColor={colors.textSecondary}
-                  value={searchValue}
-                  onChangeText={setSearchValue}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                {searchValue && searchValue.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchValue('')}>
-                    <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-              </InputWithFocus>
+                inputStyle={[styles.searchInputText, { color: colors.text }]}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
             </View>
             <TouchableOpacity
               onPress={() => setShowOnlySelected(!showOnlySelected)}

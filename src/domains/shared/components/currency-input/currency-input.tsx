@@ -7,17 +7,9 @@
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import React, { useRef, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
-
-interface CurrencyInputProps {
-  value: string;
-  onChangeText: (value: string) => void;
-  currency?: string; // Código de moneda (ej: "USD", "EUR")
-  placeholder?: string;
-  disabled?: boolean;
-  containerStyle?: any;
-  error?: boolean;
-}
+import { TextInput, View } from 'react-native';
+import { createCurrencyInputStyles } from './currency-input.styles';
+import type { CurrencyInputProps } from './currency-input.types';
 
 export function CurrencyInput({
   value,
@@ -29,6 +21,7 @@ export function CurrencyInput({
   containerStyle,
 }: CurrencyInputProps) {
   const { colors } = useTheme();
+  const styles = createCurrencyInputStyles();
   const [focused, setFocused] = useState(false);
   const integerInputRef = useRef<TextInput>(null);
   const decimalInputRef = useRef<TextInput>(null);
@@ -200,68 +193,4 @@ export function CurrencyInput({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-    minHeight: 48,
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  currencyPrefix: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRightWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 60,
-  },
-  currencyText: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  inputArea: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingRight: 12,
-    gap: 4,
-  },
-  integerInput: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: 18,
-    fontWeight: '600',
-    paddingVertical: 12,
-    minWidth: 60,
-    borderWidth: 0,
-    outlineStyle: 'none',
-  },
-  decimalSeparator: {
-    fontSize: 20,
-    fontWeight: '700',
-    paddingVertical: 12,
-  },
-  decimalSuffix: {
-    paddingHorizontal: 0,
-    paddingVertical: 12,
-    justifyContent: 'left',
-    alignItems: 'left ',
-    minWidth: 40,
-  },
-  decimalInput: {
-    textAlign: 'left',
-    fontSize: 18,
-    fontWeight: '600',
-    width: 30,
-    borderWidth: 0,
-    outlineStyle: 'none',
-  },
-});
 

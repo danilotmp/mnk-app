@@ -4,6 +4,7 @@ export function createCompanyConfigCarouselStyles() {
   return StyleSheet.create({
     container: {
       marginVertical: 16,
+      height: 350,
     },
     header: {
       flexDirection: 'row',

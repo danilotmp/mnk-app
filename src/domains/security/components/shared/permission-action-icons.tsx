@@ -6,7 +6,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTheme } from '@/hooks/use-theme';
-import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import { SecurityPermission } from '@/src/domains/security/types';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';

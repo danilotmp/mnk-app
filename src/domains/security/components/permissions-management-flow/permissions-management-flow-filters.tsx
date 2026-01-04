@@ -4,15 +4,14 @@
  */
 
 import { ThemedText } from '@/components/themed-text';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
-import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { DynamicIcon, SearchInput } from '@/src/domains/shared/components';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { createPermissionsFlowFiltersStyles } from './permissions-management-flow-filters.styles';
 import { PermissionsFlowFiltersProps } from './permissions-management-flow-filters.types';
 
@@ -103,29 +102,18 @@ export function PermissionsFlowFilters({
     <View style={styles.container}>
       {/* Input de búsqueda - siempre visible, filtra en tiempo real */}
       <View style={styles.searchContainer}>
-        <InputWithFocus
+        <SearchInput
+          value={searchValue}
+          onChangeText={onSearchChange}
+          placeholder={t.security?.permissions?.filterPlaceholder || 'Filtrar por nombre, ruta o descripción...'}
           containerStyle={[
             styles.searchInputContainer,
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
-          primaryColor={colors.primary}
-        >
-          <Ionicons name="search" size={20} color={colors.textSecondary || '#999'} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t.security?.permissions?.filterPlaceholder || 'Filtrar por nombre, ruta o descripción...'}
-            placeholderTextColor={colors.textSecondary || '#999'}
-            value={searchValue}
-            onChangeText={onSearchChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchValue && searchValue.length > 0 && (
-            <TouchableOpacity onPress={() => onSearchChange('')}>
-              <Ionicons name="close-circle" size={20} color={colors.textSecondary || '#999'} />
-            </TouchableOpacity>
-          )}
-        </InputWithFocus>
+          inputStyle={[styles.searchInput, { color: colors.text }]}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
 
         <View style={styles.actionButtons}>
           <Tooltip

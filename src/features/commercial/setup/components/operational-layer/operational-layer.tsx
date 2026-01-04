@@ -7,7 +7,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CurrencyInput } from '@/components/ui/currency-input';
+import { CurrencyInput } from '@/src/domains/shared/components';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useResponsive } from '@/hooks/use-responsive';

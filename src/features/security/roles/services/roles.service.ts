@@ -47,7 +47,8 @@ export class RolesService {
         queryParams.append('status', filters.status.toString());
       }
       if (filters.isSystem !== undefined) {
-        queryParams.append('isSystem', filters.isSystem.toString());
+        // Enviar como string explícitamente: 'true' o 'false'
+        queryParams.append('isSystem', filters.isSystem ? 'true' : 'false');
       }
       if (filters.companyId) {
         queryParams.append('companyId', filters.companyId);

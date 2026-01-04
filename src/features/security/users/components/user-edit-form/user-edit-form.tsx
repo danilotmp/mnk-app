@@ -314,11 +314,7 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.email.trim()) {
-      newErrors.email = t.auth?.emailRequired || 'El email es requerido';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
-    }
+    // Email no se valida porque no es editable
 
     if (changePassword && !password.trim()) {
       newErrors.password = t.auth?.passwordRequired || 'La contraseña es requerida';
@@ -665,32 +661,27 @@ export function UserEditForm({ userId, onSuccess, onCancel, showHeader = true, s
             containerStyle={[
               styles.inputContainer,
               {
-                backgroundColor: colors.surface,
-                borderColor: errors.email ? colors.error : colors.border,
+                backgroundColor: colors.surfaceVariant || colors.surface,
+                borderColor: colors.border,
+                opacity: 0.6,
               },
             ]}
             primaryColor={colors.primary}
-            error={!!errors.email}
+            error={false}
           >
             <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.textSecondary }]}
               placeholder={t.auth?.email || 'Email'}
               placeholderTextColor={colors.textSecondary}
               value={formData.email}
-              onChangeText={(text) => handleChange('email', text)}
+              editable={false}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
               textContentType="emailAddress"
-              editable={!isLoading}
             />
           </InputWithFocus>
-          {errors.email && (
-            <ThemedText type="caption" variant="error" style={styles.errorText}>
-              {errors.email}
-            </ThemedText>
-          )}
         </View>
 
         {/* Change Password Toggle */}

@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { openBrowserAsync } from 'expo-web-browser';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
-import { IconInput } from '@/src/domains/security/components/shared/icon-input/icon-input';
+import { IconInput } from '@/src/domains/shared/components';
 import { createPermissionFormStyles } from './permission-create-form.styles';
 import { PermissionCreateFormProps } from './permission-create-form.types';
 

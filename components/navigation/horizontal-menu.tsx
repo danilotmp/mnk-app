@@ -3,7 +3,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
 import { AppConfig } from '@/src/config';
-import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { Ionicons } from '@expo/vector-icons';

@@ -2,10 +2,13 @@
  * Componente para el panel de información del contacto
  */
 import { ThemedText } from '@/components/themed-text';
+import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCompany } from '@/src/domains/shared';
+import { DatePicker } from '@/src/domains/shared/components/date-picker/date-picker';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Animated, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { contactInfoPanelStyles } from './contact-info-panel.styles';
 import type { ContactInfoPanelProps } from './contact-info-panel.types';
 
@@ -20,6 +23,47 @@ export const ContactInfoPanel = React.memo(({
   colors,
 }: ContactInfoPanelProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('cliente');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedValues, setEditedValues] = useState({
+    name: contact.name,
+    phoneNumber: contact.phoneNumber,
+    email: contact.email || '',
+    identification: '',
+    birthDate: null as string | null,
+  });
+  const [saving, setSaving] = useState(false);
+  const { company } = useCompany();
+  const dateFormat = company?.settings?.dateFormat || 'DD/MM/YYYY';
+  
+  const handleStartEdit = () => {
+    setIsEditing(true);
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedValues({
+      name: contact.name,
+      phoneNumber: contact.phoneNumber,
+      email: contact.email || '',
+      identification: '',
+      birthDate: null,
+    });
+  };
+  
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // TODO: Implementar guardado del contacto
+      // Aquí se debe llamar al servicio para actualizar el contacto
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setIsEditing(false);
+    } catch (error) {
+      // Manejar errores
+      console.error('Error al guardar contacto:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
   const containerStyle = isMobile
     ? [
         contactInfoPanelStyles.modal,
@@ -89,14 +133,6 @@ export const ContactInfoPanel = React.memo(({
                 {contact.phoneNumber}
               </ThemedText>
             </View>
-            {contact.email && (
-              <View style={contactInfoPanelStyles.iconItem}>
-                <Ionicons name="mail" size={16} color={colors.textSecondary} />
-                <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
-                  {contact.email}
-                </ThemedText>
-              </View>
-            )}
             <View style={contactInfoPanelStyles.iconItem}>
               <Ionicons name="calendar" size={16} color={colors.textSecondary} />
               <ThemedText type="caption" style={{ marginLeft: 6, color: colors.textSecondary }}>
@@ -191,58 +227,183 @@ export const ContactInfoPanel = React.memo(({
                 <ThemedText type="body2" style={{ color: colors.text, fontWeight: '600' }}>
                   Detalles del cliente
                 </ThemedText>
-                <TouchableOpacity>
-                  <Ionicons name="pencil" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
+                {!isEditing ? (
+                  <TouchableOpacity onPress={handleStartEdit}>
+                    <Ionicons name="pencil" size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={handleCancelEdit} disabled={saving}>
+                    <Ionicons name="close" size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={contactInfoPanelStyles.details}>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
                     Nombres:
                   </ThemedText>
-                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                    {contact.name}
-                  </ThemedText>
+                  {isEditing ? (
+                    <InputWithFocus
+                      containerStyle={[
+                        styles.editInput,
+                        { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        value={editedValues.name}
+                        onChangeText={(text) => setEditedValues({ ...editedValues, name: text })}
+                        placeholder="Nombre"
+                        placeholderTextColor={colors.textSecondary}
+                        editable={!saving}
+                      />
+                    </InputWithFocus>
+                  ) : (
+                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                      {contact.name}
+                    </ThemedText>
+                  )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
                     Teléfono:
                   </ThemedText>
-                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                    {contact.phoneNumber}
-                  </ThemedText>
+                  {isEditing ? (
+                    <InputWithFocus
+                      containerStyle={[
+                        styles.editInput,
+                        { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        value={editedValues.phoneNumber}
+                        onChangeText={(text) => setEditedValues({ ...editedValues, phoneNumber: text })}
+                        placeholder="Teléfono"
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="phone-pad"
+                        editable={!saving}
+                      />
+                    </InputWithFocus>
+                  ) : (
+                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                      {contact.phoneNumber}
+                    </ThemedText>
+                  )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
                     Email:
                   </ThemedText>
-                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                    {contact.email || 'Sin email'}
-                  </ThemedText>
+                  {isEditing ? (
+                    <InputWithFocus
+                      containerStyle={[
+                        styles.editInput,
+                        { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        value={editedValues.email}
+                        onChangeText={(text) => setEditedValues({ ...editedValues, email: text })}
+                        placeholder="Email"
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        editable={!saving}
+                      />
+                    </InputWithFocus>
+                  ) : (
+                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                      {contact.email || ''}
+                    </ThemedText>
+                  )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
                     Identificación:
                   </ThemedText>
-                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                    Sin identificación
-                  </ThemedText>
+                  {isEditing ? (
+                    <InputWithFocus
+                      containerStyle={[
+                        styles.editInput,
+                        { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                      primaryColor={colors.primary}
+                    >
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        value={editedValues.identification}
+                        onChangeText={(text) => setEditedValues({ ...editedValues, identification: text })}
+                        placeholder="Identificación"
+                        placeholderTextColor={colors.textSecondary}
+                        editable={!saving}
+                      />
+                    </InputWithFocus>
+                  ) : (
+                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                      {editedValues.identification || ''}
+                    </ThemedText>
+                  )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                    Fecha de Nacimiento:
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
+                    F Nacimiento:
                   </ThemedText>
-                  <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8 }}>
-                    Sin fecha
-                  </ThemedText>
+                  {isEditing ? (
+                    <View style={{ flex: 1 }}>
+                      <DatePicker
+                        value={editedValues.birthDate}
+                        onChange={(date) => setEditedValues({ ...editedValues, birthDate: date })}
+                        displayFormat={dateFormat}
+                        placeholder={dateFormat}
+                        disabled={saving}
+                      />
+                    </View>
+                  ) : (
+                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                      {editedValues.birthDate || ''}
+                    </ThemedText>
+                  )}
                 </View>
               </View>
-              <TouchableOpacity style={contactInfoPanelStyles.seeMore}>
-                <ThemedText type="caption" style={{ color: colors.primary }}>
-                  Ver más
-                </ThemedText>
-                <Ionicons name="chevron-down" size={16} color={colors.primary} />
-              </TouchableOpacity>
+              {isEditing && (
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    style={[styles.editButton, { borderColor: colors.primary, backgroundColor: 'transparent' }]}
+                    onPress={handleCancelEdit}
+                    disabled={saving}
+                  >
+                    <ThemedText type="body2" style={{ color: colors.primary }}>
+                      Cancelar
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.editButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <ThemedText type="body2" style={{ color: '#FFFFFF' }}>
+                        Guardar
+                      </ThemedText>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!isEditing && (
+                <TouchableOpacity style={contactInfoPanelStyles.seeMore}>
+                  <ThemedText type="caption" style={{ color: colors.primary }}>
+                    Ver más
+                  </ThemedText>
+                  <Ionicons name="chevron-down" size={16} color={colors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Etiquetas */}
@@ -337,3 +498,34 @@ export const ContactInfoPanel = React.memo(({
 });
 
 ContactInfoPanel.displayName = 'ContactInfoPanel';
+
+const styles = StyleSheet.create({
+  editInput: {
+    flex: 1,
+    minHeight: 36,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  input: {
+    fontSize: 14,
+    minHeight: 20,
+    padding: 0,
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
+  editButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+});

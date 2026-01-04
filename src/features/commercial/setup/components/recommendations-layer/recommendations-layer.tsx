@@ -19,7 +19,7 @@ import {
   RecommendationPayload,
   RecommendationType,
 } from '@/src/domains/commercial/types';
-import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import { useCompany } from '@/src/domains/shared';
 import { RecordStatus } from '@/src/domains/shared/types/status.types';
 import { useTranslation } from '@/src/infrastructure/i18n';

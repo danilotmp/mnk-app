@@ -10,7 +10,7 @@ import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { useTheme } from '@/hooks/use-theme';
 import { APP_CONFIG } from '@/src/config/app.config';
 import { PermissionsService } from '@/src/domains/security';
-import { IconInput } from '@/src/domains/security/components/shared/icon-input/icon-input';
+import { IconInput } from '@/src/domains/shared/components';
 import { MenuItemSelectorModal } from '@/src/domains/security/components/shared/menu-item-selector-modal/menu-item-selector-modal';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';

@@ -19,13 +19,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleProp, TextStyle } from 'react-native';
-
-interface DynamicIconProps {
-  name: string;
-  size?: number;
-  color?: string;
-  style?: StyleProp<TextStyle>;
-}
+import type { DynamicIconProps } from './dynamic-icon.types';
 
 type IconComponent = React.ComponentType<{
   name: any;

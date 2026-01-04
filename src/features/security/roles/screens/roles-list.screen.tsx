@@ -227,6 +227,17 @@ export function RolesListScreen() {
       return;
     }
 
+    // Manejar filtros boolean (isSystem)
+    // El componente SearchFilterBar envía true, false o undefined
+    if (key === 'isSystem') {
+      setFilters((prev) => ({
+        ...prev,
+        isSystem: value, // Mantener el valor boolean (true/false) o undefined
+        page: 1,
+      }));
+      return;
+    }
+
     // Convertir status de string a number si es necesario
     const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
     setFilters((prev) => ({

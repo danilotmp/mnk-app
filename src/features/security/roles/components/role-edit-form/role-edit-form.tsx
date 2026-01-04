@@ -142,7 +142,8 @@ export function RoleEditForm({ roleId, onSuccess, onCancel, showHeader = true, s
     };
 
     loadRole();
-  }, [roleId, alert]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleId]);
 
   /**
    * Validar formulario

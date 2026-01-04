@@ -10,7 +10,7 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
-import { DynamicIcon } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import { createPermissionsCarouselStyles } from './permissions-carousel.styles';
 
 interface PermissionsCarouselProps {

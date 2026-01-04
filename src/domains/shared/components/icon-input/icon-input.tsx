@@ -5,18 +5,11 @@
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { DynamicIcon, getIconFamilies } from '@/src/domains/security/components/shared/dynamic-icon/dynamic-icon';
+import { DynamicIcon, getIconFamilies } from '@/src/domains/shared/components/dynamic-icon/dynamic-icon';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-
-interface IconInputProps {
-  value: string; // Formato: "Familia:Nombre" o solo "Nombre"
-  onChange: (value: string) => void; // Callback con el valor completo "Familia:Nombre"
-  placeholder?: string;
-  disabled?: boolean;
-  error?: boolean;
-}
+import type { IconInputProps } from './icon-input.types';
 
 /**
  * Parsea el valor del icono para extraer familia y nombre
