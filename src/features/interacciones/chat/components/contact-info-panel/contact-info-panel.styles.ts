@@ -113,4 +113,15 @@ export const contactInfoPanelStyles = StyleSheet.create({
   emptyState: {
     width: '100%',
   },
+  detailLabel: {
+    minWidth: 100,
+  },
+  detailValue: {
+    marginLeft: 8,
+    flex: 1,
+    paddingVertical:8
+  },
+  datePickerContainer: {
+    flex: 1,
+  },
 });

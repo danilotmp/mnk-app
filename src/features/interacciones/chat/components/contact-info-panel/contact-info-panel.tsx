@@ -239,7 +239,7 @@ export const ContactInfoPanel = React.memo(({
               </View>
               <View style={contactInfoPanelStyles.details}>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
+                  <ThemedText type="body2" style={[contactInfoPanelStyles.detailLabel, { color: colors.textSecondary }]}>
                     Nombres:
                   </ThemedText>
                   {isEditing ? (
@@ -260,13 +260,13 @@ export const ContactInfoPanel = React.memo(({
                       />
                     </InputWithFocus>
                   ) : (
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                    <ThemedText type="body2" style={[contactInfoPanelStyles.detailValue, { color: colors.text }]}>
                       {contact.name}
                     </ThemedText>
                   )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
+                  <ThemedText type="body2" style={[contactInfoPanelStyles.detailLabel, { color: colors.textSecondary }]}>
                     Teléfono:
                   </ThemedText>
                   {isEditing ? (
@@ -281,13 +281,13 @@ export const ContactInfoPanel = React.memo(({
                       ]}
                     />
                   ) : (
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                    <ThemedText type="body2" style={[contactInfoPanelStyles.detailValue, { color: colors.text }]}>
                       {contact.phoneNumber}
                     </ThemedText>
                   )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
+                  <ThemedText type="body2" style={[contactInfoPanelStyles.detailLabel, { color: colors.textSecondary }]}>
                     Email:
                   </ThemedText>
                   {isEditing ? (
@@ -302,13 +302,13 @@ export const ContactInfoPanel = React.memo(({
                       ]}
                     />
                   ) : (
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                    <ThemedText type="body2" style={[contactInfoPanelStyles.detailValue, { color: colors.text }]}>
                       {contact.email || ''}
                     </ThemedText>
                   )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
+                  <ThemedText type="body2" style={[contactInfoPanelStyles.detailLabel, { color: colors.textSecondary }]}>
                     Identificación:
                   </ThemedText>
                   {isEditing ? (
@@ -329,17 +329,17 @@ export const ContactInfoPanel = React.memo(({
                       />
                     </InputWithFocus>
                   ) : (
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                    <ThemedText type="body2" style={[contactInfoPanelStyles.detailValue, { color: colors.text }]}>
                       {editedValues.identification || ''}
                     </ThemedText>
                   )}
                 </View>
                 <View style={contactInfoPanelStyles.detailRow}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary, minWidth: 100 }}>
+                  <ThemedText type="body2" style={[contactInfoPanelStyles.detailLabel, { color: colors.textSecondary }]}>
                     F Nacimiento:
                   </ThemedText>
                   {isEditing ? (
-                    <View style={{ flex: 1 }}>
+                    <View style={contactInfoPanelStyles.datePickerContainer}>
                       <DatePicker
                         value={editedValues.birthDate}
                         onChange={(date) => setEditedValues({ ...editedValues, birthDate: date })}
@@ -349,7 +349,7 @@ export const ContactInfoPanel = React.memo(({
                       />
                     </View>
                   ) : (
-                    <ThemedText type="body2" style={{ color: colors.text, marginLeft: 8, flex: 1 }}>
+                    <ThemedText type="body2" style={[contactInfoPanelStyles.detailValue, { color: colors.text }]}>
                       {editedValues.birthDate || ''}
                     </ThemedText>
                   )}

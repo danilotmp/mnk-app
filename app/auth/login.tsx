@@ -254,6 +254,8 @@ export default function LoginPage() {
                   error={!!errors.password}
                   errorMessage={errors.password}
                   disabled={isLoading}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
                 />
               </View>
 

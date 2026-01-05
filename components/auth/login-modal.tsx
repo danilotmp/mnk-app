@@ -266,6 +266,8 @@ export function LoginModal({ visible, onClose, onLoginSuccess }: LoginModalProps
                           error={!!errors.password}
                           errorMessage={errors.password}
                           disabled={isLoading}
+                          returnKeyType="done"
+                          onSubmitEditing={handleLogin}
                         />
                       </View>
 
