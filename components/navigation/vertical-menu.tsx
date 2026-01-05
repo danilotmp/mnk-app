@@ -5,7 +5,7 @@ import { AppConfig } from '@/src/config';
 import { DynamicIcon } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createVerticalMenuStyles } from '@/src/styles/components/vertical-menu.styles';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -493,56 +493,73 @@ export function VerticalMenu({
         onMouseLeave: handleMouseLeave,
       } : {})}
     >
-      {/* Input de búsqueda */}
-      {shouldShowText && (
-        <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <View style={{ position: 'relative' }}>
-            <Ionicons
-              name="search"
-              size={18}
-              color={colors.textSecondary}
-              style={{ position: 'absolute', left: 10, top: 10, zIndex: 1 }}
-            />
-            {searchValue.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchValue('')}
-                style={{ position: 'absolute', right: 10, top: 8, zIndex: 1, padding: 4 }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            )}
-            <InputWithFocus
-              containerStyle={{
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 6,
-                backgroundColor: colors.background,
-                paddingLeft: 36,
-                paddingRight: searchValue.length > 0 ? 36 : 10,
-                height: 36,
-              }}
-              primaryColor={colors.primary}
-            >
-              <TextInput
-                placeholder="Buscar..."
-                value={searchValue}
-                onChangeText={setSearchValue}
-                style={{
-                  padding: 8,
-                  color: colors.text,
-                  fontSize: 14,
-                }}
-                placeholderTextColor={colors.textSecondary}
+      {/* Input de búsqueda y icono de bloqueo */}
+      <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {/* Input de búsqueda - solo visible cuando el menú está expandido */}
+          {shouldShowText && (
+            <View style={{ flex: 1, position: 'relative' }}>
+              <Ionicons
+                name="search"
+                size={18}
+                color={colors.textSecondary}
+                style={{ position: 'absolute', left: 10, top: 10, zIndex: 1 }}
               />
-            </InputWithFocus>
-          </View>
+              {searchValue.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchValue('')}
+                  style={{ position: 'absolute', right: 10, top: 8, zIndex: 1, padding: 4 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
+              <InputWithFocus
+                containerStyle={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 6,
+                  backgroundColor: colors.background,
+                  paddingLeft: 36,
+                  paddingRight: searchValue.length > 0 ? 36 : 10,
+                  height: 36,
+                }}
+                primaryColor={colors.primary}
+              >
+                <TextInput
+                  placeholder="Buscar..."
+                  value={searchValue}
+                  onChangeText={setSearchValue}
+                  style={{
+                    padding: 8,
+                    color: colors.text,
+                    fontSize: 14,
+                  }}
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </InputWithFocus>
+            </View>
+          )}
+          {/* Icono de bloqueo/desbloqueo del menú - siempre visible */}
+          {onToggleCollapse && (
+            <TouchableOpacity
+              onPress={handleToggleCollapse}
+              activeOpacity={0.7}
+              style={{ padding: 4 }}
+            >
+              <MaterialCommunityIcons
+                name={isExpanded ? 'menu-open' : 'menu-close'}
+                size={20}
+                color={isManuallyExpanded ? activeItemColor : colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Contenedor con altura fija y scroll para todo el menú */}
       <View style={[styles.scrollContainer, { height: shouldShowText ? availableHeight - 60 : availableHeight }]}>
@@ -741,21 +758,6 @@ export function VerticalMenu({
           })}
         </ScrollView>
       </View>
-
-      {/* Botón para colapsar/expandir - en la parte inferior */}
-      {onToggleCollapse && (
-        <TouchableOpacity
-          style={[styles.toggleButton, { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }]}
-          onPress={handleToggleCollapse}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isManuallyExpanded ? 'chevron-back' : 'chevron-forward'}
-            size={20}
-            color={colors.text}
-          />
-        </TouchableOpacity>
-      )}
     </Animated.View>
   );
 }

@@ -48,7 +48,10 @@ interface HorizontalMenuProps {
  * - Desktop/Tablet: Menú horizontal con mega menú de columnas
  * - Mobile: Menú hamburger con drawer
  */
-export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
+export function HorizontalMenu({ 
+  items, 
+  onItemPress,
+}: HorizontalMenuProps) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
@@ -57,6 +60,7 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const { t } = useTranslation();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
   
   // Obtener el color para items activos según la configuración
   // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
@@ -1351,7 +1355,10 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   }, [desktopSearchExpanded, searchWidthAnim]);
 
   return (
-    <View style={[styles.desktopContainer, { flexDirection: 'row', alignItems: 'center' }]} data-menu-container="true">
+    <View 
+      style={[styles.desktopContainer, { flexDirection: 'row', alignItems: 'center' }]} 
+      data-menu-container="true"
+    >
       {/* Icono de búsqueda expandible */}
       <Animated.View
         style={{
