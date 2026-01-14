@@ -52,6 +52,7 @@ export function HorizontalMenu({
   };
   const activeItemColor = getActiveItemColor();
   const styles = createHorizontalMenuStyles(activeItemColor);
+  const additionalStyles = createHorizontalMenuAdditionalStyles(colors);
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
   const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(null); // Para rastrear opción activa del submenú
