@@ -80,24 +80,26 @@ export function useMenu() {
           // Usar userId del UserResponse o del user del contexto como fallback
           const currentUserId = userResponse?.id || user.id || user.email || null;
           
-          // IMPORTANTE: SIEMPRE usar companyIdDefault del UserResponse como fuente de verdad
-          // El UserResponse tiene el companyIdDefault correcto que viene del login
-          // Esto es crítico porque session storage puede tener valores antiguos de sesiones anteriores
+          // IMPORTANTE: Respetar la última empresa seleccionada guardada en session storage
+          // Solo usar companyIdDefault si NO hay un valor guardado en session storage
+          // Esto permite que al hacer F5 se mantenga la última empresa seleccionada
           let currentCompanyId: string | null = null;
           
-          // PRIORIDAD 1: companyIdDefault del UserResponse (del login) - ESTA ES LA FUENTE DE VERDAD
-          if (userResponse?.companyIdDefault) {
-            currentCompanyId = userResponse.companyIdDefault;
-            // SIEMPRE sobrescribir session storage con el companyIdDefault del login
-            // Esto asegura que session storage tenga el valor correcto y elimine cualquier valor antiguo
-            await userSessionService.setCurrentCompany(userResponse.companyIdDefault, true);
-          } else if (user?.companyIdDefault) {
-            // PRIORIDAD 2: companyIdDefault del user del contexto (fallback)
-            currentCompanyId = user.companyIdDefault;
-            await userSessionService.setCurrentCompany(user.companyIdDefault, true);
-          } else {
-            // PRIORIDAD 3: currentCompanyId de session storage (solo si no hay UserResponse ni user)
-            currentCompanyId = await userSessionService.getCurrentCompany();
+          // PRIORIDAD 1: currentCompanyId de session storage (última empresa seleccionada)
+          // Esto respeta la selección del usuario incluso después de F5
+          currentCompanyId = await userSessionService.getCurrentCompany();
+          
+          // PRIORIDAD 2: Si no hay valor en session storage, usar companyIdDefault del UserResponse
+          // Esto solo aplica en el primer login o cuando no hay empresa guardada
+          if (!currentCompanyId) {
+            if (userResponse?.companyIdDefault) {
+              currentCompanyId = userResponse.companyIdDefault;
+              await userSessionService.setCurrentCompany(userResponse.companyIdDefault, true);
+            } else if (user?.companyIdDefault) {
+              // PRIORIDAD 3: companyIdDefault del user del contexto (fallback)
+              currentCompanyId = user.companyIdDefault;
+              await userSessionService.setCurrentCompany(user.companyIdDefault, true);
+            }
           }
           
           // Si aún no hay companyId, no podemos cargar el menú

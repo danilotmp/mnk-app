@@ -114,13 +114,14 @@ export class UserContextService {
       return;
     }
 
-    // IMPORTANTE: SIEMPRE usar companyIdDefault del UserResponse como fuente de verdad
-    // No confiar en session storage que puede tener valores antiguos
+    // IMPORTANTE: Respetar la última empresa seleccionada guardada en session storage
+    // Solo usar companyIdDefault si NO hay un valor guardado en session storage
+    // Esto permite que al hacer F5 se mantenga la última empresa seleccionada
     let currentCompanyId = await this.userSessionService.getCurrentCompany();
     
-    // Si no hay currentCompanyId en session storage O si es diferente del companyIdDefault del login,
-    // usar el companyIdDefault del UserResponse (que es la fuente de verdad del login)
-    if (!currentCompanyId || currentCompanyId !== user.companyIdDefault) {
+    // Si no hay currentCompanyId en session storage, usar el companyIdDefault del UserResponse
+    // Pero NO sobrescribir si ya hay un valor guardado (permite mantener la selección después de F5)
+    if (!currentCompanyId) {
       if (user.companyIdDefault) {
         currentCompanyId = user.companyIdDefault;
         await this.userSessionService.setCurrentCompany(user.companyIdDefault, true);
