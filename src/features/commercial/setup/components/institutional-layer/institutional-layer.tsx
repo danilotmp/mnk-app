@@ -17,7 +17,7 @@ import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/cust
 import { useLanguage, useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface InstitutionalLayerProps {
@@ -103,6 +103,27 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     loadCatalogs();
   }, [company?.id]);
 
+  // Función helper para convertir name a code si es necesario
+  // Memoizada para evitar recreaciones innecesarias
+  const normalizeIndustryValue = useCallback((industryValue: string | null | undefined): string => {
+    if (!industryValue) return '';
+    
+    // Si el valor ya es un code (coincide con algún code en las opciones), devolverlo
+    const matchingByCode = industries.find(opt => opt.value.toLowerCase() === industryValue.toLowerCase());
+    if (matchingByCode) {
+      return matchingByCode.value;
+    }
+    
+    // Si no coincide por code, buscar por name (label)
+    const matchingByName = industries.find(opt => opt.label === industryValue || opt.label.toLowerCase() === industryValue.toLowerCase());
+    if (matchingByName) {
+      return matchingByName.value; // Devolver el code correspondiente
+    }
+    
+    // Si no se encuentra, devolver el valor original (por si acaso)
+    return industryValue;
+  }, [industries]);
+
   // Sincronizar timezone del formulario con las opciones del catálogo cuando se cargan
   // Normalizar el valor a lowercase para que coincida con las opciones del catálogo
   useEffect(() => {
@@ -117,6 +138,34 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       setFormData(prev => ({ ...prev, timezone: matchingTimezone.value }));
     }
   }, [timezones, formData.timezone]);
+
+  // Normalizar industry cuando se cargan las industrias O cuando se carga el perfil
+  // Convertir name a code si es necesario
+  // Esto asegura que el Select muestre la opción correcta preseleccionada
+  useEffect(() => {
+    // Solo normalizar si hay industrias cargadas y hay un valor de industry en el formulario
+    if (industries.length === 0 || !formData.industry) return;
+
+    // Normalizar el valor actual de industry
+    const normalizedIndustry = normalizeIndustryValue(formData.industry);
+    
+    // Verificar si el valor normalizado existe en las opciones disponibles
+    const optionExists = industries.some(opt => opt.value === normalizedIndustry);
+    
+    // Si el valor normalizado es diferente del actual Y existe en las opciones,
+    // actualizar el formulario para que el Select muestre la opción correcta preseleccionada
+    if (normalizedIndustry !== formData.industry && normalizedIndustry && optionExists) {
+      console.log('Normalizando industria para preselección:', {
+        original: formData.industry,
+        normalized: normalizedIndustry,
+        optionExists,
+        availableOptions: industries.length,
+      });
+      setFormData(prev => ({ ...prev, industry: normalizedIndustry }));
+      // También actualizar los datos originales para mantener la consistencia
+      setOriginalFormData(prev => prev ? { ...prev, industry: normalizedIndustry } : null);
+    }
+  }, [industries, normalizeIndustryValue, profile?.industry]); // Incluir profile?.industry para detectar cuando se carga el perfil
 
   // Cargar perfil existente - solo una vez cuando cambia company.id
   useEffect(() => {
@@ -133,10 +182,16 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         // Debug: Log para verificar los datos recibidos
         console.log('Perfil cargado desde API:', existingProfile);
         
+        // Normalizar el valor de industry: convertir name a code si es necesario
+        // Si las industrias ya están cargadas, normalizar ahora; si no, se normalizará cuando se carguen
+        const normalizedIndustry = industries.length > 0 
+          ? normalizeIndustryValue(existingProfile.industry)
+          : (existingProfile.industry || '');
+        
         // Mapear los datos al formulario, asegurando que los valores estén presentes
         const newFormData = {
           businessDescription: existingProfile.businessDescription || '',
-          industry: existingProfile.industry || '',
+          industry: normalizedIndustry,
           language: existingProfile.language || systemLanguage,
           timezone: existingProfile.timezone || systemTimezone,
           is24_7: existingProfile.is24_7 ?? false,
@@ -146,6 +201,8 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         
         // Debug: Log para verificar los datos mapeados
         console.log('Datos mapeados al formulario:', newFormData);
+        console.log('Industria normalizada:', normalizedIndustry);
+        console.log('Opciones de industrias disponibles:', industries.length);
         
         setFormData(newFormData);
         // Guardar los datos originales para comparar cambios
@@ -183,7 +240,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company?.id]); // Solo depender de company.id
+  }, [company?.id]); // Solo depender de company.id para cargar el perfil una vez
 
   // Calcular progreso
   useEffect(() => {
@@ -244,14 +301,19 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     try {
       // Construir payload - asegurar que los campos se envíen correctamente
       const trimmedDescription = formData.businessDescription.trim();
-      const trimmedIndustry = formData.industry.trim();
       const trimmedTimezone = formData.timezone.trim();
+      
+      // Normalizar industry: asegurarse de que siempre se envíe el code, no el name
+      let normalizedIndustry = formData.industry.trim();
+      if (normalizedIndustry && industries.length > 0) {
+        normalizedIndustry = normalizeIndustryValue(normalizedIndustry);
+      }
       
       const payload: CommercialProfilePayload = {
         companyId: company.id,
         // Enviar campos solo si tienen contenido (no undefined para evitar eliminarlos del JSON)
         ...(trimmedDescription ? { businessDescription: trimmedDescription } : {}),
-        ...(trimmedIndustry ? { industry: trimmedIndustry } : {}),
+        ...(normalizedIndustry ? { industry: normalizedIndustry } : {}),
         language: formData.language,
         ...(trimmedTimezone ? { timezone: trimmedTimezone } : {}),
         is24_7: formData.is24_7,
