@@ -14,6 +14,9 @@ export interface CommercialProfile {
   is24_7?: boolean | null;
   defaultTaxMode?: 'included' | 'excluded' | null;
   allowsBranchPricing?: boolean | null;
+  whatsapp?: string | null;
+  /** Base64 del QR (string) o objeto con qr y expiresAt. El backend puede devolverlo como string. */
+  whatsappQR?: string | { qr: string; expiresAt?: string } | null;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -30,6 +33,8 @@ export interface CommercialProfilePayload {
   is24_7?: boolean;
   defaultTaxMode?: 'included' | 'excluded';
   allowsBranchPricing?: boolean;
+  whatsapp?: string | null;
+  whatsappQR?: string | { qr: string; expiresAt?: string } | null;
 }
 
 // ===== Payment Methods =====
@@ -350,7 +355,7 @@ export interface CommercialCapabilities {
 // Capa 5: Pagos (payment_method, payment_account, payment_instruction)
 // Capa 6: Recomendaciones y upsell (recommendation: suggestion, upsell)
 export interface LayerProgress {
-  layer: 'institutional' | 'operational' | 'offerings' | 'interactionGuidelines' | 'payments' | 'recommendations';
+  layer: 'institutional' | 'operational' | 'offerings' | 'interactionGuidelines' | 'payments' | 'recommendations' | 'whatsappConnection';
   completed: boolean;
   completionPercentage: number;
   enabledCapabilities: string[];

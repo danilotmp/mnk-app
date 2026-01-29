@@ -177,13 +177,14 @@ export function RecommendationsLayer({
     onProgressUpdate?.(progress);
     onDataChange?.(hasRecommendations);
     
-    // Si se completa al 100%, notificar después de un breve delay
-    if (progress === 100) {
+    // Si se completa al 100% Y no estaba completada antes, notificar después de un breve delay
+    // No ejecutar onComplete si isCompleted es true (ya estaba completada al cargar)
+    if (progress === 100 && !isCompleted) {
       setTimeout(() => {
         onComplete?.();
       }, 500);
     }
-  }, [recommendations, company?.id, onProgressUpdate, onDataChange, onComplete, allowedTypes]);
+  }, [recommendations, company?.id, onProgressUpdate, onDataChange, onComplete, allowedTypes, isCompleted]);
 
   const handleCreate = async () => {
     if (!company?.id) return;

@@ -53,7 +53,10 @@ export const CommercialService = {
   async getProfile(companyId: string): Promise<CommercialProfile> {
     const res = await apiClient.get<any>(`${BASE_INTERACCIONES}/profile/${companyId}`);
     
-    // El API devuelve { data: { commercial: {...} }, result: {...} }
+    // El API devuelve diferentes formatos posibles:
+    // - { data: { commercial: {...} }, result: {...} }
+    // - { data: { id, companyId, whatsapp, ... } }
+    // - { data: { data: { commercial: {...} } } }
     // Necesitamos extraer y mapear de snake_case a camelCase
     const commercialData = res.data?.commercial || res.data?.data?.commercial || res.data;
     
@@ -68,6 +71,9 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
+      // Mapear whatsapp: puede venir directamente como whatsapp (camelCase según documentación)
+      whatsapp: commercialData?.whatsapp || null,
+      whatsappQR: commercialData?.whatsappQR || commercialData?.whatsapp_qr || null,
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
       updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,
       createdBy: commercialData?.createdBy || commercialData?.created_by || null,
@@ -83,9 +89,34 @@ export const CommercialService = {
    * companyId debe estar en el body, no en la URL
    */
   async upsertProfile(payload: CommercialProfilePayload): Promise<CommercialProfile> {
-    const res = await apiClient.put<CommercialProfile>(`${BASE_INTERACCIONES}/profile`, payload);
-    const { mapObject } = await import('@/src/domains/shared/utils/object-mapper');
-    return mapObject<CommercialProfile>(res.data, { deep: true }) as CommercialProfile;
+    const res = await apiClient.put<any>(`${BASE_INTERACCIONES}/profile`, payload);
+    
+    // La respuesta puede venir en diferentes formatos:
+    // - { data: { commercial: {...} }, result: {...} }
+    // - { data: { id, companyId, whatsapp, ... } }
+    // - { data: { data: { commercial: {...} } } }
+    const commercialData = res.data?.commercial || res.data?.data?.commercial || res.data;
+    
+    // Mapear manualmente para asegurar que todos los campos se mapeen correctamente
+    const profile: CommercialProfile = {
+      companyId: commercialData?.companyId || payload.companyId,
+      businessDescription: commercialData?.business_description || commercialData?.businessDescription || null,
+      industry: commercialData?.industry || null,
+      language: commercialData?.language || null,
+      timezone: commercialData?.timezone || null,
+      currency: commercialData?.currency || null,
+      is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
+      defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
+      allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
+      whatsapp: commercialData?.whatsapp || null,
+      whatsappQR: commercialData?.whatsappQR || commercialData?.whatsapp_qr || null,
+      createdAt: commercialData?.createdAt || commercialData?.created_at || null,
+      updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,
+      createdBy: commercialData?.createdBy || commercialData?.created_by || null,
+      updatedBy: commercialData?.updatedBy || commercialData?.updated_by || null,
+    };
+    
+    return profile;
   },
 
   // Métodos legacy mantenidos para compatibilidad (ahora usan upsertProfile internamente)
@@ -835,25 +866,73 @@ export const CommercialService = {
   // ===== Capabilities =====
   // Nota: getFullContext fue eliminado - usar endpoints específicos en su lugar
   async getCapabilities(companyId: string): Promise<CommercialCapabilities> {
-    const res = await apiClient.get<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`);
-    return res.data;
+    try {
+      const res = await apiClient.get<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`);
+      return res.data;
+    } catch (error: any) {
+      // Si el recurso no existe (404), retornar valores por defecto
+      // El backend creará el recurso cuando sea necesario
+      if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
+        return {
+          canAnswerAboutBusiness: false,
+          canAnswerAboutLocation: false,
+          canAnswerAboutPrices: false,
+          canAnswerAboutPayment: false,
+          canRecommend: false,
+          canSuggestProducts: false,
+        };
+      }
+      throw error;
+    }
   },
 
   async updateCapabilities(companyId: string, capabilities: Partial<CommercialCapabilities>): Promise<CommercialCapabilities> {
-    const res = await apiClient.put<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`, capabilities);
-    return res.data;
+    // Intentar PUT directamente - si el recurso existe, se actualizará
+    // Si el recurso no existe (404), simplemente retornar valores por defecto sin hacer nada más
+    // NO hacer GET, NO reintentar, NO causar bucles infinitos
+    try {
+      const res = await apiClient.put<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`, capabilities);
+      return res.data;
+    } catch (error: any) {
+      // Si el recurso no existe (404), retornar valores por defecto y terminar aquí
+      // NO hacer GET, NO reintentar, NO causar bucles
+      if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
+        return {
+          canAnswerAboutBusiness: false,
+          canAnswerAboutLocation: false,
+          canAnswerAboutPrices: false,
+          canAnswerAboutPayment: false,
+          canRecommend: false,
+          canSuggestProducts: false,
+          ...capabilities,
+        } as CommercialCapabilities;
+      }
+      // Para otros errores, lanzar el error
+      throw error;
+    }
   },
 
   async getLayerProgress(companyId: string): Promise<LayerProgress[]> {
     // Calcular progreso basado en los datos existentes según documento técnico V1.0
     // Usar endpoints específicos en lugar de getFullContext para evitar llamadas innecesarias
-    const [profile, capabilities, offerings, paymentMethods, recommendations] = await Promise.all([
+    // NO llamar a getCapabilities - calcular capabilities localmente basándose en los datos
+    const [profile, offerings, paymentMethods, recommendations] = await Promise.all([
       this.getProfile(companyId).catch(() => null),
-      this.getCapabilities(companyId),
       this.getOfferings(companyId).catch(() => []),
       this.getPaymentMethods(companyId).catch(() => []),
       this.getRecommendations(companyId).catch(() => []),
     ]);
+    
+    // Calcular capabilities localmente basándose en los datos existentes
+    // Esto evita llamadas innecesarias al backend cuando el recurso no existe
+    const capabilities: CommercialCapabilities = {
+      canAnswerAboutBusiness: !!(profile?.businessDescription && profile?.industry),
+      canAnswerAboutLocation: !!(profile?.businessDescription && profile?.industry),
+      canAnswerAboutPrices: offerings.length > 0,
+      canAnswerAboutPayment: paymentMethods.length > 0,
+      canRecommend: recommendations.some(r => r.type === 'suggestion' || r.type === 'upsell'),
+      canSuggestProducts: recommendations.some(r => r.type === 'suggestion' || r.type === 'upsell'),
+    };
     
     const layers: LayerProgress[] = [];
     
@@ -972,5 +1051,44 @@ export const CommercialService = {
     });
     
     return layers;
+  },
+
+  // ===== WhatsApp Connection =====
+  async createWhatsAppInstance(name: string): Promise<{ success: boolean; [key: string]: any }> {
+    try {
+      const res = await apiClient.post<{ success: boolean; [key: string]: any }>(
+        `/whatsapp/instance/create`,
+        { name, data: {} }
+      );
+      return res.data;
+    } catch (error: any) {
+      // 409 = instancia ya creada anteriormente → continuar con el flujo (obtener QR, etc.)
+      if (error?.statusCode === 409) {
+        return { success: true };
+      }
+      // Temporal: 500 con "Error al crear la instancia" es un falso positivo (instancia ya existe)
+      // Continuar con el flujo en lugar de fallar
+      if (
+        error?.statusCode === 500 &&
+        String(error?.message || '').includes('Error al crear la instancia')
+      ) {
+        return { success: true };
+      }
+      throw error;
+    }
+  },
+
+  async getWhatsAppQRCode(whatsapp: string): Promise<{ qrcode: string; [key: string]: any }> {
+    const res = await apiClient.get<{ qrcode: string; [key: string]: any }>(
+      `/whatsapp/instance/${whatsapp}/qrcode`
+    );
+    return res.data;
+  },
+
+  async connectWhatsApp(commercialProfileId: string): Promise<{ whatsappQR: { qr: string; expiresAt?: string } }> {
+    const res = await apiClient.post<{ whatsappQR: { qr: string; expiresAt?: string } }>(
+      `${BASE_INTERACCIONES}/context/whatsapp-connection/${commercialProfileId}`
+    );
+    return res.data;
   },
 };

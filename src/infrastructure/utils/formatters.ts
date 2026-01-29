@@ -7,6 +7,7 @@
  * Convierte un texto a formato de código:
  * - Convierte a mayúsculas
  * - Reemplaza espacios por guiones bajos
+ * - Reemplaza caracteres especiales por guiones bajos (solo permite letras, números y guiones bajos)
  * 
  * @param text - Texto a convertir
  * @returns Texto formateado como código (ej: "mi codigo" -> "MI_CODIGO")
@@ -15,10 +16,14 @@
  * ```ts
  * formatCode("mi codigo") // "MI_CODIGO"
  * formatCode("Mi Código") // "MI_CODIGO"
+ * formatCode("mi-código@123") // "MI_CODIGO_123"
  * ```
  */
 export function formatCode(text: string): string {
-  return text.toUpperCase().replace(/\s+/g, '_');
+  return text
+    .toUpperCase()
+    .replace(/\s+/g, '_') // Reemplazar espacios por guiones bajos
+    .replace(/[^A-Z0-9_]/g, '_'); // Reemplazar caracteres especiales por guiones bajos (solo permite letras, números y guiones bajos)
 }
 
 /**

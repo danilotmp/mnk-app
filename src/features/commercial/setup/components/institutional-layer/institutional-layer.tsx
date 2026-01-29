@@ -13,9 +13,11 @@ import { CatalogService, catalogDetailsToSelectOptions } from '@/src/domains/cat
 import { CommercialService } from '@/src/domains/commercial';
 import { CommercialProfile, CommercialProfilePayload } from '@/src/domains/commercial/types';
 import { useCompany } from '@/src/domains/shared';
+import { PhoneInput } from '@/src/domains/shared/components';
 import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { useLanguage, useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { formatCode } from '@/src/infrastructure/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -67,6 +69,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     is24_7: false,
     defaultTaxMode: 'included' as 'included' | 'excluded',
     allowsBranchPricing: false,
+    whatsapp: '',
   });
   // Guardar los datos originales para comparar cambios
   const [originalFormData, setOriginalFormData] = useState<typeof formData | null>(null);
@@ -155,12 +158,6 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     // Si el valor normalizado es diferente del actual Y existe en las opciones,
     // actualizar el formulario para que el Select muestre la opción correcta preseleccionada
     if (normalizedIndustry !== formData.industry && normalizedIndustry && optionExists) {
-      console.log('Normalizando industria para preselección:', {
-        original: formData.industry,
-        normalized: normalizedIndustry,
-        optionExists,
-        availableOptions: industries.length,
-      });
       setFormData(prev => ({ ...prev, industry: normalizedIndustry }));
       // También actualizar los datos originales para mantener la consistencia
       setOriginalFormData(prev => prev ? { ...prev, industry: normalizedIndustry } : null);
@@ -179,9 +176,6 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         const existingProfile = await CommercialService.getProfile(company.id);
         setProfile(existingProfile);
         
-        // Debug: Log para verificar los datos recibidos
-        console.log('Perfil cargado desde API:', existingProfile);
-        
         // Normalizar el valor de industry: convertir name a code si es necesario
         // Si las industrias ya están cargadas, normalizar ahora; si no, se normalizará cuando se carguen
         const normalizedIndustry = industries.length > 0 
@@ -197,12 +191,8 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           is24_7: existingProfile.is24_7 ?? false,
           defaultTaxMode: (existingProfile.defaultTaxMode || 'included') as 'included' | 'excluded',
           allowsBranchPricing: existingProfile.allowsBranchPricing ?? false,
+          whatsapp: existingProfile.whatsapp || '',
         };
-        
-        // Debug: Log para verificar los datos mapeados
-        console.log('Datos mapeados al formulario:', newFormData);
-        console.log('Industria normalizada:', normalizedIndustry);
-        console.log('Opciones de industrias disponibles:', industries.length);
         
         setFormData(newFormData);
         // Guardar los datos originales para comparar cambios
@@ -222,6 +212,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
             is24_7: false,
             defaultTaxMode: 'included' as 'included' | 'excluded',
             allowsBranchPricing: false,
+            whatsapp: '',
           };
           setFormData(defaultFormData);
           // Guardar los datos originales (vacíos en este caso)
@@ -260,7 +251,15 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   }, [formData, company?.id, onProgressUpdate, onDataChange]);
 
   const handleChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let processedValue: string | boolean = value;
+    
+    // Si es el campo whatsapp y es un string, aplicar validación/formato
+    if (field === 'whatsapp' && typeof value === 'string') {
+      // Aplicar formato: mayúsculas, espacios por guiones bajos, caracteres especiales por guiones bajos
+      processedValue = formatCode(value);
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
     if (errors[field]) {
       setErrors(prev => {
         const next = { ...prev };
@@ -281,7 +280,8 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       formData.timezone.trim() !== (originalFormData.timezone || '').trim() ||
       formData.is24_7 !== originalFormData.is24_7 ||
       formData.defaultTaxMode !== originalFormData.defaultTaxMode ||
-      formData.allowsBranchPricing !== originalFormData.allowsBranchPricing
+      formData.allowsBranchPricing !== originalFormData.allowsBranchPricing ||
+      formData.whatsapp.trim() !== (originalFormData.whatsapp || '').trim()
     );
   };
 
@@ -302,6 +302,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       // Construir payload - asegurar que los campos se envíen correctamente
       const trimmedDescription = formData.businessDescription.trim();
       const trimmedTimezone = formData.timezone.trim();
+      const trimmedWhatsapp = formData.whatsapp.trim();
       
       // Normalizar industry: asegurarse de que siempre se envíe el code, no el name
       let normalizedIndustry = formData.industry.trim();
@@ -319,16 +320,9 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         is24_7: formData.is24_7,
         defaultTaxMode: formData.defaultTaxMode,
         allowsBranchPricing: formData.allowsBranchPricing,
+        // whatsapp puede ser null si está vacío, o el valor si tiene contenido
+        whatsapp: trimmedWhatsapp || null,
       };
-
-      // Debug: Log del payload y valores del formulario antes de enviar
-      console.log('Valores del formulario:', {
-        businessDescription: formData.businessDescription,
-        industry: formData.industry,
-        language: formData.language,
-        timezone: formData.timezone,
-      });
-      console.log('Payload a enviar:', payload);
 
       // Usar UPSERT unificado - el backend decide si crear o actualizar
       await CommercialService.upsertProfile(payload);
@@ -348,6 +342,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           is24_7: updated.is24_7 || false,
           defaultTaxMode: (updated.defaultTaxMode || 'included') as 'included' | 'excluded',
           allowsBranchPricing: updated.allowsBranchPricing || false,
+          whatsapp: updated.whatsapp || '',
         };
         setFormData(newFormData);
         // Actualizar los datos originales después de guardar
@@ -400,11 +395,11 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
 
       <View style={styles.formContainer}>
-        {/* Industria y Atención 24/7 - En la misma línea */}
+        {/* WhatsApp ID e Industria - En la misma línea */}
         <View style={styles.inputGroup}>
-          <View style={styles.rowContainer}>
+          <View style={[styles.rowContainer, isMobile && { flexDirection: 'column', gap: 0 }]}>
             {/* Industria */}
-            <View style={styles.halfWidth}>
+            <View style={[styles.halfWidth, isMobile && { width: '100%', marginTop: isMobile ? 16 : 0 }]}>
               <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
                 ¿En qué industria está tu empresa?
               </ThemedText>
@@ -417,6 +412,22 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
                 error={!!errors.industry}
                 errorMessage={errors.industry}
               />
+            </View>
+            {/* WhatsApp */}
+            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
+              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                WhatsApp
+              </ThemedText>
+              <PhoneInput
+                value={formData.whatsapp}
+                onChangeText={(val) => handleChange('whatsapp', val)}
+                placeholder="Ej: 593996294267 o MI_CODIGO"
+                error={!!errors.whatsapp}
+                errorMessage={errors.whatsapp}
+              />
+              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                Número de WhatsApp o identificador IA
+              </ThemedText>
             </View>
           </View>
         </View>

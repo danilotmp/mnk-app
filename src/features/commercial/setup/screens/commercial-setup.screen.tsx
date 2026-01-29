@@ -24,6 +24,7 @@ import { InteractionGuidelinesLayer } from '../components/interaction-guidelines
 import { OperationalLayer } from '../components/operational-layer/operational-layer';
 import { PaymentsLayer } from '../components/payments-layer/payments-layer';
 import { RecommendationsLayer } from '../components/recommendations-layer/recommendations-layer';
+import { WhatsAppConnectionLayer } from '../components/whatsapp-connection-layer';
 import { WizardStep, WizardStepper } from '../components/wizard-stepper';
 
 export function CommercialSetupScreen() {
@@ -95,13 +96,12 @@ export function CommercialSetupScreen() {
   const [isLoadingProgress, setIsLoadingProgress] = useState(false);
 
   // Función helper para marcar una capa como completada u omitida
+  // NO llama a updateCapabilities para evitar bucles infinitos
+  // El GET en getLayerProgress se encargará de crear/actualizar el recurso cuando sea necesario
   const markLayerAsCompleted = useCallback(async (layer: string, hasData: boolean = false) => {
     if (!company?.id) return;
     
     try {
-      // Obtener capacidades actuales
-      const currentCapabilities = await CommercialService.getCapabilities(company.id);
-      
       // Mapear capa a capacidad correspondiente
       const capabilityMap: Record<string, keyof CommercialCapabilities> = {
         'institutional': 'canAnswerAboutBusiness', // También puede activar canAnswerAboutLocation
@@ -112,12 +112,10 @@ export function CommercialSetupScreen() {
       };
       
       const capabilityKey = capabilityMap[layer];
-      if (capabilityKey) {
-        // Si tiene datos, activar la capacidad; si no tiene datos pero se completó, también activarla (omitida)
-        await CommercialService.updateCapabilities(company.id, {
-          [capabilityKey]: true,
-        });
-      }
+      
+      // NO llamar a updateCapabilities aquí para evitar bucles infinitos
+      // Solo actualizar el estado local
+      // El GET en getLayerProgress se encargará de crear/actualizar el recurso cuando sea necesario
       
       // Actualizar el progreso local
       // Cuando se completa u omite una capa, siempre se marca como completada al 100%
@@ -157,7 +155,7 @@ export function CommercialSetupScreen() {
       const progress = await CommercialService.getLayerProgress(company.id);
       
       // Definir el orden de las capas
-      const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+      const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
       
       // Filtrar capa 'operational' del progreso
       const filteredProgress = progress.filter(p => p.layer !== 'operational');
@@ -245,6 +243,7 @@ export function CommercialSetupScreen() {
     { id: 'interactionGuidelines', label: 'Directrices de Interacción', layer: 'interactionGuidelines', completed: false, enabled: true, completionPercentage: 0 },
     { id: 'payments', label: 'Pagos', layer: 'payments', completed: false, enabled: true, completionPercentage: 0 },
     { id: 'recommendations', label: 'Recomendaciones', layer: 'recommendations', completed: false, enabled: true, completionPercentage: 0 },
+    { id: 'whatsappConnection', label: 'Conexión WhatsApp', layer: 'whatsappConnection', completed: false, enabled: true, completionPercentage: 0 },
   ];
 
   // Convertir LayerProgress a WizardStep (sin capa 'operational')
@@ -263,7 +262,11 @@ export function CommercialSetupScreen() {
               ? 'Directrices de Interacción'
               : layer.layer === 'payments'
               ? 'Pagos'
-              : 'Recomendaciones', // Incluye todos los tipos: informational, orientation, suggestion, upsell
+              : layer.layer === 'recommendations'
+              ? 'Recomendaciones'
+              : layer.layer === 'whatsappConnection'
+              ? 'Conexión WhatsApp'
+              : layer.layer, // Fallback al nombre de la capa
           layer: layer.layer,
           completed: layer.completed,
           enabled: true,
@@ -274,7 +277,7 @@ export function CommercialSetupScreen() {
 
   const handleStepPress = (step: WizardStep) => {
     // Definir el orden de las capas
-    const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+    const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
     
     const currentIndex = layerOrder.indexOf(currentLayer);
     const targetIndex = layerOrder.indexOf(step.layer);
@@ -388,6 +391,11 @@ export function CommercialSetupScreen() {
                       Define los métodos de pago aceptados y cómo los clientes pueden realizar pagos.
                     </ThemedText>
                   )}
+                  {currentLayer === 'whatsappConnection' && (
+                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
+                      Conecta tu cuenta de WhatsApp para que la IA pueda interactuar con tus clientes. Escanea el código QR con tu teléfono.
+                    </ThemedText>
+                  )}
                 </View>
                 {currentLayer === 'offerings' && (
                   <View style={{ 
@@ -478,17 +486,10 @@ export function CommercialSetupScreen() {
                       // Actualizar capacidades cuando hay datos
                     }}
                     onComplete={async () => {
-                      // Recargar progreso primero para obtener datos actualizados
+                      // Recargar progreso para obtener datos actualizados
                       await loadProgress();
-                      // Luego avanzar a la siguiente capa en la secuencia
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
-                        const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
-                          return layerOrder[currentIndex + 1];
-                        }
-                        return prevLayer;
-                      });
+                      // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
+                      // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                   />
                 )}
@@ -520,15 +521,8 @@ export function CommercialSetupScreen() {
                     onComplete={async () => {
                       // No recargar progreso aquí para evitar sobrescribir el progreso al 100%
                       // que se estableció después de guardar exitosamente
-                      // await loadProgress();
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
-                        const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
-                          return layerOrder[currentIndex + 1];
-                        }
-                        return prevLayer;
-                      });
+                      // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
+                      // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                   />
                 )}
@@ -564,19 +558,13 @@ export function CommercialSetupScreen() {
                     }}
                     onComplete={async (hasData) => {
                       await markLayerAsCompleted('interactionGuidelines', hasData || false);
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
-                        const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
-                          return layerOrder[currentIndex + 1];
-                        }
-                        return prevLayer;
-                      });
+                      // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
+                      // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                     onSkip={async () => {
                       await markLayerAsCompleted('interactionGuidelines', false);
                       setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
                         const currentIndex = layerOrder.indexOf(prevLayer);
                         if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
                           return layerOrder[currentIndex + 1];
@@ -620,20 +608,14 @@ export function CommercialSetupScreen() {
                     onComplete={async (hasData: boolean = false) => {
                       // Marcar como completada con los datos proporcionados
                       await markLayerAsCompleted('payments', hasData);
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
-                        const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
-                          return layerOrder[currentIndex + 1];
-                        }
-                        return prevLayer;
-                      });
+                      // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
+                      // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                     onSkip={async () => {
                       // Marcar como omitida sin datos
                       await markLayerAsCompleted('payments', false);
                       setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations'];
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
                         const currentIndex = layerOrder.indexOf(prevLayer);
                         if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
                           return layerOrder[currentIndex + 1];
@@ -678,7 +660,8 @@ export function CommercialSetupScreen() {
                     onComplete={async (hasData: boolean = false) => {
                       // Marcar como completada con los datos proporcionados
                       await markLayerAsCompleted('recommendations', hasData);
-                      // Si todas están completas, se puede mostrar mensaje de finalización (futuro)
+                      // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
+                      // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                     onSkip={async () => {
                       // Marcar como omitida sin datos
@@ -687,6 +670,37 @@ export function CommercialSetupScreen() {
                     // Mostrar todos los tipos de recomendaciones (sin filtro)
                     layerTitle="Recomendaciones"
                     layerDescription="Crea recomendaciones informativas, de orientación, sugerencias y upsell que la IA puede ofrecer durante las conversaciones"
+                  />
+                )}
+                {currentLayer === 'whatsappConnection' && (
+                  <WhatsAppConnectionLayer
+                    onProgressUpdate={(progress) => {
+                      setLayerProgress(prev => {
+                        const updated = prev.map(l => l.layer === 'whatsappConnection' 
+                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
+                          : l
+                        );
+                        if (!updated.find(l => l.layer === 'whatsappConnection')) {
+                          updated.push({
+                            layer: 'whatsappConnection',
+                            completed: progress === 100,
+                            completionPercentage: progress,
+                            enabledCapabilities: [],
+                            missingFields: progress === 100 ? [] : ['whatsappConnection'],
+                          });
+                        }
+                        return updated;
+                      });
+                    }}
+                    onDataChange={(hasData) => {
+                      // Actualizar cuando hay datos
+                    }}
+                    onComplete={async () => {
+                      // Finalizar wizard - todas las capas completadas
+                      alert.showSuccess('¡Configuración completada! Tu Chat IA está listo para usar.');
+                      // Opcional: redirigir a otra página
+                      // router.push('/interacciones/chat');
+                    }}
                   />
                 )}
               </View>
