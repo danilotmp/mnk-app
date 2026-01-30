@@ -255,6 +255,60 @@ export function MenuAdminScreen() {
     setValidationErrors({}); // Limpiar errores al cancelar
   };
 
+  // Función auxiliar para validar si un string es un UUID válido
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
+  // Función auxiliar para buscar el UUID original de un item por su identificador
+  const findOriginalUUID = (identifier: string, originalItems: MenuAdminItem[]): string | null => {
+    const findInItems = (items: MenuAdminItem[]): string | null => {
+      for (const originalItem of items) {
+        // Si el identificador coincide y el original tiene un UUID válido, retornarlo
+        if (originalItem.id === identifier && isValidUUID(originalItem.id)) {
+          return originalItem.id;
+        }
+        // Buscar recursivamente en submenu
+        if (originalItem.submenu) {
+          const found = findInItems(originalItem.submenu);
+          if (found) return found;
+        }
+        // Buscar recursivamente en columns
+        if (originalItem.columns) {
+          for (const col of originalItem.columns) {
+            if (col.items) {
+              const found = findInItems(col.items);
+              if (found) return found;
+            }
+          }
+        }
+      }
+      return null;
+    };
+    return findInItems(originalItems);
+  };
+
+  // Función auxiliar para obtener el UUID correcto de un item
+  const getItemUUID = (item: MenuAdminItem): string | undefined => {
+    // Si el id es un UUID válido, usarlo directamente
+    if (isValidUUID(item.id)) {
+      return item.id;
+    }
+    // Si es un item nuevo (empieza con "new-"), no enviar el id (el backend lo creará)
+    if (item.id.startsWith('new-')) {
+      return undefined;
+    }
+    // Si no es un UUID válido, buscar el UUID original en originalMenuItems
+    const originalUUID = findOriginalUUID(item.id, originalMenuItems);
+    if (originalUUID) {
+      return originalUUID;
+    }
+    // Si no se encuentra el UUID original, no enviar el id (será tratado como nuevo)
+    console.warn(`No se encontró UUID para el item con id "${item.id}". Se tratará como item nuevo.`);
+    return undefined;
+  };
+
   // Validar campos obligatorios
   const validateForm = (): boolean => {
     const errors: { icon?: string; label?: string; route?: string } = {};
@@ -337,14 +391,20 @@ export function MenuAdminScreen() {
       
       // Convertir a formato MenuItem para el backend
       const convertToMenuItem = (adminItem: MenuAdminItem, parentItem: MenuAdminItem | null): MenuItem => {
+        // Obtener el UUID correcto para el item
+        const itemUUID = getItemUUID(adminItem);
+        
         const menuItem: any = {
-          // Si es un item nuevo (ID empieza con 'new-'), no enviar el ID para que el backend lo cree
-          ...(adminItem.id.startsWith('new-') ? {} : { id: adminItem.id }),
           label: adminItem.label,
           route: adminItem.route || '',
           order: adminItem.order,
           status: adminItem.status,
         };
+        
+        // Solo incluir el id si tenemos un UUID válido (no para items nuevos)
+        if (itemUUID) {
+          menuItem.id = itemUUID;
+        }
         
         if (adminItem.description) menuItem.description = adminItem.description;
         if (adminItem.icon) menuItem.icon = adminItem.icon;
@@ -352,13 +412,20 @@ export function MenuAdminScreen() {
         
         // Si tiene padre, incluirlo en la estructura anidada
         if (parentItem) {
+          // Obtener el UUID correcto para el padre
+          const parentUUID = getItemUUID(parentItem);
+          
           // Crear estructura con el padre y solo este hijo
           const parentMenuItem: any = {
-            id: parentItem.id,
             label: parentItem.label,
             route: parentItem.route || '',
             order: parentItem.order,
           };
+          
+          // Solo incluir el id del padre si tenemos un UUID válido
+          if (parentUUID) {
+            parentMenuItem.id = parentUUID;
+          }
           
           if (parentItem.description) parentMenuItem.description = parentItem.description;
           if (parentItem.icon) parentMenuItem.icon = parentItem.icon;
@@ -754,12 +821,19 @@ export function MenuAdminScreen() {
             return;
           }
           
+          // Obtener el UUID correcto para el item
+          const itemUUID = getItemUUID(item);
+          
           // Crear item base
           const menuItem: any = {
-            id: item.id,
             label: item.label,
             order: item.order !== undefined ? item.order : 0,
           };
+          
+          // Solo incluir el id si tenemos un UUID válido (no para items nuevos)
+          if (itemUUID) {
+            menuItem.id = itemUUID;
+          }
           
           // Solo incluir propiedades si tienen valor (excepto isPublic que puede ser false)
           if (item.route) menuItem.route = item.route;
