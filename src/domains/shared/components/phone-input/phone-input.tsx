@@ -26,6 +26,7 @@ export function PhoneInput({
   onBlur,
   returnKeyType,
   onSubmitEditing,
+  maxLength,
 }: PhoneInputProps) {
   const { colors } = useTheme();
   const styles = createPhoneInputStyles();
@@ -68,6 +69,7 @@ export function PhoneInput({
           onBlur={onBlur}
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
+          maxLength={maxLength}
         />
       </InputWithFocus>
       {error && errorMessage && (

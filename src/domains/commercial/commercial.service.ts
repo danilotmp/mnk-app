@@ -33,6 +33,8 @@ import type {
     RecommendationPayload,
     ServiceCondition,
     ServiceConditionPayload,
+    WhatsAppInstance,
+    WhatsAppInstancePayload,
 } from './types';
 
 const BASE_COMMERCIAL = '/commercial';
@@ -71,9 +73,8 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
-      // Mapear whatsapp: puede venir directamente como whatsapp (camelCase según documentación)
-      whatsapp: commercialData?.whatsapp || null,
-      whatsappQR: commercialData?.whatsappQR || commercialData?.whatsapp_qr || null,
+      // Mapear whatsappInstances: array de instancias de WhatsApp
+      whatsappInstances: commercialData?.whatsappInstances || commercialData?.whatsapp_instances || [],
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
       updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,
       createdBy: commercialData?.createdBy || commercialData?.created_by || null,
@@ -108,8 +109,7 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
-      whatsapp: commercialData?.whatsapp || null,
-      whatsappQR: commercialData?.whatsappQR || commercialData?.whatsapp_qr || null,
+      whatsappInstances: commercialData?.whatsappInstances || commercialData?.whatsapp_instances || [],
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
       updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,
       createdBy: commercialData?.createdBy || commercialData?.created_by || null,
@@ -125,12 +125,22 @@ export const CommercialService = {
   },
 
   async updateProfile(companyId: string, payload: Partial<CommercialProfilePayload>): Promise<CommercialProfile> {
-    // Asegurar que companyId esté en el payload
-    const fullPayload: CommercialProfilePayload = {
+    // Si no se están actualizando whatsappInstances, preservar las existentes
+    let finalPayload: CommercialProfilePayload = {
       ...payload,
       companyId,
     };
-    return this.upsertProfile(fullPayload);
+    
+    if (!payload.whatsappInstances) {
+      const currentProfile = await this.getProfile(companyId);
+      finalPayload.whatsappInstances = currentProfile.whatsappInstances?.map(inst => ({
+        whatsapp: inst.whatsapp,
+        whatsappQR: inst.whatsappQR,
+        isActive: inst.isActive,
+      })) || [];
+    }
+    
+    return this.upsertProfile(finalPayload);
   },
 
   // ===== Payment Methods =====
@@ -1090,5 +1100,147 @@ export const CommercialService = {
       `${BASE_INTERACCIONES}/context/whatsapp-connection/${commercialProfileId}`
     );
     return res.data;
+  },
+
+  // ===== WhatsApp Instances Management =====
+  async createWhatsAppInstanceInProfile(companyId: string, payload: WhatsAppInstancePayload): Promise<WhatsAppInstance> {
+    // Si ya se proporcionó un QR code, usarlo directamente
+    let qrCode: string | null = payload.whatsappQR || null;
+    
+    // Si no hay QR code proporcionado, crear la instancia y obtener el QR
+    if (!qrCode) {
+      // Primero crear la instancia en WhatsApp
+      const createResponse = await this.createWhatsAppInstance(payload.whatsapp);
+      if (!createResponse.success) {
+        throw new Error('Error al crear la instancia de WhatsApp');
+      }
+
+      // Obtener QR code si se creó exitosamente
+      try {
+        const qrResponse = await this.getWhatsAppQRCode(payload.whatsapp);
+        qrCode = qrResponse.qrcode || null;
+      } catch (error: any) {
+        // Si falla obtener QR, continuar sin QR
+        console.error('Error al obtener QR code:', error);
+      }
+    } else {
+      // Si ya hay QR proporcionado, solo crear la instancia en WhatsApp (puede que ya exista)
+      // Esto es para asegurar que la instancia existe antes de guardarla en el perfil
+      try {
+        await this.createWhatsAppInstance(payload.whatsapp);
+      } catch (error: any) {
+        // Si falla porque ya existe (409) o es un falso positivo (500), está bien, continuar
+        if (error?.statusCode !== 409 && 
+            !(error?.statusCode === 500 && String(error?.message || '').includes('Error al crear la instancia'))) {
+          console.error('Error al crear instancia de WhatsApp:', error);
+        }
+      }
+    }
+
+    // Actualizar el perfil con la nueva instancia
+    const profile = await this.getProfile(companyId);
+    const updatedInstances = [
+      ...(profile.whatsappInstances || []),
+      {
+        id: '', // El backend generará el ID
+        whatsapp: payload.whatsapp,
+        whatsappQR: qrCode,
+        isActive: payload.isActive ?? true,
+      },
+    ];
+
+    const updatedProfile = await this.updateProfile(companyId, {
+      whatsappInstances: updatedInstances.map(inst => ({
+        whatsapp: inst.whatsapp,
+        whatsappQR: inst.whatsappQR,
+        isActive: inst.isActive,
+      })),
+    });
+
+    // Retornar la instancia creada (el backend debería devolverla con ID)
+    const createdInstance = updatedProfile.whatsappInstances?.find(
+      inst => inst.whatsapp === payload.whatsapp
+    );
+    if (!createdInstance) {
+      throw new Error('Error al crear la instancia');
+    }
+    return createdInstance;
+  },
+
+  async updateWhatsAppInstance(companyId: string, instanceId: string, payload: Partial<WhatsAppInstancePayload>): Promise<WhatsAppInstance> {
+    const profile = await this.getProfile(companyId);
+    const instances = profile.whatsappInstances || [];
+    const instanceIndex = instances.findIndex(inst => inst.id === instanceId);
+    
+    if (instanceIndex === -1) {
+      throw new Error('Instancia no encontrada');
+    }
+
+    // Si se está actualizando el QR, obtenerlo
+    let qrCode: string | null = instances[instanceIndex].whatsappQR;
+    if (payload.whatsapp && payload.whatsapp !== instances[instanceIndex].whatsapp) {
+      // Si cambió el whatsapp, obtener nuevo QR
+      try {
+        const qrResponse = await this.getWhatsAppQRCode(payload.whatsapp);
+        qrCode = qrResponse.qrcode || null;
+      } catch (error: any) {
+        console.error('Error al obtener QR code:', error);
+      }
+    }
+
+    const updatedInstances = [...instances];
+    updatedInstances[instanceIndex] = {
+      ...updatedInstances[instanceIndex],
+      whatsapp: payload.whatsapp ?? updatedInstances[instanceIndex].whatsapp,
+      whatsappQR: qrCode ?? updatedInstances[instanceIndex].whatsappQR,
+      isActive: payload.isActive ?? updatedInstances[instanceIndex].isActive,
+    };
+
+    const updatedProfile = await this.updateProfile(companyId, {
+      whatsappInstances: updatedInstances.map(inst => ({
+        whatsapp: inst.whatsapp,
+        whatsappQR: inst.whatsappQR,
+        isActive: inst.isActive,
+      })),
+    });
+
+    const updatedInstance = updatedProfile.whatsappInstances?.find(inst => inst.id === instanceId);
+    if (!updatedInstance) {
+      throw new Error('Error al actualizar la instancia');
+    }
+    return updatedInstance;
+  },
+
+  async deleteWhatsAppInstance(companyId: string, instanceId: string): Promise<void> {
+    const profile = await this.getProfile(companyId);
+    const instances = (profile.whatsappInstances || []).filter(inst => inst.id !== instanceId);
+
+    await this.updateProfile(companyId, {
+      whatsappInstances: instances.map(inst => ({
+        whatsapp: inst.whatsapp,
+        whatsappQR: inst.whatsappQR,
+        isActive: inst.isActive,
+      })),
+    });
+  },
+
+  async toggleWhatsAppInstanceStatus(companyId: string, instanceId: string, isActive: boolean): Promise<WhatsAppInstance> {
+    return this.updateWhatsAppInstance(companyId, instanceId, { isActive });
+  },
+
+  async regenerateWhatsAppQR(companyId: string, instanceId: string): Promise<WhatsAppInstance> {
+    const profile = await this.getProfile(companyId);
+    const instance = profile.whatsappInstances?.find(inst => inst.id === instanceId);
+    
+    if (!instance) {
+      throw new Error('Instancia no encontrada');
+    }
+
+    // Obtener nuevo QR code
+    const qrResponse = await this.getWhatsAppQRCode(instance.whatsapp);
+    const qrCode = qrResponse.qrcode || null;
+
+    // Actualizar la instancia con el nuevo QR
+    return this.updateWhatsAppInstance(companyId, instanceId, { whatsappQR: qrCode });
   },
 };

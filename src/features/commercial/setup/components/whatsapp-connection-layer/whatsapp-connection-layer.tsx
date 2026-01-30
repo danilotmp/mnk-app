@@ -1,28 +1,27 @@
 /**
  * Componente para Capa de Conexión WhatsApp
- * Crea la instancia de WhatsApp y muestra el QR code para conectar.
- * Si el perfil ya tiene whatsappQR, se muestra sin orquestar los servicios.
+ * Gestiona las instancias de WhatsApp con tabla CRUD
  */
 
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
+import { SideModal } from '@/components/ui/side-modal';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { CommercialService } from '@/src/domains/commercial';
-import type { CommercialProfile } from '@/src/domains/commercial/types';
+import type { WhatsAppInstance } from '@/src/domains/commercial/types';
+import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
+import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
 import { useCompany } from '@/src/domains/shared';
-import { useTranslation } from '@/src/infrastructure/i18n';
+import { PhoneInput } from '@/src/domains/shared/components';
+import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { formatCode } from '@/src/infrastructure/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from 'react-native';
-
-/** Normaliza whatsappQR del perfil (string o objeto con qr) a base64 string para mostrar. */
-function getWhatsAppQRBase64(whatsappQR: CommercialProfile['whatsappQR']): string | null {
-  if (whatsappQR == null) return null;
-  if (typeof whatsappQR === 'string') return whatsappQR;
-  return whatsappQR.qr || null;
-}
+import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface WhatsAppConnectionLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -30,203 +29,627 @@ interface WhatsAppConnectionLayerProps {
   onComplete?: () => void;
 }
 
-export function WhatsAppConnectionLayer({ onProgressUpdate, onDataChange, onComplete }: WhatsAppConnectionLayerProps) {
-  const { colors } = useTheme();
-  const { isMobile } = useResponsive();
-  const { t } = useTranslation();
-  const alert = useAlert();
-  const { company } = useCompany();
+export interface WhatsAppConnectionLayerRef {
+  handleCreate: () => void;
+}
 
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [whatsapp, setWhatsapp] = useState<string | null>(null);
+interface WhatsAppInstanceFormData {
+  whatsapp: string;
+  isActive?: boolean;
+}
 
-  // Al montar: si el perfil ya tiene whatsappQR, mostrarlo sin llamar a create/qrcode
-  useEffect(() => {
-    if (!company?.id) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
+export const WhatsAppConnectionLayer = forwardRef<WhatsAppConnectionLayerRef, WhatsAppConnectionLayerProps>(
+  ({ onProgressUpdate, onDataChange }, ref) => {
+    const { colors, isDark } = useTheme();
+    const { isMobile } = useResponsive();
+    const alert = useAlert();
+    const { company } = useCompany();
+    const actionIconColor = isDark ? colors.primaryDark : colors.primary;
+
+    const [loading, setLoading] = useState(true);
+    const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view-qr' | null>(null);
+    const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null);
+    const [generatingQR, setGeneratingQR] = useState(false);
+    const [formData, setFormData] = useState<WhatsAppInstanceFormData>({ whatsapp: '', isActive: true });
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
+    const [generatedQR, setGeneratedQR] = useState<string | null>(null);
+
+    // Cargar instancias al montar
+    useEffect(() => {
+      if (!company?.id) {
+        setLoading(false);
+        return;
+      }
+      loadInstances();
+    }, [company?.id]);
+
+      const loadInstances = async () => {
+      if (!company?.id) return;
       try {
+        setLoading(true);
         const profile = await CommercialService.getProfile(company.id);
-        if (cancelled) return;
-        const existingQR = getWhatsAppQRBase64(profile.whatsappQR);
-        if (existingQR) {
-          setQrCode(existingQR);
-          if (profile.whatsapp) setWhatsapp(profile.whatsapp);
-          onProgressUpdate?.(100);
-          onDataChange?.(true);
-        }
+        const loadedInstances = profile.whatsappInstances || [];
+        setInstances(loadedInstances);
+        
+        // Actualizar progreso basado en si hay instancias activas
+        const hasActiveInstances = loadedInstances.some(inst => inst.isActive);
+        onProgressUpdate?.(hasActiveInstances ? 100 : 0);
+        onDataChange?.(hasActiveInstances);
       } catch (error: any) {
-        if (!cancelled) {
-          console.error('Error al cargar perfil para WhatsApp:', error);
-        }
+        console.error('Error al cargar instancias de WhatsApp:', error);
+        alert.showError('Error al cargar instancias de WhatsApp');
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
-  }, [company?.id]);
+    };
 
-  /** Orquesta create → qrcode → guardar en perfil. Usado para "Generar" y "Regenerar". */
-  const handleConnect = async () => {
-    if (!company?.id) {
-      alert.showError('No se encontró la empresa');
-      return;
-    }
+    const handleCreate = () => {
+      setFormData({ whatsapp: '', isActive: true });
+      setFormErrors({});
+      setSelectedInstance(null);
+      setModalMode('create');
+      setIsModalVisible(true);
+    };
 
-    try {
-      setLoading(true);
-      const profile = await CommercialService.getProfile(company.id);
+    // Exponer handleCreate a través de la ref
+    useImperativeHandle(ref, () => ({
+      handleCreate,
+    }));
+
+    const handleEdit = (instance: WhatsAppInstance) => {
+      setFormData({ whatsapp: instance.whatsapp, isActive: instance.isActive });
+      setFormErrors({});
+      setSelectedInstance(instance);
+      setModalMode('edit');
+      setIsModalVisible(true);
+    };
+
+    const handleViewQR = (instance: WhatsAppInstance) => {
+      setSelectedInstance(instance);
+      setModalMode('view-qr');
+      setIsModalVisible(true);
+    };
+
+    const handleCloseModal = () => {
+      setIsModalVisible(false);
+      setModalMode(null);
+      setSelectedInstance(null);
+      setFormData({ whatsapp: '' });
+      setFormErrors({});
+      setGeneratedQR(null);
+    };
+
+    const validateForm = (): boolean => {
+      const errors: Record<string, string> = {};
+      if (!formData.whatsapp.trim()) {
+        errors.whatsapp = 'El número de WhatsApp es requerido';
+      }
+      setFormErrors(errors);
+      return Object.keys(errors).length === 0;
+    };
+
+    const handleGenerateQR = async () => {
+      if (!company?.id || !selectedInstance) return;
       
-      if (!profile.whatsapp) {
-        alert.showError('Debes configurar el número de WhatsApp en la capa de Contexto Institucional primero');
-        return;
-      }
-
-      const whatsappValue = profile.whatsapp;
-      setWhatsapp(whatsappValue);
-
-      // Paso 1: Crear instancia de WhatsApp
-      setCreating(true);
-      const createResponse = await CommercialService.createWhatsAppInstance(whatsappValue);
-      
-      if (!createResponse.success) {
-        alert.showError('Error al crear la instancia de WhatsApp');
-        return;
-      }
-
-      // Paso 2: Obtener QR code
-      const qrResponse = await CommercialService.getWhatsAppQRCode(whatsappValue);
-      
-      if (!qrResponse.qrcode) {
-        alert.showError('Error al obtener el código QR');
-        return;
-      }
-
-      setQrCode(qrResponse.qrcode);
-
-      // Paso 3: Guardar QR code en el perfil
-      // El endpoint connectWhatsApp actualiza automáticamente whatsappQR, pero primero guardamos el QR
-      await CommercialService.updateProfile(company.id, {
-        whatsappQR: {
-          qr: qrResponse.qrcode,
-          expiresAt: new Date(Date.now() + 60 * 1000).toISOString(), // Expira en 1 minuto (típico de QR de WhatsApp)
-        },
-      });
-
-      // Paso 4: Llamar al endpoint de conexión para marcar como conectado
-      // Este endpoint actualiza automáticamente whatsappQR en el backend
+      setGeneratingQR(true);
       try {
-        await CommercialService.connectWhatsApp(company.id);
+        // Regenerar QR para la instancia seleccionada
+        const updatedInstance = await CommercialService.regenerateWhatsAppQR(company.id, selectedInstance.id);
+        
+        // Actualizar en la lista local
+        const updatedInstances = instances.map(inst => 
+          inst.id === updatedInstance.id ? updatedInstance : inst
+        );
+        setInstances(updatedInstances);
+        
+        // Actualizar instancia seleccionada para mostrar nuevo QR
+        setSelectedInstance(updatedInstance);
+        
+        alert.showSuccess('Código QR regenerado correctamente');
       } catch (error: any) {
-        // Si falla, no es crítico - el QR ya está guardado
-        console.error('Error al conectar WhatsApp (no crítico):', error);
+        const errorMessage = error?.message || 'Error al regenerar el código QR';
+        alert.showError(errorMessage);
+      } finally {
+        setGeneratingQR(false);
       }
+    };
 
-      // Actualizar progreso
-      onProgressUpdate?.(100);
-      onDataChange?.(true);
-      alert.showSuccess('Código QR generado correctamente. Escanea el código con WhatsApp para conectar.');
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Error al conectar WhatsApp';
-      alert.showError(errorMessage);
-    } finally {
-      setLoading(false);
-      setCreating(false);
-    }
-  };
+    const handleGenerateFromInput = async () => {
+      if (!company?.id) return;
+      
+      if (!formData.whatsapp.trim()) {
+        setFormErrors({ whatsapp: 'El número de WhatsApp es requerido' });
+        return;
+      }
+      
+      setGeneratingQR(true);
+      try {
+        const whatsappValue = formatCode(formData.whatsapp.trim());
+        
+        // Paso 1: Crear instancia de WhatsApp
+        const createResponse = await CommercialService.createWhatsAppInstance(whatsappValue);
+        
+        if (!createResponse.success) {
+          alert.showError('Error al crear la instancia de WhatsApp');
+          return;
+        }
 
-  return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
-      <View style={styles.formContainer}>
-        {!qrCode && !loading && (
-          <View style={styles.actionContainer}>
-            <Button
-              title={creating ? 'Creando instancia...' : 'Generar Código QR'}
-              onPress={handleConnect}
-              variant="primary"
-              size="lg"
-              disabled={creating}
-              style={styles.button}
-            >
-              {creating ? (
-                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-              ) : (
-                <Ionicons name="qr-code-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-              )}
-            </Button>
-          </View>
-        )}
+        // Paso 2: Obtener QR code
+        const qrResponse = await CommercialService.getWhatsAppQRCode(whatsappValue);
+        
+        if (!qrResponse.qrcode) {
+          alert.showError('Error al obtener el código QR');
+          return;
+        }
 
-        {qrCode && (
-          <View style={styles.qrContainer}>
-            <View style={[styles.qrContent, isMobile && styles.qrContentMobile]}>
-              {/* Instrucciones a la izquierda */}
-              <View style={styles.instructionsContainer}>
-                <ThemedText type="body2" style={[styles.qrTitle, { color: colors.text }]}>
-                  Escanea este código con WhatsApp
+        // Guardar el QR generado en el estado
+        setGeneratedQR(qrResponse.qrcode);
+        
+        alert.showSuccess('Código QR generado correctamente');
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Error al generar el código QR';
+        alert.showError(errorMessage);
+      } finally {
+        setGeneratingQR(false);
+      }
+    };
+
+    const handleSave = async () => {
+      if (!company?.id) return;
+      
+      if (!validateForm()) return;
+      
+      setSaving(true);
+      try {
+        const whatsappValue = formatCode(formData.whatsapp.trim());
+        
+        if (modalMode === 'create') {
+          // Crear nueva instancia con el QR generado si existe
+          const newInstance = await CommercialService.createWhatsAppInstanceInProfile(company.id, {
+            whatsapp: whatsappValue,
+            whatsappQR: generatedQR,
+            isActive: true,
+          });
+          
+          setInstances(prev => [...prev, newInstance]);
+          
+          // Actualizar progreso con la nueva lista
+          const updatedInstances = [...instances, newInstance];
+          const hasActiveInstances = updatedInstances.some(inst => inst.isActive);
+          onProgressUpdate?.(hasActiveInstances ? 100 : 0);
+          onDataChange?.(hasActiveInstances);
+          
+          // Si la instancia tiene QR, mostrar el modal de QR automáticamente
+          if (newInstance.whatsappQR) {
+            setSelectedInstance(newInstance);
+            setModalMode('view-qr');
+            setIsModalVisible(true);
+            setGeneratedQR(null); // Limpiar QR generado
+            alert.showSuccess('Instancia de WhatsApp creada correctamente');
+          } else {
+            handleCloseModal();
+            alert.showSuccess('Instancia de WhatsApp creada correctamente');
+          }
+        } else if (modalMode === 'edit' && selectedInstance) {
+          // Actualizar instancia existente
+          const updatedInstance = await CommercialService.updateWhatsAppInstance(
+            company.id,
+            selectedInstance.id,
+            { 
+              whatsapp: whatsappValue,
+              isActive: formData.isActive
+            }
+          );
+          
+          setInstances(prev => prev.map(inst => 
+            inst.id === updatedInstance.id ? updatedInstance : inst
+          ));
+          
+          // Si se actualizó el WhatsApp y tiene QR, actualizar la instancia seleccionada
+          if (updatedInstance.whatsappQR && selectedInstance) {
+            setSelectedInstance(updatedInstance);
+          }
+          
+          // Actualizar progreso con la lista actualizada
+          const updatedInstances = instances.map(inst => 
+            inst.id === updatedInstance.id ? updatedInstance : inst
+          );
+          const hasActiveInstances = updatedInstances.some(inst => inst.isActive);
+          onProgressUpdate?.(hasActiveInstances ? 100 : 0);
+          onDataChange?.(hasActiveInstances);
+          
+          alert.showSuccess('Instancia de WhatsApp actualizada correctamente');
+          handleCloseModal();
+        }
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Error al guardar la instancia';
+        alert.showError(errorMessage);
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    const handleDelete = async (instance: WhatsAppInstance) => {
+      if (!company?.id) return;
+      
+      alert.showConfirm(
+        'Eliminar instancia',
+        `¿Seguro que deseas eliminar la instancia de WhatsApp ${instance.whatsapp}? Esta acción no se puede deshacer.`,
+        async () => {
+          try {
+            await CommercialService.deleteWhatsAppInstance(company.id, instance.id);
+            const remainingInstances = instances.filter(inst => inst.id !== instance.id);
+            setInstances(remainingInstances);
+            
+            // Actualizar progreso con la lista actualizada
+            const hasActiveInstances = remainingInstances.some(inst => inst.isActive);
+            onProgressUpdate?.(hasActiveInstances ? 100 : 0);
+            onDataChange?.(hasActiveInstances);
+            
+            alert.showSuccess('Instancia eliminada correctamente');
+          } catch (error: any) {
+            const errorMessage = error?.message || 'Error al eliminar la instancia';
+            alert.showError(errorMessage);
+          }
+        }
+      );
+    };
+
+    const handleToggleStatus = async (instance: WhatsAppInstance) => {
+      if (!company?.id) return;
+      
+      try {
+        const updatedInstance = await CommercialService.toggleWhatsAppInstanceStatus(
+          company.id,
+          instance.id,
+          !instance.isActive
+        );
+        
+        const updatedInstances = instances.map(inst => 
+          inst.id === updatedInstance.id ? updatedInstance : inst
+        );
+        setInstances(updatedInstances);
+        
+        // Actualizar progreso con la lista actualizada
+        const hasActiveInstances = updatedInstances.some(inst => inst.isActive);
+        onProgressUpdate?.(hasActiveInstances ? 100 : 0);
+        onDataChange?.(hasActiveInstances);
+        
+        alert.showSuccess(
+          updatedInstance.isActive 
+            ? 'Instancia activada correctamente' 
+            : 'Instancia desactivada correctamente'
+        );
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Error al cambiar el estado de la instancia';
+        alert.showError(errorMessage);
+      }
+    };
+
+    // Columnas de la tabla
+    const columns: TableColumn<WhatsAppInstance>[] = [
+      {
+        key: 'whatsapp',
+        label: 'WhatsApp',
+        width: '25%',
+      },
+      {
+        key: 'whatsappQR',
+        label: 'QR Code',
+        width: '20%',
+        render: (instance) => (
+          instance.whatsappQR ? (
+            <TouchableOpacity onPress={() => handleViewQR(instance)}>
+              <View style={[styles.qrBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                <Ionicons name="qr-code" size={16} color={colors.primary} />
+                <ThemedText type="caption" style={{ color: colors.primary, marginLeft: 4 }}>
+                  Ver QR
                 </ThemedText>
-                <ThemedText type="caption" style={[styles.qrInstructions, { color: colors.textSecondary }]}>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <ThemedText type="caption" style={{ color: colors.textSecondary }}>
+              Sin QR
+            </ThemedText>
+          )
+        ),
+      },
+      {
+        key: 'isActive',
+        label: 'Estado',
+        width: '15%',
+        align: 'center',
+        render: (instance) => (
+          <StatusBadge 
+            status={instance.isActive ? 1 : 0}
+            statusDescription={instance.isActive ? 'Activa' : 'Inactiva'}
+            size="small"
+          />
+        ),
+      },
+      {
+        key: 'actions',
+        label: 'Acciones',
+        width: '40%',
+        align: 'center',
+        render: (instance) => (
+          <View style={styles.actionsContainer}>
+            {instance.whatsappQR && (
+              <Tooltip text="Ver QR" position="left">
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleViewQR(instance)}
+                >
+                  <Ionicons name="qr-code" size={18} color={actionIconColor} />
+                </TouchableOpacity>
+              </Tooltip>
+            )}
+            <Tooltip text={instance.isActive ? 'Desactivar' : 'Activar'} position="left">
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleToggleStatus(instance)}
+              >
+                <Ionicons 
+                  name={instance.isActive ? 'eye-off' : 'eye'} 
+                  size={18} 
+                  color={actionIconColor} 
+                />
+              </TouchableOpacity>
+            </Tooltip>
+            <Tooltip text="Editar" position="left">
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleEdit(instance)}
+              >
+                <Ionicons name="pencil" size={18} color={actionIconColor} />
+              </TouchableOpacity>
+            </Tooltip>
+            <Tooltip text="Eliminar" position="left">
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleDelete(instance)}
+              >
+                <Ionicons name="trash" size={18} color={actionIconColor} />
+              </TouchableOpacity>
+            </Tooltip>
+          </View>
+        ),
+      },
+    ];
+
+    return (
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
+        <View style={styles.formContainer}>
+          {/* Tabla de instancias */}
+          <View style={styles.tableContainer}>
+            <DataTable
+              data={instances}
+              columns={columns}
+              loading={loading}
+              emptyMessage="No hay instancias de WhatsApp. Crea una para comenzar."
+              keyExtractor={(instance) => instance.id}
+              showPagination={false}
+            />
+          </View>
+
+          {/* Modal de crear/editar */}
+          {(modalMode === 'create' || modalMode === 'edit') && (
+            <SideModal
+              visible={isModalVisible}
+              onClose={handleCloseModal}
+              title={modalMode === 'edit' ? 'Editar Instancia' : 'Crear Instancia'}
+              subtitle={modalMode === 'edit' ? 'Modifica los datos de la instancia' : 'Completa los datos para crear una nueva instancia'}
+              footer={
+                <>
+                  <Button
+                    title="Cancelar"
+                    onPress={handleCloseModal}
+                    variant="outline"
+                    size="md"
+                    disabled={saving || generatingQR}
+                  />
+                  <Button
+                    title={saving ? 'Guardando...' : 'Guardar'}
+                    onPress={handleSave}
+                    variant="primary"
+                    size="md"
+                    disabled={saving || generatingQR}
+                  >
+                    {saving && (
+                      <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                    )}
+                  </Button>
+                </>
+              }
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.inputGroup}>
+                  <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                    Número de WhatsApp
+                  </ThemedText>
+                  <PhoneInput
+                    value={formData.whatsapp}
+                    onChangeText={(val) => {
+                      const formatted = formatCode(val);
+                      setFormData(prev => ({ ...prev, whatsapp: formatted }));
+                      if (formErrors.whatsapp) {
+                        setFormErrors(prev => {
+                          const next = { ...prev };
+                          delete next.whatsapp;
+                          return next;
+                        });
+                      }
+                    }}
+                    placeholder="Ej: 593996294267 o MI_CODIGO"
+                    error={!!formErrors.whatsapp}
+                    errorMessage={formErrors.whatsapp}
+                    maxLength={15}
+                  />
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                    Número de WhatsApp o identificador IA
+                  </ThemedText>
+                  
+                  {/* Switch de estado activo/inactivo - Solo en modo edición */}
+                  {modalMode === 'edit' && (
+                    <View style={{ marginTop: 16 }}>
+                      <CustomSwitch
+                        value={formData.isActive ?? false}
+                        onValueChange={(value) => {
+                          setFormData(prev => ({ ...prev, isActive: value }));
+                        }}
+                        label="Estado de la instancia"
+                      />
+                      <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                        {formData.isActive ? 'La instancia está activa y disponible para uso' : 'La instancia está inactiva y no estará disponible'}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {/* Botón Generar QR - Solo mostrar si no hay QR generado y estamos en modo creación */}
+                  {modalMode === 'create' && !generatedQR && (
+                    <View style={{ marginTop: 12 }}>
+                      <Button
+                        title={generatingQR ? 'Generando...' : 'Generar'}
+                        onPress={handleGenerateFromInput}
+                        variant="outline"
+                        size="md"
+                        disabled={generatingQR || !formData.whatsapp.trim()}
+                      >
+                        {generatingQR ? (
+                          <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
+                        ) : (
+                          <Ionicons name="qr-code-outline" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+                        )}
+                      </Button>
+                    </View>
+                  )}
+                  
+                  {/* Mostrar QR generado si existe (solo en creación) */}
+                  {modalMode === 'create' && generatedQR && (
+                    <View style={styles.inputGroup}>
+                      <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                        Código QR Generado
+                      </ThemedText>
+                      <View style={[styles.qrImageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <Image
+                          source={{ 
+                            uri: generatedQR.startsWith('data:') 
+                              ? generatedQR 
+                              : `data:image/png;base64,${generatedQR}` 
+                          }}
+                          style={styles.qrImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* En modo edición, mostrar QR existente y botón regenerar */}
+                {modalMode === 'edit' && selectedInstance && (
+                  <View style={styles.inputGroup}>
+                    {selectedInstance.whatsappQR && (
+                      <>
+                        <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+                          Código QR Actual
+                        </ThemedText>
+                        <View style={[styles.qrImageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                          <Image
+                            source={{ 
+                              uri: selectedInstance.whatsappQR.startsWith('data:') 
+                                ? selectedInstance.whatsappQR 
+                                : `data:image/png;base64,${selectedInstance.whatsappQR}` 
+                            }}
+                            style={styles.qrImage}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      </>
+                    )}
+                    <View style={{ marginTop: 12 }}>
+                      <Button
+                        title={generatingQR ? 'Regenerando...' : 'Regenerar QR'}
+                        onPress={handleGenerateQR}
+                        variant="outline"
+                        size="md"
+                        disabled={generatingQR}
+                      >
+                        {generatingQR ? (
+                          <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
+                        ) : (
+                          <Ionicons name="refresh-outline" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+                        )}
+                      </Button>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </SideModal>
+          )}
+
+          {/* Modal de ver QR */}
+          {modalMode === 'view-qr' && selectedInstance?.whatsappQR && (
+            <SideModal
+              visible={isModalVisible}
+              onClose={handleCloseModal}
+              title="Código QR de WhatsApp"
+              subtitle="Escanea este código con WhatsApp para conectar"
+              footer={
+                <>
+                  <Button
+                    title="Cerrar"
+                    onPress={handleCloseModal}
+                    variant="outline"
+                    size="md"
+                  />
+                  <Button
+                    title={generatingQR ? 'Regenerando...' : 'Regenerar QR'}
+                    onPress={handleGenerateQR}
+                    variant="primary"
+                    size="md"
+                    disabled={generatingQR}
+                  >
+                    {generatingQR ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                    ) : (
+                      <Ionicons name="refresh-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    )}
+                  </Button>
+                </>
+              }
+            >
+              <View style={styles.modalContent}>
+                <ThemedText type="body2" style={[styles.qrInstructions, { color: colors.textSecondary, marginBottom: 16 }]}>
                   1. Abre WhatsApp en tu teléfono{'\n'}
                   2. Ve a Configuración → Dispositivos vinculados{'\n'}
                   3. Toca "Vincular un dispositivo"{'\n'}
                   4. Escanea este código QR
                 </ThemedText>
-              </View>
-
-              {/* QR a la derecha */}
-              <View style={styles.qrImageWrapper}>
+                
                 <View style={[styles.qrImageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <Image
-                    source={{ uri: qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}` }}
+                    source={{ 
+                      uri: selectedInstance.whatsappQR.startsWith('data:') 
+                        ? selectedInstance.whatsappQR 
+                        : `data:image/png;base64,${selectedInstance.whatsappQR}` 
+                    }}
                     style={styles.qrImage}
                     resizeMode="contain"
                   />
                 </View>
-                
-                {/* Botón Regenerar bajo la imagen */}
-                <Button
-                  title={creating ? 'Regenerando...' : 'Regenerar'}
-                  onPress={handleConnect}
-                  variant="outline"
-                  size="lg"
-                  disabled={creating}
-                  style={styles.regenerateButton}
-                >
-                  {creating ? (
-                    <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
-                  ) : (
-                    <Ionicons name="refresh-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-                  )}
-                </Button>
               </View>
-            </View>
-          </View>
-        )}
-
-        {loading && !qrCode && !creating && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText type="body2" style={{ marginTop: 16, color: colors.textSecondary }}>
-              Cargando información...
-            </ThemedText>
-          </View>
-        )}
-
-        <View style={[styles.infoBox, { backgroundColor: colors.surfaceVariant }]}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-          <ThemedText type="body2" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
-            El código QR expira después de un tiempo. Si expira, genera uno nuevo haciendo clic en "Regenerar".
-          </ThemedText>
+            </SideModal>
+          )}
         </View>
-      </View>
-    </ScrollView>
-  );
-}
+      </ScrollView>
+    );
+  }
+);
+
+WhatsAppConnectionLayer.displayName = 'WhatsAppConnectionLayer';
 
 const styles = StyleSheet.create({
   container: {
@@ -235,72 +658,55 @@ const styles = StyleSheet.create({
   formContainer: {
     gap: 24,
   },
-  actionContainer: {
-    marginTop: 16,
-  },
-  button: {
-    marginTop: 8,
-  },
-  qrContainer: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  qrContent: {
+  header: {
     flexDirection: 'row',
-    gap: 48,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    maxWidth: 1000,
-    width: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  qrContentMobile: {
-    flexDirection: 'column',
-    gap: 24,
+  tableContainer: {
+    marginTop: 0,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  instructionsContainer: {
-    flex: 0,
-    alignItems: 'flex-start',
-    minWidth: 300,
-    maxWidth: 400,
+  actionButton: {
+    padding: 8,
   },
-  qrTitle: {
+  qrBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  modalContent: {
+    padding: 20,
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
     fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'left',
+    marginBottom: 4,
   },
   qrInstructions: {
-    textAlign: 'left',
     lineHeight: 20,
-  },
-  qrImageWrapper: {
-    alignItems: 'center',
-    flex: 0,
-    minWidth: 280,
+    textAlign: 'left',
   },
   qrImageContainer: {
+    alignSelf: 'center',
     padding: 20,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16,
   },
   qrImage: {
     width: 250,
     height: 250,
-  },
-  regenerateButton: {
-    width: '100%',
-  },
-  loadingContainer: {
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
   },
 });

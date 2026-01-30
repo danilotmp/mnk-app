@@ -3,6 +3,20 @@
  * Basado en el VVD 1.0 - Modelo de Datos Aprobado
  */
 
+// ===== WhatsApp Instance =====
+export interface WhatsAppInstance {
+  id: string;
+  whatsapp: string;
+  whatsappQR: string | null; // Base64 del QR code
+  isActive: boolean;
+}
+
+export interface WhatsAppInstancePayload {
+  whatsapp: string;
+  whatsappQR?: string | null;
+  isActive?: boolean;
+}
+
 // ===== Commercial Profile =====
 export interface CommercialProfile {
   companyId: string;
@@ -14,9 +28,7 @@ export interface CommercialProfile {
   is24_7?: boolean | null;
   defaultTaxMode?: 'included' | 'excluded' | null;
   allowsBranchPricing?: boolean | null;
-  whatsapp?: string | null;
-  /** Base64 del QR (string) o objeto con qr y expiresAt. El backend puede devolverlo como string. */
-  whatsappQR?: string | { qr: string; expiresAt?: string } | null;
+  whatsappInstances?: WhatsAppInstance[];
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -33,8 +45,7 @@ export interface CommercialProfilePayload {
   is24_7?: boolean;
   defaultTaxMode?: 'included' | 'excluded';
   allowsBranchPricing?: boolean;
-  whatsapp?: string | null;
-  whatsappQR?: string | { qr: string; expiresAt?: string } | null;
+  whatsappInstances?: WhatsAppInstancePayload[];
 }
 
 // ===== Payment Methods =====

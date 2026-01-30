@@ -5,6 +5,7 @@
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -16,7 +17,7 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { CompanySetupLayer } from '../components/company-setup-layer/company-setup-layer';
 import { InstitutionalLayer } from '../components/institutional-layer/institutional-layer';
@@ -24,7 +25,7 @@ import { InteractionGuidelinesLayer } from '../components/interaction-guidelines
 import { OperationalLayer } from '../components/operational-layer/operational-layer';
 import { PaymentsLayer } from '../components/payments-layer/payments-layer';
 import { RecommendationsLayer } from '../components/recommendations-layer/recommendations-layer';
-import { WhatsAppConnectionLayer } from '../components/whatsapp-connection-layer';
+import { WhatsAppConnectionLayer, WhatsAppConnectionLayerRef } from '../components/whatsapp-connection-layer';
 import { WizardStep, WizardStepper } from '../components/wizard-stepper';
 
 export function CommercialSetupScreen() {
@@ -43,6 +44,7 @@ export function CommercialSetupScreen() {
   const [recommendationsFilter, setRecommendationsFilter] = useState('');
   const [interactionGuidelinesFilter, setInteractionGuidelinesFilter] = useState('');
   const [offeringsFilter, setOfferingsFilter] = useState('');
+  const whatsappConnectionRef = useRef<WhatsAppConnectionLayerRef | null>(null);
 
   // Detectar si necesita Capa 0 (crear empresa/sucursal)
   const needsCompanySetup = (): boolean => {
@@ -417,6 +419,28 @@ export function CommercialSetupScreen() {
                     />
                   </View>
                 )}
+                {currentLayer === 'whatsappConnection' && (
+                  <View style={{ 
+                    flex: isMobile ? undefined : 0,
+                    marginLeft: isMobile ? 0 : 16, 
+                    marginTop: isMobile ? 0 : 0,
+                    alignItems: isMobile ? 'stretch' : 'center',
+                    justifyContent: 'center',
+                    minWidth: isMobile ? '100%' : 220
+                  }}>
+                    <Button
+                      title={isMobile ? '' : 'Crear Conexión'}
+                      onPress={() => {
+                        whatsappConnectionRef.current?.handleCreate();
+                      }}
+                      variant="primary"
+                      size="md"
+                      style={{ width: isMobile ? '100%' : 220 }}
+                    >
+                      <Ionicons name="add" size={20} color="#FFFFFF" style={!isMobile ? { marginRight: 8 } : undefined} />
+                    </Button>
+                  </View>
+                )}
                 {currentLayer === 'recommendations' && (
                   <View style={{ 
                     flex: isMobile ? undefined : 1, 
@@ -660,12 +684,28 @@ export function CommercialSetupScreen() {
                     onComplete={async (hasData: boolean = false) => {
                       // Marcar como completada con los datos proporcionados
                       await markLayerAsCompleted('recommendations', hasData);
-                      // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
-                      // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
+                      // Navegar automáticamente a la siguiente etapa (whatsappConnection)
+                      setCurrentLayer(prevLayer => {
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
+                        const currentIndex = layerOrder.indexOf(prevLayer);
+                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                          return layerOrder[currentIndex + 1];
+                        }
+                        return prevLayer;
+                      });
                     }}
                     onSkip={async () => {
                       // Marcar como omitida sin datos
                       await markLayerAsCompleted('recommendations', false);
+                      // Navegar automáticamente a la siguiente etapa (whatsappConnection)
+                      setCurrentLayer(prevLayer => {
+                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
+                        const currentIndex = layerOrder.indexOf(prevLayer);
+                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                          return layerOrder[currentIndex + 1];
+                        }
+                        return prevLayer;
+                      });
                     }}
                     // Mostrar todos los tipos de recomendaciones (sin filtro)
                     layerTitle="Recomendaciones"
@@ -674,6 +714,7 @@ export function CommercialSetupScreen() {
                 )}
                 {currentLayer === 'whatsappConnection' && (
                   <WhatsAppConnectionLayer
+                    ref={whatsappConnectionRef}
                     onProgressUpdate={(progress) => {
                       setLayerProgress(prev => {
                         const updated = prev.map(l => l.layer === 'whatsappConnection' 

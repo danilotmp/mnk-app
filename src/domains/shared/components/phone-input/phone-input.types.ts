@@ -69,4 +69,9 @@ export interface PhoneInputProps {
    * Callback cuando se presiona la tecla de retorno
    */
   onSubmitEditing?: () => void;
+  
+  /**
+   * Longitud máxima del valor
+   */
+  maxLength?: number;
 }
