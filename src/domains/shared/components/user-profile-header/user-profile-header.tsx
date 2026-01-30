@@ -149,37 +149,37 @@ export function UserProfileHeader({
     return (
       <>
         <View style={styles.profileContainer}>
-          {/* Toggle de tema - Al lado izquierdo del botón de login - Solo en desktop/tablet */}
+          {/* Toggle de tema - Solo en desktop/tablet */}
           {!isMobile && (
             <View style={styles.themeToggleWrapper}>
               <ThemeToggle />
             </View>
           )}
 
+          {/* Selector de idioma - Solo en desktop/tablet */}
+          {!isMobile && (
+            <View style={styles.languageSelectorWrapper}>
+              <LanguageSelector />
+            </View>
+          )}
+
           {/* Botón de login - Solo en desktop/tablet */}
           {!isMobile && (
-            <>
-              <TouchableOpacity
-                style={[
-                  styles.loginButton,
-                  { backgroundColor: colors.surface }
-                ]}
-                onPress={() => setLoginModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
-                  {t.auth.login}
-                </ThemedText>
-                <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
-                  <Ionicons name="person-outline" size={18} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-
-              {/* Selector de idioma - Junto al botón de login - Solo en desktop/tablet */}
-              <View style={styles.languageSelectorWrapper}>
-                <LanguageSelector />
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                { backgroundColor: 'transparent' }
+              ]}
+              onPress={() => setLoginModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
+                {t.auth.login}
+              </ThemedText>
+              <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
+                <Ionicons name="person-outline" size={18} color="#FFFFFF" />
               </View>
-            </>
+            </TouchableOpacity>
           )}
         </View>
 

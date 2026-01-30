@@ -30,6 +30,7 @@ export const createUserProfileHeaderStyles = () =>
       paddingHorizontal: 12,
       borderRadius: 20,
       gap: 8,
+      backgroundColor: 'transparent',
     },
     loginButtonMobile: {
       paddingVertical: 4,
@@ -75,6 +76,7 @@ export const createUserProfileHeaderStyles = () =>
       borderTopRightRadius: 20,
       borderBottomRightRadius: 20,
       gap: 8,
+      backgroundColor: 'transparent',
     },
     profileButtonMobile: {
       paddingVertical: 4,
