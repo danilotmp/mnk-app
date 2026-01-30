@@ -18,7 +18,7 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
       borderBottomWidth: 1,
       zIndex: 9999,
       paddingRight: 16,
-      paddingLeft: 0,
+      paddingLeft: 0, // Se sobrescribe condicionalmente en el componente para móvil
       position: 'relative', // Para posicionar el dropdown relativo al header
     },
     // Desktop/Tablet
@@ -51,6 +51,7 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     mobileLogoSection: {
       flex: 1,
       alignItems: 'flex-start',
+      paddingLeft: 0, // El padding ya está en unifiedHeader
     },
     mobileUserSection: {
       flexShrink: 0,

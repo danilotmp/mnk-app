@@ -62,7 +62,7 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   const [formData, setFormData] = useState({
     businessDescription: '',
     industry: '',
-    language: systemLanguage,
+    language: (systemLanguage === 'es' || systemLanguage === 'en' ? systemLanguage : 'es') as 'es' | 'en',
     timezone: systemTimezone, // Usar zona horaria del sistema/navegador por defecto (normalizada a lowercase)
     is24_7: false,
     defaultTaxMode: 'included' as 'included' | 'excluded',
@@ -142,6 +142,8 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   // Normalizar industry cuando se cargan las industrias O cuando se carga el perfil
   // Convertir name a code si es necesario
   // Esto asegura que el Select muestre la opción correcta preseleccionada
+  // NOTA: Este efecto se ejecuta cuando cambian las industrias o el perfil, pero el efecto anterior
+  // ya maneja la actualización cuando se cargan las industrias después del perfil
   useEffect(() => {
     // Solo normalizar si hay industrias cargadas y hay un valor de industry en el formulario
     if (industries.length === 0 || !formData.industry) return;
@@ -159,9 +161,34 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       // También actualizar los datos originales para mantener la consistencia
       setOriginalFormData(prev => prev ? { ...prev, industry: normalizedIndustry } : null);
     }
-  }, [industries, normalizeIndustryValue, profile?.industry]); // Incluir profile?.industry para detectar cuando se carga el perfil
+  }, [industries, normalizeIndustryValue, formData.industry]); // Solo depender de formData.industry, no de profile?.industry
 
   // Cargar perfil existente - solo una vez cuando cambia company.id
+  // Limpiar estado cuando cambia la empresa
+  useEffect(() => {
+    if (!company?.id) return;
+    
+    // Limpiar inmediatamente el estado del formulario cuando cambia la empresa
+    // para evitar mostrar datos de la empresa anterior mientras se carga el nuevo perfil
+    const defaultFormData = {
+      businessDescription: '',
+      industry: '',
+      language: (systemLanguage === 'es' || systemLanguage === 'en' ? systemLanguage : 'es') as 'es' | 'en',
+      timezone: systemTimezone,
+      is24_7: false,
+      defaultTaxMode: 'included' as 'included' | 'excluded',
+      allowsBranchPricing: false,
+    };
+    setFormData(defaultFormData);
+    setOriginalFormData(defaultFormData);
+    setProfile(null);
+    setErrors({});
+    // Resetear progreso a 0 mientras se carga el nuevo perfil
+    onProgressUpdate?.(0);
+    onDataChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company?.id]); // Solo depender de company.id para limpiar cuando cambia la empresa
+
   useEffect(() => {
     if (!company?.id || isLoadingProfile) return;
 
@@ -175,15 +202,18 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         
         // Normalizar el valor de industry: convertir name a code si es necesario
         // Si las industrias ya están cargadas, normalizar ahora; si no, se normalizará cuando se carguen
-        const normalizedIndustry = industries.length > 0 
-          ? normalizeIndustryValue(existingProfile.industry)
-          : (existingProfile.industry || '');
+        // Usar el valor del perfil directamente primero, luego el efecto de normalización lo corregirá si es necesario
+        const industryValue = existingProfile.industry || '';
+        const normalizedIndustry = industries.length > 0 && industryValue
+          ? normalizeIndustryValue(industryValue)
+          : industryValue;
         
         // Mapear los datos al formulario, asegurando que los valores estén presentes
+        const profileLanguage = existingProfile.language || systemLanguage;
         const newFormData = {
           businessDescription: existingProfile.businessDescription || '',
           industry: normalizedIndustry,
-          language: existingProfile.language || systemLanguage,
+          language: (profileLanguage === 'es' || profileLanguage === 'en' ? profileLanguage : 'es') as 'es' | 'en',
           timezone: existingProfile.timezone || systemTimezone,
           is24_7: existingProfile.is24_7 ?? false,
           defaultTaxMode: (existingProfile.defaultTaxMode || 'included') as 'included' | 'excluded',
@@ -200,10 +230,11 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           setProfile(null);
           
           // Usar valores por defecto: timezone del sistema/navegador, language del sistema o empresa
+          const defaultLanguage = (systemLanguage === 'es' || systemLanguage === 'en' ? systemLanguage : 'es') as 'es' | 'en';
           const defaultFormData = {
             businessDescription: '',
             industry: '',
-            language: systemLanguage,
+            language: defaultLanguage,
             timezone: systemTimezone, // Usar zona horaria del sistema/navegador por defecto
             is24_7: false,
             defaultTaxMode: 'included' as 'included' | 'excluded',
@@ -227,6 +258,20 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]); // Solo depender de company.id para cargar el perfil una vez
+
+  // Actualizar formulario cuando se cargan las industrias y hay un perfil con industry
+  // Esto asegura que el valor de industry se normalice correctamente después de cargar los catálogos
+  useEffect(() => {
+    if (!profile || industries.length === 0 || !profile.industry) return;
+    
+    // Si el formulario ya tiene el valor correcto, no hacer nada
+    const normalizedIndustry = normalizeIndustryValue(profile.industry);
+    if (formData.industry === normalizedIndustry) return;
+    
+    // Actualizar el formulario con el valor normalizado
+    setFormData(prev => ({ ...prev, industry: normalizedIndustry }));
+    setOriginalFormData(prev => prev ? { ...prev, industry: normalizedIndustry } : null);
+  }, [industries, profile, normalizeIndustryValue, formData.industry]);
 
   // Calcular progreso
   useEffect(() => {
@@ -317,10 +362,11 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         setProfile(updated);
         
         // Actualizar formData con los valores guardados
+        const updatedLanguage = updated.language || systemLanguage;
         const newFormData = {
           businessDescription: updated.businessDescription || '',
           industry: updated.industry || '',
-          language: updated.language || systemLanguage,
+          language: (updatedLanguage === 'es' || updatedLanguage === 'en' ? updatedLanguage : 'es') as 'es' | 'en',
           timezone: updated.timezone?.toLowerCase() || systemTimezone,
           is24_7: updated.is24_7 || false,
           defaultTaxMode: (updated.defaultTaxMode || 'included') as 'included' | 'excluded',

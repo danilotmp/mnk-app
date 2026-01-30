@@ -1,9 +1,12 @@
 import { ThemedText } from '@/components/themed-text';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { AppConfig } from '@/src/config';
 import { DynamicIcon } from '@/src/domains/shared/components';
+import { useCompany } from '@/src/domains/shared/hooks/use-multi-company.hook';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,11 +36,13 @@ export function HorizontalMenu({
   onItemPress,
 }: HorizontalMenuProps) {
   const { colors } = useTheme();
+  const { isDark } = useThemeMode();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
   const isMobile = isMobileDevice(width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
+  const { user } = useCompany();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
@@ -1139,10 +1144,49 @@ export function HorizontalMenu({
                 onPress={(e) => e.stopPropagation()}
                 style={{ flex: 1 }}
               >
+              {/* Header con avatar y botón cerrar */}
               <View style={[styles.mobileMenuHeader, { borderBottomColor: colors.border }]}>
-                <ThemedText type="h3">{t.menuLabel.menu}</ThemedText>
-                <TouchableOpacity onPress={closeMobileMenu}>
-                  <ThemedText type="h3">✕</ThemedText>
+                {/* Avatar del usuario */}
+                {user ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <View style={[styles.mobileAvatar, { backgroundColor: colors.primary }]}>
+                      <ThemedText style={[styles.mobileAvatarText, { color: '#FFFFFF' }]}>
+                        {(() => {
+                          const firstName = user?.firstName?.trim() || '';
+                          const lastName = user?.lastName?.trim() || '';
+                          if (firstName && lastName) {
+                            return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
+                          }
+                          if (firstName) return firstName.charAt(0).toUpperCase();
+                          if (lastName) return lastName.charAt(0).toUpperCase();
+                          if (user?.email) return user.email.charAt(0).toUpperCase();
+                          return 'U';
+                        })()}
+                      </ThemedText>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="body1" style={{ fontWeight: '600', color: colors.text }}>
+                        {(() => {
+                          const firstName = user?.firstName?.trim() || '';
+                          const lastName = user?.lastName?.trim() || '';
+                          if (firstName && lastName) return `${firstName} ${lastName}`;
+                          if (firstName) return firstName;
+                          if (lastName) return lastName;
+                          return user?.email || 'Usuario';
+                        })()}
+                      </ThemedText>
+                      {user?.email && (
+                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                          {user.email}
+                        </ThemedText>
+                      )}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+                <TouchableOpacity onPress={closeMobileMenu} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -1258,6 +1302,16 @@ export function HorizontalMenu({
                   return filteredItems.map((item) => renderMobileMenuItem(item, 0));
                 })()}
               </ScrollView>
+              
+              {/* Botón de cambio de tema al final del menú móvil */}
+              <View style={[styles.mobileMenuFooter, { borderTopColor: colors.border }]}>
+                <View style={styles.mobileThemeToggleContainer}>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, marginRight: 12 }}>
+                    {isDark ? '☀️ Modo claro' : '🌙 Modo oscuro'}
+                  </ThemedText>
+                  <ThemeToggle />
+                </View>
+              </View>
               </Pressable>
             </Animated.View>
           </Pressable>

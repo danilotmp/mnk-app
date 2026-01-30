@@ -1060,6 +1060,22 @@ export const CommercialService = {
       skipped: recommendationsSkipped,
     });
     
+    // Capa 6: Conexión WhatsApp (whatsappInstances)
+    const whatsappInstances = profile?.whatsappInstances || [];
+    const hasWhatsAppInstances = whatsappInstances.length > 0;
+    const hasActiveWhatsAppInstances = whatsappInstances.some(inst => inst.isActive);
+    // La capa está completada si hay al menos una instancia activa
+    const whatsappConnectionComplete = hasActiveWhatsAppInstances;
+    const whatsappConnectionProgress = whatsappConnectionComplete ? 100 : (hasWhatsAppInstances ? 50 : 0);
+    
+    layers.push({
+      layer: 'whatsappConnection',
+      completed: whatsappConnectionComplete,
+      completionPercentage: whatsappConnectionProgress,
+      enabledCapabilities: [], // Las instancias de WhatsApp no activan capacidades específicas en el contexto comercial
+      missingFields: whatsappConnectionComplete ? [] : ['whatsappInstances'],
+    });
+    
     return layers;
   },
 

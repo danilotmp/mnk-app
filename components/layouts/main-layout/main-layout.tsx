@@ -378,6 +378,7 @@ export function MainLayout({
             {
               backgroundColor: colors.background,
               borderBottomColor: colors.border,
+              paddingLeft: isMobile ? 16 : 0, // Padding izquierdo solo en móvil
             },
           ]}
         >

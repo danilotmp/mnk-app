@@ -26,8 +26,8 @@ export const createHorizontalMenuStyles = (activeItemColor: string = '#ff3366') 
       flexDirection: 'row',
     },
     mobileMenuContainer: {
-      width: '80%',
-      maxWidth: 320,
+      width: '85%',
+      maxWidth: 380,
       height: '100%',
       ...Platform.select({
         web: {
@@ -44,10 +44,32 @@ export const createHorizontalMenuStyles = (activeItemColor: string = '#ff3366') 
     },
     mobileMenuHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      padding: 20,
+      padding: 16,
       borderBottomWidth: 1,
+      gap: 12,
+    },
+    mobileHeaderIcon: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    mobileHeaderAvatarContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      minWidth: 0,
+    },
+    mobileAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0,
+    },
+    mobileAvatarText: {
+      fontSize: 16,
+      fontWeight: '600',
     },
     mobileMenuContent: { flex: 1 },
     mobileMenuItem: {

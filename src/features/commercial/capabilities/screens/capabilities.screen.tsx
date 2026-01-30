@@ -125,22 +125,22 @@ export function CapabilitiesScreen() {
     return {
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
-      justifyContent: 'flex-start' as const,
+      justifyContent: isMobile ? 'center' as const : 'flex-start' as const,
       gap: 16,
     };
   };
 
   /**
    * Calcula el ancho dinámico de cada tarjeta de producto
-   * Mobile: 1 columna (100%)
+   * Mobile: Ancho fijo de 300px centrado
    * Tablet: 2 columnas (48% cada una)
    * Desktop pequeño: 3 columnas (31% cada una)
    * Desktop grande: 4 columnas (23% cada una)
    */
   const createProductCardStyle = (screenWidth: number, isMobileDevice: boolean) => {
     if (isMobileDevice || screenWidth < 600) {
-      // Mobile: 1 columna
-      return { width: '100%' };
+      // Mobile: Ancho fijo de 300px
+      return { width: 300, maxWidth: 300 };
     } else if (screenWidth < 900) {
       // Tablet: 2 columnas (48% para dejar espacio al gap)
       return { width: '48%' };
@@ -157,11 +157,11 @@ export function CapabilitiesScreen() {
     <ThemedView style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, isMobile && styles.headerMobile]}>
           <ThemedText type="h2" style={styles.title}>
             Productos del Sistema
           </ThemedText>
@@ -171,7 +171,7 @@ export function CapabilitiesScreen() {
         </View>
 
         {/* Cards de Productos */}
-        <View style={[styles.productsGrid, createProductsGridStyle()]}>
+        <View style={[styles.productsGrid, isMobile && styles.productsGridMobile, createProductsGridStyle()]}>
           {products.map((product) => (
             <TouchableOpacity
               key={product.id}
@@ -184,11 +184,12 @@ export function CapabilitiesScreen() {
                 style={[
                   styles.productCard,
                   createProductCardStyle(width, isMobile),
+                  isMobile && styles.productCardMobile,
                   !product.enabled && styles.productCardDisabled
                 ]}
               >
                 {/* Imagen o Icono */}
-                <View style={styles.cardImageContainer}>
+                <View style={[styles.cardImageContainer, isMobile && styles.cardImageContainerMobile]}>
                   {product.image ? (
                     <Image 
                       source={{ uri: product.image }} 
@@ -199,7 +200,7 @@ export function CapabilitiesScreen() {
                     <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
                       <Ionicons 
                         name={product.icon} 
-                        size={48} 
+                        size={isMobile ? 40 : 48} 
                         color={product.enabled ? colors.primary : colors.textSecondary} 
                       />
                     </View>
@@ -208,10 +209,13 @@ export function CapabilitiesScreen() {
 
                 {/* Contenido */}
                 <View style={styles.cardContent}>
-                  <ThemedText type="h4" style={styles.cardTitle}>
+                  <ThemedText type="h4" style={[styles.cardTitle, isMobile && styles.cardTitleMobile]}>
                     {product.title}
                   </ThemedText>
-                  <ThemedText type="body2" style={[styles.cardDescription, { color: colors.textSecondary }]}>
+                  <ThemedText 
+                    type="body2" 
+                    style={[styles.cardDescription, { color: colors.textSecondary }, isMobile && styles.cardDescriptionMobile]}
+                  >
                     {product.description}
                   </ThemedText>
 
@@ -244,7 +248,7 @@ export function CapabilitiesScreen() {
         </View>
 
         {/* Mensaje informativo */}
-        <Card variant="outlined" style={styles.infoCard}>
+        <Card variant="outlined" style={[styles.infoCard, isMobile && styles.infoCardMobile]}>
           <View style={styles.infoContent}>
             <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
             <View style={styles.infoText}>
@@ -275,9 +279,18 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  scrollContentMobile: {
+    padding: 12,
+    paddingBottom: 24,
+  },
   header: {
     margin: 24,
     gap: 8,
+  },
+  headerMobile: {
+    margin: 16,
+    marginBottom: 12,
+    gap: 6,
   },
   title: {
     marginBottom: 4,
@@ -290,9 +303,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 26,
     marginBottom: 24,
   },
+  productsGridMobile: {
+    gap: 12,
+    marginHorizontal: 0,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
   productCard: {
     padding: 20,
     gap: 16,
+  },
+  productCardMobile: {
+    padding: 12,
+    gap: 10,
   },
   productCardDisabled: {
     opacity: 0.6,
@@ -303,6 +326,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 8,
+  },
+  cardImageContainerMobile: {
+    height: 140,
+    borderRadius: 10,
+    marginBottom: 6,
   },
   cardImage: {
     width: '100%',
@@ -321,8 +349,17 @@ const styles = StyleSheet.create({
   cardTitle: {
     marginBottom: 4,
   },
+  cardTitleMobile: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
   cardDescription: {
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  cardDescriptionMobile: {
+    lineHeight: 18,
+    fontSize: 14,
     marginBottom: 8,
   },
   cardFooter: {
@@ -339,6 +376,11 @@ const styles = StyleSheet.create({
   infoCard: {
     margin: 24,
     padding: 16,
+  },
+  infoCardMobile: {
+    margin: 16,
+    marginTop: 12,
+    padding: 12,
   },
   infoContent: {
     flexDirection: 'row',

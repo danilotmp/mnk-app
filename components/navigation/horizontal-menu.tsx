@@ -1,13 +1,19 @@
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
 import { isMobileDevice } from '@/constants/breakpoints';
 import { useTheme } from '@/hooks/use-theme';
+import { useThemeMode } from '@/hooks/use-theme-mode';
 import { AppConfig } from '@/src/config';
 import { DynamicIcon } from '@/src/domains/shared/components';
-import { useTranslation } from '@/src/infrastructure/i18n';
+import { useBranches, useCompany, useMultiCompany } from '@/src/domains/shared/hooks/use-multi-company.hook';
+import { Branch, BranchAccess } from '@/src/domains/shared/types';
+import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { useSession } from '@/src/infrastructure/session';
+import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
 import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -33,14 +39,174 @@ export function HorizontalMenu({
   onItemPress,
 }: HorizontalMenuProps) {
   const { colors } = useTheme();
+  const { isDark } = useThemeMode();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
   const isMobile = isMobileDevice(width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
   const { t } = useTranslation();
+  const { user, company, branch: currentBranch } = useCompany();
+  const { switchBranch } = useBranches();
+  const { clearContext } = useMultiCompany();
+  const { clearSession } = useSession();
+  const alert = useAlert();
+  const router = useRouter();
+  const [branches, setBranches] = React.useState<BranchAccess[]>([]);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
+
+  // Función helper para inferir tipo de sucursal
+  const inferBranchType = (code: string): 'headquarters' | 'branch' | 'warehouse' | 'store' => {
+    const upperCode = code.toUpperCase();
+    if (upperCode.includes('HQ') || upperCode.includes('HEADQUARTERS') || upperCode.includes('CASA MATRIZ')) {
+      return 'headquarters';
+    }
+    if (upperCode.includes('WAREHOUSE') || upperCode.includes('ALMACEN') || upperCode.includes('BODEGA')) {
+      return 'warehouse';
+    }
+    if (upperCode.includes('STORE') || upperCode.includes('TIENDA') || upperCode.includes('LOCAL')) {
+      return 'store';
+    }
+    return 'branch';
+  };
+
+  // Cargar branches cuando cambia la empresa o usuario
+  React.useEffect(() => {
+    const loadBranches = async () => {
+      if (!company || !user) {
+        setBranches([]);
+        return;
+      }
+      
+      const { UserSessionService } = await import('@/src/domains/shared/services/user-session.service');
+      const { UserContextService } = await import('@/src/domains/shared/services/user-context.service');
+      const userSessionService = UserSessionService.getInstance();
+      const userContextService = UserContextService.getInstance();
+      
+      const userResponse = await userSessionService.getUser();
+      if (!userResponse) {
+        setBranches([]);
+        return;
+      }
+      
+      const branchInfos = userContextService.getBranchesForCompany(company.id, userResponse);
+      
+      const branchAccesses: BranchAccess[] = branchInfos.map(branchInfo => {
+        const branchObj: Branch = {
+          id: branchInfo.id,
+          code: branchInfo.code,
+          name: branchInfo.name,
+          type: inferBranchType(branchInfo.code) as any,
+          companyId: company.id,
+          address: {
+            street: '',
+            city: '',
+            state: '',
+            country: '',
+            postalCode: '',
+          },
+          contactInfo: {
+            phone: '',
+            email: '',
+          },
+          settings: {
+            timezone: 'America/Guayaquil',
+            workingHours: {
+              monday: { isOpen: false },
+              tuesday: { isOpen: false },
+              wednesday: { isOpen: false },
+              thursday: { isOpen: false },
+              friday: { isOpen: false },
+              saturday: { isOpen: false },
+              sunday: { isOpen: false },
+            },
+            services: [],
+            features: [],
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        return {
+          branchId: branchInfo.id,
+          branch: branchObj,
+        };
+      });
+      
+      setBranches(branchAccesses);
+    };
+    
+    loadBranches();
+  }, [company?.id, user]);
+
+  // Obtener iniciales del nombre para el avatar
+  const getInitials = () => {
+    const firstName = user?.firstName?.trim() || '';
+    const lastName = user?.lastName?.trim() || '';
+    
+    if (firstName && lastName) {
+      return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
+    }
+    if (firstName) return firstName.charAt(0).toUpperCase();
+    if (lastName) return lastName.charAt(0).toUpperCase();
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return 'U';
+  };
+  
+  // Obtener nombre completo para mostrar
+  const getDisplayName = () => {
+    const firstName = user?.firstName?.trim() || '';
+    const lastName = user?.lastName?.trim() || '';
+    
+    if (firstName && lastName) return `${firstName} ${lastName}`;
+    if (firstName) return firstName;
+    if (lastName) return lastName;
+    return user?.email || 'Usuario';
+  };
+
+  const handleBranchSwitch = (newBranch: Branch) => {
+    if (currentBranch && newBranch.id === currentBranch.id) {
+      return;
+    }
+    switchBranch(newBranch);
+  };
+
+  const handleLogout = async () => {
+    setProfileModalVisible(false);
+    closeMobileMenu();
+    
+    try {
+      const { authService } = await import('@/src/infrastructure/services/auth.service');
+      await authService.logout();
+    } catch (error) {
+      // Error handling
+    }
+    
+    await clearSession();
+    clearContext();
+    alert.showSuccess('auth.logoutSuccess');
+    
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        router.replace('/');
+      }, 150);
+    });
+  };
+
+  const handleProfile = () => {
+    setProfileModalVisible(false);
+    closeMobileMenu();
+    // TODO: Navegar a pantalla de perfil
+  };
+
+  const handleSettings = () => {
+    setProfileModalVisible(false);
+    closeMobileMenu();
+    // TODO: Navegar a pantalla de configuración
+  };
   
   // Obtener el color para items activos según la configuración
   // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
@@ -1138,10 +1304,45 @@ export function HorizontalMenu({
                 onPress={(e) => e.stopPropagation()}
                 style={{ flex: 1 }}
               >
+              {/* Header con avatar e idioma */}
               <View style={[styles.mobileMenuHeader, { borderBottomColor: colors.border }]}>
-                <ThemedText type="h3">{t.menuLabel.menu}</ThemedText>
-                <TouchableOpacity onPress={closeMobileMenu}>
-                  <ThemedText type="h3">✕</ThemedText>
+                {/* Avatar del usuario - Clickable */}
+                {user ? (
+                  <TouchableOpacity 
+                    style={styles.mobileHeaderAvatarContainer}
+                    onPress={() => {
+                      setProfileModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.mobileAvatar, { backgroundColor: colors.primary }]}>
+                      <ThemedText style={[styles.mobileAvatarText, { color: '#FFFFFF' }]}>
+                        {getInitials()}
+                      </ThemedText>
+                    </View>
+                    <View style={{ marginLeft: 8, flex: 1 }}>
+                      <ThemedText type="body2" style={{ fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                        {getDisplayName()}
+                      </ThemedText>
+                      {user?.email && (
+                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
+                          {user.email}
+                        </ThemedText>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+                
+                {/* Selector de idioma */}
+                <View style={styles.mobileHeaderIcon}>
+                  <LanguageSelector />
+                </View>
+                
+                {/* Botón cerrar */}
+                <TouchableOpacity onPress={closeMobileMenu} style={{ padding: 4, marginLeft: 8 }}>
+                  <Ionicons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -1260,6 +1461,205 @@ export function HorizontalMenu({
               </Pressable>
             </Animated.View>
           </Pressable>
+        </Modal>
+
+        {/* Modal del perfil para móvil */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={profileModalVisible}
+          onRequestClose={() => setProfileModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            activeOpacity={1}
+            onPress={() => setProfileModalVisible(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={{
+                width: '90%',
+                maxWidth: 400,
+                maxHeight: '80%',
+              }}
+            >
+              <ThemedView
+                style={{
+                  borderRadius: 16,
+                  padding: 24,
+                  backgroundColor: colors.background,
+                  ...Platform.select({
+                    web: {
+                      boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.25)',
+                    },
+                    default: {
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 8,
+                      elevation: 5,
+                    },
+                  }),
+                }}
+              >
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {/* Encabezado del modal */}
+                  <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                    <View style={[{
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: 12,
+                      backgroundColor: colors.primary,
+                    }]}>
+                      <ThemedText style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>
+                        {getInitials()}
+                      </ThemedText>
+                    </View>
+                    <ThemedText type="h3" style={{ marginBottom: 4 }}>
+                      {getDisplayName()}
+                    </ThemedText>
+                    {user?.email && (
+                      <ThemedText type="body2" variant="secondary">
+                        {user.email}
+                      </ThemedText>
+                    )}
+                    {company && (
+                      <View style={{
+                        marginTop: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                        backgroundColor: 'transparent',
+                      }}>
+                        <ThemedText type="caption" variant="primary">
+                          {company.name}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 16 }} />
+
+                  {/* Selector de sucursales */}
+                  {branches && branches.length > 0 && (
+                    <>
+                      <View style={{ marginBottom: 16 }}>
+                        <ThemedText type="defaultSemiBold" style={{ marginBottom: 12 }}>
+                          {t.user.changeBranch || 'Sucursales'}
+                        </ThemedText>
+                        {branches
+                          .filter((branchAccess) => branchAccess?.branch != null)
+                          .map((branchAccess, index) => {
+                            const branchItem = branchAccess.branch;
+                            if (!branchItem || !branchItem.id) {
+                              return null;
+                            }
+                            const isSelected = currentBranch && branchItem.id === currentBranch.id;
+                            return (
+                              <TouchableOpacity
+                                key={branchItem.id || index}
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: 16,
+                                  borderRadius: 12,
+                                  marginBottom: 8,
+                                  backgroundColor: isSelected ? colors.surface : 'transparent',
+                                }}
+                                onPress={() => handleBranchSwitch(branchItem)}
+                                disabled={isSelected}
+                              >
+                                <View style={{ flex: 1 }}>
+                                  <ThemedText
+                                    type="defaultSemiBold"
+                                    variant={isSelected ? undefined : 'primary'}
+                                  >
+                                    {branchItem.name || `OPCIÓN ${index + 1}`}
+                                  </ThemedText>
+                                </View>
+                                {isSelected && (
+                                  <ThemedText style={{ color: colors.text }}>✓</ThemedText>
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })
+                          .filter((item) => item !== null)}
+                      </View>
+                      <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 16 }} />
+                    </>
+                  )}
+
+                  {/* Opciones del menú */}
+                  <View style={{ marginBottom: 16 }}>
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 16,
+                        gap: 12,
+                      }}
+                      onPress={handleProfile}
+                    >
+                      <ThemedText style={{ fontSize: 20 }}>👤</ThemedText>
+                      <ThemedText type="defaultSemiBold">{t.user.myProfile}</ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 16,
+                        gap: 12,
+                      }}
+                      onPress={handleSettings}
+                    >
+                      <ThemedText style={{ fontSize: 20 }}>⚙️</ThemedText>
+                      <ThemedText type="defaultSemiBold">{t.user.configuration}</ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 16,
+                        gap: 12,
+                      }}
+                      onPress={handleLogout}
+                    >
+                      <ThemedText style={{ fontSize: 20 }}>🚪</ThemedText>
+                      <ThemedText type="defaultSemiBold" variant="error">
+                        {t.user.logout}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Botón cerrar */}
+                  <TouchableOpacity
+                    style={{
+                      marginTop: 16,
+                      padding: 16,
+                      borderRadius: 12,
+                      alignItems: 'center',
+                      backgroundColor: colors.surface,
+                    }}
+                    onPress={() => setProfileModalVisible(false)}
+                  >
+                    <ThemedText type="defaultSemiBold">{t.common.close}</ThemedText>
+                  </TouchableOpacity>
+                </ScrollView>
+              </ThemedView>
+            </TouchableOpacity>
+          </TouchableOpacity>
         </Modal>
       </>
     );
@@ -1762,4 +2162,4 @@ export function HorizontalMenu({
   );
 }
 
-// estilos movidos a src/styles/components/horizontal-menu.styles.ts
+  // Desktop/Tablet: Horizontal Menu

@@ -149,40 +149,38 @@ export function UserProfileHeader({
     return (
       <>
         <View style={styles.profileContainer}>
-          {/* Toggle de tema - Al lado izquierdo del botón de login */}
-          <View style={[
-            styles.themeToggleWrapper,
-            isMobile && styles.themeToggleWrapperMobile
-          ]}>
-            <ThemeToggle />
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.loginButton,
-              { backgroundColor: colors.surface },
-              isMobile && styles.loginButtonMobile
-            ]}
-            onPress={() => setLoginModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            {!isMobile && (
-              <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
-                {t.auth.login}
-              </ThemedText>
-            )}
-            <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
-              <Ionicons name="person-outline" size={18} color="#FFFFFF" />
+          {/* Toggle de tema - Al lado izquierdo del botón de login - Solo en desktop/tablet */}
+          {!isMobile && (
+            <View style={styles.themeToggleWrapper}>
+              <ThemeToggle />
             </View>
-          </TouchableOpacity>
+          )}
 
-          {/* Selector de idioma - Junto al botón de login */}
-          <View style={[
-            styles.languageSelectorWrapper,
-            isMobile && styles.languageSelectorWrapperMobile
-          ]}>
-            <LanguageSelector />
-          </View>
+          {/* Botón de login - Solo en desktop/tablet */}
+          {!isMobile && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.loginButton,
+                  { backgroundColor: colors.surface }
+                ]}
+                onPress={() => setLoginModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
+                  {t.auth.login}
+                </ThemedText>
+                <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="person-outline" size={18} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+
+              {/* Selector de idioma - Junto al botón de login - Solo en desktop/tablet */}
+              <View style={styles.languageSelectorWrapper}>
+                <LanguageSelector />
+              </View>
+            </>
+          )}
         </View>
 
         {/* Modal de Login */}
@@ -296,26 +294,29 @@ export function UserProfileHeader({
     <>
       {/* Contenedor del perfil */}
       <View style={styles.profileContainer}>
-        {/* Toggle de tema - Al lado izquierdo del avatar */}
-        <View style={[
-          styles.themeToggleWrapper,
-          isMobile && styles.themeToggleWrapperMobile
-        ]}>
+        {/* Toggle de tema */}
+        <View style={styles.themeToggleWrapper}>
           <ThemeToggle />
         </View>
 
-        {/* Botón de perfil - RESPONSIVE */}
-        <TouchableOpacity
-          style={[
-            styles.profileButton, 
-            { backgroundColor: colors.surface },
-            isMobile && styles.profileButtonMobile
-          ]}
-          onPress={() => setModalVisible(true)}
-          activeOpacity={0.7}
-        >
-          {/* Info del usuario - Solo visible en Tablet y Desktop */}
-          {!isMobile && (
+        {/* Selector de idioma - Solo en desktop/tablet */}
+        {!isMobile && (
+          <View style={styles.languageSelectorWrapper}>
+            <LanguageSelector />
+          </View>
+        )}
+
+        {/* Botón de perfil - Solo en desktop/tablet */}
+        {!isMobile && (
+          <TouchableOpacity
+            style={[
+              styles.profileButton, 
+              { backgroundColor: 'transparent' }
+            ]}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            {/* Info del usuario */}
             <View style={styles.userInfo}>
               <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
                 {getDisplayName()}
@@ -327,23 +328,15 @@ export function UserProfileHeader({
                 </ThemedText>
               )}
             </View>
-          )}
 
-          {/* Avatar */}
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
-              {getInitials()}
-            </ThemedText>
-          </View>
-        </TouchableOpacity>
-
-        {/* Selector de idioma - Junto al perfil */}
-        <View style={[
-          styles.languageSelectorWrapper,
-          isMobile && styles.languageSelectorWrapperMobile
-        ]}>
-          <LanguageSelector />
-        </View>
+            {/* Avatar */}
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+              <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
+                {getInitials()}
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Modal con opciones */}

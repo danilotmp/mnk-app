@@ -173,63 +173,53 @@ export function CommercialSetupScreen() {
         }
       }
       
+      // Si no hay capas completadas, buscar la última capa con datos (completionPercentage > 0)
+      let lastWithDataIndex = -1;
+      if (lastCompletedIndex < 0) {
+        for (let i = layerOrder.length - 1; i >= 0; i--) {
+          const layerId = layerOrder[i];
+          const layerProgress = filteredProgress.find(p => p.layer === layerId);
+          if (layerProgress && layerProgress.completionPercentage > 0) {
+            lastWithDataIndex = i;
+            break;
+          }
+        }
+      }
+      
       // Determinar qué capa mostrar:
       // 1. Si hay etapas completadas, mostrar la última completada
-      // 2. Si no hay etapas completadas, mostrar la primera (institutional)
+      // 2. Si no hay etapas completadas pero hay capas con datos, mostrar la última con datos
+      // 3. Si no hay ninguna con datos, mostrar la primera (institutional)
       let targetLayer = 'institutional';
       if (lastCompletedIndex >= 0) {
         targetLayer = layerOrder[lastCompletedIndex];
+      } else if (lastWithDataIndex >= 0) {
+        targetLayer = layerOrder[lastWithDataIndex];
       }
       
       setCurrentLayer(targetLayer);
       
-      // Actualizar el estado con el progreso, pero preservar el progreso de capas que ya están completadas
-      // (para evitar que se sobrescriba el progreso que se estableció después de completar/omitir)
-      setLayerProgress(prev => {
-        const updated = progress.map(newLayer => {
-          const existingLayer = prev.find(l => l.layer === newLayer.layer);
-          // Si la capa existente ya está marcada como completada, mantenerla (no sobrescribir)
-          if (existingLayer && existingLayer.completed) {
-            return existingLayer;
-          }
-          // Si la nueva capa está completada, usar la nueva
-          if (newLayer.completed) {
-            return newLayer;
-          }
-          // Si la capa existente ya está al 100%, mantenerla
-          if (existingLayer && existingLayer.completionPercentage === 100) {
-            return existingLayer;
-          }
-          // Si la nueva capa está al 100%, usar la nueva
-          if (newLayer.completionPercentage === 100) {
-            return newLayer;
-          }
-          // Si la capa existente tiene más progreso que la nueva, mantener la existente
-          if (existingLayer && existingLayer.completionPercentage > newLayer.completionPercentage) {
-            return existingLayer;
-          }
-          // En otros casos, usar la nueva
-          return newLayer;
-        });
-        
-        // Agregar capas que no están en el progreso nuevo pero sí en el anterior
-        prev.forEach(existingLayer => {
-          if (!updated.find(l => l.layer === existingLayer.layer)) {
-            updated.push(existingLayer);
-          }
-        });
-        
-        return updated;
-      });
+      // IMPORTANTE: Cuando cambia la empresa, reemplazar completamente el progreso
+      // No preservar el progreso de la empresa anterior
+      setLayerProgress(filteredProgress);
     } catch (error: any) {
       // Error silencioso - solo log (no mostrar toast en pantalla)
       console.error('Error al cargar el progreso:', error);
+      // En caso de error, limpiar el progreso para evitar mostrar datos de otra empresa
+      setLayerProgress([]);
     } finally {
       setLoading(false);
       setIsLoadingProgress(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]); // Solo depender de company.id para evitar loops
+
+  // Limpiar progreso cuando cambia la empresa
+  useEffect(() => {
+    // Cuando cambia company.id, limpiar el progreso anterior para evitar mostrar datos de otra empresa
+    setLayerProgress([]);
+    setCurrentLayer('institutional'); // Resetear a la primera capa
+  }, [company?.id]);
 
   useEffect(() => {
     if (company?.id) {
