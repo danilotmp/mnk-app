@@ -8,7 +8,7 @@ import { baseTheme } from '../styles/themes/base.theme';
 export const AppConfig = {
   // Información de la aplicación
   app: {
-    name: Constants.expoConfig?.name || 'MNK',
+    name: Constants.expoConfig?.name || 'AIBox',
     version: Constants.expoConfig?.version || '1.0.0',
     description: 'Aplicación React Native',
     environment: process.env.NODE_ENV || 'development',

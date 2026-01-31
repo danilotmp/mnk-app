@@ -23,7 +23,7 @@ import { MainLayoutProps } from './main-layout.types';
 
 export function MainLayout({
   children,
-  title = 'MNK',
+  title = 'AIBox',
   showHeader = true,
   showUserProfile = true,
   showNavigation = true,

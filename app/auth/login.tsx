@@ -338,7 +338,7 @@ export default function LoginPage() {
               <View style={styles.overlay}>
                 <View style={styles.overlayContent}>
                   <ThemedText type="h1" style={styles.overlayTitle}>
-                    MNK
+                    AIBox
                   </ThemedText>
                   <ThemedText type="body1" style={styles.overlaySubtitle}>
                     Una nueva generación de soluciones empresariales, diseñada para evolucionar, conectar y transformar.

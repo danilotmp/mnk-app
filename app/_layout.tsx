@@ -146,7 +146,7 @@ function LayoutContent() {
   // Esto permite que la página actual se renderice mientras el menú carga
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <MainLayout title="MNK" menuItems={menuItemsToUse}>
+      <MainLayout title="AIBox" menuItems={menuItemsToUse}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

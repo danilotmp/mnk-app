@@ -53,10 +53,10 @@ export class SessionManager {
   private static instance: SessionManager;
   
   // Prefijo base para todas las claves
-  private readonly PREFIX = '@mnk_session:';
+  private readonly PREFIX = '@aibox_session:';
   
   // Namespace para datos seguros
-  private readonly SECURE_PREFIX = '@mnk_secure:';
+  private readonly SECURE_PREFIX = '@aibox_secure:';
 
   private constructor() {
     this.storage = getStorageAdapter();

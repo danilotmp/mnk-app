@@ -107,7 +107,7 @@ export const es: Translations = {
       needHelp: '¿Necesitas ayuda?',
       customerService: 'Atención al cliente',
       offices: 'Nuestras Oficinas',
-      officesSubtitle: 'MNK está siempre cerca de ti',
+      officesSubtitle: 'AIBox está siempre cerca de ti',
       map: 'Mapa',
       contactForm: 'Formulario de Contacto',
       schedule: 'Horario',
