@@ -35,7 +35,7 @@ interface ProductCard {
 }
 
 export function CapabilitiesScreen() {
-  const { colors } = useTheme();
+  const { colors, typography, pageLayout } = useTheme();
   const { t } = useTranslation();
   const { isMobile, width } = useResponsive();
   const router = useRouter();
@@ -278,26 +278,53 @@ export function CapabilitiesScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           isMobile && styles.scrollContentMobile,
+          {
+            paddingTop: isMobile
+              ? pageLayout.headerTitleGapMobile
+              : pageLayout.headerTitleGap,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={[styles.header, isMobile && styles.headerMobile]}>
-            <View style={styles.titleRow}>
+            <View
+              style={[
+                styles.titleRow,
+                {
+                  marginBottom: isMobile
+                    ? pageLayout.titleSubtitleGapMobile
+                    : pageLayout.titleSubtitleGap,
+                },
+              ]}
+            >
               <DynamicIcon
                 name="AntDesign:product"
                 size={32}
                 color={colors.primary}
                 style={styles.titleIcon}
               />
-              <ThemedText type="h1" style={[styles.title, isMobile && styles.titleMobile]}>
+              <ThemedText
+                type="h1"
+                style={[
+                  styles.title,
+                  { color: colors.text },
+                  isMobile && typography.pageTitleMobile,
+                ]}
+              >
                 Productos del Sistema
               </ThemedText>
             </View>
             <ThemedText
               type="body1"
-              style={[styles.subtitle, { color: colors.textSecondary }]}
+              style={[
+                styles.subtitle,
+                isMobile
+                  ? typography.pageSubtitleMobile
+                  : typography.pageSubtitle,
+                { color: colors.textSecondary },
+              ]}
             >
               Activa y configura las funcionalidades disponibles para tu negocio
             </ThemedText>
@@ -367,6 +394,7 @@ export function CapabilitiesScreen() {
                       style={[
                         styles.cardTitle,
                         isMobile && styles.cardTitleMobile,
+                        isMobile ? typography.h5 : typography.h4,
                       ]}
                     >
                       {product.title}
@@ -375,8 +403,10 @@ export function CapabilitiesScreen() {
                       type="body2"
                       style={[
                         styles.cardDescription,
+                        isMobile
+                          ? typography.pageBodyMobile
+                          : typography.pageBody,
                         { color: colors.textSecondary },
-                        isMobile && styles.cardDescriptionMobile,
                       ]}
                     >
                       {product.description}
@@ -419,7 +449,7 @@ export function CapabilitiesScreen() {
 
                       <Ionicons
                         name="chevron-forward"
-                        size={20}
+                        size={pageLayout.iconSubtitle}
                         color={
                           product.enabled
                             ? colors.primary
@@ -497,6 +527,7 @@ export function CapabilitiesScreen() {
                   type="body2"
                   style={[
                     styles.conceptDescription,
+                    isMobile ? typography.pageBodyMobile : typography.pageBody,
                     { color: colors.textSecondary },
                   ]}
                 >
@@ -551,6 +582,7 @@ export function CapabilitiesScreen() {
                   type="body2"
                   style={[
                     styles.conceptDescription,
+                    isMobile ? typography.pageBodyMobile : typography.pageBody,
                     { color: colors.textSecondary },
                   ]}
                 >
@@ -626,6 +658,7 @@ export function CapabilitiesScreen() {
                   type="body2"
                   style={[
                     styles.conceptDescription,
+                    isMobile ? typography.pageBodyMobile : typography.pageBody,
                     { color: colors.textSecondary },
                   ]}
                 >
@@ -649,13 +682,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 40,
-    paddingTop: 48,
     paddingBottom: 32,
   },
   scrollContentMobile: {
     paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   contentWrapper: {
     maxWidth: 1400,
@@ -681,12 +712,8 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: 4,
   },
-  titleMobile: {
-    fontSize: 27,
-    lineHeight: 32,
-  },
   subtitle: {
-    lineHeight: 20,
+    marginTop: 4,
   },
   productsGrid: {
     gap: 16,
@@ -738,16 +765,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardTitleMobile: {
-    fontSize: 18,
     marginBottom: 4,
   },
   cardDescription: {
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  cardDescriptionMobile: {
-    lineHeight: 18,
-    fontSize: 14,
     marginBottom: 8,
   },
   cardFooter: {
@@ -870,8 +890,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   conceptDescription: {
-    fontSize: 13,
-    lineHeight: 20,
     textAlign: "center",
   },
 });

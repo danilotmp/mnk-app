@@ -1,5 +1,11 @@
-import { BrandColors, DarkTheme, LightTheme, Typography } from '@/constants/theme';
-import { useThemeMode } from './use-theme-mode';
+import {
+    BrandColors,
+    DarkTheme,
+    LightTheme,
+    PageLayout,
+    Typography,
+} from "@/constants/theme";
+import { useThemeMode } from "./use-theme-mode";
 
 export function useTheme() {
   const { isDark } = useThemeMode();
@@ -7,12 +13,13 @@ export function useTheme() {
 
   return {
     theme,
-    colorScheme: isDark ? 'dark' : 'light',
+    colorScheme: isDark ? "dark" : "light",
     colors: theme.colors,
     spacing: theme.spacing,
     borderRadius: theme.borderRadius,
     shadows: theme.shadows,
     typography: Typography,
+    pageLayout: PageLayout,
     brandColors: BrandColors,
     isDark,
     isLight: !isDark,

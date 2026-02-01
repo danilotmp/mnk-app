@@ -12,7 +12,7 @@ import { DynamicIcon } from "@/src/domains/shared/components";
 import { useTranslation } from "@/src/infrastructure/i18n";
 
 export default function ContactPage() {
-  const { colors } = useTheme();
+  const { colors, typography, pageLayout } = useTheme();
   const { t } = useTranslation();
   const { isMobile } = useResponsive();
 
@@ -98,7 +98,15 @@ export default function ContactPage() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: isMobile
+              ? pageLayout.headerTitleGapMobile
+              : pageLayout.headerTitleGap,
+            paddingBottom: isMobile ? 16 : 48,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.contactSection}>
@@ -109,23 +117,46 @@ export default function ContactPage() {
             <View style={styles.leftColumn}>
               {/* Header con Icono, Título y Subtítulo (mismo estilo que página de Inicio) */}
               <View style={styles.headerSection}>
-                <View style={styles.headerRow}>
+                <View
+                  style={[
+                    styles.headerRow,
+                    {
+                      marginBottom: isMobile
+                        ? pageLayout.titleSubtitleGapMobile
+                        : pageLayout.titleSubtitleGap,
+                    },
+                  ]}
+                >
                   <DynamicIcon
                     name="MaterialCommunityIcons:contacts"
-                    size={isMobile ? 28 : 36}
+                    size={
+                      isMobile
+                        ? pageLayout.iconTitleMobile
+                        : pageLayout.iconTitle
+                    }
                     color={colors.primary}
                     style={styles.headerIcon}
                   />
                   <ThemedText
                     type="h1"
-                    style={[styles.title, { color: colors.text }, isMobile && styles.titleMobile]}
+                    style={[
+                      styles.title,
+                      { color: colors.text },
+                      isMobile && typography.pageTitleMobile,
+                    ]}
                   >
                     {t.pages.contact.title}
                   </ThemedText>
                 </View>
                 <ThemedText
                   type="body1"
-                  style={[styles.subtitle, { color: colors.textSecondary }]}
+                  style={[
+                    styles.subtitle,
+                    isMobile
+                      ? typography.pageSubtitleMobile
+                      : typography.pageSubtitle,
+                    { color: colors.textSecondary },
+                  ]}
                 >
                   {t.pages.contact.subtitle}
                 </ThemedText>
@@ -153,7 +184,7 @@ export default function ContactPage() {
                     <ThemedText
                       type="h2"
                       variant="primary"
-                      style={styles.locationName}
+                      style={[styles.locationName, typography.h4]}
                     >
                       Matriz
                     </ThemedText>
@@ -161,13 +192,22 @@ export default function ContactPage() {
                   <View style={[styles.matrixRow, styles.matrixRowFirst]}>
                     <Ionicons
                       name="map-outline"
-                      size={18}
+                      size={
+                        isMobile
+                          ? pageLayout.iconSubtitleMobile
+                          : pageLayout.iconSubtitle
+                      }
                       color={colors.textSecondary}
                     />
                     <ThemedText
                       type="body2"
                       variant="secondary"
-                      style={styles.contactText}
+                      style={[
+                        styles.contactText,
+                        isMobile
+                          ? typography.pageBodyMobile
+                          : typography.pageBody,
+                      ]}
                     >
                       Jun Murillo y San Gregorio - 170129
                     </ThemedText>
@@ -189,13 +229,22 @@ export default function ContactPage() {
                   <View style={styles.matrixRow}>
                     <Ionicons
                       name="phone-portrait-outline"
-                      size={18}
+                      size={
+                        isMobile
+                          ? pageLayout.iconSubtitleMobile
+                          : pageLayout.iconSubtitle
+                      }
                       color={colors.textSecondary}
                     />
                     <ThemedText
                       type="body2"
                       variant="secondary"
-                      style={styles.contactText}
+                      style={[
+                        styles.contactText,
+                        isMobile
+                          ? typography.pageBodyMobile
+                          : typography.pageBody,
+                      ]}
                     >
                       0987255382
                     </ThemedText>
@@ -204,7 +253,13 @@ export default function ContactPage() {
                     <ThemedText
                       type="body2"
                       variant="secondary"
-                      style={[styles.contactText, styles.contactTextRight]}
+                      style={[
+                        styles.contactText,
+                        styles.contactTextRight,
+                        isMobile
+                          ? typography.pageBodyMobile
+                          : typography.pageBody,
+                      ]}
                     >
                       Quito - Ecuador
                     </ThemedText>
@@ -303,7 +358,11 @@ export default function ContactPage() {
               </ThemedText>
               <ThemedText
                 type="body2"
-                style={[styles.commCardDesc, { color: colors.textSecondary }]}
+                style={[
+                  styles.commCardDesc,
+                  isMobile ? typography.pageBodyMobile : typography.pageBody,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Contáctanos por teléfono
               </ThemedText>
@@ -341,7 +400,11 @@ export default function ContactPage() {
               </ThemedText>
               <ThemedText
                 type="body2"
-                style={[styles.commCardDesc, { color: colors.textSecondary }]}
+                style={[
+                  styles.commCardDesc,
+                  isMobile ? typography.pageBodyMobile : typography.pageBody,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Escríbenos por correo
               </ThemedText>
@@ -378,7 +441,11 @@ export default function ContactPage() {
               </ThemedText>
               <ThemedText
                 type="body2"
-                style={[styles.commCardDesc, { color: colors.textSecondary }]}
+                style={[
+                  styles.commCardDesc,
+                  isMobile ? typography.pageBodyMobile : typography.pageBody,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Ubicación y cómo llegar
               </ThemedText>
@@ -396,8 +463,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingTop: 48,
-    paddingBottom: 48,
+    /* paddingTop y paddingBottom se aplican dinámicamente según isMobile */
   },
   contactSection: {
     padding: 24,
@@ -436,10 +502,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     textAlign: "left",
     flex: 1,
-  },
-  titleMobile: {
-    fontSize: 27,
-    lineHeight: 32,
   },
   subtitle: {
     marginTop: 8,
@@ -493,8 +555,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   locationName: {
-    fontSize: 20,
-    fontWeight: "600",
     marginTop: 0,
     marginBottom: 4,
   },
@@ -511,8 +571,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   contactText: {
-    fontSize: 15,
-    lineHeight: 22,
     flex: 1,
   },
   contactTextRight: {
@@ -656,8 +714,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   commCardDesc: {
-    fontSize: 13,
-    lineHeight: 18,
     textAlign: "center",
   },
 });

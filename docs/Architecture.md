@@ -68,18 +68,21 @@ src/
 ### 2.1 ¿Cuándo usar `domains/` vs `features/`?
 
 **`src/domains/[domain]/`** - Usar para:
+
 - Componentes compartidos **dentro de un dominio** (ej: `permissions-carousel` compartido en seguridad)
 - Servicios compartidos **dentro de un dominio** (ej: `PermissionsService` usado por múltiples features)
 - Hooks específicos del dominio (ej: `use-company-options` usado por múltiples features de seguridad)
 - Tipos compartidos del dominio
 
 **`src/features/[domain]/[feature]/`** - Usar para:
+
 - Features completas con estructura propia
 - Componentes específicos de una feature (ej: `UserCreateForm` solo para usuarios)
 - Servicios específicos de una feature (ej: `UsersService` solo para gestión de usuarios)
 - Screens (pantallas) de una feature
 
 **`src/domains/shared/`** - Usar para:
+
 - Componentes reutilizables **cross-domain** (ej: `DataTable`, `SearchFilterBar`)
 - Contextos compartidos (ej: `MultiCompanyContext`)
 - Hooks compartidos (ej: `useMultiCompany`)
@@ -96,7 +99,7 @@ component-name/
 └── component-name.types.ts     # Tipos e interfaces
 ```
 
-**Regla de oro**: **NUNCA mezclar estilos inline con lógica**. Todos los estilos deben estar en el archivo `.styles.ts`.
+**Regla de oro**: **NUNCA mezclar estilos inline con lógica**. Todos los estilos deben estar en el archivo `.styles.ts`. Toda nueva interfaz debe reutilizar variables del tema central (`constants/theme.ts`): colores, tipografía, espaciado, bordes y sombras (véase § 3.2).
 
 **Excepción**: Estilos dinámicos que dependen de props/estado pueden calcularse en el componente usando estilos base del archivo `.styles.ts`:
 
@@ -104,13 +107,14 @@ component-name/
 // ✅ CORRECTO: Estilos base en .styles.ts, variantes dinámicas en el componente
 const containerStyle = [
   styles.containerBase,
-  { backgroundColor: isActive ? colors.primary : colors.surface }
+  { backgroundColor: isActive ? colors.primary : colors.surface },
 ];
 ```
 
 ### 2.3 Estructura de Screens
 
 Los screens deben:
+
 - Estar en `src/features/[domain]/[feature]/screens/`
 - Usar estilos del archivo `.styles.ts` correspondiente
 - Usar traducciones del sistema i18n (nunca strings hardcodeados)
@@ -123,49 +127,75 @@ Los screens deben:
 ### 3.1 Organización
 
 ```
+constants/
+└── theme.ts                   # ★ Tema central en uso (colores, spacing, typography, borderRadius, shadows)
+                               #   LightTheme / DarkTheme para cambio claro/oscuro. Consumido vía useTheme().
+
 src/styles/
-├── themes/                    # Tokens de diseño
-│   ├── base.theme.ts         # Tokens base (colores, tipografía, espaciado)
-│   ├── light.theme.ts        # Variante claro
-│   └── dark.theme.ts         # Variante oscuro
+├── themes/                    # Tokens alternativos (base, light, dark)
+│   ├── base.theme.ts
+│   ├── light.theme.ts
+│   └── dark.theme.ts
 ├── components/                # Estilos de componentes compartidos
 └── pages/                     # Estilos de páginas específicas
 ```
 
-### 3.2 Patrón de Estilos
+### 3.2 Tema central (obligatorio para nuevas interfaces)
+
+**Todas las interfaces nuevas deben reutilizar variables del tema central.** No se permiten valores hardcodeados de colores, tamaños de texto, espaciado ni bordes.
+
+- **Ubicación del tema en uso**: `constants/theme.ts`
+  - Contiene: `LightTheme`, `DarkTheme` (colores, spacing, borderRadius, shadows), `Typography` (h1–h6, body1, body2, caption, button).
+  - Consumo: hook `useTheme()` desde `@/hooks/use-theme`, que expone `colors`, `spacing`, `typography`, `borderRadius`, `shadows`, `isDark`/`isLight`.
+
+- **Uso obligatorio**:
+  - **Colores**: siempre `colors.*` del tema (p. ej. `colors.text`, `colors.primary`, `colors.border`). Respeta el cambio de tema claro/oscuro.
+  - **Tipografía**: títulos y cuerpo desde `typography.*` (p. ej. `typography.h1`, `typography.body2`) o tokens semánticos definidos en el mismo archivo (p. ej. `pageTitle`, `sectionTitle`).
+  - **Espaciado**: solo `spacing.xs` … `spacing.xxl` del tema; no usar números mágicos (24, 48, etc.) en pantallas o componentes.
+  - **Bordes y sombras**: `borderRadius.*`, `shadows.*` del tema.
+
+- **Estilos de componente**: en `component-name.styles.ts` usar una factory que reciba el tema (o al menos `colors` y `spacing`) y construya los estilos únicamente con propiedades del tema. Ejemplo: `createComponentStyles(theme)` usando `theme.colors`, `theme.spacing`, `theme.typography`.
+
+Así, un único cambio en `constants/theme.ts` (p. ej. tamaño de títulos de página o espaciado) se refleja en toda la aplicación.
+
+### 3.3 Patrón de Estilos
 
 **Estilos generales** (bordes, colores, tamaños):
-- Centralizados en `src/styles/themes/`
-- Accesibles vía `useTheme()` hook: `colors.primary`, `colors.surface`, etc.
+
+- Centralizados en el tema en uso: `constants/theme.ts`
+- Accesibles vía `useTheme()`: `colors.primary`, `colors.surface`, `spacing.lg`, `typography.h1`, etc.
 
 **Estilos de componente**:
+
 - En archivo `component-name.styles.ts` junto al componente
-- Función factory que recibe `colors`: `createComponentStyles(colors)`
+- Función factory que recibe el **tema** (`useTheme()`): `createComponentStyles(theme)` usando solo `theme.colors`, `theme.spacing`, `theme.typography`, etc.
 
 **Ejemplo**:
+
 ```typescript
 // component-name.styles.ts
-export const createComponentStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  // Estilos base para variantes dinámicas
-  containerBase: {
-    padding: 12,
-    borderRadius: 8,
-  },
-  containerActive: {
-    borderColor: colors.primary,
-  },
-});
+export const createComponentStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+    },
+    containerBase: {
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+    },
+    containerActive: {
+      borderColor: theme.colors.primary,
+    },
+  });
 
 // component-name.tsx
-const styles = createComponentStyles(colors);
+const { theme, colors } = useTheme();
+const styles = createComponentStyles(theme);
 const dynamicStyle = [
   styles.containerBase,
   isActive && styles.containerActive,
-  { backgroundColor: isActive ? colors.primary : colors.surface }
+  { backgroundColor: isActive ? colors.primary : colors.surface },
 ];
 ```
 
@@ -217,10 +247,11 @@ const menuAdminTranslations = t.security?.menuAdmin || {};
   - `src/features/[domain]/[feature]/services/` - Servicios específicos de la feature
 
 **Ejemplo**:
+
 ```typescript
 export class ThemeService {
   private static instance: ThemeService;
-  
+
   static getInstance(): ThemeService {
     if (!ThemeService.instance) {
       ThemeService.instance = new ThemeService();
@@ -298,6 +329,7 @@ export function useMultiCompany() {
 - Cada ruta es un wrapper delgado que importa el screen correspondiente
 
 **Ejemplo**:
+
 ```typescript
 // app/security/users/index.tsx
 import { UsersListScreen } from '@/src/features/security/users/screens/users-list.screen';
@@ -338,6 +370,7 @@ export default function UsersListPage() {
 ### 10.1 Crear una Nueva Feature
 
 1. **Crear estructura en `src/features/[domain]/[feature]/`**:
+
    ```
    feature-name/
    ├── adapters/
@@ -375,12 +408,15 @@ export default function UsersListPage() {
 ### 10.2 Crear un Componente Compartido
 
 **Si es compartido dentro de un dominio**:
+
 - `src/domains/[domain]/components/component-name/`
 
 **Si es compartido cross-domain**:
+
 - `src/domains/shared/components/component-name/`
 
 **Si es componente UI base**:
+
 - `components/ui/component-name/`
 
 ### 10.3 Agregar Traducciones
@@ -438,6 +474,7 @@ Antes de considerar un desarrollo completo, verificar:
 - **Sistema de diseño**: `docs/DesignSystem.md`
 - **Patrón de componentes**: `docs/COMPONENT_ORGANIZATION_PATTERN.md`
 - **Estructura del proyecto**: `docs/ESTRUCTURA_PROYECTO.md`
+- **Análisis home y estilos**: `docs/ANALISIS_HOME_Y_ESTILOS.md`
 
 ---
 
