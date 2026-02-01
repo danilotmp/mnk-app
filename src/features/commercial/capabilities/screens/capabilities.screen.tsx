@@ -15,8 +15,8 @@ import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface ProductCard {
   id: string;
@@ -154,6 +154,54 @@ export function CapabilitiesScreen() {
     }
   };
 
+  // Animaciones para la sección inferior: Flujos, Flexibilidad, Acoplamiento
+  const flowAnim = useRef(new Animated.Value(0)).current;
+  const flexAnim = useRef(new Animated.Value(0)).current;
+  const coupleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const processDuration = 2400;
+    const flowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flowAnim, { toValue: 1, duration: processDuration, useNativeDriver: true }),
+        Animated.timing(flowAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    const flexLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flexAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(flexAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    const coupleLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(coupleAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
+        Animated.timing(coupleAnim, { toValue: 0, duration: 1600, useNativeDriver: true }),
+      ])
+    );
+    flowLoop.start();
+    flexLoop.start();
+    coupleLoop.start();
+    return () => {
+      flowLoop.stop();
+      flexLoop.stop();
+      coupleLoop.stop();
+    };
+  }, [flowAnim, flexAnim, coupleAnim]);
+
+  const processStep0 = flowAnim.interpolate({ inputRange: [0, 0.15, 0.25, 0.45], outputRange: [0.4, 1, 1, 0.4] });
+  const processStep1 = flowAnim.interpolate({ inputRange: [0.25, 0.4, 0.5, 0.7], outputRange: [0.4, 1, 1, 0.4] });
+  const processStep2 = flowAnim.interpolate({ inputRange: [0.5, 0.65, 0.75, 0.95], outputRange: [0.4, 1, 1, 0.4] });
+  const processStep3 = flowAnim.interpolate({ inputRange: [0, 0.75, 0.9, 0.95, 1], outputRange: [0.4, 0.4, 1, 1, 0.4] });
+  // Flexibilidad: onda que recorre 4 barras verticales
+  const flexBar0 = flexAnim.interpolate({ inputRange: [0, 0.15, 0.25, 0.45], outputRange: [0.7, 1.25, 1.25, 0.7] });
+  const flexBar1 = flexAnim.interpolate({ inputRange: [0.25, 0.4, 0.5, 0.7], outputRange: [0.7, 1.25, 1.25, 0.7] });
+  const flexBar2 = flexAnim.interpolate({ inputRange: [0.5, 0.65, 0.75, 0.95], outputRange: [0.7, 1.25, 1.25, 0.7] });
+  const flexBar3 = flexAnim.interpolate({ inputRange: [0, 0.75, 0.9, 1], outputRange: [0.7, 0.7, 1.25, 0.7] });
+  // Acoplamiento: línea que se activa y dos nodos que pulsan al unísono
+  const coupleLineGlow = coupleAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.35, 1, 0.35] });
+  const coupleNodeScale = coupleAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.15, 1] });
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView 
@@ -250,6 +298,70 @@ export function CapabilitiesScreen() {
               </Card>
             </TouchableOpacity>
           ))}
+          </View>
+
+          {/* Sección inferior animada: Flexibilidad, Acoplamiento, Procesos (mismo lugar que fortalezas en Inicio) */}
+          <View style={[styles.conceptsSection, isMobile && styles.conceptsSectionMobile, { borderTopColor: colors.border }]}>
+            <View style={[styles.conceptsGrid, isMobile && styles.conceptsGridMobile]}>
+              {/* Flexibilidad: onda que recorre barras verticales */}
+              <View style={[styles.conceptCard, { borderColor: colors.border }]}>
+                <View style={styles.conceptVisual}>
+                  <View style={styles.flexWaveRow}>
+                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar0 }] }]} />
+                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar1 }] }]} />
+                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar2 }] }]} />
+                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar3 }] }]} />
+                  </View>
+                </View>
+                <ThemedText type="h5" style={[styles.conceptTitle, { color: colors.text }]}>
+                  Flexibilidad
+                </ThemedText>
+                <ThemedText type="body2" style={[styles.conceptDescription, { color: colors.textSecondary }]}>
+                  Se adapta a tu negocio sin rigideces
+                </ThemedText>
+              </View>
+
+              {/* Acoplamiento: dos nodos unidos por una línea que se activa */}
+              <View style={[styles.conceptCard, { borderColor: colors.border }]}>
+                <View style={styles.conceptVisual}>
+                  <View style={styles.coupleRow}>
+                    <Animated.View style={[styles.coupleNode, { backgroundColor: colors.primary }, { transform: [{ scale: coupleNodeScale }] }]} />
+                    <View style={styles.coupleLineWrap}>
+                      <View style={[styles.coupleLineBase, { backgroundColor: colors.primary + '40' }]} />
+                      <Animated.View style={[styles.coupleLineGlow, { backgroundColor: colors.primary }, { opacity: coupleLineGlow }]} />
+                    </View>
+                    <Animated.View style={[styles.coupleNode, { backgroundColor: colors.primary }, { transform: [{ scale: coupleNodeScale }] }]} />
+                  </View>
+                </View>
+                <ThemedText type="h5" style={[styles.conceptTitle, { color: colors.text }]}>
+                  Acoplamiento
+                </ThemedText>
+                <ThemedText type="body2" style={[styles.conceptDescription, { color: colors.textSecondary }]}>
+                  Módulos integrados que trabajan en conjunto
+                </ThemedText>
+              </View>
+
+              {/* Procesos: pasos que se iluminan en secuencia */}
+              <View style={[styles.conceptCard, { borderColor: colors.border }]}>
+                <View style={styles.conceptVisual}>
+                  <View style={styles.processStepsRow}>
+                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep0 }]} />
+                    <View style={[styles.processStepLine, { backgroundColor: colors.primary + '50' }]} />
+                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep1 }]} />
+                    <View style={[styles.processStepLine, { backgroundColor: colors.primary + '50' }]} />
+                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep2 }]} />
+                    <View style={[styles.processStepLine, { backgroundColor: colors.primary + '50' }]} />
+                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep3 }]} />
+                  </View>
+                </View>
+                <ThemedText type="h5" style={[styles.conceptTitle, { color: colors.text }]}>
+                  Procesos
+                </ThemedText>
+                <ThemedText type="body2" style={[styles.conceptDescription, { color: colors.textSecondary }]}>
+                  Procesos claros y continuos que guían cada interacción
+                </ThemedText>
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -373,5 +485,112 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  // Sección inferior: Flujos, Flexibilidad, Acoplamiento (animada)
+  conceptsSection: {
+    maxWidth: 1400,
+    alignSelf: 'center',
+    width: '100%',
+    marginTop: 48,
+    paddingTop: 32,
+    borderTopWidth: 1,
+  },
+  conceptsSectionMobile: {
+    marginTop: 32,
+    paddingTop: 24,
+  },
+  conceptsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: 16,
+  },
+  conceptsGridMobile: {
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  conceptCard: {
+    flex: 1,
+    minWidth: 0,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  conceptVisual: {
+    width: '100%',
+    height: 56,
+    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  processStepsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  processStepNode: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  processStepLine: {
+    width: 20,
+    height: 3,
+    borderRadius: 2,
+  },
+  flexWaveRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 10,
+    height: 40,
+  },
+  flexWaveBar: {
+    width: 10,
+    height: 24,
+    borderRadius: 5,
+  },
+  coupleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  coupleNode: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  coupleLineWrap: {
+    width: 36,
+    height: 4,
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  coupleLineBase: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 2,
+  },
+  coupleLineGlow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 2,
+  },
+  conceptTitle: {
+    marginBottom: 6,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  conceptDescription: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });
