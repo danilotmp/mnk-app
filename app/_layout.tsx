@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, usePathname, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 // Solo importar reanimated en plataformas nativas para evitar problemas con worklets en web
@@ -11,7 +12,7 @@ if (Platform.OS !== 'web') {
 import { MainLayout, MenuItem } from '@/components/layouts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/use-theme-mode';
-import { MultiCompanyProvider } from '@/src/domains/shared';
+import { MultiCompanyProvider, useMultiCompany } from '@/src/domains/shared';
 import { useScrollbarStyles } from '@/src/hooks/use-scrollbar-styles.hook';
 import { LanguageProvider, useTranslation } from '@/src/infrastructure/i18n';
 import { useMenu } from '@/src/infrastructure/menu';
@@ -133,8 +134,34 @@ function LayoutContent() {
   const { t, interpolate } = useTranslation();
   const pathname = usePathname();
   const segments = useSegments();
-  const { isLoading: isSessionLoading } = useSession();
+  const router = useRouter();
+  const { isLoading: isSessionLoading, clearSession } = useSession();
   const { menu, loading: menuLoading } = useMenu();
+  const { clearContext } = useMultiCompany();
+  
+  // Escuchar evento de token expirado para cerrar sesión y redirigir
+  useEffect(() => {
+    const handleTokenExpired = async () => {
+      try {
+        // Limpiar sesión completa
+        await clearSession();
+        clearContext();
+        
+        // Redirigir al inicio
+        router.replace('/');
+      } catch (error) {
+        // Fallar silenciosamente y redirigir de todas formas
+        router.replace('/');
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('tokenExpired', handleTokenExpired);
+      return () => {
+        window.removeEventListener('tokenExpired', handleTokenExpired);
+      };
+    }
+  }, [clearSession, clearContext, router]);
   
   // Aplicar estilos de scrollbar adaptados al tema
   useScrollbarStyles();

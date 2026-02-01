@@ -86,27 +86,17 @@ export class ApiClient {
       // Validar si result.statusCode es 200 (éxito)
       // Si no es 200, es un error y lanzar ApiError
       if (data.result?.statusCode !== SUCCESS_STATUS_CODE) {
-        // Si es un error 401 y no estamos en una ruta pública, redirigir al home
-        if (data.result?.statusCode === HTTP_STATUS.UNAUTHORIZED && !config.skipAuth) {
-          if (typeof window !== 'undefined') {
-            const currentPath = window.location.pathname;
-            const isPrivateRoute = currentPath !== '/' && 
-                                  !currentPath.startsWith('/auth') && 
-                                  !currentPath.startsWith('/main');
-            const isAdminRoute = currentPath.includes('/security') || 
-                                currentPath.includes('/admin');
-            
-            if (isPrivateRoute || isAdminRoute) {
-              // Limpiar tokens antes de redirigir
-              await this.clearTokens();
-              // Redirigir al home
-              window.location.href = '/';
-            }
-          }
+        const errorDescription = data.result?.description || '';
+        const isTokenExpired = errorDescription.toLowerCase().includes('token expirado') || 
+                              errorDescription.toLowerCase().includes('token expired');
+        
+        // Si el mensaje indica "Token expirado" o es un error 401, cerrar sesión y redirigir
+        if ((isTokenExpired || data.result?.statusCode === HTTP_STATUS.UNAUTHORIZED) && !config.skipAuth) {
+          await this.handleTokenExpired();
         }
         
         throw new ApiError(
-          data.result?.description || 'Error en la petición',
+          errorDescription || 'Error en la petición',
           data.result?.statusCode || response.status,
           data.result?.details
         );
@@ -195,24 +185,9 @@ export class ApiClient {
       // Si falla el refresh, limpiar y lanzar error
       this.failedQueue.forEach(({ reject }) => reject(error));
       this.failedQueue = [];
-      await this.clearTokens();
       
-      // Redirigir al home si estamos en una ruta privada o de administración
-      if (typeof window !== 'undefined') {
-        const currentPath = window.location.pathname;
-        // Verificar si estamos en una ruta privada (no es /, /auth, o rutas públicas)
-        const isPrivateRoute = currentPath !== '/' && 
-                              !currentPath.startsWith('/auth') && 
-                              !currentPath.startsWith('/main');
-        // Verificar si estamos en una ruta de administración
-        const isAdminRoute = currentPath.includes('/security') || 
-                            currentPath.includes('/admin');
-        
-        if (isPrivateRoute || isAdminRoute) {
-          // Redirigir al home
-          window.location.href = '/';
-        }
-      }
+      // Cerrar sesión y redirigir cuando falla el refresh
+      await this.handleTokenExpired();
       
       if (error instanceof ApiError) {
         throw error;
@@ -307,6 +282,46 @@ export class ApiClient {
   async clearTokens(): Promise<void> {
     await this.storage.removeItem(API_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
     await this.storage.removeItem(API_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+  }
+
+  /**
+   * Maneja el cierre de sesión cuando el token expira
+   * Limpia tokens, sesión y redirige al inicio
+   */
+  private async handleTokenExpired(): Promise<void> {
+    // Limpiar tokens
+    await this.clearTokens();
+    
+    // Limpiar contexto de usuario
+    this.config.setUserContext(null);
+    
+    // Limpiar sesión completa
+    try {
+      const { sessionManager } = await import('../session/session-manager');
+      await sessionManager.clearAll();
+    } catch (error) {
+      // Fallar silenciosamente si hay error al limpiar sesión
+    }
+    
+    // Emitir evento personalizado para que los componentes puedan reaccionar
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('tokenExpired'));
+    }
+    
+    // Redirigir al inicio
+    if (typeof window !== 'undefined') {
+      // Usar replace para evitar que el usuario pueda volver atrás
+      window.location.replace('/');
+    } else {
+      // En React Native, usar Linking para redirigir
+      try {
+        const { Linking } = await import('react-native');
+        // En React Native, la navegación se maneja con el router de expo-router
+        // El evento 'tokenExpired' será escuchado por el layout para redirigir
+      } catch (error) {
+        // Fallar silenciosamente
+      }
+    }
   }
 
   /**
