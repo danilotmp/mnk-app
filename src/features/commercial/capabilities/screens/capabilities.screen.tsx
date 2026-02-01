@@ -15,15 +15,15 @@ import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Image,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import { createCapabilitiesScreenStyles } from "./capabilities.screen.styles";
 
 interface ProductCard {
   id: string;
@@ -35,9 +35,21 @@ interface ProductCard {
 }
 
 export function CapabilitiesScreen() {
-  const { colors, typography, pageLayout } = useTheme();
+  const { colors, typography, pageLayout, spacing, borderRadius } = useTheme();
   const { t } = useTranslation();
   const { isMobile, width } = useResponsive();
+
+  const styles = useMemo(
+    () =>
+      createCapabilitiesScreenStyles({
+        colors,
+        typography,
+        pageLayout,
+        spacing,
+        borderRadius,
+      }),
+    [colors, typography, pageLayout, spacing, borderRadius],
+  );
   const router = useRouter();
   const alert = useAlert();
   const { company, user, branch } = useCompany();
@@ -134,38 +146,25 @@ export function CapabilitiesScreen() {
    * Calcula el estilo dinámico para el grid de productos
    * Ajusta el número de columnas según el ancho de la pantalla
    */
-  const createProductsGridStyle = () => {
-    return {
-      flexDirection: "row" as const,
-      flexWrap: "wrap" as const,
-      justifyContent: "center" as const,
-      gap: 16,
-    };
-  };
-
   /**
    * Calcula el ancho dinámico de cada tarjeta de producto
-   * Mobile: Ancho fijo de 300px centrado
-   * Tablet: 2 columnas (48% cada una)
-   * Desktop pequeño: 3 columnas (31% cada una)
-   * Desktop grande: 4 columnas (23% cada una)
+   * Mobile: Ancho fijo 360px
+   * Tablet: 60% del ancho
+   * Desktop pequeño: 40% del ancho
+   * Desktop grande: 30% del ancho
    */
   const createProductCardStyle = (
     screenWidth: number,
     isMobileDevice: boolean,
   ) => {
     if (isMobileDevice || screenWidth < 600) {
-      // Mobile: Ancho fijo de 300px
-      return { width: 300, maxWidth: 300 };
+      return { width: 360, maxWidth: 360 };
     } else if (screenWidth < 900) {
-      // Tablet: 2 columnas (48% para dejar espacio al gap)
-      return { width: "48%" };
+      return { width: "60%" };
     } else if (screenWidth < 1200) {
-      // Desktop pequeño: 3 columnas (31% para dejar espacio al gap)
-      return { width: "31%" };
+      return { width: "40%" };
     } else {
-      // Desktop grande: 4 columnas (23% para dejar espacio al gap)
-      return { width: "23%" };
+      return { width: "30%" };
     }
   };
 
@@ -278,11 +277,6 @@ export function CapabilitiesScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           isMobile && styles.scrollContentMobile,
-          {
-            paddingTop: isMobile
-              ? pageLayout.headerTitleGapMobile
-              : pageLayout.headerTitleGap,
-          },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -301,7 +295,9 @@ export function CapabilitiesScreen() {
             >
               <DynamicIcon
                 name="AntDesign:product"
-                size={32}
+                size={
+                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                }
                 color={colors.primary}
                 style={styles.titleIcon}
               />
@@ -332,11 +328,7 @@ export function CapabilitiesScreen() {
 
           {/* Cards de Productos */}
           <View
-            style={[
-              styles.productsGrid,
-              isMobile && styles.productsGridMobile,
-              createProductsGridStyle(),
-            ]}
+            style={[styles.productsGrid, isMobile && styles.productsGridMobile]}
           >
             {products.map((product) => (
               <TouchableOpacity
@@ -347,12 +339,14 @@ export function CapabilitiesScreen() {
               >
                 <Card
                   variant="elevated"
-                  style={[
-                    styles.productCard,
-                    createProductCardStyle(width, isMobile),
-                    isMobile && styles.productCardMobile,
-                    !product.enabled && styles.productCardDisabled,
-                  ]}
+                  style={
+                    [
+                      styles.productCard,
+                      createProductCardStyle(width, isMobile),
+                      isMobile && styles.productCardMobile,
+                      product.enabled ? undefined : styles.productCardDisabled,
+                    ] as unknown as React.ComponentProps<typeof Card>["style"]
+                  }
                 >
                   {/* Imagen o Icono */}
                   <View
@@ -468,7 +462,6 @@ export function CapabilitiesScreen() {
             style={[
               styles.conceptsSection,
               isMobile && styles.conceptsSectionMobile,
-              { borderTopColor: colors.border },
             ]}
           >
             <View
@@ -482,7 +475,6 @@ export function CapabilitiesScreen() {
                 style={[
                   styles.conceptCard,
                   isMobile && styles.conceptCardMobile,
-                  { borderColor: colors.border },
                 ]}
               >
                 <View style={styles.conceptVisual}>
@@ -536,9 +528,7 @@ export function CapabilitiesScreen() {
               </View>
 
               {/* Acoplamiento: dos nodos unidos por una línea que se activa */}
-              <View
-                style={[styles.conceptCard, { borderColor: colors.border }]}
-              >
+              <View style={styles.conceptCard}>
                 <View style={styles.conceptVisual}>
                   <View style={styles.coupleRow}>
                     <Animated.View
@@ -595,7 +585,6 @@ export function CapabilitiesScreen() {
                 style={[
                   styles.conceptCard,
                   isMobile && styles.conceptCardMobile,
-                  { borderColor: colors.border },
                 ]}
               >
                 <View style={styles.conceptVisual}>
@@ -672,224 +661,3 @@ export function CapabilitiesScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 40,
-    paddingBottom: 32,
-  },
-  scrollContentMobile: {
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-  },
-  contentWrapper: {
-    maxWidth: 1400,
-    alignSelf: "center",
-    width: "100%",
-  },
-  header: {
-    marginBottom: 24,
-    gap: 8,
-  },
-  headerMobile: {
-    marginBottom: 16,
-    gap: 6,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  titleIcon: {
-    flexShrink: 0,
-  },
-  title: {
-    marginBottom: 4,
-  },
-  subtitle: {
-    marginTop: 4,
-  },
-  productsGrid: {
-    gap: 16,
-    marginBottom: 24,
-  },
-  productsGridMobile: {
-    gap: 12,
-    marginBottom: 16,
-    alignItems: "center",
-  },
-  productCard: {
-    padding: 20,
-    gap: 16,
-  },
-  productCardMobile: {
-    padding: 12,
-    gap: 10,
-  },
-  productCardDisabled: {
-    opacity: 0.6,
-  },
-  cardImageContainer: {
-    width: "100%",
-    height: 160,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  cardImageContainerMobile: {
-    height: 140,
-    borderRadius: 10,
-    marginBottom: 6,
-  },
-  cardImage: {
-    width: "100%",
-    height: "100%",
-  },
-  iconContainer: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 12,
-  },
-  cardContent: {
-    gap: 12,
-  },
-  cardTitle: {
-    marginBottom: 4,
-  },
-  cardTitleMobile: {
-    marginBottom: 4,
-  },
-  cardDescription: {
-    marginBottom: 8,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  // Sección inferior: Flujos, Flexibilidad, Acoplamiento (animada)
-  conceptsSection: {
-    maxWidth: 1400,
-    alignSelf: "center",
-    width: "100%",
-    marginTop: 48,
-    paddingTop: 32,
-    borderTopWidth: 1,
-  },
-  conceptsSectionMobile: {
-    marginTop: 32,
-    paddingTop: 24,
-  },
-  conceptsGrid: {
-    flexDirection: "row",
-    flexWrap: "nowrap",
-    gap: 16,
-  },
-  conceptsGridMobile: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    width: "100%",
-  },
-  conceptCard: {
-    flex: 1,
-    minWidth: 0,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  conceptCardMobile: {
-    flex: 1,
-    minWidth: "47%",
-  },
-  conceptVisual: {
-    width: "100%",
-    height: 56,
-    marginBottom: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  processStepsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  processStepNode: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  processStepLine: {
-    width: 20,
-    height: 3,
-    borderRadius: 2,
-  },
-  flexWaveRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "center",
-    gap: 10,
-    height: 40,
-  },
-  flexWaveBar: {
-    width: 10,
-    height: 24,
-    borderRadius: 5,
-  },
-  coupleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  coupleNode: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-  },
-  coupleLineWrap: {
-    width: 36,
-    height: 4,
-    position: "relative",
-    justifyContent: "center",
-  },
-  coupleLineBase: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 3,
-    borderRadius: 2,
-  },
-  coupleLineGlow: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 3,
-    borderRadius: 2,
-  },
-  conceptTitle: {
-    marginBottom: 6,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  conceptDescription: {
-    textAlign: "center",
-  },
-});

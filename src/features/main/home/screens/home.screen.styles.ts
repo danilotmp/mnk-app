@@ -161,12 +161,12 @@ export function createHomeScreenStyles(t: HomeScreenTheme): HomeScreenStyles {
     },
     description: {
       ...(t.typography.pageSubtitle as TextStyle),
-      marginBottom: t.spacing.lg,
+      marginBottom: t.pageLayout.subtitleContentGap,
       textAlign: "justify",
     },
     descriptionMobile: {
       ...(t.typography.pageSubtitleMobile as TextStyle),
-      marginBottom: t.spacing.lg,
+      marginBottom: t.pageLayout.subtitleContentGapMobile,
       textAlign: "justify",
     },
     featuresList: {
