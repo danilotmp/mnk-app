@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { ThemedText } from '@/components/themed-text';
@@ -18,6 +19,45 @@ export default function ContactPage() {
   // URL del mapa: obtener una actual desde Google Maps (Compartir > Insertar mapa)
   const googleMapsEmbedUrl =
     'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.7855!2d-78.4678!3d-0.1807!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x91d59a9b8c8c8c8d%3A0x8c8c8c8c8c8c8c8c!2sQuito%2C%20Ecuador!5e0!3m2!1ses!2sec!4v1234567890';
+
+  // Animaciones Comunicación: Llamadas, Email, Mapa
+  const llamadasAnim = useRef(new Animated.Value(0)).current;
+  const emailAnim = useRef(new Animated.Value(0)).current;
+  const mapaAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const llamadasLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(llamadasAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(llamadasAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    const emailLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(emailAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(emailAnim, { toValue: 0, duration: 1800, useNativeDriver: true }),
+      ])
+    );
+    const mapaLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(mapaAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(mapaAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
+      ])
+    );
+    llamadasLoop.start();
+    emailLoop.start();
+    mapaLoop.start();
+    return () => {
+      llamadasLoop.stop();
+      emailLoop.stop();
+      mapaLoop.stop();
+    };
+  }, [llamadasAnim, emailAnim, mapaAnim]);
+
+  const llamadasWave1 = llamadasAnim.interpolate({ inputRange: [0, 0.4, 0.6, 1], outputRange: [1, 1.35, 1.35, 1] });
+  const llamadasWave2 = llamadasAnim.interpolate({ inputRange: [0.3, 0.6, 0.9, 1], outputRange: [1, 1.35, 1.35, 1] });
+  const emailLetterY = emailAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 8, 0] });
+  const mapaPinScale = mapaAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.2, 1] });
 
   return (
     <ThemedView style={styles.container}>
@@ -130,6 +170,68 @@ export default function ContactPage() {
             </View>
           </View>
         </Card>
+
+        {/* Sección inferior: Comunicación - Llamadas, Email, Mapa (animado) */}
+        <View style={[styles.commSection, isMobile && styles.commSectionMobile, { borderTopColor: colors.border }]}>
+          <ThemedText type="h4" style={[styles.commSectionTitle, { color: colors.text }]}>
+            Comunicación
+          </ThemedText>
+          <View style={[styles.commGrid, isMobile && styles.commGridMobile]}>
+            {/* Llamadas: ondas de sonido */}
+            <View style={[styles.commCard, { borderColor: colors.border }]}>
+              <View style={styles.commVisual}>
+                <View style={styles.llamadasRow}>
+                  <Animated.View style={[styles.llamadasWave, { backgroundColor: colors.primary }, { transform: [{ scale: llamadasWave1 }] }]} />
+                  <Animated.View style={[styles.llamadasWave, { backgroundColor: colors.primary }, { transform: [{ scale: llamadasWave2 }] }]} />
+                </View>
+              </View>
+              <ThemedText type="h5" style={[styles.commCardTitle, { color: colors.text }]}>
+                Llamadas
+              </ThemedText>
+              <ThemedText type="body2" style={[styles.commCardDesc, { color: colors.textSecondary }]}>
+                Contáctanos por teléfono
+              </ThemedText>
+            </View>
+
+            {/* Email: carta que entra al sobre */}
+            <View style={[styles.commCard, { borderColor: colors.border }]}>
+              <View style={styles.commVisual}>
+                <View style={[styles.emailEnvelope, { borderColor: colors.primary + '60' }]}>
+                  <View style={[styles.emailFlap, { borderBottomColor: colors.primary + '50' }]} />
+                  <Animated.View
+                    style={[
+                      styles.emailLetter,
+                      { backgroundColor: colors.primary + '40' },
+                      { transform: [{ translateY: emailLetterY }] },
+                    ]}
+                  />
+                </View>
+              </View>
+              <ThemedText type="h5" style={[styles.commCardTitle, { color: colors.text }]}>
+                Email
+              </ThemedText>
+              <ThemedText type="body2" style={[styles.commCardDesc, { color: colors.textSecondary }]}>
+                Escríbenos por correo
+              </ThemedText>
+            </View>
+
+            {/* Mapa: pin que pulsa */}
+            <View style={[styles.commCard, { borderColor: colors.border }]}>
+              <View style={styles.commVisual}>
+                <Animated.View style={[styles.mapaPin, { transform: [{ scale: mapaPinScale }] }]}>
+                  <View style={[styles.mapaPinHead, { backgroundColor: colors.primary }]} />
+                  <View style={[styles.mapaPinPoint, { borderTopColor: colors.primary }]} />
+                </Animated.View>
+              </View>
+              <ThemedText type="h5" style={[styles.commCardTitle, { color: colors.text }]}>
+                Mapa
+              </ThemedText>
+              <ThemedText type="body2" style={[styles.commCardDesc, { color: colors.textSecondary }]}>
+                Ubicación y cómo llegar
+              </ThemedText>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -288,5 +390,117 @@ const styles = StyleSheet.create({
   mapWebView: {
     width: '100%',
     height: '100%',
+  },
+  // Sección Comunicación (inferior)
+  commSection: {
+    maxWidth: 1400,
+    alignSelf: 'center',
+    width: '100%',
+    marginTop: 32,
+    paddingTop: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+  },
+  commSectionMobile: {
+    marginTop: 24,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+  },
+  commSectionTitle: {
+    marginBottom: 20,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  commGrid: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: 16,
+  },
+  commGridMobile: {
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  commCard: {
+    flex: 1,
+    minWidth: 0,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  commVisual: {
+    width: '100%',
+    height: 52,
+    marginBottom: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  llamadasRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  llamadasWave: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  emailEnvelope: {
+    width: 44,
+    height: 32,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderRadius: 4,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  emailFlap: {
+    position: 'absolute',
+    top: -1,
+    left: -1,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 23,
+    borderRightWidth: 23,
+    borderBottomWidth: 14,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  emailLetter: {
+    position: 'absolute',
+    left: 8,
+    top: 4,
+    width: 26,
+    height: 10,
+    borderRadius: 2,
+  },
+  mapaPin: {
+    alignItems: 'center',
+  },
+  mapaPinPoint: {
+    width: 0,
+    height: 0,
+    marginTop: -2,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  mapaPinHead: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  commCardTitle: {
+    marginBottom: 4,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  commCardDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
