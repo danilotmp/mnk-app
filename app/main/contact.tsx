@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsive } from '@/hooks/use-responsive';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import { useTranslation } from '@/src/infrastructure/i18n';
 
 export default function ContactPage() {
@@ -31,10 +32,15 @@ export default function ContactPage() {
           ]}>
             {/* Columna Izquierda: Header + Información de Matriz */}
             <View style={styles.leftColumn}>
-              {/* Header con Icono, Título y Subtítulo (mismo estilo que Capabilities) */}
+              {/* Header con Icono, Título y Subtítulo (mismo estilo que página de Inicio) */}
               <View style={styles.headerSection}>
                 <View style={styles.headerRow}>
-                  <Ionicons name="call" size={48} color={colors.text} />
+                  <DynamicIcon
+                    name="MaterialCommunityIcons:contacts"
+                    size={isMobile ? 28 : 36}
+                    color={colors.primary}
+                    style={styles.headerIcon}
+                  />
                   <ThemedText type="h1" style={[styles.title, { color: colors.text }]}>
                     {t.pages.contact.title}
                   </ThemedText>
@@ -45,24 +51,38 @@ export default function ContactPage() {
               </View>
 
               {/* Información de Matriz - Card con icono superpuesto */}
-              <View style={[styles.matrixCardWrapper, { backgroundColor: colors.surface }]}>
+              <View style={[styles.matrixCardWrapper, isMobile && styles.matrixCardWrapperMobile, { backgroundColor: colors.surface }]}>
                 <View style={[styles.matrixIconBlock, { backgroundColor: colors.primary }]}>
                   <Ionicons name="location" size={35} color="#FFFFFF" />
                 </View>
                 <View style={styles.matrixCardContent}>
-                  <ThemedText type="h2" variant="primary" style={styles.locationName}>
-                    Matriz
-                  </ThemedText>
-                  <View style={styles.matrixRow}>
+                  <View style={styles.matrixTitleRow}>
+                    <View style={styles.matrixTitleSpacer} />
+                    <ThemedText type="h2" variant="primary" style={styles.locationName}>
+                      Matriz
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.matrixRow, styles.matrixRowFirst]}>
                     <Ionicons name="map-outline" size={18} color={colors.textSecondary} />
                     <ThemedText type="body2" variant="secondary" style={styles.contactText}>
-                      Quito - Ecuador
+                      Jun Murillo y San Gregorio - 170129
+                    </ThemedText>
+                  </View>
+                  <View style={styles.matrixRow}>
+                    <Ionicons name="location-outline" size={18} color={colors.textSecondary} />
+                    <ThemedText type="body2" variant="secondary" style={styles.contactText}>
+                      Sector la Mariscal
                     </ThemedText>
                   </View>
                   <View style={styles.matrixRow}>
                     <Ionicons name="phone-portrait-outline" size={18} color={colors.textSecondary} />
                     <ThemedText type="body2" variant="secondary" style={styles.contactText}>
                       0987255382
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.matrixRow, styles.matrixRowRight]}>
+                    <ThemedText type="body2" variant="secondary" style={[styles.contactText, styles.contactTextRight]}>
+                      Quito - Ecuador
                     </ThemedText>
                   </View>
                 </View>
@@ -149,21 +169,26 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     flexWrap: 'nowrap',
+  },
+  headerIcon: {
+    flexShrink: 0,
   },
   title: {
     marginTop: 0,
     marginBottom: 0,
     textAlign: 'left',
-    flexShrink: 0,
+    flex: 1,
   },
   subtitle: {
     marginTop: 8,
     textAlign: 'left',
   },
   matrixCardWrapper: {
+    width: '70%',
+    alignSelf: 'flex-start',
     marginTop: 45,
     borderRadius: 20,
     paddingTop: 32,
@@ -176,6 +201,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
+  },
+  matrixCardWrapperMobile: {
+    width: '100%',
   },
   matrixIconBlock: {
     position: 'absolute',
@@ -195,10 +223,20 @@ const styles = StyleSheet.create({
   matrixCardContent: {
     gap: 12,
   },
+  matrixTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -33,
+    gap: 12,
+  },
+  matrixTitleSpacer: {
+    width: 56,
+    flexShrink: 0,
+  },
   locationName: {
     fontSize: 20,
     fontWeight: '600',
-    marginTop: 15,
+    marginTop: 0,
     marginBottom: 4,
   },
   matrixRow: {
@@ -206,13 +244,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  matrixRowFirst: {
+    marginTop: 16,
+  },
+  matrixRowRight: {
+    alignSelf: 'stretch',
+    justifyContent: 'flex-end',
+  },
   contactText: {
     fontSize: 15,
     lineHeight: 22,
     flex: 1,
   },
+  contactTextRight: {
+    textAlign: 'right',
+  },
   mapCardWrapper: {
-    width: 624,
+    width: 624, // ~30% más pequeño que 624
     borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',

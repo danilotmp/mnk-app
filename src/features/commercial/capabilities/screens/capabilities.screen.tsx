@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import { useCompany } from '@/src/domains/shared';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
@@ -163,9 +164,12 @@ export function CapabilitiesScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={[styles.header, isMobile && styles.headerMobile]}>
-<ThemedText type="h1" style={styles.title}>
-            Productos del Sistema
-          </ThemedText>
+            <View style={styles.titleRow}>
+              <DynamicIcon name="AntDesign:product" size={32} color={colors.primary} style={styles.titleIcon} />
+              <ThemedText type="h1" style={styles.title}>
+                Productos del Sistema
+              </ThemedText>
+            </View>
             <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
               Activa y configura las funcionalidades disponibles para tu negocio
             </ThemedText>
@@ -282,6 +286,14 @@ const styles = StyleSheet.create({
   headerMobile: {
     marginBottom: 16,
     gap: 6,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  titleIcon: {
+    flexShrink: 0,
   },
   title: {
     marginBottom: 4,

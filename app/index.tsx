@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { VideoPlayer } from '@/components/video-player';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { DynamicIcon } from '@/src/domains/shared/components';
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -13,6 +14,40 @@ export default function HomeScreen() {
   // Ruta del video - usar require para todas las plataformas
   // En web, Metro bundler procesará el require y generará la URL correcta
   const videoSource = require('@/assets/videos/grammarly-189393-docs_module_animation-624x480-2X-WHITEBG_V1__2_.mp4');
+
+  // Fortalezas del sistema para la sección de iconos
+  const strengths = [
+    {
+      id: 'scale',
+      icon: 'MaterialCommunityIcons:chart-line',
+      title: 'Escalable',
+      description: 'Crece con tu negocio. Desde una sucursal hasta múltiples empresas y ubicaciones.',
+    },
+    {
+      id: 'multi',
+      icon: 'Entypo:network',
+      title: 'Multi-empresa',
+      description: 'Gestiona varias empresas y sucursales desde una sola plataforma.',
+    },
+    {
+      id: 'ai',
+      icon: 'Ionicons:sparkles',
+      title: 'IA integrada',
+      description: 'Inteligencia artificial en ChatIA para respuestas automáticas e inteligentes.',
+    },
+    {
+      id: 'security',
+      icon: 'Ionicons:shield-checkmark',
+      title: 'Seguro',
+      description: 'Arquitectura segura, datos protegidos y control de acceso por roles.',
+    },
+    {
+      id: 'integrated',
+      icon: 'MaterialCommunityIcons:connection',
+      title: 'Integrado',
+      description: 'WhatsApp, facturación y ERP conectados en un solo ecosistema.',
+    },
+  ];
 
   return (
     <ThemedView style={styles.container}>
@@ -33,16 +68,24 @@ export default function HomeScreen() {
             isMobile && styles.textColumnMobile,
             isDesktop && styles.textColumnDesktop
           ]}>
-            <ThemedText 
-              type="h1" 
-              style={[
-                styles.mainTitle,
-                isMobile && styles.mainTitleMobile,
-                { color: colors.text }
-              ]}
-            >
-              Soluciones empresariales con Inteligencia Artificial
-            </ThemedText>
+            <View style={[styles.mainTitleRow, isMobile && styles.mainTitleRowMobile]}>
+              <DynamicIcon
+                name="Entypo:network"
+                size={isMobile ? 28 : 36}
+                color={colors.primary}
+                style={styles.mainTitleIcon}
+              />
+              <ThemedText 
+                type="h1" 
+                style={[
+                  styles.mainTitle,
+                  isMobile && styles.mainTitleMobile,
+                  { color: colors.text }
+                ]}
+              >
+                Soluciones empresariales con Inteligencia Artificial
+              </ThemedText>
+            </View>
             
             <ThemedText 
               type="body1" 
@@ -120,6 +163,69 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* Fortalezas de nuestro sistema - Iconos con descripciones (una sola fila) */}
+        <View style={[styles.strengthsSection, isMobile && styles.strengthsSectionMobile]}>
+          {isMobile ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.strengthsGridMobileScroll}
+            >
+              {strengths.map((item) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.strengthCard,
+                    styles.strengthCardMobile,
+                    { borderColor: colors.border },
+                  ]}
+                >
+                  <View style={[styles.strengthIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                    <DynamicIcon
+                      name={item.icon}
+                      size={28}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <ThemedText type="h5" style={[styles.strengthCardTitle, { color: colors.text }]}>
+                    {item.title}
+                  </ThemedText>
+                  <ThemedText type="body2" style={[styles.strengthCardDescription, { color: colors.textSecondary }]}>
+                    {item.description}
+                  </ThemedText>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+          <View style={styles.strengthsGrid}>
+            {strengths.map((item) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.strengthCard,
+                  isMobile && styles.strengthCardMobile,
+                  { borderColor: colors.border },
+                ]}
+              >
+                <View style={[styles.strengthIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <DynamicIcon
+                    name={item.icon}
+                    size={isMobile ? 28 : 32}
+                    color={colors.primary}
+                  />
+                </View>
+                <ThemedText type="h5" style={[styles.strengthCardTitle, { color: colors.text }]}>
+                  {item.title}
+                </ThemedText>
+                <ThemedText type="body2" style={[styles.strengthCardDescription, { color: colors.textSecondary }]}>
+                  {item.description}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+          )}
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -160,17 +266,25 @@ const styles = StyleSheet.create({
   textColumnDesktop: {
     maxWidth: 600,
   },
-  mainTitle: {
-    fontSize: 48,
-    fontWeight: '700',
-    lineHeight: 56,
+  mainTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
     marginBottom: 24,
+  },
+  mainTitleIcon: {
+    flexShrink: 0,
+  },
+  mainTitleRowMobile: {
+    marginBottom: 16,
+  },
+  mainTitle: {
+    marginBottom: 0,
     textAlign: 'justify',
+    flex: 1,
   },
   mainTitleMobile: {
-    fontSize: 32,
-    lineHeight: 40,
-    marginBottom: 16,
+    marginBottom: 0,
     textAlign: 'justify',
   },
   description: {
@@ -242,5 +356,61 @@ const styles = StyleSheet.create({
   videoNative: {
     width: '100%',
     aspectRatio: 624 / 480,
+  },
+  // Fortalezas del sistema
+  strengthsSection: {
+    maxWidth: 1400,
+    alignSelf: 'center',
+    width: '100%',
+    marginTop: 48,
+    paddingTop: 32,
+    borderTopWidth: 1,
+  },
+  strengthsSectionMobile: {
+    marginTop: 32,
+    paddingTop: 24,
+  },
+  strengthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: 16,
+  },
+  strengthsGridMobile: {
+    gap: 12,
+  },
+  strengthsGridMobileScroll: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  strengthCard: {
+    flex: 1,
+    minWidth: 0,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'flex-start',
+  },
+  strengthCardMobile: {
+    flex: 0,
+    width: 160,
+  },
+  strengthIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  strengthCardTitle: {
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  strengthCardDescription: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'left',
   },
 });
