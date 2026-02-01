@@ -29,7 +29,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -37,7 +36,7 @@ import {
 export default function LoginPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { isDesktop } = useResponsive();
+  const { isDesktop, isMobile } = useResponsive();
   const router = useRouter();
   const { setUserContext } = useMultiCompany();
   const alert = useAlert();
@@ -210,9 +209,13 @@ export default function LoginPage() {
       />
       <View style={styles.container}>
         {/* Layout de dos columnas en desktop, apilado en mobile */}
-        <View style={styles.layoutContainer}>
+        <View style={[styles.layoutContainer, isMobile && styles.layoutContainerMobile]}>
           {/* Columna Izquierda: Formulario */}
-          <View style={[styles.leftColumn, { backgroundColor: colors.background }]}>
+          <View style={[
+            styles.leftColumn,
+            { backgroundColor: colors.background },
+            isMobile && styles.leftColumnMobile,
+          ]}>
             {/* Botón de regresar */}
             <TouchableOpacity
               style={styles.backButton}
@@ -230,17 +233,18 @@ export default function LoginPage() {
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
           keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.formContainer}
+          showsVerticalScrollIndicator={false}
+          style={isMobile ? styles.scrollViewMobile : undefined}
         >
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={[styles.formContainer, isMobile && styles.formContainerMobile]}
+            >
             {/* Logo/Header */}
             <View style={styles.header}>
-              <View style={styles.headerContent}>
+              <View style={[styles.headerContent, isMobile && styles.headerContentMobile]}>
                 <View style={styles.logoContainer}>
                   <Image
                     source={require('@/assets/images/icon.png')}
@@ -260,7 +264,7 @@ export default function LoginPage() {
             </View>
 
             {/* Formulario */}
-            <Card style={styles.card}>
+            <Card style={[styles.card, isMobile && styles.cardMobile]}>
               {mode === 'login' && (
               <>
               {/* Email */}
@@ -430,10 +434,16 @@ export default function LoginPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    maxWidth: '100%',
   },
   layoutContainer: {
     flex: 1,
     flexDirection: 'row',
+    maxWidth: '100%',
+  },
+  layoutContainerMobile: {
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   leftColumn: {
     flex: 1,
@@ -441,6 +451,10 @@ const styles = StyleSheet.create({
       maxWidth: '50%',
       minWidth: 500,
     } : {}),
+  },
+  leftColumnMobile: {
+    maxWidth: '100%',
+    minWidth: 0,
   },
   rightColumn: {
     flex: 1,
@@ -491,6 +505,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  scrollContentMobile: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    paddingTop: 72,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+  scrollViewMobile: {
+    maxWidth: '100%',
+  },
   backButton: {
     position: 'absolute',
     top: Platform.OS === 'web' ? 20 : 40,
@@ -506,6 +530,11 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  formContainerMobile: {
+    maxWidth: '100%',
+    width: '100%',
+    justifyContent: 'flex-start',
+  },
   header: {
     marginBottom: 32,
   },
@@ -514,6 +543,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     marginLeft: 20,
+  },
+  headerContentMobile: {
+    marginLeft: 0,
   },
   logoContainer: {
     width: 60,
@@ -542,6 +574,10 @@ const styles = StyleSheet.create({
   card: {
     padding: 24,
     gap: 20,
+  },
+  cardMobile: {
+    padding: 20,
+    gap: 16,
   },
   inputGroup: {
     marginBottom: 4,

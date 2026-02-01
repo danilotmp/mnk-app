@@ -1,3 +1,4 @@
+import { LoginModal } from '@/components/auth/login-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { InputWithFocus } from '@/components/ui/input-with-focus';
@@ -45,6 +46,7 @@ export function HorizontalMenu({
   const isMobile = isMobileDevice(width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
   const { t } = useTranslation();
   const { user, company, branch: currentBranch } = useCompany();
   const { switchBranch } = useBranches();
@@ -1342,9 +1344,20 @@ export function HorizontalMenu({
                     </View>
                   </TouchableOpacity>
                 ) : (
-                  <View style={{ flex: 1 }} />
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
+                    onPress={() => setLoginModalVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.mobileAvatar, { backgroundColor: colors.primary }]}>
+                      <Ionicons name="person-outline" size={20} color="#FFFFFF" />
+                    </View>
+                    <ThemedText type="body1" style={{ fontWeight: '600', color: colors.text }}>
+                      {t.auth?.login ?? 'Iniciar Sesión'}
+                    </ThemedText>
+                  </TouchableOpacity>
                 )}
-                
+
                 {/* Selector de idioma */}
                 <View style={styles.mobileHeaderIcon}>
                   <LanguageSelector />
@@ -1355,6 +1368,16 @@ export function HorizontalMenu({
                   <Ionicons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
+
+              {/* Modal de login (cuando no está autenticado) */}
+              <LoginModal
+                visible={loginModalVisible}
+                onClose={() => setLoginModalVisible(false)}
+                onLoginSuccess={() => {
+                  setLoginModalVisible(false);
+                  closeMobileMenu();
+                }}
+              />
 
               {/* Input de búsqueda para móvil */}
               <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>

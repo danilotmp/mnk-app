@@ -166,18 +166,21 @@ export class MenuService {
         id: 'home',
         label: 'Inicio',
         route: '/',
+        icon: 'home',
         isPublic: true, // Página pública
       },
       {
         id: 'capabilities',
         label: 'Productos',
         route: '/capabilities',
+        icon: 'AntDesign:product',
         isPublic: true, // Página pública
       },
       {
         id: 'contact',
         label: 'Contacto',
         route: '/main/contact',
+        icon: 'MaterialCommunityIcons:contacts',
         isPublic: true, // Página pública
       },
     ];

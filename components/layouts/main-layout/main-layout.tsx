@@ -166,12 +166,13 @@ export function MainLayout({
     }
   }, [showCompanyDropdown]);
 
-  // Menú por defecto si no se proporciona
+  // Menú por defecto si no se proporciona (cuando el usuario no está autenticado)
   const defaultMenuItems: MenuItem[] = [
     {
       id: 'home',
       label: 'Inicio',
       route: '/',
+      icon: 'home',
     },
     {
       id: 'services',
@@ -188,11 +189,13 @@ export function MainLayout({
         { id: 'product-1', label: 'Producto 1', route: '/products/1' },
         { id: 'product-2', label: 'Producto 2', route: '/products/2' },
       ],
+      icon: 'AntDesign:product',
     },
     {
-      id: 'about',
-      label: 'Acerca de',
-      route: '/about',
+      id: 'contact',
+      label: 'Contactos',
+      route: '/main/contact',
+      icon: 'MaterialCommunityIcons:contacts',
     },
   ];
 
