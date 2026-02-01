@@ -13,6 +13,7 @@ import { CompanyLogoAndMenuContainerProps } from './company-logo-and-menu-contai
 
 export function CompanyLogoAndMenuContainer({
   companyName,
+  companySubtitle,
   companyNameClickable,
   onCompanyNamePress,
   menuItems,
@@ -69,38 +70,24 @@ export function CompanyLogoAndMenuContainer({
           <View style={styles.iconContainer}>
             <Logo size="small" style={{ marginRight: 0 }} />
           </View>
-          {companyName && (
-            <Animated.View
-              style={[
-                styles.companyNameContainer,
-                {
-                  opacity: companyNameAnim,
-                  marginLeft: companyNameAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 0], // Sin margin adicional ya que está en el contenedor
-                  }),
-                },
-              ]}
-            >
-              {companyNameClickable ? (
-                <TouchableOpacity
-                  onPress={onCompanyNamePress}
-                  activeOpacity={0.7}
-                  style={styles.companyNameClickable}
-                >
-                  <ThemedText
-                    type="subtitle"
-                    style={[styles.companyNameText, { color: colors.text }]}
-                    numberOfLines={1}
-                    onLayout={(event) => {
-                      const { width } = event.nativeEvent.layout;
-                      onTitleLayout(width);
-                    }}
-                  >
-                    {companyName}
-                  </ThemedText>
-                </TouchableOpacity>
-              ) : (
+          <Animated.View
+            style={[
+              styles.companyNameContainer,
+              {
+                opacity: companyNameAnim,
+                marginLeft: companyNameAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0], // Sin margin adicional ya que está en el contenedor
+                }),
+              },
+            ]}
+          >
+            {companyNameClickable ? (
+              <TouchableOpacity
+                onPress={onCompanyNamePress}
+                activeOpacity={0.7}
+                style={styles.companyNameClickable}
+              >
                 <ThemedText
                   type="subtitle"
                   style={[styles.companyNameText, { color: colors.text }]}
@@ -110,11 +97,45 @@ export function CompanyLogoAndMenuContainer({
                     onTitleLayout(width);
                   }}
                 >
-                  {companyName}
+                  AIBox
                 </ThemedText>
-              )}
-            </Animated.View>
-          )}
+                {companySubtitle && (
+                  <ThemedText
+                    type="caption"
+                    variant="secondary"
+                    style={{ color: colors.textSecondary }}
+                    numberOfLines={1}
+                  >
+                    {companySubtitle}
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View>
+                <ThemedText
+                  type="subtitle"
+                  style={[styles.companyNameText, { color: colors.text }]}
+                  numberOfLines={1}
+                  onLayout={(event) => {
+                    const { width } = event.nativeEvent.layout;
+                    onTitleLayout(width);
+                  }}
+                >
+                  AIBox
+                </ThemedText>
+                {companySubtitle && (
+                  <ThemedText
+                    type="caption"
+                    variant="secondary"
+                    style={{ color: colors.textSecondary }}
+                    numberOfLines={1}
+                  >
+                    {companySubtitle}
+                  </ThemedText>
+                )}
+              </View>
+            )}
+          </Animated.View>
         </View>
 
         {/* Contenedor separado para el Menú Horizontal - Centrado */}

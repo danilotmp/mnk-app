@@ -38,6 +38,8 @@ export const createCompanyLogoAndMenuContainerStyles = (colors: any) =>
     },
     companyNameClickable: {
       paddingVertical: 4,
+      flexDirection: 'column',
+      alignItems: 'flex-start',
     },
     companyNameText: {
       fontWeight: '600',

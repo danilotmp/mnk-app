@@ -58,6 +58,16 @@ export const createHorizontalMenuStyles = (activeItemColor: string = '#ff3366') 
       alignItems: 'center',
       flex: 1,
       minWidth: 0,
+      ...Platform.select({
+        web: {
+          outline: 'none',
+          outlineStyle: 'none',
+          outlineWidth: 0,
+          outlineColor: 'transparent',
+          borderWidth: 0,
+          borderColor: 'transparent',
+        },
+      }),
     },
     mobileAvatar: {
       width: 40,

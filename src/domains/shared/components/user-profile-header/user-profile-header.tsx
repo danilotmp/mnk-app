@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Modal,
+  Platform,
   ScrollView,
   TouchableOpacity,
   View,
@@ -311,7 +312,15 @@ export function UserProfileHeader({
           <TouchableOpacity
             style={[
               styles.profileButton, 
-              { backgroundColor: 'transparent' }
+              { backgroundColor: 'transparent' },
+              Platform.OS === 'web' && {
+                outline: 'none',
+                outlineStyle: 'none',
+                outlineWidth: 0,
+                outlineColor: 'transparent',
+                borderWidth: 0,
+                borderColor: 'transparent',
+              },
             ]}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.7}

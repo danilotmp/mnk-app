@@ -1,12 +1,12 @@
 import { useTheme } from '@/hooks/use-theme';
 import React from 'react';
 import { SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Logo } from './logo';
 import { ThemedText } from './themed-text';
 
 interface HeaderProps {
   title?: string;
+  subtitle?: string; // Subtítulo que muestra el nombre de la empresa o "Artificial Intelligence Box"
   showLogo?: boolean;
   children?: React.ReactNode;
   inline?: boolean; // Nuevo: para usar en header unificado
@@ -17,7 +17,7 @@ interface HeaderProps {
   renderDropdown?: React.ReactNode; // Dropdown a renderizar dentro del contenedor del título
 }
 
-export function Header({ title, showLogo = true, children, inline = false, logoSize = 'medium', onTitlePress, titleClickable = false, onTitleLayout, renderDropdown }: HeaderProps) {
+export function Header({ title, subtitle, showLogo = true, children, inline = false, logoSize = 'medium', onTitlePress, titleClickable = false, onTitleLayout, renderDropdown }: HeaderProps) {
   const { colors, spacing, shadows } = useTheme();
 
   // Versión inline: sin SafeAreaView, sin padding, sin borde (para header unificado)
@@ -26,7 +26,7 @@ export function Header({ title, showLogo = true, children, inline = false, logoS
       <View style={styles.inlineContent}>
         {showLogo && <Logo size={logoSize} />}
         {title && (
-          <View style={{ position: 'relative' }}>
+          <View style={{ position: 'relative', flex: 1, minWidth: 0, maxWidth: '100%' }}> {/* Contenedor flexible pero con límite */}
             {titleClickable && onTitlePress ? (
               <TouchableOpacity 
                 onPress={onTitlePress} 
@@ -37,26 +37,46 @@ export function Header({ title, showLogo = true, children, inline = false, logoS
                   onTitleLayout?.(width, x);
                 }}
               >
+                <View style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
+                  <ThemedText 
+                    type={logoSize === 'small' ? 'body1' : 'subtitle'} 
+                    style={[styles.inlineTitle, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
+                    AIBox
+                  </ThemedText>
+                  {subtitle && (
+                    <ThemedText 
+                      type="caption" 
+                      variant="secondary"
+                      style={{ color: colors.textSecondary }}
+                      numberOfLines={1}
+                    >
+                      {subtitle}
+                    </ThemedText>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
                 <ThemedText 
                   type={logoSize === 'small' ? 'body1' : 'subtitle'} 
                   style={[styles.inlineTitle, { color: colors.text }]}
+                  numberOfLines={1}
                 >
-                  {title}
+                  AIBox
                 </ThemedText>
-                <Ionicons 
-                  name="chevron-down" 
-                  size={16} 
-                  color={colors.text} 
-                  style={styles.dropdownIcon}
-                />
-              </TouchableOpacity>
-            ) : (
-              <ThemedText 
-                type={logoSize === 'small' ? 'body1' : 'subtitle'} 
-                style={[styles.inlineTitle, { color: colors.text }]}
-              >
-                {title}
-              </ThemedText>
+                {subtitle && (
+                  <ThemedText 
+                    type="caption" 
+                    variant="secondary"
+                    style={{ color: colors.textSecondary }}
+                    numberOfLines={1}
+                  >
+                    {subtitle}
+                  </ThemedText>
+                )}
+              </View>
             )}
             {renderDropdown}
           </View>
@@ -119,8 +139,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  dropdownIcon: {
-    marginLeft: 2,
+    width: '100%',
+    minWidth: 0,
   },
 });

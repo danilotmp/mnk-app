@@ -26,11 +26,16 @@ if (typeof window !== 'undefined') {
   if (originalError) {
     window.console.error = (...args: any[]) => {
       const errorMessage = args[0]?.toString() || '';
+      const fullMessage = args.map(arg => String(arg)).join(' ');
       // Ignorar errores específicos de FontFaceObserver timeout
       if (
         errorMessage.includes('fontfaceobserver') ||
+        errorMessage.includes('FontFaceObserver') ||
         errorMessage.includes('6000ms timeout exceeded') ||
-        errorMessage.includes('timeout exceeded')
+        errorMessage.includes('timeout exceeded') ||
+        fullMessage.includes('fontfaceobserver') ||
+        fullMessage.includes('FontFaceObserver') ||
+        fullMessage.includes('6000ms timeout exceeded')
       ) {
         // Este es un error conocido y no afecta la funcionalidad
         // Las fuentes del sistema se cargan correctamente sin necesidad de FontFaceObserver
@@ -44,10 +49,15 @@ if (typeof window !== 'undefined') {
   const originalOnError = window.onerror;
   window.onerror = (message, source, lineno, colno, error) => {
     const errorString = message?.toString() || '';
+    const errorStack = error?.stack?.toString() || '';
     if (
       errorString.includes('fontfaceobserver') ||
+      errorString.includes('FontFaceObserver') ||
       errorString.includes('6000ms timeout exceeded') ||
-      errorString.includes('timeout exceeded')
+      errorString.includes('timeout exceeded') ||
+      errorStack.includes('fontfaceobserver') ||
+      errorStack.includes('FontFaceObserver') ||
+      errorStack.includes('6000ms timeout exceeded')
     ) {
       // Suprimir este error específico
       return true; // Prevenir que se muestre en consola
@@ -57,6 +67,66 @@ if (typeof window !== 'undefined') {
     }
     return false;
   };
+
+  // Capturar errores no manejados con addEventListener
+  window.addEventListener('error', (event) => {
+    const errorMessage = event.message?.toString() || '';
+    const errorSource = event.filename?.toString() || '';
+    if (
+      errorMessage.includes('fontfaceobserver') ||
+      errorMessage.includes('FontFaceObserver') ||
+      errorMessage.includes('6000ms timeout exceeded') ||
+      errorMessage.includes('timeout exceeded') ||
+      errorSource.includes('fontfaceobserver') ||
+      errorSource.includes('FontFaceObserver')
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  // Capturar promesas rechazadas no manejadas
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason?.toString() || '';
+    if (
+      reason.includes('fontfaceobserver') ||
+      reason.includes('FontFaceObserver') ||
+      reason.includes('6000ms timeout exceeded') ||
+      reason.includes('timeout exceeded')
+    ) {
+      event.preventDefault();
+      return false;
+    }
+  });
+
+  // Agregar estilos globales para eliminar outline/border de elementos con foco en web
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    // Verificar si ya se agregaron los estilos para evitar duplicados
+    if (!document.getElementById('remove-focus-outline-styles')) {
+      const style = document.createElement('style');
+      style.id = 'remove-focus-outline-styles';
+      style.textContent = `
+        button:focus,
+        button:focus-visible,
+        button:active,
+        [role="button"]:focus,
+        [role="button"]:focus-visible,
+        [role="button"]:active,
+        div[class*="TouchableOpacity"]:focus,
+        div[class*="TouchableOpacity"]:focus-visible,
+        div[class*="TouchableOpacity"]:active {
+          outline: none !important;
+          outline-style: none !important;
+          outline-width: 0 !important;
+          outline-color: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
 }
 
 function LayoutContent() {

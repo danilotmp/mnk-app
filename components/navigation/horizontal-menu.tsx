@@ -1309,7 +1309,17 @@ export function HorizontalMenu({
                 {/* Avatar del usuario - Clickable */}
                 {user ? (
                   <TouchableOpacity 
-                    style={styles.mobileHeaderAvatarContainer}
+                    style={[
+                      styles.mobileHeaderAvatarContainer,
+                      Platform.OS === 'web' && {
+                        outline: 'none',
+                        outlineStyle: 'none',
+                        outlineWidth: 0,
+                        outlineColor: 'transparent',
+                        borderWidth: 0,
+                        borderColor: 'transparent',
+                      },
+                    ]}
                     onPress={() => {
                       setProfileModalVisible(true);
                     }}

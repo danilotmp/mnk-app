@@ -15,9 +15,8 @@ import { useCompany, useMultiCompany, UserProfileHeader } from '@/src/domains/sh
 import { useMenu } from '@/src/infrastructure/menu';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
-import { CompanyLogoAndMenuContainer } from './company-logo-and-menu-container';
 import { createMainLayoutStyles } from './main-layout.styles';
 import { MainLayoutProps } from './main-layout.types';
 
@@ -39,6 +38,8 @@ export function MainLayout({
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [titleWidth, setTitleWidth] = useState<number>(0);
   const [verticalMenuCollapsed, setVerticalMenuCollapsed] = useState(true); // Inicia colapsado por defecto
+  const companySelectorRef = useRef<View>(null);
+  const companyDropdownRef = useRef<View>(null);
 
   // Determinar el tipo de menú según configuración y estado de autenticación
   // El menú horizontal siempre se muestra antes del login
@@ -68,6 +69,9 @@ export function MainLayout({
   }, [user?.companyIdDefault]);
 
   const displayTitle = companies.find((c) => c.id === currentCompanyId)?.name || company?.name || title;
+  const displaySubtitle = isAuthenticated 
+    ? (companies.find((c) => c.id === currentCompanyId)?.name || company?.name || '')
+    : 'Artificial Intelligence Box';
   const availableCompanies = companies.filter((c) => c.id !== currentCompanyId);
   const canSwitchCompany = availableCompanies.length > 0;
 
@@ -108,6 +112,59 @@ export function MainLayout({
       console.error('Error al cambiar empresa:', error);
     }
   };
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    if (!showCompanyDropdown) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      // En web, verificar si el clic fue fuera del dropdown y del botón
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const target = event.target as HTMLElement;
+        if (target) {
+          // Verificar si el clic fue en el dropdown o en el contenedor del selector
+          // Usar data attributes como fallback si los refs no están disponibles
+          const isClickInDropdown = target.closest?.('[data-company-dropdown]');
+          const isClickInSelector = target.closest?.('[data-company-selector]');
+          
+          // También verificar usando refs si están disponibles
+          const dropdownElement = companyDropdownRef.current;
+          const selectorElement = companySelectorRef.current;
+          
+          let isInDropdown = false;
+          let isInSelector = false;
+          
+          if (dropdownElement) {
+            // En React Native Web, el ref puede tener una propiedad _nativeNode
+            const nativeNode = (dropdownElement as any)._nativeNode || (dropdownElement as any);
+            isInDropdown = nativeNode === target || nativeNode?.contains?.(target);
+          }
+          
+          if (selectorElement) {
+            const nativeNode = (selectorElement as any)._nativeNode || (selectorElement as any);
+            isInSelector = nativeNode === target || nativeNode?.contains?.(target);
+          }
+          
+          // Si no está en ninguno de los dos, cerrar el dropdown
+          if (!isClickInDropdown && !isClickInSelector && !isInDropdown && !isInSelector) {
+            setShowCompanyDropdown(false);
+          }
+        }
+      }
+    };
+
+    // En web, usar addEventListener
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      // Usar setTimeout para evitar que el clic que abre el dropdown también lo cierre
+      setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 0);
+
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [showCompanyDropdown]);
 
   // Menú por defecto si no se proporciona
   const defaultMenuItems: MenuItem[] = [
@@ -280,34 +337,45 @@ export function MainLayout({
     // Para desktop, calcular posición y tamaño dinámicamente
     if (isDesktop) {
       const isVerticalMenuExpanded = shouldShowVerticalMenu && !verticalMenuCollapsed;
-      const iconWidth = AppConfig.navigation.verticalMenuCollapsedWidth - 16; // 32px
-      const companyNameWidth = AppConfig.navigation.verticalMenuExpandedWidth - iconWidth; // 248px
-      const shouldApplyVerticalMenuSpacing = isVerticalMenuExpanded;
-
-      const dropdownWidth = isVerticalMenuExpanded
-        ? shouldApplyVerticalMenuSpacing
-          ? AppConfig.navigation.verticalMenuExpandedWidth - 6
-          : AppConfig.navigation.verticalMenuExpandedWidth
-        : companyNameWidth;
+      const isWebDesktop = Platform.OS === 'web' && !isMobile && !useVerticalMenu;
+      
+      // En web desktop con tres bloques, usar ancho fijo igual al bloque izquierdo
+      const dropdownWidth = isWebDesktop 
+        ? 280 // Mismo ancho que webLeftSection
+        : (isVerticalMenuExpanded
+          ? (shouldShowVerticalMenu && !verticalMenuCollapsed
+            ? AppConfig.navigation.verticalMenuExpandedWidth - 6
+            : AppConfig.navigation.verticalMenuExpandedWidth)
+          : (AppConfig.navigation.verticalMenuExpandedWidth - (AppConfig.navigation.verticalMenuCollapsedWidth - 16)));
 
       const itemPaddingLeft = isVerticalMenuExpanded
-        ? shouldApplyVerticalMenuSpacing
+        ? (shouldShowVerticalMenu && !verticalMenuCollapsed
           ? AppConfig.navigation.verticalMenuCollapsedWidth - 6
-          : AppConfig.navigation.verticalMenuCollapsedWidth
-        : 12;
+          : AppConfig.navigation.verticalMenuCollapsedWidth)
+        : 12; // Padding izquierdo de 10 para las opciones cuando el menú está colapsado
+
+      // Calcular el margin izquierdo del dropdown cuando el menú está colapsado
+      // Cuando el menú vertical está colapsado, usar el ancho del menú colapsado como margin izquierdo
+      // Solo aplicar cuando hay menú vertical (vertical o mix) Y está colapsado
+      const dropdownMarginLeft = shouldShowVerticalMenu && !isVerticalMenuExpanded
+        ? AppConfig.navigation.verticalMenuCollapsedWidth
+        : undefined;
 
       return (
         <View
+          ref={companyDropdownRef}
+          data-company-dropdown={true}
           style={[
             ...dropdownStyles,
             {
               top: '100%',
-              left: isVerticalMenuExpanded
-                ? shouldApplyVerticalMenuSpacing
-                  ? 3
-                  : 0
-                : AppConfig.navigation.verticalMenuCollapsedWidth,
-              marginTop: shouldApplyVerticalMenuSpacing ? 3 : 0,
+              left: isWebDesktop 
+                ? 0 // Alineado al inicio del bloque izquierdo
+                : (isVerticalMenuExpanded
+                  ? (shouldShowVerticalMenu && !verticalMenuCollapsed ? 3 : 0)
+                  : 0), // Cuando colapsado, left: 0, el margin izquierdo desplaza el dropdown
+              ...(dropdownMarginLeft !== undefined && { marginLeft: dropdownMarginLeft }), // Margin izquierdo cuando el menú está colapsado (48px)
+              marginTop: isVerticalMenuExpanded && !isWebDesktop ? 3 : 0,
               width: dropdownWidth,
             },
           ]}
@@ -347,7 +415,7 @@ export function MainLayout({
 
     // Para mobile/tablet
     return (
-      <View style={dropdownStyles}>
+      <View ref={companyDropdownRef} data-company-dropdown={true} style={dropdownStyles}>
         {/* Flecha superior del dropdown */}
         <View style={[styles.companyDropdownArrow, styles.companyDropdownArrowOuter, { borderBottomColor: colors.border }]} />
         <View
@@ -358,9 +426,9 @@ export function MainLayout({
             <TouchableOpacity
               key={companyInfo.id}
               onPress={() => handleCompanySelect(companyInfo)}
-              style={[styles.companyDropdownItem, { borderBottomColor: colors.border }]}
+              style={[styles.companyDropdownItem, { borderBottomColor: colors.border, paddingLeft: 10 }]}
             >
-              <ThemedText type="defaultSemiBold">{companyInfo.name}</ThemedText>
+              <ThemedText type="body2" style={{ fontWeight: '600' }}>{companyInfo.name}</ThemedText>
             </TouchableOpacity>
           );
         })}
@@ -389,7 +457,8 @@ export function MainLayout({
               <View style={styles.mobileLogoSection}>
                 <View style={styles.companyDropdownContainer}>
                   <Header
-                    title={displayTitle}
+                    title="AIBox"
+                    subtitle={displaySubtitle}
                     inline={true}
                     logoSize="small"
                     titleClickable={canSwitchCompany}
@@ -423,67 +492,93 @@ export function MainLayout({
               </View>
             </>
           ) : (
-            // Layout Desktop/Tablet: [Menú con Logo integrado] ──── [Usuario]
+            // Layout Desktop/Tablet: Tres bloques en web, layout normal en otras plataformas
             <>
-              {/* Logo separado solo si es menú vertical, si no, el logo va integrado en el menú horizontal */}
-              {useVerticalMenu && (
-                <View style={styles.logoSection}>
-                  <View style={styles.companyDropdownContainer}>
-                    <Header
-                      title={displayTitle}
-                      inline={true}
-                      titleClickable={canSwitchCompany}
-                      onTitlePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
-                      onTitleLayout={(width) => setTitleWidth(width)}
-                      renderDropdown={renderCompanyDropdown(false)}
-                    />
+              {Platform.OS === 'web' && !isMobile && !useVerticalMenu ? (
+                // Layout Web Desktop: [Logo + Selector] ──── [Menú Centrado] ──── [Acciones]
+                <>
+                  {/* Primer bloque: Logo, nombre y selector de empresas */}
+                  <View style={styles.webLeftSection}>
+                    <View ref={companySelectorRef} style={styles.companyDropdownContainer} data-company-selector={true}>
+                      <Header
+                        title="AIBox"
+                        subtitle={displaySubtitle}
+                        inline={true}
+                        logoSize="small"
+                        titleClickable={canSwitchCompany}
+                        onTitlePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
+                        onTitleLayout={(width) => setTitleWidth(width)}
+                        renderDropdown={renderCompanyDropdown(false)}
+                      />
+                    </View>
                   </View>
-                </View>
-              )}
 
-              {/* Menú de navegación horizontal con logo separado (si no es menú vertical, o si es modo mix) */}
-              {showNavigation && (!useVerticalMenu || useMixMenu) && Platform.OS === 'web' && !isMobile && (
-                <View style={styles.menuSection}>
-                  <CompanyLogoAndMenuContainer
-                    companyName={displayTitle}
-                    companyNameClickable={canSwitchCompany}
-                    onCompanyNamePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
-                    menuItems={useMixMenu ? publicMenuItems : finalMenuItems}
-                    onMenuItemPress={handleMenuItemPress}
-                    titleWidth={titleWidth}
-                    onTitleLayout={(width) => setTitleWidth(width)}
-                    showCompanyDropdown={false}
-                    canSwitchCompany={canSwitchCompany}
-                    availableCompanies={availableCompanies}
-                    onCompanySelect={handleCompanySelect}
-                    colors={colors}
-                  />
-                </View>
-              )}
-              {/* Dropdown de empresas - Posicionado debajo del header completo (solo Web Desktop) */}
-              {showNavigation &&
-                (!useVerticalMenu || useMixMenu) &&
-                Platform.OS === 'web' &&
-                !isMobile &&
-                renderCompanyDropdown(true)}
-              {showNavigation && (!useVerticalMenu || useMixMenu) && (Platform.OS !== 'web' || isMobile) && (
-                <View style={styles.menuSection}>
-                  <HorizontalMenu
-                    items={useMixMenu ? publicMenuItems : finalMenuItems}
-                    onItemPress={handleMenuItemPress}
-                  />
-                </View>
-              )}
+                  {/* Segundo bloque: Menú de navegación centrado */}
+                  {showNavigation && (
+                    <View style={styles.webMenuSection}>
+                      <HorizontalMenu
+                        items={useMixMenu ? publicMenuItems : finalMenuItems}
+                        onItemPress={handleMenuItemPress}
+                      />
+                    </View>
+                  )}
 
-              {/* UserProfile en la derecha */}
-              {showUserProfile && (
-                <View style={styles.userSection}>
-                  <UserProfileHeader
-                    onLogout={handleLogout}
-                    onSettings={handleSettings}
-                    onProfile={handleProfile}
-                  />
-                </View>
+                  {/* Tercer bloque: Botones de acción (tema, idioma, avatar) */}
+                  {showUserProfile && (
+                    <View style={styles.webRightSection}>
+                      <UserProfileHeader
+                        onLogout={handleLogout}
+                        onSettings={handleSettings}
+                        onProfile={handleProfile}
+                      />
+                    </View>
+                  )}
+
+                  {/* Dropdown de empresas - Posicionado debajo del primer bloque (solo Web Desktop) */}
+                  {showNavigation &&
+                    (!useVerticalMenu || useMixMenu) &&
+                    renderCompanyDropdown(true)}
+                </>
+              ) : (
+                // Layout normal para otras plataformas o menú vertical
+                <>
+                  {/* Logo separado solo si es menú vertical */}
+                  {useVerticalMenu && (
+                    <View style={styles.logoSection}>
+                      <View ref={companySelectorRef} style={styles.companyDropdownContainer} data-company-selector={true}>
+                        <Header
+                          title={displayTitle}
+                          inline={true}
+                          titleClickable={canSwitchCompany}
+                          onTitlePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
+                          onTitleLayout={(width) => setTitleWidth(width)}
+                          renderDropdown={renderCompanyDropdown(false)}
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Menú de navegación horizontal */}
+                  {showNavigation && (!useVerticalMenu || useMixMenu) && (
+                    <View style={styles.menuSection}>
+                      <HorizontalMenu
+                        items={useMixMenu ? publicMenuItems : finalMenuItems}
+                        onItemPress={handleMenuItemPress}
+                      />
+                    </View>
+                  )}
+
+                  {/* UserProfile en la derecha */}
+                  {showUserProfile && (
+                    <View style={styles.userSection}>
+                      <UserProfileHeader
+                        onLogout={handleLogout}
+                        onSettings={handleSettings}
+                        onProfile={handleProfile}
+                      />
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}

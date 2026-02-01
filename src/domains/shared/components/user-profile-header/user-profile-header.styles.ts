@@ -77,6 +77,16 @@ export const createUserProfileHeaderStyles = () =>
       borderBottomRightRadius: 20,
       gap: 8,
       backgroundColor: 'transparent',
+      ...Platform.select({
+        web: {
+          outline: 'none',
+          outlineStyle: 'none',
+          outlineWidth: 0,
+          outlineColor: 'transparent',
+          borderWidth: 0,
+          borderColor: 'transparent',
+        },
+      }),
     },
     profileButtonMobile: {
       paddingVertical: 4,

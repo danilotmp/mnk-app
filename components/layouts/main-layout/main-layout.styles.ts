@@ -38,6 +38,28 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
       justifyContent: 'flex-end',
       flexDirection: 'row',
     },
+    // Web Desktop - Tres bloques
+    webLeftSection: {
+      width: 280, // Mismo ancho que el bloque derecho
+      flexShrink: 0,
+      paddingLeft: 16,
+      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+    },
+    webMenuSection: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+    },
+    webRightSection: {
+      width: 280, // Mismo ancho que el bloque izquierdo
+      flexShrink: 0,
+      paddingRight: 16,
+      justifyContent: 'flex-end',
+      alignItems: 'flex-end',
+      flexDirection: 'row',
+    },
     // Mobile
     mobileRightSection: {
       flexDirection: 'row',
@@ -71,6 +93,7 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     // Estilos para dropdowns de empresas
     companyDropdownContainer: {
       position: 'relative',
+      width: '100%', // Ocupa todo el ancho del bloque izquierdo
     },
     companyDropdown: {
       position: 'absolute',
