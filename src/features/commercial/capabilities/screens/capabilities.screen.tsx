@@ -125,7 +125,7 @@ export function CapabilitiesScreen() {
     return {
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
-      justifyContent: isMobile ? 'center' as const : 'flex-start' as const,
+      justifyContent: 'center' as const,
       gap: 16,
     };
   };
@@ -160,18 +160,19 @@ export function CapabilitiesScreen() {
         contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={[styles.header, isMobile && styles.headerMobile]}>
-          <ThemedText type="h2" style={styles.title}>
+        <View style={styles.contentWrapper}>
+          {/* Header */}
+          <View style={[styles.header, isMobile && styles.headerMobile]}>
+<ThemedText type="h1" style={styles.title}>
             Productos del Sistema
           </ThemedText>
-          <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Activa y configura las funcionalidades disponibles para tu negocio
-          </ThemedText>
-        </View>
+            <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Activa y configura las funcionalidades disponibles para tu negocio
+            </ThemedText>
+          </View>
 
-        {/* Cards de Productos */}
-        <View style={[styles.productsGrid, isMobile && styles.productsGridMobile, createProductsGridStyle()]}>
+          {/* Cards de Productos */}
+          <View style={[styles.productsGrid, isMobile && styles.productsGridMobile, createProductsGridStyle()]}>
           {products.map((product) => (
             <TouchableOpacity
               key={product.id}
@@ -245,24 +246,8 @@ export function CapabilitiesScreen() {
               </Card>
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Mensaje informativo */}
-        <Card variant="outlined" style={[styles.infoCard, isMobile && styles.infoCardMobile]}>
-          <View style={styles.infoContent}>
-            <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
-            <View style={styles.infoText}>
-              <ThemedText type="body2" style={{ fontWeight: '600', marginBottom: 4 }}>
-                ¿Cómo funcionan los productos?
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                Cada producto tiene un wizard de configuración que te guía paso a paso. 
-                Si no tienes empresa configurada, el sistema te ayudará a crearla. 
-                Puedes completar la información cuando lo necesites, sin restricciones.
-              </ThemedText>
-            </View>
           </View>
-        </Card>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -276,20 +261,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 40,
+    paddingTop: 48,
     paddingBottom: 32,
   },
   scrollContentMobile: {
-    padding: 12,
+    paddingHorizontal: 24,
+    paddingTop: 48,
     paddingBottom: 24,
   },
+  contentWrapper: {
+    maxWidth: 1400,
+    alignSelf: 'center',
+    width: '100%',
+  },
   header: {
-    margin: 24,
+    marginBottom: 24,
     gap: 8,
   },
   headerMobile: {
-    margin: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     gap: 6,
   },
   title: {
@@ -300,12 +291,10 @@ const styles = StyleSheet.create({
   },
   productsGrid: {
     gap: 16,
-    marginHorizontal: 26,
     marginBottom: 24,
   },
   productsGridMobile: {
     gap: 12,
-    marginHorizontal: 0,
     marginBottom: 16,
     alignItems: 'center',
   },
@@ -372,22 +361,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-  },
-  infoCard: {
-    margin: 24,
-    padding: 16,
-  },
-  infoCardMobile: {
-    margin: 16,
-    marginTop: 12,
-    padding: 12,
-  },
-  infoContent: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
-    gap: 4,
   },
 });

@@ -42,7 +42,8 @@ export const createCompanyLogoAndMenuContainerStyles = (colors: any) =>
       alignItems: 'flex-start',
     },
     companyNameText: {
-      fontWeight: '600',
+      fontSize: 18,
+      fontWeight: '700',
     },
     menuContainer: {
       flex: 1,

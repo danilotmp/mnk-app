@@ -15,6 +15,8 @@ import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
 import { useTranslation } from '@/src/infrastructure/i18n';
 import { useAlert } from '@/src/infrastructure/messages/alert.service';
 import { extractErrorDetail, extractErrorMessage } from '@/src/infrastructure/messages/error-utils';
+import { RegisterForm } from '@/src/features/auth/components/register-form';
+import { VerifyEmailForm } from '@/src/features/auth/components/verify-email-form';
 import { authService } from '@/src/infrastructure/services/auth.service';
 import { mapUserResponseToMultiCompanyUser } from '@/src/infrastructure/services/user-mapper.service';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,9 +44,13 @@ export default function LoginPage() {
   const userSessionService = UserSessionService.getInstance();
   const userContextService = UserContextService.getInstance();
   
+  type AuthMode = 'login' | 'register' | 'verify';
+
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
@@ -164,6 +170,36 @@ export default function LoginPage() {
     }
   };
 
+  const handleRegisterSuccess = (email: string, verificationRequired: boolean) => {
+    setRegisteredEmail(email);
+    if (verificationRequired) {
+      setMode('verify');
+    } else {
+      alert.showSuccess(t.auth?.registerSuccess ?? 'Cuenta creada. Ya puedes iniciar sesión.');
+      setMode('login');
+      setEmail(email);
+    }
+  };
+
+  const handleVerifySuccess = () => {
+    alert.showSuccess(t.auth?.verifySuccess ?? 'Cuenta verificada. Ya puedes iniciar sesión.');
+    setMode('login');
+    setEmail(registeredEmail);
+  };
+
+  const getHeaderText = () => {
+    switch (mode) {
+      case 'register':
+        return { title: t.auth.register ?? 'Crear Cuenta', subtitle: t.auth.registerSubtitle ?? 'Regístrate para empezar' };
+      case 'verify':
+        return { title: 'Verificar Cuenta', subtitle: 'Ingresa el código que enviamos a tu correo' };
+      default:
+        return { title: t.auth.login, subtitle: t.auth.loginSubtitle ?? 'Ingresa tus credenciales para continuar' };
+    }
+  };
+
+  const headerText = getHeaderText();
+
   return (
     <>
       <Stack.Screen 
@@ -178,9 +214,17 @@ export default function LoginPage() {
           {/* Columna Izquierda: Formulario */}
           <View style={[styles.leftColumn, { backgroundColor: colors.background }]}>
             {/* Botón de regresar */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() => {
+                if (mode === 'verify') {
+                  setMode('register');
+                } else if (mode === 'register') {
+                  setMode('login');
+                } else {
+                  router.back();
+                }
+              }}
               disabled={isLoading}
             >
               <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -206,10 +250,10 @@ export default function LoginPage() {
                 </View>
                 <View style={styles.headerText}>
                   <ThemedText type="h2" style={styles.title}>
-                    {t.auth.login}
+                    {headerText.title}
                   </ThemedText>
                   <ThemedText type="body2" variant="secondary" style={styles.subtitle}>
-                    Ingresa tus credenciales para continuar
+                    {headerText.subtitle}
                   </ThemedText>
                 </View>
               </View>
@@ -217,6 +261,8 @@ export default function LoginPage() {
 
             {/* Formulario */}
             <Card style={styles.card}>
+              {mode === 'login' && (
+              <>
               {/* Email */}
               <View style={styles.inputGroup}>
                 <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
@@ -315,12 +361,33 @@ export default function LoginPage() {
                 <ThemedText type="body2" variant="secondary">
                   {t.auth.dontHaveAccount}{' '}
                 </ThemedText>
-                <TouchableOpacity disabled={isLoading}>
+                <TouchableOpacity
+                  disabled={isLoading}
+                  onPress={() => setMode('register')}
+                >
                   <ThemedText type="body2" variant="primary" style={styles.registerLink}>
                     {t.auth.signUp}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
+              </>
+              )}
+
+              {mode === 'register' && (
+                <RegisterForm
+                  onSuccess={handleRegisterSuccess}
+                  onLoginLink={() => setMode('login')}
+                  isLoading={isLoading}
+                />
+              )}
+
+              {mode === 'verify' && (
+                <VerifyEmailForm
+                  email={registeredEmail}
+                  onSuccess={handleVerifySuccess}
+                  onBack={() => setMode('register')}
+                />
+              )}
             </Card>
               </KeyboardAvoidingView>
         </ScrollView>
@@ -337,9 +404,16 @@ export default function LoginPage() {
               {/* Overlay con texto opcional */}
               <View style={styles.overlay}>
                 <View style={styles.overlayContent}>
-                  <ThemedText type="h1" style={styles.overlayTitle}>
-                    AIBox
-                  </ThemedText>
+                  <View style={styles.overlayTitleRow}>
+                    <Image
+                      source={require('@/assets/images/icon-white.png')}
+                      style={styles.overlayIcon}
+                      contentFit="contain"
+                    />
+                    <ThemedText type="h1" style={styles.overlayTitle}>
+                      AIBox
+                    </ThemedText>
+                  </View>
                   <ThemedText type="body1" style={styles.overlaySubtitle}>
                     Una nueva generación de soluciones empresariales, diseñada para evolucionar, conectar y transformar.
                   </ThemedText>
@@ -390,11 +464,21 @@ const styles = StyleSheet.create({
   overlayContent: {
     gap: 16,
   },
+  overlayTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 8,
+  },
+  overlayIcon: {
+    width: 56,
+    height: 56,
+  },
   overlayTitle: {
     color: '#FFFFFF',
     fontSize: 48,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 0,
   },
   overlaySubtitle: {
     color: '#FFFFFF',

@@ -89,7 +89,7 @@ export function CompanyLogoAndMenuContainer({
                 style={styles.companyNameClickable}
               >
                 <ThemedText
-                  type="subtitle"
+                  type="body1"
                   style={[styles.companyNameText, { color: colors.text }]}
                   numberOfLines={1}
                   onLayout={(event) => {
@@ -113,7 +113,7 @@ export function CompanyLogoAndMenuContainer({
             ) : (
               <View>
                 <ThemedText
-                  type="subtitle"
+                  type="body1"
                   style={[styles.companyNameText, { color: colors.text }]}
                   numberOfLines={1}
                   onLayout={(event) => {

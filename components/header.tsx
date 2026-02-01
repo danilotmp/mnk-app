@@ -60,7 +60,7 @@ export function Header({ title, subtitle, showLogo = true, children, inline = fa
             ) : (
               <View style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
                 <ThemedText 
-                  type={logoSize === 'small' ? 'body1' : 'subtitle'} 
+                  type="body1"
                   style={[styles.inlineTitle, { color: colors.text }]}
                   numberOfLines={1}
                 >
@@ -134,6 +134,8 @@ const styles = StyleSheet.create({
   },
   inlineTitle: {
     marginLeft: 4,
+    fontSize: 18,
+    fontWeight: '700',
   },
   clickableTitleContainer: {
     flexDirection: 'row',
