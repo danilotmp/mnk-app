@@ -4,19 +4,26 @@
  * según el estado del usuario (logueado, empresa, etc.)
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Card } from '@/components/ui/card';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { DynamicIcon } from '@/src/domains/shared/components';
-import { useCompany } from '@/src/domains/shared';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Card } from "@/components/ui/card";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { useCompany } from "@/src/domains/shared";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
+import {
+  Animated,
+  Image,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface ProductCard {
   id: string;
@@ -38,12 +45,14 @@ export function CapabilitiesScreen() {
   // Productos/Funcionalidades disponibles del sistema
   const products: ProductCard[] = [
     {
-      id: 'chat-ia',
-      title: 'Chat IA',
-      description: 'Asistente inteligente que interactúa con tus clientes por WhatsApp. Responde preguntas, brinda información sobre tu negocio, precios, métodos de pago y ayuda con recomendaciones personalizadas.',
-      icon: 'chatbubbles-outline',
+      id: "chat-ia",
+      title: "Chat IA",
+      description:
+        "Asistente inteligente que interactúa con tus clientes por WhatsApp. Responde preguntas, brinda información sobre tu negocio, precios, métodos de pago y ayuda con recomendaciones personalizadas.",
+      icon: "chatbubbles-outline",
       enabled: true,
-      image: 'https://img.freepik.com/vector-premium/inteligencia-artificial-telefono-inteligente-bot-chat-linea-movil-robot-asistente-correspondencia_178863-2199.jpg?w=360',
+      image:
+        "https://img.freepik.com/vector-premium/inteligencia-artificial-telefono-inteligente-bot-chat-linea-movil-robot-asistente-correspondencia_178863-2199.jpg?w=360",
     },
     // Futuros productos se agregarán aquí
     // {
@@ -61,17 +70,17 @@ export function CapabilitiesScreen() {
    */
   const isGuestCompany = (): boolean => {
     if (!company) return true;
-    
-    const code = (company.code || '').toUpperCase();
-    const name = (company.name || '').toUpperCase();
-    
+
+    const code = (company.code || "").toUpperCase();
+    const name = (company.name || "").toUpperCase();
+
     return (
-      code.includes('GUEST') ||
-      code.includes('INVITADO') ||
-      name.includes('GUEST') ||
-      name.includes('INVITADO') ||
-      code === 'DEFAULT' ||
-      name === 'EMPRESA POR DEFECTO'
+      code.includes("GUEST") ||
+      code.includes("INVITADO") ||
+      name.includes("GUEST") ||
+      name.includes("INVITADO") ||
+      code === "DEFAULT" ||
+      name === "EMPRESA POR DEFECTO"
     );
   };
 
@@ -81,16 +90,16 @@ export function CapabilitiesScreen() {
   const needsCompanySetup = (): boolean => {
     // Si no está logueado, necesita crear empresa
     if (!user) return true;
-    
+
     // Si no tiene empresa, necesita crear
     if (!company) return true;
-    
+
     // Si tiene empresa pero es de invitado, necesita crear empresa real
     if (isGuestCompany()) return true;
-    
+
     // Si tiene empresa pero no tiene sucursal, necesita crear sucursal
     if (!branch) return true;
-    
+
     return false;
   };
 
@@ -103,7 +112,10 @@ export function CapabilitiesScreen() {
 
     // Si no está logueado → Login primero, luego redirigir al wizard
     if (!user) {
-      router.push('/auth/login?redirect=' + encodeURIComponent(`/commercial/setup?product=${product.id}`));
+      router.push(
+        "/auth/login?redirect=" +
+          encodeURIComponent(`/commercial/setup?product=${product.id}`),
+      );
       return;
     }
 
@@ -124,9 +136,9 @@ export function CapabilitiesScreen() {
    */
   const createProductsGridStyle = () => {
     return {
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      justifyContent: 'center' as const,
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      justifyContent: "center" as const,
       gap: 16,
     };
   };
@@ -138,19 +150,22 @@ export function CapabilitiesScreen() {
    * Desktop pequeño: 3 columnas (31% cada una)
    * Desktop grande: 4 columnas (23% cada una)
    */
-  const createProductCardStyle = (screenWidth: number, isMobileDevice: boolean) => {
+  const createProductCardStyle = (
+    screenWidth: number,
+    isMobileDevice: boolean,
+  ) => {
     if (isMobileDevice || screenWidth < 600) {
       // Mobile: Ancho fijo de 300px
       return { width: 300, maxWidth: 300 };
     } else if (screenWidth < 900) {
       // Tablet: 2 columnas (48% para dejar espacio al gap)
-      return { width: '48%' };
+      return { width: "48%" };
     } else if (screenWidth < 1200) {
       // Desktop pequeño: 3 columnas (31% para dejar espacio al gap)
-      return { width: '31%' };
+      return { width: "31%" };
     } else {
       // Desktop grande: 4 columnas (23% para dejar espacio al gap)
-      return { width: '23%' };
+      return { width: "23%" };
     }
   };
 
@@ -163,21 +178,45 @@ export function CapabilitiesScreen() {
     const processDuration = 2400;
     const flowLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(flowAnim, { toValue: 1, duration: processDuration, useNativeDriver: true }),
-        Animated.timing(flowAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ])
+        Animated.timing(flowAnim, {
+          toValue: 1,
+          duration: processDuration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(flowAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     const flexLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(flexAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(flexAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ])
+        Animated.timing(flexAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(flexAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     const coupleLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(coupleAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
-        Animated.timing(coupleAnim, { toValue: 0, duration: 1600, useNativeDriver: true }),
-      ])
+        Animated.timing(coupleAnim, {
+          toValue: 1,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(coupleAnim, {
+          toValue: 0,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     flowLoop.start();
     flexLoop.start();
@@ -189,175 +228,407 @@ export function CapabilitiesScreen() {
     };
   }, [flowAnim, flexAnim, coupleAnim]);
 
-  const processStep0 = flowAnim.interpolate({ inputRange: [0, 0.15, 0.25, 0.45], outputRange: [0.4, 1, 1, 0.4] });
-  const processStep1 = flowAnim.interpolate({ inputRange: [0.25, 0.4, 0.5, 0.7], outputRange: [0.4, 1, 1, 0.4] });
-  const processStep2 = flowAnim.interpolate({ inputRange: [0.5, 0.65, 0.75, 0.95], outputRange: [0.4, 1, 1, 0.4] });
-  const processStep3 = flowAnim.interpolate({ inputRange: [0, 0.75, 0.9, 0.95, 1], outputRange: [0.4, 0.4, 1, 1, 0.4] });
+  const processStep0 = flowAnim.interpolate({
+    inputRange: [0, 0.15, 0.25, 0.45],
+    outputRange: [0.4, 1, 1, 0.4],
+  });
+  const processStep1 = flowAnim.interpolate({
+    inputRange: [0.25, 0.4, 0.5, 0.7],
+    outputRange: [0.4, 1, 1, 0.4],
+  });
+  const processStep2 = flowAnim.interpolate({
+    inputRange: [0.5, 0.65, 0.75, 0.95],
+    outputRange: [0.4, 1, 1, 0.4],
+  });
+  const processStep3 = flowAnim.interpolate({
+    inputRange: [0, 0.75, 0.9, 0.95, 1],
+    outputRange: [0.4, 0.4, 1, 1, 0.4],
+  });
   // Flexibilidad: onda que recorre 4 barras verticales
-  const flexBar0 = flexAnim.interpolate({ inputRange: [0, 0.15, 0.25, 0.45], outputRange: [0.7, 1.25, 1.25, 0.7] });
-  const flexBar1 = flexAnim.interpolate({ inputRange: [0.25, 0.4, 0.5, 0.7], outputRange: [0.7, 1.25, 1.25, 0.7] });
-  const flexBar2 = flexAnim.interpolate({ inputRange: [0.5, 0.65, 0.75, 0.95], outputRange: [0.7, 1.25, 1.25, 0.7] });
-  const flexBar3 = flexAnim.interpolate({ inputRange: [0, 0.75, 0.9, 1], outputRange: [0.7, 0.7, 1.25, 0.7] });
+  const flexBar0 = flexAnim.interpolate({
+    inputRange: [0, 0.15, 0.25, 0.45],
+    outputRange: [0.7, 1.25, 1.25, 0.7],
+  });
+  const flexBar1 = flexAnim.interpolate({
+    inputRange: [0.25, 0.4, 0.5, 0.7],
+    outputRange: [0.7, 1.25, 1.25, 0.7],
+  });
+  const flexBar2 = flexAnim.interpolate({
+    inputRange: [0.5, 0.65, 0.75, 0.95],
+    outputRange: [0.7, 1.25, 1.25, 0.7],
+  });
+  const flexBar3 = flexAnim.interpolate({
+    inputRange: [0, 0.75, 0.9, 1],
+    outputRange: [0.7, 0.7, 1.25, 0.7],
+  });
   // Acoplamiento: línea que se activa y dos nodos que pulsan al unísono
-  const coupleLineGlow = coupleAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.35, 1, 0.35] });
-  const coupleNodeScale = coupleAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.15, 1] });
+  const coupleLineGlow = coupleAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.35, 1, 0.35],
+  });
+  const coupleNodeScale = coupleAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.15, 1],
+  });
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isMobile && styles.scrollContentMobile,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={[styles.header, isMobile && styles.headerMobile]}>
             <View style={styles.titleRow}>
-              <DynamicIcon name="AntDesign:product" size={32} color={colors.primary} style={styles.titleIcon} />
-              <ThemedText type="h1" style={styles.title}>
+              <DynamicIcon
+                name="AntDesign:product"
+                size={32}
+                color={colors.primary}
+                style={styles.titleIcon}
+              />
+              <ThemedText type="h1" style={[styles.title, isMobile && styles.titleMobile]}>
                 Productos del Sistema
               </ThemedText>
             </View>
-            <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
+            <ThemedText
+              type="body1"
+              style={[styles.subtitle, { color: colors.textSecondary }]}
+            >
               Activa y configura las funcionalidades disponibles para tu negocio
             </ThemedText>
           </View>
 
           {/* Cards de Productos */}
-          <View style={[styles.productsGrid, isMobile && styles.productsGridMobile, createProductsGridStyle()]}>
-          {products.map((product) => (
-            <TouchableOpacity
-              key={product.id}
-              onPress={() => handleProductPress(product)}
-              disabled={!product.enabled}
-              activeOpacity={0.7}
-            >
-              <Card 
-                variant="elevated" 
-                style={[
-                  styles.productCard,
-                  createProductCardStyle(width, isMobile),
-                  isMobile && styles.productCardMobile,
-                  !product.enabled && styles.productCardDisabled
-                ]}
+          <View
+            style={[
+              styles.productsGrid,
+              isMobile && styles.productsGridMobile,
+              createProductsGridStyle(),
+            ]}
+          >
+            {products.map((product) => (
+              <TouchableOpacity
+                key={product.id}
+                onPress={() => handleProductPress(product)}
+                disabled={!product.enabled}
+                activeOpacity={0.7}
               >
-                {/* Imagen o Icono */}
-                <View style={[styles.cardImageContainer, isMobile && styles.cardImageContainerMobile]}>
-                  {product.image ? (
-                    <Image 
-                      source={{ uri: product.image }} 
-                      style={styles.cardImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-                      <Ionicons 
-                        name={product.icon} 
-                        size={isMobile ? 40 : 48} 
-                        color={product.enabled ? colors.primary : colors.textSecondary} 
-                      />
-                    </View>
-                  )}
-                </View>
-
-                {/* Contenido */}
-                <View style={styles.cardContent}>
-                  <ThemedText type="h4" style={[styles.cardTitle, isMobile && styles.cardTitleMobile]}>
-                    {product.title}
-                  </ThemedText>
-                  <ThemedText 
-                    type="body2" 
-                    style={[styles.cardDescription, { color: colors.textSecondary }, isMobile && styles.cardDescriptionMobile]}
+                <Card
+                  variant="elevated"
+                  style={[
+                    styles.productCard,
+                    createProductCardStyle(width, isMobile),
+                    isMobile && styles.productCardMobile,
+                    !product.enabled && styles.productCardDisabled,
+                  ]}
+                >
+                  {/* Imagen o Icono */}
+                  <View
+                    style={[
+                      styles.cardImageContainer,
+                      isMobile && styles.cardImageContainerMobile,
+                    ]}
                   >
-                    {product.description}
-                  </ThemedText>
-
-                  {/* Badge de Estado */}
-                  <View style={styles.cardFooter}>
-                    {product.enabled ? (
-                      <View style={[styles.badge, { backgroundColor: '#10b981' + '20' }]}>
-                        <ThemedText type="caption" style={{ color: '#10b981', fontWeight: '600' }}>
-                          Disponible
-                        </ThemedText>
-                      </View>
+                    {product.image ? (
+                      <Image
+                        source={{ uri: product.image }}
+                        style={styles.cardImage}
+                        resizeMode="cover"
+                      />
                     ) : (
-                      <View style={[styles.badge, { backgroundColor: colors.textSecondary + '20' }]}>
-                        <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: '600' }}>
-                          Próximamente
-                        </ThemedText>
+                      <View
+                        style={[
+                          styles.iconContainer,
+                          { backgroundColor: colors.primary + "20" },
+                        ]}
+                      >
+                        <Ionicons
+                          name={product.icon}
+                          size={isMobile ? 40 : 48}
+                          color={
+                            product.enabled
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
                       </View>
                     )}
-                    
-                    <Ionicons 
-                      name="chevron-forward" 
-                      size={20} 
-                      color={product.enabled ? colors.primary : colors.textSecondary} 
+                  </View>
+
+                  {/* Contenido */}
+                  <View style={styles.cardContent}>
+                    <ThemedText
+                      type="h4"
+                      style={[
+                        styles.cardTitle,
+                        isMobile && styles.cardTitleMobile,
+                      ]}
+                    >
+                      {product.title}
+                    </ThemedText>
+                    <ThemedText
+                      type="body2"
+                      style={[
+                        styles.cardDescription,
+                        { color: colors.textSecondary },
+                        isMobile && styles.cardDescriptionMobile,
+                      ]}
+                    >
+                      {product.description}
+                    </ThemedText>
+
+                    {/* Badge de Estado */}
+                    <View style={styles.cardFooter}>
+                      {product.enabled ? (
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: "#10b981" + "20" },
+                          ]}
+                        >
+                          <ThemedText
+                            type="caption"
+                            style={{ color: "#10b981", fontWeight: "600" }}
+                          >
+                            Disponible
+                          </ThemedText>
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: colors.textSecondary + "20" },
+                          ]}
+                        >
+                          <ThemedText
+                            type="caption"
+                            style={{
+                              color: colors.textSecondary,
+                              fontWeight: "600",
+                            }}
+                          >
+                            Próximamente
+                          </ThemedText>
+                        </View>
+                      )}
+
+                      <Ionicons
+                        name="chevron-forward"
+                        size={20}
+                        color={
+                          product.enabled
+                            ? colors.primary
+                            : colors.textSecondary
+                        }
+                      />
+                    </View>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Sección inferior animada: Flexibilidad, Acoplamiento, Procesos (flex wrap: web 1 fila, móvil 2+1) */}
+          <View
+            style={[
+              styles.conceptsSection,
+              isMobile && styles.conceptsSectionMobile,
+              { borderTopColor: colors.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.conceptsGrid,
+                isMobile && styles.conceptsGridMobile,
+              ]}
+            >
+              {/* Flexibilidad: onda que recorre barras verticales */}
+              <View
+                style={[
+                  styles.conceptCard,
+                  isMobile && styles.conceptCardMobile,
+                  { borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.conceptVisual}>
+                  <View style={styles.flexWaveRow}>
+                    <Animated.View
+                      style={[
+                        styles.flexWaveBar,
+                        { backgroundColor: colors.primary },
+                        { transform: [{ scaleY: flexBar0 }] },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.flexWaveBar,
+                        { backgroundColor: colors.primary },
+                        { transform: [{ scaleY: flexBar1 }] },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.flexWaveBar,
+                        { backgroundColor: colors.primary },
+                        { transform: [{ scaleY: flexBar2 }] },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.flexWaveBar,
+                        { backgroundColor: colors.primary },
+                        { transform: [{ scaleY: flexBar3 }] },
+                      ]}
                     />
                   </View>
                 </View>
-              </Card>
-            </TouchableOpacity>
-          ))}
-          </View>
-
-          {/* Sección inferior animada: Flexibilidad, Acoplamiento, Procesos (mismo lugar que fortalezas en Inicio) */}
-          <View style={[styles.conceptsSection, isMobile && styles.conceptsSectionMobile, { borderTopColor: colors.border }]}>
-            <View style={[styles.conceptsGrid, isMobile && styles.conceptsGridMobile]}>
-              {/* Flexibilidad: onda que recorre barras verticales */}
-              <View style={[styles.conceptCard, { borderColor: colors.border }]}>
-                <View style={styles.conceptVisual}>
-                  <View style={styles.flexWaveRow}>
-                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar0 }] }]} />
-                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar1 }] }]} />
-                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar2 }] }]} />
-                    <Animated.View style={[styles.flexWaveBar, { backgroundColor: colors.primary }, { transform: [{ scaleY: flexBar3 }] }]} />
-                  </View>
-                </View>
-                <ThemedText type="h5" style={[styles.conceptTitle, { color: colors.text }]}>
+                <ThemedText
+                  type="h5"
+                  style={[styles.conceptTitle, { color: colors.text }]}
+                >
                   Flexibilidad
                 </ThemedText>
-                <ThemedText type="body2" style={[styles.conceptDescription, { color: colors.textSecondary }]}>
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.conceptDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Se adapta a tu negocio sin rigideces
                 </ThemedText>
               </View>
 
               {/* Acoplamiento: dos nodos unidos por una línea que se activa */}
-              <View style={[styles.conceptCard, { borderColor: colors.border }]}>
+              <View
+                style={[styles.conceptCard, { borderColor: colors.border }]}
+              >
                 <View style={styles.conceptVisual}>
                   <View style={styles.coupleRow}>
-                    <Animated.View style={[styles.coupleNode, { backgroundColor: colors.primary }, { transform: [{ scale: coupleNodeScale }] }]} />
+                    <Animated.View
+                      style={[
+                        styles.coupleNode,
+                        { backgroundColor: colors.primary },
+                        { transform: [{ scale: coupleNodeScale }] },
+                      ]}
+                    />
                     <View style={styles.coupleLineWrap}>
-                      <View style={[styles.coupleLineBase, { backgroundColor: colors.primary + '40' }]} />
-                      <Animated.View style={[styles.coupleLineGlow, { backgroundColor: colors.primary }, { opacity: coupleLineGlow }]} />
+                      <View
+                        style={[
+                          styles.coupleLineBase,
+                          { backgroundColor: colors.primary + "40" },
+                        ]}
+                      />
+                      <Animated.View
+                        style={[
+                          styles.coupleLineGlow,
+                          { backgroundColor: colors.primary },
+                          { opacity: coupleLineGlow },
+                        ]}
+                      />
                     </View>
-                    <Animated.View style={[styles.coupleNode, { backgroundColor: colors.primary }, { transform: [{ scale: coupleNodeScale }] }]} />
+                    <Animated.View
+                      style={[
+                        styles.coupleNode,
+                        { backgroundColor: colors.primary },
+                        { transform: [{ scale: coupleNodeScale }] },
+                      ]}
+                    />
                   </View>
                 </View>
-                <ThemedText type="h5" style={[styles.conceptTitle, { color: colors.text }]}>
+                <ThemedText
+                  type="h5"
+                  style={[styles.conceptTitle, { color: colors.text }]}
+                >
                   Acoplamiento
                 </ThemedText>
-                <ThemedText type="body2" style={[styles.conceptDescription, { color: colors.textSecondary }]}>
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.conceptDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Módulos integrados que trabajan en conjunto
                 </ThemedText>
               </View>
 
               {/* Procesos: pasos que se iluminan en secuencia */}
-              <View style={[styles.conceptCard, { borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.conceptCard,
+                  isMobile && styles.conceptCardMobile,
+                  { borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.conceptVisual}>
                   <View style={styles.processStepsRow}>
-                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep0 }]} />
-                    <View style={[styles.processStepLine, { backgroundColor: colors.primary + '50' }]} />
-                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep1 }]} />
-                    <View style={[styles.processStepLine, { backgroundColor: colors.primary + '50' }]} />
-                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep2 }]} />
-                    <View style={[styles.processStepLine, { backgroundColor: colors.primary + '50' }]} />
-                    <Animated.View style={[styles.processStepNode, { backgroundColor: colors.primary }, { opacity: processStep3 }]} />
+                    <Animated.View
+                      style={[
+                        styles.processStepNode,
+                        { backgroundColor: colors.primary },
+                        { opacity: processStep0 },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.processStepLine,
+                        { backgroundColor: colors.primary + "50" },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.processStepNode,
+                        { backgroundColor: colors.primary },
+                        { opacity: processStep1 },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.processStepLine,
+                        { backgroundColor: colors.primary + "50" },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.processStepNode,
+                        { backgroundColor: colors.primary },
+                        { opacity: processStep2 },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.processStepLine,
+                        { backgroundColor: colors.primary + "50" },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.processStepNode,
+                        { backgroundColor: colors.primary },
+                        { opacity: processStep3 },
+                      ]}
+                    />
                   </View>
                 </View>
-                <ThemedText type="h5" style={[styles.conceptTitle, { color: colors.text }]}>
+                <ThemedText
+                  type="h5"
+                  style={[styles.conceptTitle, { color: colors.text }]}
+                >
                   Procesos
                 </ThemedText>
-                <ThemedText type="body2" style={[styles.conceptDescription, { color: colors.textSecondary }]}>
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.conceptDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Procesos claros y continuos que guían cada interacción
                 </ThemedText>
               </View>
@@ -388,8 +659,8 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
   },
   header: {
     marginBottom: 24,
@@ -400,8 +671,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   titleIcon: {
@@ -409,6 +680,10 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 4,
+  },
+  titleMobile: {
+    fontSize: 27,
+    lineHeight: 32,
   },
   subtitle: {
     lineHeight: 20,
@@ -420,7 +695,7 @@ const styles = StyleSheet.create({
   productsGridMobile: {
     gap: 12,
     marginBottom: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   productCard: {
     padding: 20,
@@ -434,10 +709,10 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   cardImageContainer: {
-    width: '100%',
+    width: "100%",
     height: 160,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   cardImageContainerMobile: {
@@ -446,14 +721,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   iconContainer: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 12,
   },
   cardContent: {
@@ -476,9 +751,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 8,
   },
   badge: {
@@ -489,8 +764,8 @@ const styles = StyleSheet.create({
   // Sección inferior: Flujos, Flexibilidad, Acoplamiento (animada)
   conceptsSection: {
     maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
     marginTop: 48,
     paddingTop: 32,
     borderTopWidth: 1,
@@ -500,13 +775,15 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   conceptsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexDirection: "row",
+    flexWrap: "nowrap",
     gap: 16,
   },
   conceptsGridMobile: {
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
+    width: "100%",
   },
   conceptCard: {
     flex: 1,
@@ -514,20 +791,24 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
+  },
+  conceptCardMobile: {
+    flex: 1,
+    minWidth: "47%",
   },
   conceptVisual: {
-    width: '100%',
+    width: "100%",
     height: 56,
     marginBottom: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
   },
   processStepsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
   },
   processStepNode: {
@@ -541,9 +822,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   flexWaveRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
     gap: 10,
     height: 40,
   },
@@ -553,9 +834,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   coupleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
   },
   coupleNode: {
@@ -566,18 +847,18 @@ const styles = StyleSheet.create({
   coupleLineWrap: {
     width: 36,
     height: 4,
-    position: 'relative',
-    justifyContent: 'center',
+    position: "relative",
+    justifyContent: "center",
   },
   coupleLineBase: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     height: 3,
     borderRadius: 2,
   },
   coupleLineGlow: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     height: 3,
@@ -585,12 +866,12 @@ const styles = StyleSheet.create({
   },
   conceptTitle: {
     marginBottom: 6,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   conceptDescription: {
     fontSize: 13,
     lineHeight: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

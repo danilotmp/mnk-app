@@ -1,11 +1,11 @@
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { VideoPlayer } from '@/components/video-player';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { DynamicIcon } from '@/src/domains/shared/components';
-import React from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { VideoPlayer } from "@/components/video-player";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import React from "react";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
   const { colors, spacing } = useTheme();
@@ -13,165 +13,258 @@ export default function HomeScreen() {
 
   // Ruta del video - usar require para todas las plataformas
   // En web, Metro bundler procesará el require y generará la URL correcta
-  const videoSource = require('@/assets/videos/grammarly-189393-docs_module_animation-624x480-2X-WHITEBG_V1__2_.mp4');
+  const videoSource = require("@/assets/videos/grammarly-189393-docs_module_animation-624x480-2X-WHITEBG_V1__2_.mp4");
 
   // Fortalezas del sistema para la sección de iconos
   const strengths = [
     {
-      id: 'scale',
-      icon: 'MaterialCommunityIcons:chart-line',
-      title: 'Escalable',
-      description: 'Crece con tu negocio. Desde una sucursal hasta múltiples empresas y ubicaciones.',
+      id: "scale",
+      icon: "MaterialCommunityIcons:chart-line",
+      title: "Escalable",
+      description:
+        "Crece con tu negocio. Desde una sucursal hasta múltiples empresas y ubicaciones.",
     },
     {
-      id: 'multi',
-      icon: 'Entypo:network',
-      title: 'Multi-empresa',
-      description: 'Gestiona varias empresas y sucursales desde una sola plataforma.',
+      id: "multi",
+      icon: "Entypo:network",
+      title: "Multi-empresa",
+      description:
+        "Gestiona varias empresas y sucursales desde una sola plataforma.",
     },
     {
-      id: 'ai',
-      icon: 'Ionicons:sparkles',
-      title: 'IA integrada',
-      description: 'Inteligencia artificial en ChatIA para respuestas automáticas e inteligentes.',
+      id: "ai",
+      icon: "Ionicons:sparkles",
+      title: "IA integrada",
+      description:
+        "Inteligencia artificial en ChatIA para respuestas automáticas e inteligentes.",
     },
     {
-      id: 'security',
-      icon: 'Ionicons:shield-checkmark',
-      title: 'Seguro',
-      description: 'Arquitectura segura, datos protegidos y control de acceso por roles.',
+      id: "security",
+      icon: "Ionicons:shield-checkmark",
+      title: "Seguro",
+      description:
+        "Arquitectura segura, datos protegidos y control de acceso por roles.",
     },
     {
-      id: 'integrated',
-      icon: 'MaterialCommunityIcons:connection',
-      title: 'Integrado',
-      description: 'WhatsApp, facturación y ERP conectados en un solo ecosistema.',
+      id: "integrated",
+      icon: "MaterialCommunityIcons:connection",
+      title: "Integrado",
+      description:
+        "WhatsApp, facturación y ERP conectados en un solo ecosistema.",
     },
   ];
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section - Two Column Layout */}
-        <View style={[
-          styles.heroContainer,
-          isMobile && styles.heroContainerMobile,
-          { gap: spacing.lg }
-        ]}>
+        {/* Hero Section - Two Column Layout (desktop) / Stacked with video after description (mobile) */}
+        <View
+          style={[
+            styles.heroContainer,
+            isMobile && styles.heroContainerMobile,
+            { gap: spacing.lg },
+          ]}
+        >
           {/* Left Column - Text Content */}
-          <View style={[
-            styles.textColumn,
-            isMobile && styles.textColumnMobile,
-            isDesktop && styles.textColumnDesktop
-          ]}>
-            <View style={[styles.mainTitleRow, isMobile && styles.mainTitleRowMobile]}>
+          <View
+            style={[
+              styles.textColumn,
+              isMobile && styles.textColumnMobile,
+              isDesktop && styles.textColumnDesktop,
+            ]}
+          >
+            <View
+              style={[
+                styles.mainTitleRow,
+                isMobile && styles.mainTitleRowMobile,
+              ]}
+            >
               <DynamicIcon
                 name="Entypo:network"
                 size={isMobile ? 28 : 36}
                 color={colors.primary}
                 style={styles.mainTitleIcon}
               />
-              <ThemedText 
-                type="h1" 
+              <ThemedText
+                type="h1"
                 style={[
                   styles.mainTitle,
                   isMobile && styles.mainTitleMobile,
-                  { color: colors.text }
+                  { color: colors.text },
                 ]}
               >
                 Soluciones empresariales con Inteligencia Artificial
               </ThemedText>
             </View>
-            
-            <ThemedText 
-              type="body1" 
+
+            <ThemedText
+              type="body1"
               style={[
                 styles.description,
                 isMobile && styles.descriptionMobile,
-                { color: colors.textSecondary }
+                { color: colors.textSecondary },
               ]}
             >
-              AIBox es una plataforma multi-empresa diseñada para crecer según tus necesidades. 
-              Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable.
+              AIBox es una plataforma multi-empresa diseñada para crecer según
+              tus necesidades. Integra diferentes módulos y funcionalidades
+              empresariales en una sola solución escalable.
             </ThemedText>
+
+            {/* En móvil: video justo después del texto de AIBox */}
+            {isMobile && (
+              <View
+                style={[
+                  styles.videoColumn,
+                  styles.videoColumnMobile,
+                  { marginTop: 24, marginBottom: 32 },
+                ]}
+              >
+                <View style={styles.videoContainer}>
+                  <VideoPlayer
+                    source={videoSource}
+                    style={
+                      Platform.OS === "web"
+                        ? styles.videoWeb
+                        : styles.videoNative
+                    }
+                    autoPlay
+                    loop
+                    muted
+                  />
+                </View>
+              </View>
+            )}
 
             {/* Features List */}
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
-                <ThemedText type="h5" style={[styles.featureTitle, { color: colors.text, marginBottom: spacing.xs }]}>
+                <ThemedText
+                  type="h5"
+                  style={[
+                    styles.featureTitle,
+                    { color: colors.text, marginBottom: spacing.xs },
+                  ]}
+                >
                   WhatsApp con ChatIA
                 </ThemedText>
-                <ThemedText type="body2" style={[styles.featureDescription, { color: colors.textSecondary }]}>
-                  Conecta tu WhatsApp con inteligencia artificial para automatizar conversaciones 
-                  y mejorar la atención al cliente con respuestas inteligentes y contextuales.
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.featureDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Conecta tu WhatsApp con inteligencia artificial para
+                  automatizar conversaciones y mejorar la atención al cliente
+                  con respuestas inteligentes y contextuales.
                 </ThemedText>
               </View>
 
               <View style={styles.featureItem}>
-                <ThemedText type="h5" style={[styles.featureTitle, { color: colors.text, marginBottom: spacing.xs }]}>
+                <ThemedText
+                  type="h5"
+                  style={[
+                    styles.featureTitle,
+                    { color: colors.text, marginBottom: spacing.xs },
+                  ]}
+                >
                   Módulo de Facturación
                 </ThemedText>
-                <ThemedText type="body2" style={[styles.featureDescription, { color: colors.textSecondary }]}>
-                  Sistema completo de facturación electrónica con gestión de clientes, 
-                  productos y reportes financieros integrados.
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.featureDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Sistema completo de facturación electrónica con gestión de
+                  clientes, productos y reportes financieros integrados.
                 </ThemedText>
               </View>
 
               <View style={styles.featureItem}>
-                <ThemedText type="h5" style={[styles.featureTitle, { color: colors.text, marginBottom: spacing.xs }]}>
+                <ThemedText
+                  type="h5"
+                  style={[
+                    styles.featureTitle,
+                    { color: colors.text, marginBottom: spacing.xs },
+                  ]}
+                >
                   Módulo ERP
                 </ThemedText>
-                <ThemedText type="body2" style={[styles.featureDescription, { color: colors.textSecondary }]}>
-                  Planificación de recursos empresariales para gestionar inventarios, 
-                  compras, ventas y procesos operativos de tu negocio.
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.featureDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Planificación de recursos empresariales para gestionar
+                  inventarios, compras, ventas y procesos operativos de tu
+                  negocio.
                 </ThemedText>
               </View>
             </View>
 
             {/* Key Points */}
             <View style={styles.keyPoints}>
-              <ThemedText type="body2" style={[styles.keyPoint, { color: colors.textSecondary }]}>
+              <ThemedText
+                type="body2"
+                style={[styles.keyPoint, { color: colors.textSecondary }]}
+              >
                 ✓ Arquitectura multi-empresa
               </ThemedText>
-              <ThemedText type="body2" style={[styles.keyPoint, { color: colors.textSecondary }]}>
+              <ThemedText
+                type="body2"
+                style={[styles.keyPoint, { color: colors.textSecondary }]}
+              >
                 ✓ Escalable y modular
               </ThemedText>
-              <ThemedText type="body2" style={[styles.keyPoint, { color: colors.textSecondary }]}>
+              <ThemedText
+                type="body2"
+                style={[styles.keyPoint, { color: colors.textSecondary }]}
+              >
                 ✓ Integración con WhatsApp
               </ThemedText>
             </View>
           </View>
 
-          {/* Right Column - Video */}
-          <View style={[
-            styles.videoColumn,
-            isMobile && styles.videoColumnMobile,
-            isDesktop && styles.videoColumnDesktop
-          ]}>
-            <View style={styles.videoContainer}>
-              <VideoPlayer
-                source={videoSource}
-                style={Platform.OS === 'web' ? styles.videoWeb : styles.videoNative}
-                autoPlay
-                loop
-                muted
-              />
+          {/* Right Column - Video (solo desktop/tablet; en móvil ya se muestra después del texto) */}
+          {!isMobile && (
+            <View
+              style={[
+                styles.videoColumn,
+                isDesktop && styles.videoColumnDesktop,
+              ]}
+            >
+              <View style={styles.videoContainer}>
+                <VideoPlayer
+                  source={videoSource}
+                  style={
+                    Platform.OS === "web" ? styles.videoWeb : styles.videoNative
+                  }
+                  autoPlay
+                  loop
+                  muted
+                />
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
-        {/* Fortalezas de nuestro sistema - Iconos con descripciones (una sola fila) */}
-        <View style={[styles.strengthsSection, isMobile && styles.strengthsSectionMobile]}>
+        {/* Fortalezas: web = una fila de 5; móvil = flex wrap 2+2+1 */}
+        <View
+          style={[
+            styles.strengthsSection,
+            isMobile && styles.strengthsSectionMobile,
+          ]}
+        >
           {isMobile ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.strengthsGridMobileScroll}
-            >
+            <View style={styles.strengthsGridMobile}>
               {strengths.map((item) => (
                 <View
                   key={item.id}
@@ -181,49 +274,77 @@ export default function HomeScreen() {
                     { borderColor: colors.border },
                   ]}
                 >
-                  <View style={[styles.strengthIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <View
+                    style={[
+                      styles.strengthIconWrap,
+                      { backgroundColor: colors.primary + "18" },
+                    ]}
+                  >
                     <DynamicIcon
                       name={item.icon}
                       size={28}
                       color={colors.primary}
                     />
                   </View>
-                  <ThemedText type="h5" style={[styles.strengthCardTitle, { color: colors.text }]}>
+                  <ThemedText
+                    type="h5"
+                    style={[styles.strengthCardTitle, { color: colors.text }]}
+                  >
                     {item.title}
                   </ThemedText>
-                  <ThemedText type="body2" style={[styles.strengthCardDescription, { color: colors.textSecondary }]}>
+                  <ThemedText
+                    type="body2"
+                    style={[
+                      styles.strengthCardDescription,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     {item.description}
                   </ThemedText>
                 </View>
               ))}
-            </ScrollView>
+            </View>
           ) : (
-          <View style={styles.strengthsGrid}>
-            {strengths.map((item) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.strengthCard,
-                  isMobile && styles.strengthCardMobile,
-                  { borderColor: colors.border },
-                ]}
-              >
-                <View style={[styles.strengthIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <DynamicIcon
-                    name={item.icon}
-                    size={isMobile ? 28 : 32}
-                    color={colors.primary}
-                  />
+            <View style={styles.strengthsGrid}>
+              {strengths.map((item) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.strengthCard,
+                    isMobile && styles.strengthCardMobile,
+                    { borderColor: colors.border },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.strengthIconWrap,
+                      { backgroundColor: colors.primary + "18" },
+                    ]}
+                  >
+                    <DynamicIcon
+                      name={item.icon}
+                      size={isMobile ? 28 : 32}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <ThemedText
+                    type="h5"
+                    style={[styles.strengthCardTitle, { color: colors.text }]}
+                  >
+                    {item.title}
+                  </ThemedText>
+                  <ThemedText
+                    type="body2"
+                    style={[
+                      styles.strengthCardDescription,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {item.description}
+                  </ThemedText>
                 </View>
-                <ThemedText type="h5" style={[styles.strengthCardTitle, { color: colors.text }]}>
-                  {item.title}
-                </ThemedText>
-                <ThemedText type="body2" style={[styles.strengthCardDescription, { color: colors.textSecondary }]}>
-                  {item.description}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -244,16 +365,16 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   heroContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
   },
   heroContainerMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
+    flexDirection: "column",
+    alignItems: "stretch",
   },
   textColumn: {
     flex: 1,
@@ -267,8 +388,8 @@ const styles = StyleSheet.create({
     maxWidth: 600,
   },
   mainTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
     marginBottom: 24,
   },
@@ -280,24 +401,26 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     marginBottom: 0,
-    textAlign: 'justify',
+    textAlign: "justify",
     flex: 1,
   },
   mainTitleMobile: {
     marginBottom: 0,
-    textAlign: 'justify',
+    textAlign: "justify",
+    fontSize: 27,
+    lineHeight: 32,
   },
   description: {
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 24,
-    textAlign: 'justify',
+    textAlign: "justify",
   },
   descriptionMobile: {
     fontSize: 13,
     lineHeight: 20,
     marginBottom: 20,
-    textAlign: 'justify',
+    textAlign: "justify",
   },
   featuresList: {
     marginBottom: 32,
@@ -307,16 +430,16 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   featureDescription: {
     fontSize: 13,
     lineHeight: 20,
-    textAlign: 'justify',
+    textAlign: "justify",
   },
   keyPoints: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 16,
   },
   keyPoint: {
@@ -324,22 +447,22 @@ const styles = StyleSheet.create({
   },
   videoColumn: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   videoColumnMobile: {
-    width: '100%',
+    width: "100%",
   },
   videoColumnDesktop: {
     maxWidth: 600,
   },
   videoContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 624,
     borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
-    shadowColor: '#000',
+    overflow: "hidden",
+    backgroundColor: "#f5f5f5",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -349,19 +472,19 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   videoWeb: {
-    width: '100%',
-    height: 'auto',
-    display: 'block',
+    width: "100%",
+    height: "auto",
+    display: "block",
   },
   videoNative: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 624 / 480,
   },
   // Fortalezas del sistema
   strengthsSection: {
     maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
     marginTop: 48,
     paddingTop: 32,
     borderTopWidth: 1,
@@ -371,18 +494,15 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   strengthsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexDirection: "row",
+    flexWrap: "nowrap",
     gap: 16,
   },
   strengthsGridMobile: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
-  },
-  strengthsGridMobileScroll: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    width: "100%",
   },
   strengthCard: {
     flex: 1,
@@ -390,27 +510,27 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   strengthCardMobile: {
-    flex: 0,
-    width: 160,
+    flex: 1,
+    minWidth: "47%",
   },
   strengthIconWrap: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
   strengthCardTitle: {
     marginBottom: 6,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   strengthCardDescription: {
     fontSize: 13,
     lineHeight: 20,
-    textAlign: 'left',
+    textAlign: "left",
   },
 });

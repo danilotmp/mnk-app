@@ -4,25 +4,33 @@
  * que no deben variar al navegar entre páginas
  */
 
-import { Header } from '@/components/header';
-import { HorizontalMenu, MenuItem, VerticalMenu } from '@/components/navigation';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { AppConfig } from '@/src/config';
-import { useCompany, useMultiCompany, UserProfileHeader } from '@/src/domains/shared';
-import { useMenu } from '@/src/infrastructure/menu';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { Platform, TouchableOpacity, View } from 'react-native';
-import { createMainLayoutStyles } from './main-layout.styles';
-import { MainLayoutProps } from './main-layout.types';
+import { Header } from "@/components/header";
+import {
+  HorizontalMenu,
+  MenuItem,
+  VerticalMenu,
+} from "@/components/navigation";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { AppConfig } from "@/src/config";
+import {
+  useCompany,
+  useMultiCompany,
+  UserProfileHeader,
+} from "@/src/domains/shared";
+import { useMenu } from "@/src/infrastructure/menu";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, TouchableOpacity, View } from "react-native";
+import { createMainLayoutStyles } from "./main-layout.styles";
+import { MainLayoutProps } from "./main-layout.types";
 
 export function MainLayout({
   children,
-  title = 'AIBox',
+  title = "AIBox",
   showHeader = true,
   showUserProfile = true,
   showNavigation = true,
@@ -46,21 +54,27 @@ export function MainLayout({
   // Después del login, se aplica la configuración de AppConfig
   // En móviles, siempre se usa el menú horizontal independientemente de la configuración
   const isAuthenticated = !!user;
-  const menuType = isAuthenticated ? AppConfig.navigation.menuType : 'horizontal';
+  const menuType = isAuthenticated
+    ? AppConfig.navigation.menuType
+    : "horizontal";
 
   // En móviles, siempre usar menú horizontal independientemente de la configuración
-  const useVerticalMenu = !isMobile && menuType === 'vertical' && isAuthenticated;
-  const useMixMenu = !isMobile && menuType === 'mix' && isAuthenticated;
+  const useVerticalMenu =
+    !isMobile && menuType === "vertical" && isAuthenticated;
+  const useMixMenu = !isMobile && menuType === "mix" && isAuthenticated;
 
   const companies = user?.companies || [];
 
   // Obtener currentCompanyId de session storage, no de user.companyIdDefault
   // porque puede haber cambiado después de seleccionar otra empresa
-  const [currentCompanyId, setCurrentCompanyId] = React.useState<string | null>(null);
+  const [currentCompanyId, setCurrentCompanyId] = React.useState<string | null>(
+    null,
+  );
 
   React.useEffect(() => {
     const loadCurrentCompanyId = async () => {
-      const { UserSessionService } = await import('@/src/domains/shared/services/user-session.service');
+      const { UserSessionService } =
+        await import("@/src/domains/shared/services/user-session.service");
       const userSessionService = UserSessionService.getInstance();
       const storedCompanyId = await userSessionService.getCurrentCompany();
       setCurrentCompanyId(storedCompanyId || user?.companyIdDefault || null);
@@ -68,14 +82,19 @@ export function MainLayout({
     loadCurrentCompanyId();
   }, [user?.companyIdDefault]);
 
-  const displayTitle = companies.find((c) => c.id === currentCompanyId)?.name || company?.name || title;
-  const displaySubtitle = isAuthenticated 
-    ? (companies.find((c) => c.id === currentCompanyId)?.name || company?.name || '')
-    : 'Artificial Intelligence Box';
+  const displayTitle =
+    companies.find((c) => c.id === currentCompanyId)?.name ||
+    company?.name ||
+    title;
+  const displaySubtitle = isAuthenticated
+    ? companies.find((c) => c.id === currentCompanyId)?.name ||
+      company?.name ||
+      ""
+    : "Artificial Intelligence Box";
   const availableCompanies = companies.filter((c) => c.id !== currentCompanyId);
   const canSwitchCompany = availableCompanies.length > 0;
 
-  const handleCompanySelect = async (companyInfo: typeof companies[0]) => {
+  const handleCompanySelect = async (companyInfo: (typeof companies)[0]) => {
     if (companyInfo.id === currentCompanyId) {
       setShowCompanyDropdown(false);
       return;
@@ -84,7 +103,8 @@ export function MainLayout({
     try {
       setShowCompanyDropdown(false);
 
-      const { UserContextService } = await import('@/src/domains/shared/services/user-context.service');
+      const { UserContextService } =
+        await import("@/src/domains/shared/services/user-context.service");
       const userContextService = UserContextService.getInstance();
 
       // Cambiar empresa y obtener nuevo menú
@@ -94,12 +114,14 @@ export function MainLayout({
       setCurrentCompanyId(companyInfo.id);
 
       // Actualizar el contexto del usuario con la nueva empresa
-      const { UserSessionService } = await import('@/src/domains/shared/services/user-session.service');
+      const { UserSessionService } =
+        await import("@/src/domains/shared/services/user-session.service");
       const userSessionService = UserSessionService.getInstance();
       const updatedUser = await userSessionService.getUser();
 
       if (updatedUser) {
-        const { mapUserResponseToMultiCompanyUser } = await import('@/src/infrastructure/services/user-mapper.service');
+        const { mapUserResponseToMultiCompanyUser } =
+          await import("@/src/infrastructure/services/user-mapper.service");
         const mappedUser = mapUserResponseToMultiCompanyUser(updatedUser);
         await setUserContext(mappedUser);
       }
@@ -107,9 +129,9 @@ export function MainLayout({
       // El menú ya fue actualizado por switchCompany, pero refetch asegura que se actualice en el hook
       await refetch();
     } catch (error: any) {
-      const errorMessage = error?.message || 'Error al cambiar de empresa';
+      const errorMessage = error?.message || "Error al cambiar de empresa";
       alert.showError(errorMessage);
-      console.error('Error al cambiar empresa:', error);
+      console.error("Error al cambiar empresa:", error);
     }
   };
 
@@ -119,34 +141,43 @@ export function MainLayout({
 
     const handleClickOutside = (event: MouseEvent) => {
       // En web, verificar si el clic fue fuera del dropdown y del botón
-      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      if (Platform.OS === "web" && typeof document !== "undefined") {
         const target = event.target as HTMLElement;
         if (target) {
           // Verificar si el clic fue en el dropdown o en el contenedor del selector
           // Usar data attributes como fallback si los refs no están disponibles
-          const isClickInDropdown = target.closest?.('[data-company-dropdown]');
-          const isClickInSelector = target.closest?.('[data-company-selector]');
-          
+          const isClickInDropdown = target.closest?.("[data-company-dropdown]");
+          const isClickInSelector = target.closest?.("[data-company-selector]");
+
           // También verificar usando refs si están disponibles
           const dropdownElement = companyDropdownRef.current;
           const selectorElement = companySelectorRef.current;
-          
+
           let isInDropdown = false;
           let isInSelector = false;
-          
+
           if (dropdownElement) {
             // En React Native Web, el ref puede tener una propiedad _nativeNode
-            const nativeNode = (dropdownElement as any)._nativeNode || (dropdownElement as any);
-            isInDropdown = nativeNode === target || nativeNode?.contains?.(target);
+            const nativeNode =
+              (dropdownElement as any)._nativeNode || (dropdownElement as any);
+            isInDropdown =
+              nativeNode === target || nativeNode?.contains?.(target);
           }
-          
+
           if (selectorElement) {
-            const nativeNode = (selectorElement as any)._nativeNode || (selectorElement as any);
-            isInSelector = nativeNode === target || nativeNode?.contains?.(target);
+            const nativeNode =
+              (selectorElement as any)._nativeNode || (selectorElement as any);
+            isInSelector =
+              nativeNode === target || nativeNode?.contains?.(target);
           }
-          
+
           // Si no está en ninguno de los dos, cerrar el dropdown
-          if (!isClickInDropdown && !isClickInSelector && !isInDropdown && !isInSelector) {
+          if (
+            !isClickInDropdown &&
+            !isClickInSelector &&
+            !isInDropdown &&
+            !isInSelector
+          ) {
             setShowCompanyDropdown(false);
           }
         }
@@ -154,14 +185,14 @@ export function MainLayout({
     };
 
     // En web, usar addEventListener
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    if (Platform.OS === "web" && typeof document !== "undefined") {
       // Usar setTimeout para evitar que el clic que abre el dropdown también lo cierre
       setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
+        document.addEventListener("click", handleClickOutside);
       }, 0);
 
       return () => {
-        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener("click", handleClickOutside);
       };
     }
   }, [showCompanyDropdown]);
@@ -169,33 +200,33 @@ export function MainLayout({
   // Menú por defecto si no se proporciona (cuando el usuario no está autenticado)
   const defaultMenuItems: MenuItem[] = [
     {
-      id: 'home',
-      label: 'Inicio',
-      route: '/',
-      icon: 'home',
+      id: "home",
+      label: "Inicio",
+      route: "/",
+      icon: "home",
     },
     {
-      id: 'services',
-      label: 'Servicios',
+      id: "services",
+      label: "Servicios",
       submenu: [
-        { id: 'service-1', label: 'Servicio 1', route: '/services/1' },
-        { id: 'service-2', label: 'Servicio 2', route: '/services/2' },
+        { id: "service-1", label: "Servicio 1", route: "/services/1" },
+        { id: "service-2", label: "Servicio 2", route: "/services/2" },
       ],
     },
     {
-      id: 'products',
-      label: 'Productos',
+      id: "products",
+      label: "Productos",
       submenu: [
-        { id: 'product-1', label: 'Producto 1', route: '/products/1' },
-        { id: 'product-2', label: 'Producto 2', route: '/products/2' },
+        { id: "product-1", label: "Producto 1", route: "/products/1" },
+        { id: "product-2", label: "Producto 2", route: "/products/2" },
       ],
-      icon: 'AntDesign:product',
+      icon: "AntDesign:product",
     },
     {
-      id: 'contact',
-      label: 'Contactos',
-      route: '/main/contact',
-      icon: 'MaterialCommunityIcons:contacts',
+      id: "contact",
+      label: "Contactos",
+      route: "/main/contact",
+      icon: "MaterialCommunityIcons:contacts",
     },
   ];
 
@@ -270,7 +301,9 @@ export function MainLayout({
 
   // Filtrar items según el modo de menú
   const publicMenuItems = useMixMenu ? filterPublicItems(finalMenuItems) : [];
-  const privateMenuItems = useMixMenu ? filterPrivateItems(finalMenuItems) : finalMenuItems;
+  const privateMenuItems = useMixMenu
+    ? filterPrivateItems(finalMenuItems)
+    : finalMenuItems;
 
   // Determinar si realmente se debe mostrar el menú vertical
   // En modo mix, solo se muestra si hay items privados
@@ -284,7 +317,7 @@ export function MainLayout({
 
   const handleLogout = () => {
     // Redirigir al Home después del logout
-    router.push('/');
+    router.push("/");
   };
 
   const handleSettings = () => {
@@ -339,30 +372,34 @@ export function MainLayout({
 
     // Para desktop, calcular posición y tamaño dinámicamente
     if (isDesktop) {
-      const isVerticalMenuExpanded = shouldShowVerticalMenu && !verticalMenuCollapsed;
-      const isWebDesktop = Platform.OS === 'web' && !isMobile && !useVerticalMenu;
-      
+      const isVerticalMenuExpanded =
+        shouldShowVerticalMenu && !verticalMenuCollapsed;
+      const isWebDesktop =
+        Platform.OS === "web" && !isMobile && !useVerticalMenu;
+
       // En web desktop con tres bloques, usar ancho fijo igual al bloque izquierdo
-      const dropdownWidth = isWebDesktop 
+      const dropdownWidth = isWebDesktop
         ? 280 // Mismo ancho que webLeftSection
-        : (isVerticalMenuExpanded
-          ? (shouldShowVerticalMenu && !verticalMenuCollapsed
+        : isVerticalMenuExpanded
+          ? shouldShowVerticalMenu && !verticalMenuCollapsed
             ? AppConfig.navigation.verticalMenuExpandedWidth - 6
-            : AppConfig.navigation.verticalMenuExpandedWidth)
-          : (AppConfig.navigation.verticalMenuExpandedWidth - (AppConfig.navigation.verticalMenuCollapsedWidth - 16)));
+            : AppConfig.navigation.verticalMenuExpandedWidth
+          : AppConfig.navigation.verticalMenuExpandedWidth -
+            (AppConfig.navigation.verticalMenuCollapsedWidth - 16);
 
       const itemPaddingLeft = isVerticalMenuExpanded
-        ? (shouldShowVerticalMenu && !verticalMenuCollapsed
+        ? shouldShowVerticalMenu && !verticalMenuCollapsed
           ? AppConfig.navigation.verticalMenuCollapsedWidth - 6
-          : AppConfig.navigation.verticalMenuCollapsedWidth)
+          : AppConfig.navigation.verticalMenuCollapsedWidth
         : 12; // Padding izquierdo de 10 para las opciones cuando el menú está colapsado
 
       // Calcular el margin izquierdo del dropdown cuando el menú está colapsado
       // Cuando el menú vertical está colapsado, usar el ancho del menú colapsado como margin izquierdo
       // Solo aplicar cuando hay menú vertical (vertical o mix) Y está colapsado
-      const dropdownMarginLeft = shouldShowVerticalMenu && !isVerticalMenuExpanded
-        ? AppConfig.navigation.verticalMenuCollapsedWidth
-        : undefined;
+      const dropdownMarginLeft =
+        shouldShowVerticalMenu && !isVerticalMenuExpanded
+          ? AppConfig.navigation.verticalMenuCollapsedWidth
+          : undefined;
 
       return (
         <View
@@ -371,13 +408,17 @@ export function MainLayout({
           style={[
             ...dropdownStyles,
             {
-              top: '100%',
-              left: isWebDesktop 
+              top: "100%",
+              left: isWebDesktop
                 ? 0 // Alineado al inicio del bloque izquierdo
-                : (isVerticalMenuExpanded
-                  ? (shouldShowVerticalMenu && !verticalMenuCollapsed ? 3 : 0)
-                  : 0), // Cuando colapsado, left: 0, el margin izquierdo desplaza el dropdown
-              ...(dropdownMarginLeft !== undefined && { marginLeft: dropdownMarginLeft }), // Margin izquierdo cuando el menú está colapsado (48px)
+                : isVerticalMenuExpanded
+                  ? shouldShowVerticalMenu && !verticalMenuCollapsed
+                    ? 3
+                    : 0
+                  : 0, // Cuando colapsado, left: 0, el margin izquierdo desplaza el dropdown
+              ...(dropdownMarginLeft !== undefined && {
+                marginLeft: dropdownMarginLeft,
+              }), // Margin izquierdo cuando el menú está colapsado (48px)
               marginTop: isVerticalMenuExpanded && !isWebDesktop ? 3 : 0,
               width: dropdownWidth,
             },
@@ -405,10 +446,15 @@ export function MainLayout({
                 onPress={() => handleCompanySelect(companyInfo)}
                 style={[
                   styles.companyDropdownItemDesktop,
-                  { borderBottomColor: colors.border, paddingLeft: itemPaddingLeft },
+                  {
+                    borderBottomColor: colors.border,
+                    paddingLeft: itemPaddingLeft,
+                  },
                 ]}
               >
-                <ThemedText type="defaultSemiBold">{companyInfo.name}</ThemedText>
+                <ThemedText type="defaultSemiBold">
+                  {companyInfo.name}
+                </ThemedText>
               </TouchableOpacity>
             );
           })}
@@ -418,20 +464,39 @@ export function MainLayout({
 
     // Para mobile/tablet
     return (
-      <View ref={companyDropdownRef} data-company-dropdown={true} style={dropdownStyles}>
+      <View
+        ref={companyDropdownRef}
+        data-company-dropdown={true}
+        style={dropdownStyles}
+      >
         {/* Flecha superior del dropdown */}
-        <View style={[styles.companyDropdownArrow, styles.companyDropdownArrowOuter, { borderBottomColor: colors.border }]} />
         <View
-          style={[styles.companyDropdownArrow, styles.companyDropdownArrowInner, { borderBottomColor: colors.background }]}
+          style={[
+            styles.companyDropdownArrow,
+            styles.companyDropdownArrowOuter,
+            { borderBottomColor: colors.border },
+          ]}
+        />
+        <View
+          style={[
+            styles.companyDropdownArrow,
+            styles.companyDropdownArrowInner,
+            { borderBottomColor: colors.background },
+          ]}
         />
         {availableCompanies.map((companyInfo) => {
           return (
             <TouchableOpacity
               key={companyInfo.id}
               onPress={() => handleCompanySelect(companyInfo)}
-              style={[styles.companyDropdownItem, { borderBottomColor: colors.border, paddingLeft: 10 }]}
+              style={[
+                styles.companyDropdownItem,
+                { borderBottomColor: colors.border, paddingLeft: 10 },
+              ]}
             >
-              <ThemedText type="body2" style={{ fontWeight: '600' }}>{companyInfo.name}</ThemedText>
+              <ThemedText type="body2" style={{ fontWeight: "600" }}>
+                {companyInfo.name}
+              </ThemedText>
             </TouchableOpacity>
           );
         })}
@@ -450,6 +515,7 @@ export function MainLayout({
               backgroundColor: colors.background,
               borderBottomColor: colors.border,
               paddingLeft: isMobile ? 16 : 0, // Padding izquierdo solo en móvil
+              paddingRight: isMobile ? 4 : undefined, // Menos padding derecho en móvil para acercar el botón hamburguesa al borde
             },
           ]}
         >
@@ -465,7 +531,10 @@ export function MainLayout({
                     inline={true}
                     logoSize="small"
                     titleClickable={canSwitchCompany}
-                    onTitlePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
+                    onTitlePress={() =>
+                      canSwitchCompany &&
+                      setShowCompanyDropdown(!showCompanyDropdown)
+                    }
                     onTitleLayout={(width) => setTitleWidth(width)}
                     renderDropdown={renderCompanyDropdown(false)}
                   />
@@ -497,19 +566,26 @@ export function MainLayout({
           ) : (
             // Layout Desktop/Tablet: Tres bloques en web, layout normal en otras plataformas
             <>
-              {Platform.OS === 'web' && !isMobile && !useVerticalMenu ? (
+              {Platform.OS === "web" && !isMobile && !useVerticalMenu ? (
                 // Layout Web Desktop: [Logo + Selector] ──── [Menú Centrado] ──── [Acciones]
                 <>
                   {/* Primer bloque: Logo, nombre y selector de empresas */}
                   <View style={styles.webLeftSection}>
-                    <View ref={companySelectorRef} style={styles.companyDropdownContainer} data-company-selector={true}>
+                    <View
+                      ref={companySelectorRef}
+                      style={styles.companyDropdownContainer}
+                      data-company-selector={true}
+                    >
                       <Header
                         title="AIBox"
                         subtitle={displaySubtitle}
                         inline={true}
                         logoSize="small"
                         titleClickable={canSwitchCompany}
-                        onTitlePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
+                        onTitlePress={() =>
+                          canSwitchCompany &&
+                          setShowCompanyDropdown(!showCompanyDropdown)
+                        }
                         onTitleLayout={(width) => setTitleWidth(width)}
                         renderDropdown={renderCompanyDropdown(false)}
                       />
@@ -548,12 +624,19 @@ export function MainLayout({
                   {/* Logo separado solo si es menú vertical */}
                   {useVerticalMenu && (
                     <View style={styles.logoSection}>
-                      <View ref={companySelectorRef} style={styles.companyDropdownContainer} data-company-selector={true}>
+                      <View
+                        ref={companySelectorRef}
+                        style={styles.companyDropdownContainer}
+                        data-company-selector={true}
+                      >
                         <Header
                           title={displayTitle}
                           inline={true}
                           titleClickable={canSwitchCompany}
-                          onTitlePress={() => canSwitchCompany && setShowCompanyDropdown(!showCompanyDropdown)}
+                          onTitlePress={() =>
+                            canSwitchCompany &&
+                            setShowCompanyDropdown(!showCompanyDropdown)
+                          }
                           onTitleLayout={(width) => setTitleWidth(width)}
                           renderDropdown={renderCompanyDropdown(false)}
                         />
@@ -589,14 +672,21 @@ export function MainLayout({
       )}
 
       {/* Contenedor del body: Menú vertical (si aplica) + Content */}
-      <View style={[styles.bodyContainer, shouldShowVerticalMenu && styles.bodyContainerWithVerticalMenu]}>
+      <View
+        style={[
+          styles.bodyContainer,
+          shouldShowVerticalMenu && styles.bodyContainerWithVerticalMenu,
+        ]}
+      >
         {/* Menú vertical (solo cuando está autenticado y configurado, o en modo mix) */}
         {shouldShowVerticalMenu && (
           <VerticalMenu
             items={useMixMenu ? privateMenuItems : finalMenuItems}
             onItemPress={handleMenuItemPress}
             collapsed={verticalMenuCollapsed}
-            onToggleCollapse={() => setVerticalMenuCollapsed(!verticalMenuCollapsed)}
+            onToggleCollapse={() =>
+              setVerticalMenuCollapsed(!verticalMenuCollapsed)
+            }
           />
         )}
 

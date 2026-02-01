@@ -1,15 +1,15 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useRef } from "react";
+import { Animated, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Card } from '@/components/ui/card';
-import { useTheme } from '@/hooks/use-theme';
-import { useResponsive } from '@/hooks/use-responsive';
-import { DynamicIcon } from '@/src/domains/shared/components';
-import { useTranslation } from '@/src/infrastructure/i18n';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Card } from "@/components/ui/card";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
 
 export default function ContactPage() {
   const { colors } = useTheme();
@@ -18,7 +18,7 @@ export default function ContactPage() {
 
   // URL del mapa: obtener una actual desde Google Maps (Compartir > Insertar mapa)
   const googleMapsEmbedUrl =
-    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.7855!2d-78.4678!3d-0.1807!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x91d59a9b8c8c8c8d%3A0x8c8c8c8c8c8c8c8c!2sQuito%2C%20Ecuador!5e0!3m2!1ses!2sec!4v1234567890';
+    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.7855!2d-78.4678!3d-0.1807!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x91d59a9b8c8c8c8d%3A0x8c8c8c8c8c8c8c8c!2sQuito%2C%20Ecuador!5e0!3m2!1ses!2sec!4v1234567890";
 
   // Animaciones Comunicación: Llamadas, Email, Mapa
   const llamadasAnim = useRef(new Animated.Value(0)).current;
@@ -28,21 +28,45 @@ export default function ContactPage() {
   useEffect(() => {
     const llamadasLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(llamadasAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-        Animated.timing(llamadasAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ])
+        Animated.timing(llamadasAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(llamadasAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     const emailLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(emailAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
-        Animated.timing(emailAnim, { toValue: 0, duration: 1800, useNativeDriver: true }),
-      ])
+        Animated.timing(emailAnim, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(emailAnim, {
+          toValue: 0,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     const mapaLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(mapaAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        Animated.timing(mapaAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
-      ])
+        Animated.timing(mapaAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(mapaAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     llamadasLoop.start();
     emailLoop.start();
@@ -54,22 +78,33 @@ export default function ContactPage() {
     };
   }, [llamadasAnim, emailAnim, mapaAnim]);
 
-  const llamadasWave1 = llamadasAnim.interpolate({ inputRange: [0, 0.4, 0.6, 1], outputRange: [1, 1.35, 1.35, 1] });
-  const llamadasWave2 = llamadasAnim.interpolate({ inputRange: [0.3, 0.6, 0.9, 1], outputRange: [1, 1.35, 1.35, 1] });
-  const emailLetterY = emailAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 8, 0] });
-  const mapaPinScale = mapaAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.2, 1] });
+  const llamadasWave1 = llamadasAnim.interpolate({
+    inputRange: [0, 0.4, 0.6, 1],
+    outputRange: [1, 1.35, 1.35, 1],
+  });
+  const llamadasWave2 = llamadasAnim.interpolate({
+    inputRange: [0.3, 0.6, 0.9, 1],
+    outputRange: [1, 1.35, 1.35, 1],
+  });
+  const emailLetterY = emailAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 8, 0],
+  });
+  const mapaPinScale = mapaAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.2, 1],
+  });
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.contactSection}>
-          <View style={[
-            styles.twoColumns,
-            isMobile && styles.twoColumnsMobile
-          ]}>
+          <View
+            style={[styles.twoColumns, isMobile && styles.twoColumnsMobile]}
+          >
             {/* Columna Izquierda: Header + Información de Matriz */}
             <View style={styles.leftColumn}>
               {/* Header con Icono, Título y Subtítulo (mismo estilo que página de Inicio) */}
@@ -81,47 +116,96 @@ export default function ContactPage() {
                     color={colors.primary}
                     style={styles.headerIcon}
                   />
-                  <ThemedText type="h1" style={[styles.title, { color: colors.text }]}>
+                  <ThemedText
+                    type="h1"
+                    style={[styles.title, { color: colors.text }, isMobile && styles.titleMobile]}
+                  >
                     {t.pages.contact.title}
                   </ThemedText>
                 </View>
-                <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
+                <ThemedText
+                  type="body1"
+                  style={[styles.subtitle, { color: colors.textSecondary }]}
+                >
                   {t.pages.contact.subtitle}
                 </ThemedText>
               </View>
 
               {/* Información de Matriz - Card con icono superpuesto */}
-              <View style={[styles.matrixCardWrapper, isMobile && styles.matrixCardWrapperMobile, { backgroundColor: colors.surface }]}>
-                <View style={[styles.matrixIconBlock, { backgroundColor: colors.primary }]}>
+              <View
+                style={[
+                  styles.matrixCardWrapper,
+                  isMobile && styles.matrixCardWrapperMobile,
+                  { backgroundColor: colors.surface },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.matrixIconBlock,
+                    { backgroundColor: colors.primary },
+                  ]}
+                >
                   <Ionicons name="location" size={35} color="#FFFFFF" />
                 </View>
                 <View style={styles.matrixCardContent}>
                   <View style={styles.matrixTitleRow}>
                     <View style={styles.matrixTitleSpacer} />
-                    <ThemedText type="h2" variant="primary" style={styles.locationName}>
+                    <ThemedText
+                      type="h2"
+                      variant="primary"
+                      style={styles.locationName}
+                    >
                       Matriz
                     </ThemedText>
                   </View>
                   <View style={[styles.matrixRow, styles.matrixRowFirst]}>
-                    <Ionicons name="map-outline" size={18} color={colors.textSecondary} />
-                    <ThemedText type="body2" variant="secondary" style={styles.contactText}>
+                    <Ionicons
+                      name="map-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                    />
+                    <ThemedText
+                      type="body2"
+                      variant="secondary"
+                      style={styles.contactText}
+                    >
                       Jun Murillo y San Gregorio - 170129
                     </ThemedText>
                   </View>
                   <View style={styles.matrixRow}>
-                    <Ionicons name="location-outline" size={18} color={colors.textSecondary} />
-                    <ThemedText type="body2" variant="secondary" style={styles.contactText}>
+                    <Ionicons
+                      name="location-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                    />
+                    <ThemedText
+                      type="body2"
+                      variant="secondary"
+                      style={styles.contactText}
+                    >
                       Sector la Mariscal
                     </ThemedText>
                   </View>
                   <View style={styles.matrixRow}>
-                    <Ionicons name="phone-portrait-outline" size={18} color={colors.textSecondary} />
-                    <ThemedText type="body2" variant="secondary" style={styles.contactText}>
+                    <Ionicons
+                      name="phone-portrait-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                    />
+                    <ThemedText
+                      type="body2"
+                      variant="secondary"
+                      style={styles.contactText}
+                    >
                       0987255382
                     </ThemedText>
                   </View>
                   <View style={[styles.matrixRow, styles.matrixRowRight]}>
-                    <ThemedText type="body2" variant="secondary" style={[styles.contactText, styles.contactTextRight]}>
+                    <ThemedText
+                      type="body2"
+                      variant="secondary"
+                      style={[styles.contactText, styles.contactTextRight]}
+                    >
                       Quito - Ecuador
                     </ThemedText>
                   </View>
@@ -140,8 +224,13 @@ export default function ContactPage() {
                 },
               ]}
             >
-              <View style={[styles.mapContainer, isMobile && styles.mapContainerMobile]}>
-                {Platform.OS === 'web' ? (
+              <View
+                style={[
+                  styles.mapContainer,
+                  isMobile && styles.mapContainerMobile,
+                ]}
+              >
+                {Platform.OS === "web" ? (
                   // @ts-ignore - iframe para web
                   <iframe
                     title="Mapa de Quito, Ecuador"
@@ -151,7 +240,7 @@ export default function ContactPage() {
                     style={{
                       border: 0,
                       borderRadius: 24,
-                      display: 'block',
+                      display: "block",
                       minHeight: 400,
                     }}
                     allowFullScreen
@@ -172,8 +261,17 @@ export default function ContactPage() {
         </Card>
 
         {/* Sección inferior: Comunicación - Llamadas, Email, Mapa (animado) */}
-        <View style={[styles.commSection, isMobile && styles.commSectionMobile, { borderTopColor: colors.border }]}>
-          <ThemedText type="h4" style={[styles.commSectionTitle, { color: colors.text }]}>
+        <View
+          style={[
+            styles.commSection,
+            isMobile && styles.commSectionMobile,
+            { borderTopColor: colors.border },
+          ]}
+        >
+          <ThemedText
+            type="h4"
+            style={[styles.commSectionTitle, { color: colors.text }]}
+          >
             Comunicación
           </ThemedText>
           <View style={[styles.commGrid, isMobile && styles.commGridMobile]}>
@@ -181,14 +279,32 @@ export default function ContactPage() {
             <View style={[styles.commCard, { borderColor: colors.border }]}>
               <View style={styles.commVisual}>
                 <View style={styles.llamadasRow}>
-                  <Animated.View style={[styles.llamadasWave, { backgroundColor: colors.primary }, { transform: [{ scale: llamadasWave1 }] }]} />
-                  <Animated.View style={[styles.llamadasWave, { backgroundColor: colors.primary }, { transform: [{ scale: llamadasWave2 }] }]} />
+                  <Animated.View
+                    style={[
+                      styles.llamadasWave,
+                      { backgroundColor: colors.primary },
+                      { transform: [{ scale: llamadasWave1 }] },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.llamadasWave,
+                      { backgroundColor: colors.primary },
+                      { transform: [{ scale: llamadasWave2 }] },
+                    ]}
+                  />
                 </View>
               </View>
-              <ThemedText type="h5" style={[styles.commCardTitle, { color: colors.text }]}>
+              <ThemedText
+                type="h5"
+                style={[styles.commCardTitle, { color: colors.text }]}
+              >
                 Llamadas
               </ThemedText>
-              <ThemedText type="body2" style={[styles.commCardDesc, { color: colors.textSecondary }]}>
+              <ThemedText
+                type="body2"
+                style={[styles.commCardDesc, { color: colors.textSecondary }]}
+              >
                 Contáctanos por teléfono
               </ThemedText>
             </View>
@@ -196,21 +312,37 @@ export default function ContactPage() {
             {/* Email: carta que entra al sobre */}
             <View style={[styles.commCard, { borderColor: colors.border }]}>
               <View style={styles.commVisual}>
-                <View style={[styles.emailEnvelope, { borderColor: colors.primary + '60' }]}>
-                  <View style={[styles.emailFlap, { borderBottomColor: colors.primary + '50' }]} />
+                <View
+                  style={[
+                    styles.emailEnvelope,
+                    { borderColor: colors.primary + "60" },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.emailFlap,
+                      { borderBottomColor: colors.primary + "50" },
+                    ]}
+                  />
                   <Animated.View
                     style={[
                       styles.emailLetter,
-                      { backgroundColor: colors.primary + '40' },
+                      { backgroundColor: colors.primary + "40" },
                       { transform: [{ translateY: emailLetterY }] },
                     ]}
                   />
                 </View>
               </View>
-              <ThemedText type="h5" style={[styles.commCardTitle, { color: colors.text }]}>
+              <ThemedText
+                type="h5"
+                style={[styles.commCardTitle, { color: colors.text }]}
+              >
                 Email
               </ThemedText>
-              <ThemedText type="body2" style={[styles.commCardDesc, { color: colors.textSecondary }]}>
+              <ThemedText
+                type="body2"
+                style={[styles.commCardDesc, { color: colors.textSecondary }]}
+              >
                 Escríbenos por correo
               </ThemedText>
             </View>
@@ -218,15 +350,36 @@ export default function ContactPage() {
             {/* Mapa: pin que pulsa */}
             <View style={[styles.commCard, { borderColor: colors.border }]}>
               <View style={styles.commVisual}>
-                <Animated.View style={[styles.mapaPin, { transform: [{ scale: mapaPinScale }] }]}>
-                  <View style={[styles.mapaPinHead, { backgroundColor: colors.primary }]} />
-                  <View style={[styles.mapaPinPoint, { borderTopColor: colors.primary }]} />
+                <Animated.View
+                  style={[
+                    styles.mapaPin,
+                    { transform: [{ scale: mapaPinScale }] },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.mapaPinHead,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.mapaPinPoint,
+                      { borderTopColor: colors.primary },
+                    ]}
+                  />
                 </Animated.View>
               </View>
-              <ThemedText type="h5" style={[styles.commCardTitle, { color: colors.text }]}>
+              <ThemedText
+                type="h5"
+                style={[styles.commCardTitle, { color: colors.text }]}
+              >
                 Mapa
               </ThemedText>
-              <ThemedText type="body2" style={[styles.commCardDesc, { color: colors.textSecondary }]}>
+              <ThemedText
+                type="body2"
+                style={[styles.commCardDesc, { color: colors.textSecondary }]}
+              >
                 Ubicación y cómo llegar
               </ThemedText>
             </View>
@@ -250,30 +403,30 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 24,
     maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
   },
   twoColumns: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 24,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   twoColumnsMobile: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 24,
   },
   leftColumn: {
     flex: 1,
   },
   headerSection: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     marginBottom: 32,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
-    flexWrap: 'nowrap',
+    flexWrap: "nowrap",
   },
   headerIcon: {
     flexShrink: 0,
@@ -281,42 +434,46 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 0,
     marginBottom: 0,
-    textAlign: 'left',
+    textAlign: "left",
     flex: 1,
+  },
+  titleMobile: {
+    fontSize: 27,
+    lineHeight: 32,
   },
   subtitle: {
     marginTop: 8,
-    textAlign: 'left',
+    textAlign: "left",
   },
   matrixCardWrapper: {
-    width: '70%',
-    alignSelf: 'flex-start',
+    width: "70%",
+    alignSelf: "flex-start",
     marginTop: 45,
     borderRadius: 20,
     paddingTop: 32,
     paddingHorizontal: 24,
     paddingBottom: 24,
     minHeight: 140,
-    position: 'relative',
-    shadowColor: '#000',
+    position: "relative",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
   },
   matrixCardWrapperMobile: {
-    width: '100%',
+    width: "100%",
   },
   matrixIconBlock: {
-    position: 'absolute',
+    position: "absolute",
     top: -14,
     left: 24,
     width: 56,
     height: 56,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -326,8 +483,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   matrixTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: -33,
     gap: 12,
   },
@@ -337,21 +494,21 @@ const styles = StyleSheet.create({
   },
   locationName: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 0,
     marginBottom: 4,
   },
   matrixRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   matrixRowFirst: {
     marginTop: 16,
   },
   matrixRowRight: {
-    alignSelf: 'stretch',
-    justifyContent: 'flex-end',
+    alignSelf: "stretch",
+    justifyContent: "flex-end",
   },
   contactText: {
     fontSize: 15,
@@ -359,43 +516,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactTextRight: {
-    textAlign: 'right',
+    textAlign: "right",
   },
   mapCardWrapper: {
     width: 624, // ~30% más pequeño que 624
     borderRadius: 24,
     borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 6,
   },
   mapCardWrapperMobile: {
-    width: '100%',
+    width: "100%",
   },
   mapContainer: {
-    width: '100%',
+    width: "100%",
     height: 400,
     minHeight: 400,
     borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: '#e8eaed',
+    overflow: "hidden",
+    backgroundColor: "#e8eaed",
   },
   mapContainerMobile: {
     height: 280,
     minHeight: 280,
   },
   mapWebView: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   // Sección Comunicación (inferior)
   commSection: {
     maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
     marginTop: 32,
     paddingTop: 28,
     paddingHorizontal: 24,
@@ -409,16 +566,16 @@ const styles = StyleSheet.create({
   },
   commSectionTitle: {
     marginBottom: 20,
-    textAlign: 'center',
-    fontWeight: '600',
+    textAlign: "center",
+    fontWeight: "600",
   },
   commGrid: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexDirection: "row",
+    flexWrap: "nowrap",
     gap: 16,
   },
   commGridMobile: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: 12,
   },
   commCard: {
@@ -427,18 +584,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   commVisual: {
-    width: '100%',
+    width: "100%",
     height: 52,
     marginBottom: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   llamadasRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   llamadasWave: {
@@ -452,11 +609,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderTopWidth: 0,
     borderRadius: 4,
-    position: 'relative',
-    overflow: 'hidden',
+    position: "relative",
+    overflow: "hidden",
   },
   emailFlap: {
-    position: 'absolute',
+    position: "absolute",
     top: -1,
     left: -1,
     width: 0,
@@ -464,11 +621,11 @@ const styles = StyleSheet.create({
     borderLeftWidth: 23,
     borderRightWidth: 23,
     borderBottomWidth: 14,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
   },
   emailLetter: {
-    position: 'absolute',
+    position: "absolute",
     left: 8,
     top: 4,
     width: 26,
@@ -476,7 +633,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   mapaPin: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   mapaPinPoint: {
     width: 0,
@@ -485,8 +642,8 @@ const styles = StyleSheet.create({
     borderLeftWidth: 8,
     borderRightWidth: 8,
     borderTopWidth: 12,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
   },
   mapaPinHead: {
     width: 20,
@@ -495,12 +652,12 @@ const styles = StyleSheet.create({
   },
   commCardTitle: {
     marginBottom: 4,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   commCardDesc: {
     fontSize: 13,
     lineHeight: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

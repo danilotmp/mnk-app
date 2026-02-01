@@ -1,40 +1,41 @@
-import { ThemedText } from '@/components/themed-text';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { isMobileDevice } from '@/constants/breakpoints';
-import { useTheme } from '@/hooks/use-theme';
-import { useThemeMode } from '@/hooks/use-theme-mode';
-import { AppConfig } from '@/src/config';
-import { DynamicIcon } from '@/src/domains/shared/components';
-import { useCompany } from '@/src/domains/shared/hooks/use-multi-company.hook';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { createHorizontalMenuStyles } from '@/src/styles/components/horizontal-menu.styles';
-import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ThemedText } from "@/components/themed-text";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { isMobileDevice } from "@/constants/breakpoints";
+import { useTheme } from "@/hooks/use-theme";
+import { useThemeMode } from "@/hooks/use-theme-mode";
+import { AppConfig } from "@/src/config";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import { useCompany } from "@/src/domains/shared/hooks/use-multi-company.hook";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { createHorizontalMenuStyles } from "@/src/styles/components/horizontal-menu.styles";
+import { Ionicons } from "@expo/vector-icons";
+import { usePathname } from "expo-router";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View,
-  useWindowDimensions
-} from 'react-native';
-import { createHorizontalMenuAdditionalStyles } from './horizontal-menu.styles';
-import type { HorizontalMenuProps, MenuColumn, MenuItem } from './horizontal-menu.types';
+    Animated,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
+} from "react-native";
+import { createHorizontalMenuAdditionalStyles } from "./horizontal-menu.styles";
+import type {
+    HorizontalMenuProps,
+    MenuColumn,
+    MenuItem,
+} from "./horizontal-menu.types";
 
 /**
  * Menú de navegación horizontal responsive con mega menú
  * - Desktop/Tablet: Menú horizontal con mega menú de columnas
  * - Mobile: Menú hamburger con drawer
  */
-export function HorizontalMenu({ 
-  items, 
-  onItemPress,
-}: HorizontalMenuProps) {
+export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const { colors } = useTheme();
   const { isDark } = useThemeMode();
   const { width } = useWindowDimensions();
@@ -44,15 +45,17 @@ export function HorizontalMenu({
   const { t } = useTranslation();
   const { user } = useCompany();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
-  const [hoverTimeout, setHoverTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [hoverTimeout, setHoverTimeout] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
-  
+
   // Obtener el color para items activos según la configuración
   // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
   const getActiveItemColor = (): string => {
     const configColor = AppConfig.navigation.activeItemColor;
-    if (configColor === 'red') return '#ff3366';
-    if (configColor === 'blue') return colors.primary;
+    if (configColor === "red") return "#ff3366";
+    if (configColor === "blue") return colors.primary;
     return configColor; // Cualquier otro color se usa directamente
   };
   const activeItemColor = getActiveItemColor();
@@ -60,10 +63,13 @@ export function HorizontalMenu({
   const additionalStyles = createHorizontalMenuAdditionalStyles(colors);
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
-  const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(null); // Para rastrear opción activa del submenú
-  const [searchValue, setSearchValue] = useState<string>(''); // Estado para búsqueda (móvil)
-  const [desktopSearchExpanded, setDesktopSearchExpanded] = useState<boolean>(false); // Estado para búsqueda expandida (desktop)
-  const [desktopSearchValue, setDesktopSearchValue] = useState<string>(''); // Estado para búsqueda (desktop)
+  const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(
+    null,
+  ); // Para rastrear opción activa del submenú
+  const [searchValue, setSearchValue] = useState<string>(""); // Estado para búsqueda (móvil)
+  const [desktopSearchExpanded, setDesktopSearchExpanded] =
+    useState<boolean>(false); // Estado para búsqueda expandida (desktop)
+  const [desktopSearchValue, setDesktopSearchValue] = useState<string>(""); // Estado para búsqueda (desktop)
   const menuItemRefs = useRef<any>({});
   const slideAnim = useRef(new Animated.Value(-400)).current; // Animación para deslizar desde la izquierda
   const pendingRouteRef = useRef<string | null>(null); // Para rastrear la ruta que estamos navegando
@@ -90,12 +96,12 @@ export function HorizontalMenu({
     if (justClickedRef.current) {
       return; // Salir inmediatamente sin procesar
     }
-    
+
     // Si no hay pathname, no hacer nada
     if (!pathname) {
       return;
     }
-    
+
     // Si no hay items todavía (menú cargando), esperar a que cargue
     // IMPORTANTE: No retornar temprano aquí, porque cuando el menú carga,
     // necesitamos que este useEffect se ejecute para detectar la ruta activa
@@ -108,31 +114,34 @@ export function HorizontalMenu({
     // Función para comparar rutas de manera flexible
     const isRouteMatch = (pathname: string, route: string): boolean => {
       if (!route) return false;
-      
-      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
-      
+
+      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, "");
+      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, "");
+
       // Verificar coincidencia exacta
       if (normalizedPath === normalizedRoute) {
         return true;
       }
-      
+
       // Verificar si el pathname empieza con la ruta seguida de /
-      if (normalizedPath.startsWith(normalizedRoute + '/')) {
+      if (normalizedPath.startsWith(normalizedRoute + "/")) {
         return true;
       }
-      
+
       // Verificar si el pathname termina con / seguido de la ruta
-      if (normalizedPath.endsWith('/' + normalizedRoute)) {
+      if (normalizedPath.endsWith("/" + normalizedRoute)) {
         return true;
       }
-      
+
       // Verificar si contiene la ruta con delimitadores
-      return normalizedPath.includes('/' + normalizedRoute + '/');
+      return normalizedPath.includes("/" + normalizedRoute + "/");
     };
 
     // Función recursiva para buscar el item activo basado en la ruta
-    const findActiveItem = (items: MenuItem[], parentId?: string): { itemId: string | null; parentId: string | null } => {
+    const findActiveItem = (
+      items: MenuItem[],
+      parentId?: string,
+    ): { itemId: string | null; parentId: string | null } => {
       for (const item of items) {
         // Comparar la ruta
         if (item.route && isRouteMatch(pathname, item.route)) {
@@ -167,18 +176,21 @@ export function HorizontalMenu({
     };
 
     const { itemId, parentId } = findActiveItem(items);
-    
+
     // Si hay una ruta pendiente, verificar primero si el pathname coincide
     if (pendingRouteRef.current) {
       const routeMatches = isRouteMatch(pathname, pendingRouteRef.current);
-      
+
       if (routeMatches && itemId) {
         // La ruta coincide y encontramos el item - establecerlo
         // IMPORTANTE: NO limpiar las banderas todavía - mantenerlas mientras el item esté activo
-        
+
         // Mantener el submenú abierto si es necesario
         if (parentId) {
-          const findParentItemById = (items: MenuItem[], targetId: string): MenuItem | null => {
+          const findParentItemById = (
+            items: MenuItem[],
+            targetId: string,
+          ): MenuItem | null => {
             for (const item of items) {
               if (item.id === targetId) {
                 return item;
@@ -196,38 +208,38 @@ export function HorizontalMenu({
             }
             return null;
           };
-          
-        const parentItem = findParentItemById(items, parentId);
-        if (parentItem && (parentItem.submenu || parentItem.columns)) {
-          // Abrir el submenú primero
-          setActiveSubmenu(parentItem.id);
-          setActiveMenuItem(parentItem.id);
-          
-          // Para submenús simples, almacenar el itemId en memoria y aplicar después del render
-          // Para columnas, establecer directamente (ya funciona bien)
-          if (parentItem.submenu && !parentItem.columns) {
-            // Es un submenú simple - almacenar en ref para aplicar después del render
-            // Usar setTimeout para asegurar que React haya procesado el cambio de activeSubmenu
-            pendingSubmenuItemRef.current = itemId;
-            setTimeout(() => {
-              if (pendingSubmenuItemRef.current === itemId) {
-                setActiveSubmenuItem(itemId);
-                pendingSubmenuItemRef.current = null;
-              }
-            }, 50); // Delay suficiente para que React procese el cambio de estado
+
+          const parentItem = findParentItemById(items, parentId);
+          if (parentItem && (parentItem.submenu || parentItem.columns)) {
+            // Abrir el submenú primero
+            setActiveSubmenu(parentItem.id);
+            setActiveMenuItem(parentItem.id);
+
+            // Para submenús simples, almacenar el itemId en memoria y aplicar después del render
+            // Para columnas, establecer directamente (ya funciona bien)
+            if (parentItem.submenu && !parentItem.columns) {
+              // Es un submenú simple - almacenar en ref para aplicar después del render
+              // Usar setTimeout para asegurar que React haya procesado el cambio de activeSubmenu
+              pendingSubmenuItemRef.current = itemId;
+              setTimeout(() => {
+                if (pendingSubmenuItemRef.current === itemId) {
+                  setActiveSubmenuItem(itemId);
+                  pendingSubmenuItemRef.current = null;
+                }
+              }, 50); // Delay suficiente para que React procese el cambio de estado
+            } else {
+              // Es un menú con columnas - establecer directamente (ya funciona bien)
+              setActiveSubmenuItem(itemId);
+            }
           } else {
-            // Es un menú con columnas - establecer directamente (ya funciona bien)
+            // Si no encontramos el padre, establecer el item activo directamente
             setActiveSubmenuItem(itemId);
           }
         } else {
-          // Si no encontramos el padre, establecer el item activo directamente
+          // Si no hay parentId, establecer el item activo directamente
           setActiveSubmenuItem(itemId);
         }
-      } else {
-        // Si no hay parentId, establecer el item activo directamente
-        setActiveSubmenuItem(itemId);
-      }
-        
+
         // Solo limpiar las banderas si el itemId coincide con el pendiente
         // Esto asegura que el estado se mantenga correctamente
         if (pendingItemIdRef.current === itemId) {
@@ -240,7 +252,10 @@ export function HorizontalMenu({
         if (pendingItemIdRef.current) {
           setActiveSubmenuItem(pendingItemIdRef.current);
           // Buscar el padre del item pendiente
-          const findItemById = (items: MenuItem[], targetId: string): { item: MenuItem | null; parent: MenuItem | null } => {
+          const findItemById = (
+            items: MenuItem[],
+            targetId: string,
+          ): { item: MenuItem | null; parent: MenuItem | null } => {
             for (const item of items) {
               if (item.id === targetId) {
                 return { item, parent: null };
@@ -264,7 +279,7 @@ export function HorizontalMenu({
             }
             return { item: null, parent: null };
           };
-          
+
           const { parent } = findItemById(items, pendingItemIdRef.current);
           if (parent && (parent.submenu || parent.columns)) {
             setActiveSubmenu(parent.id);
@@ -278,7 +293,7 @@ export function HorizontalMenu({
         return;
       }
     }
-    
+
     // Si no hay ruta pendiente, comportamiento normal
     if (itemId) {
       // Limpiar las banderas pendientes solo si el itemId actual es diferente al pendiente
@@ -293,12 +308,15 @@ export function HorizontalMenu({
         // pero mantener las banderas para proteger el estado
         justClickedRef.current = false;
       }
-      
+
       // Si el item activo está en un submenú, mantener el submenú abierto
       // IMPORTANTE: Esto es crítico para que el item activo sea visible después del refresh
       if (parentId) {
         // Buscar el item padre por su ID directamente en el menú principal
-        const findParentItemById = (items: MenuItem[], targetId: string): MenuItem | null => {
+        const findParentItemById = (
+          items: MenuItem[],
+          targetId: string,
+        ): MenuItem | null => {
           for (const item of items) {
             // Buscar el item que tiene el targetId como su id
             if (item.id === targetId) {
@@ -309,7 +327,9 @@ export function HorizontalMenu({
             if (item.submenu) {
               // Verificar si alguno de los subitems tiene el targetId como padre
               // Si es así, el item actual es el padre
-              const hasChildWithId = item.submenu.some(subItem => subItem.id === targetId);
+              const hasChildWithId = item.submenu.some(
+                (subItem) => subItem.id === targetId,
+              );
               if (hasChildWithId) {
                 return item;
               }
@@ -317,7 +337,9 @@ export function HorizontalMenu({
             if (item.columns) {
               // Verificar si alguno de los items en las columnas tiene el targetId
               for (const column of item.columns) {
-                const hasChildWithId = column.items.some(colItem => colItem.id === targetId);
+                const hasChildWithId = column.items.some(
+                  (colItem) => colItem.id === targetId,
+                );
                 if (hasChildWithId) {
                   return item;
                 }
@@ -326,13 +348,13 @@ export function HorizontalMenu({
           }
           return null;
         };
-        
+
         const parentItem = findParentItemById(items, parentId);
         if (parentItem && (parentItem.submenu || parentItem.columns)) {
           // Abrir el submenú primero
           setActiveSubmenu(parentItem.id);
           setActiveMenuItem(parentItem.id);
-          
+
           // Para submenús simples, almacenar el itemId en memoria y aplicar después del render
           // Para columnas, establecer directamente (ya funciona bien)
           if (parentItem.submenu && !parentItem.columns) {
@@ -356,7 +378,10 @@ export function HorizontalMenu({
       } else {
         // Si no hay parentId pero encontramos un item activo en el nivel principal
         // Asegurarnos de que el item principal esté marcado como activo
-        const findItemById = (items: MenuItem[], targetId: string): MenuItem | null => {
+        const findItemById = (
+          items: MenuItem[],
+          targetId: string,
+        ): MenuItem | null => {
           for (const item of items) {
             if (item.id === targetId) {
               return item;
@@ -374,7 +399,7 @@ export function HorizontalMenu({
           }
           return null;
         };
-        
+
         const foundItem = findItemById(items, itemId);
         if (foundItem && !foundItem.submenu && !foundItem.columns) {
           // Es un item de nivel principal sin submenú
@@ -385,7 +410,7 @@ export function HorizontalMenu({
       // Si no hay item activo en este menú, verificar si debemos limpiar
       // Primero verificar si el pathname actual corresponde a algún item de este menú
       // Si no corresponde, limpiar el estado activo (puede que el item activo esté en otro menú)
-      
+
       // Verificar si hay algún item en este menú que coincida con el pathname
       const hasMatchingItem = (() => {
         for (const item of items) {
@@ -411,7 +436,7 @@ export function HorizontalMenu({
         }
         return false;
       })();
-      
+
       // Si no hay item que coincida en este menú, limpiar el estado activo
       // Esto asegura que cuando se selecciona un item en otro menú, este menú se desactive
       if (!hasMatchingItem) {
@@ -424,7 +449,7 @@ export function HorizontalMenu({
             justClickedRef.current = false;
           }
         }
-        
+
         // Limpiar el estado activo solo si no hay ruta pendiente o si la ruta pendiente no coincide
         if (!pendingRouteRef.current) {
           setActiveMenuItem(null);
@@ -451,10 +476,12 @@ export function HorizontalMenu({
     if (pendingSubmenuItemRef.current) {
       // Si el submenú ya está abierto, aplicar inmediatamente
       if (activeSubmenu) {
-        const activeItem = items.find(item => item.id === activeSubmenu);
+        const activeItem = items.find((item) => item.id === activeSubmenu);
         if (activeItem && activeItem.submenu && !activeItem.columns) {
           // Verificar que el item pendiente realmente existe en el submenú
-          const itemExists = activeItem.submenu.some(subitem => subitem.id === pendingSubmenuItemRef.current);
+          const itemExists = activeItem.submenu.some(
+            (subitem) => subitem.id === pendingSubmenuItemRef.current,
+          );
           if (itemExists) {
             // Es un submenú simple, está abierto y el item existe - aplicar inmediatamente
             setActiveSubmenuItem(pendingSubmenuItemRef.current);
@@ -484,7 +511,9 @@ export function HorizontalMenu({
     ) {
       // Buscar el primer item que tenga submenu o columns
       const firstItemWithSubmenu = items.find(
-        (item) => (item.submenu && item.submenu.length > 0) || (item.columns && item.columns.length > 0)
+        (item) =>
+          (item.submenu && item.submenu.length > 0) ||
+          (item.columns && item.columns.length > 0),
       );
 
       if (firstItemWithSubmenu) {
@@ -500,10 +529,19 @@ export function HorizontalMenu({
     if (item.submenu && item.submenu.length > 0) {
       // Medir posición del elemento antes de abrir el submenú
       if (menuItemRefs.current[item.id]) {
-        menuItemRefs.current[item.id].measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-          // Usar x (posición relativa al ScrollView) en lugar de pageX (posición absoluta)
-          setSubmenuPosition({ left: x });
-        });
+        menuItemRefs.current[item.id].measure(
+          (
+            x: number,
+            y: number,
+            width: number,
+            height: number,
+            pageX: number,
+            pageY: number,
+          ) => {
+            // Usar x (posición relativa al ScrollView) en lugar de pageX (posición absoluta)
+            setSubmenuPosition({ left: x });
+          },
+        );
       }
       // Si el submenú ya está abierto, cerrarlo (toggle)
       // Si está cerrado, abrirlo
@@ -519,10 +557,19 @@ export function HorizontalMenu({
     } else if (item.columns && item.columns.length > 0) {
       // Medir posición del elemento antes de abrir el mega menú
       if (menuItemRefs.current[item.id]) {
-        menuItemRefs.current[item.id].measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-          // Usar x (posición relativa al ScrollView) en lugar de pageX (posición absoluta)
-          setSubmenuPosition({ left: x });
-        });
+        menuItemRefs.current[item.id].measure(
+          (
+            x: number,
+            y: number,
+            width: number,
+            height: number,
+            pageX: number,
+            pageY: number,
+          ) => {
+            // Usar x (posición relativa al ScrollView) en lugar de pageX (posición absoluta)
+            setSubmenuPosition({ left: x });
+          },
+        );
       }
       // Si el mega menú ya está abierto, cerrarlo (toggle)
       // Si está cerrado, abrirlo
@@ -555,27 +602,27 @@ export function HorizontalMenu({
   const handleSubmenuItemPress = (item: MenuItem, parentId: string) => {
     // IMPORTANTE: Marcar que acabamos de hacer click para prevenir que el useEffect limpie el estado
     justClickedRef.current = true;
-    
+
     // 1. Guardar la ruta y el itemId esperados ANTES de navegar
     if (item.route) {
       pendingRouteRef.current = item.route;
     }
     pendingItemIdRef.current = item.id;
-    
+
     // 2. Establecer el item activo inmediatamente para feedback visual
     setActiveSubmenuItem(item.id);
-    
+
     // 3. Asegurar que el submenú/mega menú permanezca abierto
     // Esto es crítico - igual que con columnas, el menú debe permanecer visible
     if (parentId) {
       // Buscar el item padre para mantener su submenú abierto
-      const parentItem = items.find(i => i.id === parentId);
+      const parentItem = items.find((i) => i.id === parentId);
       if (parentItem && (parentItem.submenu || parentItem.columns)) {
         setActiveSubmenu(parentItem.id);
         setActiveMenuItem(parentItem.id);
       }
     }
-    
+
     // 4. Ejecutar callbacks de navegación DESPUÉS de establecer el estado
     // Esto asegura que el estado visual se establezca antes de que cambie el pathname
     if (item.onPress) {
@@ -590,7 +637,7 @@ export function HorizontalMenu({
 
     // Cerrar cualquier menú desplegado al navegar (desktop/tablet)
     setActiveSubmenu(null);
-    
+
     // Resetear el flag después de un delay más largo para asegurar que el useEffect no limpie
     setTimeout(() => {
       justClickedRef.current = false;
@@ -599,7 +646,7 @@ export function HorizontalMenu({
 
   const handleMouseEnter = (itemId: string) => {
     // Solo funciona en web
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       if (hoverTimeout) {
         clearTimeout(hoverTimeout);
         setHoverTimeout(null);
@@ -610,9 +657,18 @@ export function HorizontalMenu({
       }
       // Medir posición del elemento antes de abrir el submenú
       if (menuItemRefs.current[itemId]) {
-        menuItemRefs.current[itemId].measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-          setSubmenuPosition({ left: x });
-        });
+        menuItemRefs.current[itemId].measure(
+          (
+            x: number,
+            y: number,
+            width: number,
+            height: number,
+            pageX: number,
+            pageY: number,
+          ) => {
+            setSubmenuPosition({ left: x });
+          },
+        );
       }
       setActiveSubmenu(itemId);
     }
@@ -620,7 +676,7 @@ export function HorizontalMenu({
 
   const handleMouseLeave = () => {
     // Solo funciona en web
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       if (hoverTimeout) {
         clearTimeout(hoverTimeout);
       }
@@ -633,7 +689,7 @@ export function HorizontalMenu({
 
   const handleSubmenuMouseEnter = () => {
     // Solo funciona en web
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       if (hoverTimeout) {
         clearTimeout(hoverTimeout);
         setHoverTimeout(null);
@@ -650,15 +706,15 @@ export function HorizontalMenu({
     if (activeSubmenu) {
       const handleDocumentClick = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
-        if (target && !target.closest('[data-menu-container]')) {
+        if (target && !target.closest("[data-menu-container]")) {
           setActiveSubmenu(null);
         }
       };
-      
-      if (Platform.OS === 'web') {
-        document.addEventListener('click', handleDocumentClick);
+
+      if (Platform.OS === "web") {
+        document.addEventListener("click", handleDocumentClick);
         return () => {
-          document.removeEventListener('click', handleDocumentClick);
+          document.removeEventListener("click", handleDocumentClick);
         };
       }
     }
@@ -680,44 +736,64 @@ export function HorizontalMenu({
 
   // Función auxiliar recursiva para renderizar solo los hijos de un item (sin el botón principal)
   // Se usa cuando un item tiene hijos y queremos renderizarlos recursivamente
-  const renderMobileMenuItemChildren = (item: MenuItem, level: number, parentId: string): React.ReactNode => {
+  const renderMobileMenuItemChildren = (
+    item: MenuItem,
+    level: number,
+    parentId: string,
+  ): React.ReactNode => {
     const isRouteMatch = (pathname: string, route: string): boolean => {
       if (!route) return false;
-      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, "");
+      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, "");
       if (normalizedPath === normalizedRoute) return true;
-      if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-      if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-      return normalizedPath.includes('/' + normalizedRoute + '/');
+      if (normalizedPath.startsWith(normalizedRoute + "/")) return true;
+      if (normalizedPath.endsWith("/" + normalizedRoute)) return true;
+      return normalizedPath.includes("/" + normalizedRoute + "/");
     };
 
     return (
       <View style={{ marginLeft: 16 }}>
         {item.submenu && item.submenu.length > 0 && (
-          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+          <View
+            style={[
+              styles.submenuContainer,
+              { backgroundColor: colors.surface },
+            ]}
+          >
             {item.submenu.map((subItem) => {
-              const subIsActive = activeSubmenuItem === subItem.id || 
-                                 (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
+              const subIsActive =
+                activeSubmenuItem === subItem.id ||
+                (subItem.route &&
+                  pathname &&
+                  isRouteMatch(pathname, subItem.route));
               return (
                 <View key={subItem.id}>
                   <TouchableOpacity
                     style={[
                       styles.submenuItem,
-                      subIsActive && styles.activeSubmenuItem
+                      subIsActive && styles.activeSubmenuItem,
                     ]}
                     onPress={() => handleSubmenuItemPress(subItem, parentId)}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
                       {subItem.icon && (
                         <DynamicIcon
                           name={subItem.icon}
                           size={16}
-                          color={subIsActive ? activeItemColor : colors.textSecondary}
+                          color={
+                            subIsActive ? activeItemColor : colors.textSecondary
+                          }
                         />
                       )}
-                      <ThemedText 
-                        type="body2" 
-                        style={{ 
+                      <ThemedText
+                        type="body2"
+                        style={{
                           color: subIsActive ? activeItemColor : colors.text,
                           opacity: subIsActive ? 1 : 0.8,
                         }}
@@ -727,43 +803,73 @@ export function HorizontalMenu({
                     </View>
                   </TouchableOpacity>
                   {/* Renderizar recursivamente si tiene hijos */}
-                  {(subItem.submenu || subItem.columns) && renderMobileMenuItemChildren(subItem, level + 1, subItem.id)}
+                  {(subItem.submenu || subItem.columns) &&
+                    renderMobileMenuItemChildren(
+                      subItem,
+                      level + 1,
+                      subItem.id,
+                    )}
                 </View>
               );
             })}
           </View>
         )}
         {item.columns && item.columns.length > 0 && (
-          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+          <View
+            style={[
+              styles.submenuContainer,
+              { backgroundColor: colors.surface },
+            ]}
+          >
             {item.columns.map((column, colIdx) => (
               <View key={colIdx} style={styles.mobileColumn}>
-                <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={styles.mobileColumnTitle}
+                >
                   {column.title}
                 </ThemedText>
                 {column.items.map((colItem) => {
-                  const colIsActive = activeSubmenuItem === colItem.id || 
-                                     (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                  const colIsActive =
+                    activeSubmenuItem === colItem.id ||
+                    (colItem.route &&
+                      pathname &&
+                      isRouteMatch(pathname, colItem.route));
                   return (
                     <View key={colItem.id}>
                       <TouchableOpacity
                         style={[
                           styles.submenuItem,
-                          colIsActive && styles.activeSubmenuItem
+                          colIsActive && styles.activeSubmenuItem,
                         ]}
-                        onPress={() => handleSubmenuItemPress(colItem, parentId)}
+                        onPress={() =>
+                          handleSubmenuItemPress(colItem, parentId)
+                        }
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "flex-start",
+                            gap: 8,
+                          }}
+                        >
                           {colItem.icon && (
                             <DynamicIcon
                               name={colItem.icon}
                               size={16}
-                              color={colIsActive ? activeItemColor : colors.textSecondary}
+                              color={
+                                colIsActive
+                                  ? activeItemColor
+                                  : colors.textSecondary
+                              }
                             />
                           )}
-                          <ThemedText 
-                            type="body2" 
-                            style={{ 
-                              color: colIsActive ? activeItemColor : colors.text,
+                          <ThemedText
+                            type="body2"
+                            style={{
+                              color: colIsActive
+                                ? activeItemColor
+                                : colors.text,
                               opacity: colIsActive ? 1 : 0.8,
                             }}
                           >
@@ -772,7 +878,12 @@ export function HorizontalMenu({
                         </View>
                       </TouchableOpacity>
                       {/* Renderizar recursivamente si tiene hijos */}
-                      {(colItem.submenu || colItem.columns) && renderMobileMenuItemChildren(colItem, level + 1, colItem.id)}
+                      {(colItem.submenu || colItem.columns) &&
+                        renderMobileMenuItemChildren(
+                          colItem,
+                          level + 1,
+                          colItem.id,
+                        )}
                     </View>
                   );
                 })}
@@ -786,71 +897,103 @@ export function HorizontalMenu({
 
   // Función recursiva para renderizar items del menú móvil
   // Soporta items con submenu y columns anidados a cualquier nivel
-  const renderMobileMenuItem = (item: MenuItem, level: number = 0, parentId?: string): React.ReactNode => {
+  const renderMobileMenuItem = (
+    item: MenuItem,
+    level: number = 0,
+    parentId?: string,
+  ): React.ReactNode => {
     const isRouteMatch = (pathname: string, route: string): boolean => {
       if (!route) return false;
-      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, "");
+      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, "");
       if (normalizedPath === normalizedRoute) return true;
-      if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-      if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-      return normalizedPath.includes('/' + normalizedRoute + '/');
+      if (normalizedPath.startsWith(normalizedRoute + "/")) return true;
+      if (normalizedPath.endsWith("/" + normalizedRoute)) return true;
+      return normalizedPath.includes("/" + normalizedRoute + "/");
     };
-    
-    const isActive = activeMenuItem === item.id || 
-                     (item.route && pathname && isRouteMatch(pathname, item.route));
-    
+
+    const isActive =
+      activeMenuItem === item.id ||
+      (item.route && pathname && isRouteMatch(pathname, item.route));
+
     // Verificar si algún hijo está activo (recursivamente)
     const hasActiveChild = (() => {
       if (item.submenu && item.submenu.length > 0) {
-        return item.submenu.some(subItem => {
-          const subIsActive = activeSubmenuItem === subItem.id || 
-                             (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
-          return subIsActive || (subItem.submenu && subItem.submenu.some(s => hasActiveChild.call({ submenu: [s] }))) ||
-                 (subItem.columns && subItem.columns.some(col => col.items.some(i => hasActiveChild.call({ submenu: [i] }))));
+        return item.submenu.some((subItem) => {
+          const subIsActive =
+            activeSubmenuItem === subItem.id ||
+            (subItem.route &&
+              pathname &&
+              isRouteMatch(pathname, subItem.route));
+          return (
+            subIsActive ||
+            (subItem.submenu &&
+              subItem.submenu.some((s) =>
+                hasActiveChild.call({ submenu: [s] }),
+              )) ||
+            (subItem.columns &&
+              subItem.columns.some((col) =>
+                col.items.some((i) => hasActiveChild.call({ submenu: [i] })),
+              ))
+          );
         });
       }
       if (item.columns && item.columns.length > 0) {
-        return item.columns.some(column =>
-          column.items.some(subItem => {
-            const subIsActive = activeSubmenuItem === subItem.id || 
-                               (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
-            return subIsActive || (subItem.submenu && subItem.submenu.some(s => hasActiveChild.call({ submenu: [s] }))) ||
-                   (subItem.columns && subItem.columns.some(col => col.items.some(i => hasActiveChild.call({ submenu: [i] }))));
-          })
+        return item.columns.some((column) =>
+          column.items.some((subItem) => {
+            const subIsActive =
+              activeSubmenuItem === subItem.id ||
+              (subItem.route &&
+                pathname &&
+                isRouteMatch(pathname, subItem.route));
+            return (
+              subIsActive ||
+              (subItem.submenu &&
+                subItem.submenu.some((s) =>
+                  hasActiveChild.call({ submenu: [s] }),
+                )) ||
+              (subItem.columns &&
+                subItem.columns.some((col) =>
+                  col.items.some((i) => hasActiveChild.call({ submenu: [i] })),
+                ))
+            );
+          }),
         );
       }
       return false;
     })();
-    
+
     const hasActiveChildSimplified = (() => {
       const checkItem = (it: MenuItem): boolean => {
-        const itemActive = activeSubmenuItem === it.id || 
-                          (it.route && pathname && isRouteMatch(pathname, it.route));
+        const itemActive =
+          activeSubmenuItem === it.id ||
+          (it.route && pathname && isRouteMatch(pathname, it.route));
         if (itemActive) return true;
         if (it.submenu && it.submenu.length > 0) {
           return it.submenu.some(checkItem);
         }
         if (it.columns && it.columns.length > 0) {
-          return it.columns.some(col => col.items.some(checkItem));
+          return it.columns.some((col) => col.items.some(checkItem));
         }
         return false;
       };
       return checkItem(item);
     })();
-    
-    const hasChildren = (item.submenu && item.submenu.length > 0) || (item.columns && item.columns.length > 0);
+
+    const hasChildren =
+      (item.submenu && item.submenu.length > 0) ||
+      (item.columns && item.columns.length > 0);
     const isExpanded = activeSubmenu === item.id;
     const isItemActive = isActive || hasActiveChildSimplified;
-    
+
     return (
       <View key={item.id} style={{ marginLeft: level * 16 }}>
         <TouchableOpacity
           style={[
             styles.mobileMenuItem,
             { borderBottomColor: colors.border },
-            isItemActive && { 
-              backgroundColor: activeItemColor + '15',
+            isItemActive && {
+              backgroundColor: activeItemColor + "15",
               borderLeftWidth: 3,
               borderLeftColor: activeItemColor,
               paddingLeft: 13,
@@ -859,15 +1002,22 @@ export function HorizontalMenu({
           onPress={() => handleItemPress(item)}
           activeOpacity={0.7}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              flex: 1,
+            }}
+          >
             <DynamicIcon
-              name={item.icon || 'ellipse-outline'}
+              name={item.icon || "ellipse-outline"}
               size={20}
               color={isItemActive ? activeItemColor : colors.textSecondary}
             />
-            <ThemedText 
+            <ThemedText
               type="body2"
-              style={{ 
+              style={{
                 color: isItemActive ? activeItemColor : colors.text,
                 flex: 1,
               }}
@@ -876,7 +1026,7 @@ export function HorizontalMenu({
             </ThemedText>
             {hasChildren && (
               <Ionicons
-                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                name={isExpanded ? "chevron-up" : "chevron-down"}
                 size={16}
                 color={colors.textSecondary}
                 style={{ opacity: 0.6 }}
@@ -887,30 +1037,48 @@ export function HorizontalMenu({
 
         {/* Renderizar submenu recursivamente si está expandido */}
         {isExpanded && item.submenu && item.submenu.length > 0 && (
-          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+          <View
+            style={[
+              styles.submenuContainer,
+              { backgroundColor: colors.surface },
+            ]}
+          >
             {item.submenu.map((subItem) => {
-              const subIsActive = activeSubmenuItem === subItem.id || 
-                                 (subItem.route && pathname && isRouteMatch(pathname, subItem.route));
+              const subIsActive =
+                activeSubmenuItem === subItem.id ||
+                (subItem.route &&
+                  pathname &&
+                  isRouteMatch(pathname, subItem.route));
               return (
                 <View key={subItem.id}>
                   <TouchableOpacity
                     style={[
                       styles.submenuItem,
-                      subIsActive && styles.activeSubmenuItem
+                      subIsActive && styles.activeSubmenuItem,
                     ]}
-                    onPress={() => handleSubmenuItemPress(subItem, parentId || item.id)}
+                    onPress={() =>
+                      handleSubmenuItemPress(subItem, parentId || item.id)
+                    }
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
                       {subItem.icon && (
                         <DynamicIcon
                           name={subItem.icon}
                           size={16}
-                          color={subIsActive ? activeItemColor : colors.textSecondary}
+                          color={
+                            subIsActive ? activeItemColor : colors.textSecondary
+                          }
                         />
                       )}
-                      <ThemedText 
-                        type="body2" 
-                        style={{ 
+                      <ThemedText
+                        type="body2"
+                        style={{
                           color: subIsActive ? activeItemColor : colors.text,
                           opacity: subIsActive ? 1 : 0.8,
                         }}
@@ -923,31 +1091,56 @@ export function HorizontalMenu({
                   {isExpanded && (subItem.submenu || subItem.columns) && (
                     <View style={{ marginLeft: 16 }}>
                       {subItem.submenu && subItem.submenu.length > 0 && (
-                        <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                        <View
+                          style={[
+                            styles.submenuContainer,
+                            { backgroundColor: colors.surface },
+                          ]}
+                        >
                           {subItem.submenu.map((nestedItem) => {
-                            const nestedIsActive = activeSubmenuItem === nestedItem.id || 
-                                                   (nestedItem.route && pathname && isRouteMatch(pathname, nestedItem.route));
+                            const nestedIsActive =
+                              activeSubmenuItem === nestedItem.id ||
+                              (nestedItem.route &&
+                                pathname &&
+                                isRouteMatch(pathname, nestedItem.route));
                             return (
                               <View key={nestedItem.id}>
                                 <TouchableOpacity
                                   style={[
                                     styles.submenuItem,
-                                    nestedIsActive && styles.activeSubmenuItem
+                                    nestedIsActive && styles.activeSubmenuItem,
                                   ]}
-                                  onPress={() => handleSubmenuItemPress(nestedItem, subItem.id)}
+                                  onPress={() =>
+                                    handleSubmenuItemPress(
+                                      nestedItem,
+                                      subItem.id,
+                                    )
+                                  }
                                 >
-                                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                  <View
+                                    style={{
+                                      flexDirection: "row",
+                                      alignItems: "flex-start",
+                                      gap: 8,
+                                    }}
+                                  >
                                     {nestedItem.icon && (
                                       <DynamicIcon
                                         name={nestedItem.icon}
                                         size={16}
-                                        color={nestedIsActive ? activeItemColor : colors.textSecondary}
+                                        color={
+                                          nestedIsActive
+                                            ? activeItemColor
+                                            : colors.textSecondary
+                                        }
                                       />
                                     )}
-                                    <ThemedText 
-                                      type="body2" 
-                                      style={{ 
-                                        color: nestedIsActive ? activeItemColor : colors.text,
+                                    <ThemedText
+                                      type="body2"
+                                      style={{
+                                        color: nestedIsActive
+                                          ? activeItemColor
+                                          : colors.text,
                                         opacity: nestedIsActive ? 1 : 0.8,
                                       }}
                                     >
@@ -958,23 +1151,58 @@ export function HorizontalMenu({
                                 {/* Continuar recursivamente si tiene más hijos */}
                                 {(nestedItem.submenu || nestedItem.columns) && (
                                   <View style={{ marginLeft: 16 }}>
-                                    {nestedItem.submenu && nestedItem.submenu.length > 0 && (
-                                      <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
-                                        {nestedItem.submenu.map((deepItem) => renderMobileMenuItem(deepItem, level + 3, nestedItem.id))}
-                                      </View>
-                                    )}
-                                    {nestedItem.columns && nestedItem.columns.length > 0 && (
-                                      <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
-                                        {nestedItem.columns.map((deepColumn, deepColIdx) => (
-                                          <View key={deepColIdx} style={styles.mobileColumn}>
-                                            <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
-                                              {deepColumn.title}
-                                            </ThemedText>
-                                            {deepColumn.items.map((deepColItem) => renderMobileMenuItem(deepColItem, level + 3, nestedItem.id))}
-                                          </View>
-                                        ))}
-                                      </View>
-                                    )}
+                                    {nestedItem.submenu &&
+                                      nestedItem.submenu.length > 0 && (
+                                        <View
+                                          style={[
+                                            styles.submenuContainer,
+                                            { backgroundColor: colors.surface },
+                                          ]}
+                                        >
+                                          {nestedItem.submenu.map((deepItem) =>
+                                            renderMobileMenuItem(
+                                              deepItem,
+                                              level + 3,
+                                              nestedItem.id,
+                                            ),
+                                          )}
+                                        </View>
+                                      )}
+                                    {nestedItem.columns &&
+                                      nestedItem.columns.length > 0 && (
+                                        <View
+                                          style={[
+                                            styles.submenuContainer,
+                                            { backgroundColor: colors.surface },
+                                          ]}
+                                        >
+                                          {nestedItem.columns.map(
+                                            (deepColumn, deepColIdx) => (
+                                              <View
+                                                key={deepColIdx}
+                                                style={styles.mobileColumn}
+                                              >
+                                                <ThemedText
+                                                  type="defaultSemiBold"
+                                                  style={
+                                                    styles.mobileColumnTitle
+                                                  }
+                                                >
+                                                  {deepColumn.title}
+                                                </ThemedText>
+                                                {deepColumn.items.map(
+                                                  (deepColItem) =>
+                                                    renderMobileMenuItem(
+                                                      deepColItem,
+                                                      level + 3,
+                                                      nestedItem.id,
+                                                    ),
+                                                )}
+                                              </View>
+                                            ),
+                                          )}
+                                        </View>
+                                      )}
                                   </View>
                                 )}
                               </View>
@@ -983,37 +1211,74 @@ export function HorizontalMenu({
                         </View>
                       )}
                       {subItem.columns && subItem.columns.length > 0 && (
-                        <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+                        <View
+                          style={[
+                            styles.submenuContainer,
+                            { backgroundColor: colors.surface },
+                          ]}
+                        >
                           {subItem.columns.map((nestedColumn, nestedColIdx) => (
-                            <View key={nestedColIdx} style={styles.mobileColumn}>
-                              <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                            <View
+                              key={nestedColIdx}
+                              style={styles.mobileColumn}
+                            >
+                              <ThemedText
+                                type="defaultSemiBold"
+                                style={styles.mobileColumnTitle}
+                              >
                                 {nestedColumn.title}
                               </ThemedText>
                               {nestedColumn.items.map((nestedColItem) => {
-                                const nestedColIsActive = activeSubmenuItem === nestedColItem.id || 
-                                                          (nestedColItem.route && pathname && isRouteMatch(pathname, nestedColItem.route));
+                                const nestedColIsActive =
+                                  activeSubmenuItem === nestedColItem.id ||
+                                  (nestedColItem.route &&
+                                    pathname &&
+                                    isRouteMatch(
+                                      pathname,
+                                      nestedColItem.route,
+                                    ));
                                 return (
                                   <View key={nestedColItem.id}>
                                     <TouchableOpacity
                                       style={[
                                         styles.submenuItem,
-                                        nestedColIsActive && styles.activeSubmenuItem
+                                        nestedColIsActive &&
+                                          styles.activeSubmenuItem,
                                       ]}
-                                      onPress={() => handleSubmenuItemPress(nestedColItem, subItem.id)}
+                                      onPress={() =>
+                                        handleSubmenuItemPress(
+                                          nestedColItem,
+                                          subItem.id,
+                                        )
+                                      }
                                     >
-                                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                      <View
+                                        style={{
+                                          flexDirection: "row",
+                                          alignItems: "flex-start",
+                                          gap: 8,
+                                        }}
+                                      >
                                         {nestedColItem.icon && (
                                           <DynamicIcon
                                             name={nestedColItem.icon}
                                             size={16}
-                                            color={nestedColIsActive ? activeItemColor : colors.textSecondary}
+                                            color={
+                                              nestedColIsActive
+                                                ? activeItemColor
+                                                : colors.textSecondary
+                                            }
                                           />
                                         )}
-                                        <ThemedText 
-                                          type="body2" 
-                                          style={{ 
-                                            color: nestedColIsActive ? activeItemColor : colors.text,
-                                            opacity: nestedColIsActive ? 1 : 0.8,
+                                        <ThemedText
+                                          type="body2"
+                                          style={{
+                                            color: nestedColIsActive
+                                              ? activeItemColor
+                                              : colors.text,
+                                            opacity: nestedColIsActive
+                                              ? 1
+                                              : 0.8,
                                           }}
                                         >
                                           {nestedColItem.label}
@@ -1021,25 +1286,68 @@ export function HorizontalMenu({
                                       </View>
                                     </TouchableOpacity>
                                     {/* Continuar recursivamente si tiene más hijos */}
-                                    {(nestedColItem.submenu || nestedColItem.columns) && (
+                                    {(nestedColItem.submenu ||
+                                      nestedColItem.columns) && (
                                       <View style={{ marginLeft: 16 }}>
-                                        {nestedColItem.submenu && nestedColItem.submenu.length > 0 && (
-                                          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
-                                            {nestedColItem.submenu.map((deepItem) => renderMobileMenuItem(deepItem, level + 3, nestedColItem.id))}
-                                          </View>
-                                        )}
-                                        {nestedColItem.columns && nestedColItem.columns.length > 0 && (
-                                          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
-                                            {nestedColItem.columns.map((deepColumn, deepColIdx) => (
-                                              <View key={deepColIdx} style={styles.mobileColumn}>
-                                                <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
-                                                  {deepColumn.title}
-                                                </ThemedText>
-                                                {deepColumn.items.map((deepColItem) => renderMobileMenuItem(deepColItem, level + 3, nestedColItem.id))}
-                                              </View>
-                                            ))}
-                                          </View>
-                                        )}
+                                        {nestedColItem.submenu &&
+                                          nestedColItem.submenu.length > 0 && (
+                                            <View
+                                              style={[
+                                                styles.submenuContainer,
+                                                {
+                                                  backgroundColor:
+                                                    colors.surface,
+                                                },
+                                              ]}
+                                            >
+                                              {nestedColItem.submenu.map(
+                                                (deepItem) =>
+                                                  renderMobileMenuItem(
+                                                    deepItem,
+                                                    level + 3,
+                                                    nestedColItem.id,
+                                                  ),
+                                              )}
+                                            </View>
+                                          )}
+                                        {nestedColItem.columns &&
+                                          nestedColItem.columns.length > 0 && (
+                                            <View
+                                              style={[
+                                                styles.submenuContainer,
+                                                {
+                                                  backgroundColor:
+                                                    colors.surface,
+                                                },
+                                              ]}
+                                            >
+                                              {nestedColItem.columns.map(
+                                                (deepColumn, deepColIdx) => (
+                                                  <View
+                                                    key={deepColIdx}
+                                                    style={styles.mobileColumn}
+                                                  >
+                                                    <ThemedText
+                                                      type="defaultSemiBold"
+                                                      style={
+                                                        styles.mobileColumnTitle
+                                                      }
+                                                    >
+                                                      {deepColumn.title}
+                                                    </ThemedText>
+                                                    {deepColumn.items.map(
+                                                      (deepColItem) =>
+                                                        renderMobileMenuItem(
+                                                          deepColItem,
+                                                          level + 3,
+                                                          nestedColItem.id,
+                                                        ),
+                                                    )}
+                                                  </View>
+                                                ),
+                                              )}
+                                            </View>
+                                          )}
                                       </View>
                                     )}
                                   </View>
@@ -1059,36 +1367,61 @@ export function HorizontalMenu({
 
         {/* Renderizar columns recursivamente si está expandido - mostrar todos los niveles cuando está expandido */}
         {isExpanded && item.columns && item.columns.length > 0 && (
-          <View style={[styles.submenuContainer, { backgroundColor: colors.surface }]}>
+          <View
+            style={[
+              styles.submenuContainer,
+              { backgroundColor: colors.surface },
+            ]}
+          >
             {item.columns.map((column, colIdx) => (
               <View key={colIdx} style={styles.mobileColumn}>
-                <ThemedText type="defaultSemiBold" style={styles.mobileColumnTitle}>
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={styles.mobileColumnTitle}
+                >
                   {column.title}
                 </ThemedText>
                 {column.items.map((colItem) => {
-                  const colIsActive = activeSubmenuItem === colItem.id || 
-                                     (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                  const colIsActive =
+                    activeSubmenuItem === colItem.id ||
+                    (colItem.route &&
+                      pathname &&
+                      isRouteMatch(pathname, colItem.route));
                   return (
                     <View key={colItem.id}>
                       <TouchableOpacity
                         style={[
                           styles.submenuItem,
-                          colIsActive && styles.activeSubmenuItem
+                          colIsActive && styles.activeSubmenuItem,
                         ]}
-                        onPress={() => handleSubmenuItemPress(colItem, parentId || item.id)}
+                        onPress={() =>
+                          handleSubmenuItemPress(colItem, parentId || item.id)
+                        }
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "flex-start",
+                            gap: 8,
+                          }}
+                        >
                           {colItem.icon && (
                             <DynamicIcon
                               name={colItem.icon}
                               size={16}
-                              color={colIsActive ? activeItemColor : colors.textSecondary}
+                              color={
+                                colIsActive
+                                  ? activeItemColor
+                                  : colors.textSecondary
+                              }
                             />
                           )}
-                          <ThemedText 
-                            type="body2" 
-                            style={{ 
-                              color: colIsActive ? activeItemColor : colors.text,
+                          <ThemedText
+                            type="body2"
+                            style={{
+                              color: colIsActive
+                                ? activeItemColor
+                                : colors.text,
                               opacity: colIsActive ? 1 : 0.8,
                             }}
                           >
@@ -1097,7 +1430,12 @@ export function HorizontalMenu({
                         </View>
                       </TouchableOpacity>
                       {/* Renderizar recursivamente si tiene hijos - cuando el padre principal está expandido, mostrar todos los niveles */}
-                      {(colItem.submenu || colItem.columns) && renderMobileMenuItemChildren(colItem, level + 1, colItem.id)}
+                      {(colItem.submenu || colItem.columns) &&
+                        renderMobileMenuItemChildren(
+                          colItem,
+                          level + 1,
+                          colItem.id,
+                        )}
                     </View>
                   );
                 })}
@@ -1127,10 +1465,7 @@ export function HorizontalMenu({
           visible={mobileMenuOpen}
           onRequestClose={closeMobileMenu}
         >
-          <Pressable
-            style={styles.mobileMenuOverlay}
-            onPress={closeMobileMenu}
-          >
+          <Pressable style={styles.mobileMenuOverlay} onPress={closeMobileMenu}>
             <Animated.View
               style={[
                 styles.mobileMenuContainer,
@@ -1142,176 +1477,267 @@ export function HorizontalMenu({
             >
               <Pressable
                 onPress={(e) => e.stopPropagation()}
-                style={{ flex: 1 }}
+                style={{ flex: 1, flexDirection: "column" }}
               >
-              {/* Header con avatar y botón cerrar */}
-              <View style={[styles.mobileMenuHeader, { borderBottomColor: colors.border }]}>
-                {/* Avatar del usuario */}
-                {user ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <View style={[styles.mobileAvatar, { backgroundColor: colors.primary }]}>
-                      <ThemedText style={[styles.mobileAvatarText, { color: '#FFFFFF' }]}>
-                        {(() => {
-                          const firstName = user?.firstName?.trim() || '';
-                          const lastName = user?.lastName?.trim() || '';
-                          if (firstName && lastName) {
-                            return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
-                          }
-                          if (firstName) return firstName.charAt(0).toUpperCase();
-                          if (lastName) return lastName.charAt(0).toUpperCase();
-                          if (user?.email) return user.email.charAt(0).toUpperCase();
-                          return 'U';
-                        })()}
-                      </ThemedText>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText type="body1" style={{ fontWeight: '600', color: colors.text }}>
-                        {(() => {
-                          const firstName = user?.firstName?.trim() || '';
-                          const lastName = user?.lastName?.trim() || '';
-                          if (firstName && lastName) return `${firstName} ${lastName}`;
-                          if (firstName) return firstName;
-                          if (lastName) return lastName;
-                          return user?.email || 'Usuario';
-                        })()}
-                      </ThemedText>
-                      {user?.email && (
-                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
-                          {user.email}
-                        </ThemedText>
-                      )}
-                    </View>
-                  </View>
-                ) : (
-                  <View style={{ flex: 1 }} />
-                )}
-                <TouchableOpacity onPress={closeMobileMenu} style={{ padding: 4 }}>
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Input de búsqueda para móvil */}
-              <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <View style={{ position: 'relative' }}>
-                  <Ionicons
-                    name="search"
-                    size={18}
-                    color={colors.textSecondary}
-                    style={{ position: 'absolute', left: 10, top: 10, zIndex: 1 }}
-                  />
-                  {searchValue.length > 0 && (
+                <View style={{ flex: 1 }}>
+                  {/* Header con avatar y botón cerrar */}
+                  <View
+                    style={[
+                      styles.mobileMenuHeader,
+                      { borderBottomColor: colors.border },
+                    ]}
+                  >
+                    {/* Avatar del usuario */}
+                    {user ? (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 12,
+                          flex: 1,
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.mobileAvatar,
+                            { backgroundColor: colors.primary },
+                          ]}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.mobileAvatarText,
+                              { color: "#FFFFFF" },
+                            ]}
+                          >
+                            {(() => {
+                              const firstName = user?.firstName?.trim() || "";
+                              const lastName = user?.lastName?.trim() || "";
+                              if (firstName && lastName) {
+                                return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
+                              }
+                              if (firstName)
+                                return firstName.charAt(0).toUpperCase();
+                              if (lastName)
+                                return lastName.charAt(0).toUpperCase();
+                              if (user?.email)
+                                return user.email.charAt(0).toUpperCase();
+                              return "U";
+                            })()}
+                          </ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <ThemedText
+                            type="body1"
+                            style={{ fontWeight: "600", color: colors.text }}
+                          >
+                            {(() => {
+                              const firstName = user?.firstName?.trim() || "";
+                              const lastName = user?.lastName?.trim() || "";
+                              if (firstName && lastName)
+                                return `${firstName} ${lastName}`;
+                              if (firstName) return firstName;
+                              if (lastName) return lastName;
+                              return user?.email || "Usuario";
+                            })()}
+                          </ThemedText>
+                          {user?.email && (
+                            <ThemedText
+                              type="caption"
+                              style={{
+                                color: colors.textSecondary,
+                                marginTop: 2,
+                              }}
+                            >
+                              {user.email}
+                            </ThemedText>
+                          )}
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={{ flex: 1 }} />
+                    )}
                     <TouchableOpacity
-                      onPress={() => setSearchValue('')}
-                      style={{ position: 'absolute', right: 10, top: 8, zIndex: 1, padding: 4 }}
-                      activeOpacity={0.7}
+                      onPress={closeMobileMenu}
+                      style={{ padding: 4 }}
                     >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Input de búsqueda para móvil */}
+                  <View
+                    style={{
+                      padding: 12,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                    }}
+                  >
+                    <View style={{ position: "relative" }}>
                       <Ionicons
-                        name="close-circle"
+                        name="search"
                         size={18}
                         color={colors.textSecondary}
+                        style={{
+                          position: "absolute",
+                          left: 10,
+                          top: 10,
+                          zIndex: 1,
+                        }}
                       />
-                    </TouchableOpacity>
-                  )}
-                  <InputWithFocus
-                    containerStyle={{
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderRadius: 6,
-                      backgroundColor: colors.background,
-                      paddingLeft: 36,
-                      paddingRight: searchValue.length > 0 ? 36 : 10,
-                      height: 36,
-                    }}
-                    primaryColor={colors.primary}
-                  >
-                    <TextInput
-                      placeholder="Buscar..."
-                      value={searchValue}
-                      onChangeText={setSearchValue}
-                      style={{
-                        padding: 8,
-                        color: colors.text,
-                        fontSize: 14,
-                      }}
-                      placeholderTextColor={colors.textSecondary}
-                    />
-                  </InputWithFocus>
-                </View>
-              </View>
+                      {searchValue.length > 0 && (
+                        <TouchableOpacity
+                          onPress={() => setSearchValue("")}
+                          style={{
+                            position: "absolute",
+                            right: 10,
+                            top: 8,
+                            zIndex: 1,
+                            padding: 4,
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={18}
+                            color={colors.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      )}
+                      <InputWithFocus
+                        containerStyle={{
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 6,
+                          backgroundColor: colors.background,
+                          paddingLeft: 36,
+                          paddingRight: searchValue.length > 0 ? 36 : 10,
+                          height: 36,
+                        }}
+                        primaryColor={colors.primary}
+                      >
+                        <TextInput
+                          placeholder="Buscar..."
+                          value={searchValue}
+                          onChangeText={setSearchValue}
+                          style={{
+                            padding: 8,
+                            color: colors.text,
+                            fontSize: 14,
+                          }}
+                          placeholderTextColor={colors.textSecondary}
+                        />
+                      </InputWithFocus>
+                    </View>
+                  </View>
 
-              <ScrollView style={styles.mobileMenuContent}>
-                {(() => {
-                  // Función para filtrar recursivamente items y sus hijos
-                  const filterItemRecursively = (item: MenuItem, searchLower: string): MenuItem | null => {
-                    const itemMatches = 
-                      item.label.toLowerCase().includes(searchLower) ||
-                      item.route?.toLowerCase().includes(searchLower) ||
-                      item.description?.toLowerCase().includes(searchLower);
-                    
-                    let filteredSubmenu: MenuItem[] | undefined;
-                    if (item.submenu && item.submenu.length > 0) {
-                      filteredSubmenu = item.submenu
-                        .map(subItem => filterItemRecursively(subItem, searchLower))
-                        .filter((subItem): subItem is MenuItem => subItem !== null);
-                    }
-                    
-                    let filteredColumns: MenuColumn[] | undefined;
-                    if (item.columns && item.columns.length > 0) {
-                      filteredColumns = item.columns
-                        .map(col => {
-                          const filteredColItems = col.items
-                            .map(colItem => filterItemRecursively(colItem, searchLower))
-                            .filter((colItem): colItem is MenuItem => colItem !== null);
-                          
-                          if (filteredColItems.length > 0) {
-                            return {
-                              ...col,
-                              items: filteredColItems,
-                            };
+                  <ScrollView style={styles.mobileMenuContent}>
+                    {(() => {
+                      // Función para filtrar recursivamente items y sus hijos
+                      const filterItemRecursively = (
+                        item: MenuItem,
+                        searchLower: string,
+                      ): MenuItem | null => {
+                        const itemMatches =
+                          item.label.toLowerCase().includes(searchLower) ||
+                          item.route?.toLowerCase().includes(searchLower) ||
+                          item.description?.toLowerCase().includes(searchLower);
+
+                        let filteredSubmenu: MenuItem[] | undefined;
+                        if (item.submenu && item.submenu.length > 0) {
+                          filteredSubmenu = item.submenu
+                            .map((subItem) =>
+                              filterItemRecursively(subItem, searchLower),
+                            )
+                            .filter(
+                              (subItem): subItem is MenuItem =>
+                                subItem !== null,
+                            );
+                        }
+
+                        let filteredColumns: MenuColumn[] | undefined;
+                        if (item.columns && item.columns.length > 0) {
+                          filteredColumns = item.columns
+                            .map((col) => {
+                              const filteredColItems = col.items
+                                .map((colItem) =>
+                                  filterItemRecursively(colItem, searchLower),
+                                )
+                                .filter(
+                                  (colItem): colItem is MenuItem =>
+                                    colItem !== null,
+                                );
+
+                              if (filteredColItems.length > 0) {
+                                return {
+                                  ...col,
+                                  items: filteredColItems,
+                                };
+                              }
+                              return null;
+                            })
+                            .filter((col): col is MenuColumn => col !== null);
+
+                          if (filteredColumns.length === 0) {
+                            filteredColumns = undefined;
                           }
-                          return null;
-                        })
-                        .filter((col): col is MenuColumn => col !== null);
-                      
-                      if (filteredColumns.length === 0) {
-                        filteredColumns = undefined;
-                      }
-                    }
-                    
-                    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
-                      return {
-                        ...item,
-                        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
-                        columns: filteredColumns,
+                        }
+
+                        if (
+                          itemMatches ||
+                          (filteredSubmenu && filteredSubmenu.length > 0) ||
+                          (filteredColumns && filteredColumns.length > 0)
+                        ) {
+                          return {
+                            ...item,
+                            submenu:
+                              filteredSubmenu && filteredSubmenu.length > 0
+                                ? filteredSubmenu
+                                : undefined,
+                            columns: filteredColumns,
+                          };
+                        }
+
+                        return null;
                       };
-                    }
-                    
-                    return null;
-                  };
 
-                  // Filtrar items
-                  const filteredItems = items
-                    .map(item => {
-                      if (!searchValue) return item;
-                      const searchLower = searchValue.toLowerCase();
-                      return filterItemRecursively(item, searchLower);
-                    })
-                    .filter((item): item is MenuItem => item !== null);
+                      // Filtrar items
+                      const filteredItems = items
+                        .map((item) => {
+                          if (!searchValue) return item;
+                          const searchLower = searchValue.toLowerCase();
+                          return filterItemRecursively(item, searchLower);
+                        })
+                        .filter((item): item is MenuItem => item !== null);
 
-                  // Usar función recursiva para renderizar todos los items
-                  return filteredItems.map((item) => renderMobileMenuItem(item, 0));
-                })()}
-              </ScrollView>
-              
-              {/* Botón de cambio de tema al final del menú móvil */}
-              <View style={[styles.mobileMenuFooter, { borderTopColor: colors.border }]}>
-                <View style={styles.mobileThemeToggleContainer}>
-                  <ThemedText type="body2" style={{ color: colors.textSecondary, marginRight: 12 }}>
-                    {isDark ? '☀️ Modo claro' : '🌙 Modo oscuro'}
-                  </ThemedText>
-                  <ThemeToggle />
+                      // Usar función recursiva para renderizar todos los items
+                      return filteredItems.map((item) =>
+                        renderMobileMenuItem(item, 0),
+                      );
+                    })()}
+                  </ScrollView>
                 </View>
-              </View>
+
+                {/* Pie fijo: icono y nombre del sistema centrados */}
+                <View
+                  style={[
+                    styles.mobileMenuFooter,
+                    { borderTopColor: colors.border },
+                  ]}
+                >
+                  <Image
+                    source={require("@/assets/images/icon-white.png")}
+                    style={styles.mobileMenuFooterLogo}
+                    resizeMode="contain"
+                  />
+                  <ThemedText
+                    style={[
+                      styles.mobileMenuFooterText,
+                      { color: colors.text },
+                    ]}
+                  >
+                    AIBox
+                  </ThemedText>
+                </View>
               </Pressable>
             </Animated.View>
           </Pressable>
@@ -1322,27 +1748,32 @@ export function HorizontalMenu({
 
   // Desktop/Tablet: Horizontal Menu
   // Filtrar items para desktop primero
-  const filterItemRecursivelyDesktop = (item: MenuItem, searchLower: string): MenuItem | null => {
-    const itemMatches = 
+  const filterItemRecursivelyDesktop = (
+    item: MenuItem,
+    searchLower: string,
+  ): MenuItem | null => {
+    const itemMatches =
       item.label.toLowerCase().includes(searchLower) ||
       item.route?.toLowerCase().includes(searchLower) ||
       item.description?.toLowerCase().includes(searchLower);
-    
+
     let filteredSubmenu: MenuItem[] | undefined;
     if (item.submenu && item.submenu.length > 0) {
       filteredSubmenu = item.submenu
-        .map(subItem => filterItemRecursivelyDesktop(subItem, searchLower))
+        .map((subItem) => filterItemRecursivelyDesktop(subItem, searchLower))
         .filter((subItem): subItem is MenuItem => subItem !== null);
     }
-    
+
     let filteredColumns: MenuColumn[] | undefined;
     if (item.columns && item.columns.length > 0) {
       filteredColumns = item.columns
-        .map(col => {
+        .map((col) => {
           const filteredColItems = col.items
-            .map(colItem => filterItemRecursivelyDesktop(colItem, searchLower))
+            .map((colItem) =>
+              filterItemRecursivelyDesktop(colItem, searchLower),
+            )
             .filter((colItem): colItem is MenuItem => colItem !== null);
-          
+
           if (filteredColItems.length > 0) {
             return {
               ...col,
@@ -1352,32 +1783,41 @@ export function HorizontalMenu({
           return null;
         })
         .filter((col): col is MenuColumn => col !== null);
-      
+
       if (filteredColumns.length === 0) {
         filteredColumns = undefined;
       }
     }
-    
-    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
+
+    if (
+      itemMatches ||
+      (filteredSubmenu && filteredSubmenu.length > 0) ||
+      (filteredColumns && filteredColumns.length > 0)
+    ) {
       return {
         ...item,
-        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
+        submenu:
+          filteredSubmenu && filteredSubmenu.length > 0
+            ? filteredSubmenu
+            : undefined,
         columns: filteredColumns,
       };
     }
-    
+
     return null;
   };
 
   const filteredItemsDesktop = items
-    .map(item => {
+    .map((item) => {
       if (!desktopSearchValue) return item;
       const searchLower = desktopSearchValue.toLowerCase();
       return filterItemRecursivelyDesktop(item, searchLower);
     })
     .filter((item): item is MenuItem => item !== null);
 
-  const activeItem = filteredItemsDesktop.find(item => item.id === activeSubmenu) || items.find(item => item.id === activeSubmenu);
+  const activeItem =
+    filteredItemsDesktop.find((item) => item.id === activeSubmenu) ||
+    items.find((item) => item.id === activeSubmenu);
 
   const searchWidthAnim = useRef(new Animated.Value(0)).current;
 
@@ -1390,18 +1830,21 @@ export function HorizontalMenu({
   }, [desktopSearchExpanded, searchWidthAnim]);
 
   return (
-    <View 
-      style={[styles.desktopContainer, { flexDirection: 'row', alignItems: 'center' }]} 
+    <View
+      style={[
+        styles.desktopContainer,
+        { flexDirection: "row", alignItems: "center" },
+      ]}
       data-menu-container="true"
     >
       {/* Icono de búsqueda expandible */}
       <Animated.View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
           height: 40,
           marginRight: 8,
-          overflow: 'hidden',
+          overflow: "hidden",
           width: searchWidthAnim.interpolate({
             inputRange: [0, 1],
             outputRange: [40, 250],
@@ -1409,17 +1852,30 @@ export function HorizontalMenu({
         }}
       >
         {desktopSearchExpanded ? (
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              position: "relative",
+            }}
+          >
             <Ionicons
               name="search"
               size={18}
               color={colors.textSecondary}
-              style={{ position: 'absolute', left: 10, top: 11, zIndex: 1 }}
+              style={{ position: "absolute", left: 10, top: 11, zIndex: 1 }}
             />
             {desktopSearchValue.length > 0 && (
               <TouchableOpacity
-                onPress={() => setDesktopSearchValue('')}
-                style={{ position: 'absolute', right: 10, top: 9, zIndex: 1, padding: 4 }}
+                onPress={() => setDesktopSearchValue("")}
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: 9,
+                  zIndex: 1,
+                  padding: 4,
+                }}
                 activeOpacity={0.7}
               >
                 <Ionicons
@@ -1467,16 +1923,12 @@ export function HorizontalMenu({
             style={{
               width: 40,
               height: 40,
-              justifyContent: 'center',
-              alignItems: 'center',
+              justifyContent: "center",
+              alignItems: "center",
             }}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="search"
-              size={20}
-              color={colors.textSecondary}
-            />
+            <Ionicons name="search" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -1498,7 +1950,8 @@ export function HorizontalMenu({
             }}
             style={[
               styles.horizontalMenuItem,
-              (activeMenuItem === item.id || activeSubmenu === item.id) && styles.activeMenuItem,
+              (activeMenuItem === item.id || activeSubmenu === item.id) &&
+                styles.activeMenuItem,
             ]}
             onPress={() => handleItemPress(item)}
             activeOpacity={0.7}
@@ -1508,7 +1961,7 @@ export function HorizontalMenu({
             </ThemedText>
             {(item.submenu || item.columns) && (
               <ThemedText style={styles.dropdownIndicator}>
-                {activeSubmenu === item.id ? '▲' : '▼'}
+                {activeSubmenu === item.id ? "▲" : "▼"}
               </ThemedText>
             )}
           </TouchableOpacity>
@@ -1519,14 +1972,19 @@ export function HorizontalMenu({
       {activeSubmenu && activeItem && (
         <>
           {/* Si tiene tanto submenu como columns, mostrar estilo vertical combinado */}
-          {activeItem.submenu && activeItem.submenu.length > 0 && activeItem.columns && activeItem.columns.length > 0 ? (
+          {activeItem.submenu &&
+          activeItem.submenu.length > 0 &&
+          activeItem.columns &&
+          activeItem.columns.length > 0 ? (
             <View
               style={[
                 styles.megaMenu,
                 {
                   backgroundColor: colors.background,
                   borderColor: colors.border,
-                  ...(Platform.OS === 'web' ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' } : { shadowColor: colors.text }),
+                  ...(Platform.OS === "web"
+                    ? { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)" }
+                    : { shadowColor: colors.text }),
                   left: submenuPosition.left,
                   maxWidth: 400,
                 },
@@ -1535,48 +1993,64 @@ export function HorizontalMenu({
               <ScrollView style={{ maxHeight: 600 }}>
                 {/* Primero mostrar los subitems como items individuales */}
                 {activeItem.submenu.map((subitem) => {
-                  const isRouteMatch = (pathname: string, route: string): boolean => {
+                  const isRouteMatch = (
+                    pathname: string,
+                    route: string,
+                  ): boolean => {
                     if (!route) return false;
-                    const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                    const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                    const normalizedPath = pathname
+                      .toLowerCase()
+                      .replace(/^\/+|\/+$/g, "");
+                    const normalizedRoute = route
+                      .toLowerCase()
+                      .replace(/^\/+|\/+$/g, "");
                     if (normalizedPath === normalizedRoute) return true;
-                    if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                    if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                    return normalizedPath.includes('/' + normalizedRoute + '/');
+                    if (normalizedPath.startsWith(normalizedRoute + "/"))
+                      return true;
+                    if (normalizedPath.endsWith("/" + normalizedRoute))
+                      return true;
+                    return normalizedPath.includes("/" + normalizedRoute + "/");
                   };
-                  
-                  const isActive = activeSubmenuItem === subitem.id || 
-                                   (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                  
+
+                  const isActive =
+                    activeSubmenuItem === subitem.id ||
+                    (subitem.route &&
+                      pathname &&
+                      isRouteMatch(pathname, subitem.route));
+
                   return (
                     <TouchableOpacity
                       key={subitem.id}
                       style={[
                         {
-                          flexDirection: 'row',
-                          alignItems: 'center',
+                          flexDirection: "row",
+                          alignItems: "center",
                           paddingVertical: 12,
                           paddingHorizontal: 16,
                           borderBottomWidth: 1,
                           borderBottomColor: colors.border,
                         },
-                        isActive && styles.activeSubmenuItem
+                        isActive && styles.activeSubmenuItem,
                       ]}
-                      onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                      onPress={() =>
+                        handleSubmenuItemPress(subitem, activeItem.id)
+                      }
                     >
                       {subitem.icon && (
                         <DynamicIcon
                           name={subitem.icon}
                           size={18}
-                          color={isActive ? activeItemColor : colors.textSecondary}
+                          color={
+                            isActive ? activeItemColor : colors.textSecondary
+                          }
                           style={{ marginRight: 12 }}
                         />
                       )}
-                      <ThemedText 
-                        type="body2" 
-                        style={{ 
+                      <ThemedText
+                        type="body2"
+                        style={{
                           color: isActive ? activeItemColor : colors.text,
-                          fontWeight: isActive ? '600' : '400',
+                          fontWeight: isActive ? "600" : "400",
                         }}
                       >
                         {subitem.label}
@@ -1587,16 +2061,19 @@ export function HorizontalMenu({
 
                 {/* Luego mostrar las columns como agrupamientos */}
                 {activeItem.columns.map((column, colIdx) => (
-                  <View key={colIdx} style={{ marginTop: colIdx === 0 ? 8 : 16 }}>
+                  <View
+                    key={colIdx}
+                    style={{ marginTop: colIdx === 0 ? 8 : 16 }}
+                  >
                     {/* Título del agrupamiento en mayúsculas */}
                     <ThemedText
                       type="caption"
                       style={{
                         color: colors.textSecondary,
-                        fontWeight: '700',
+                        fontWeight: "700",
                         fontSize: 11,
                         letterSpacing: 0.5,
-                        textTransform: 'uppercase',
+                        textTransform: "uppercase",
                         paddingHorizontal: 16,
                         paddingTop: 8,
                         paddingBottom: 4,
@@ -1604,52 +2081,77 @@ export function HorizontalMenu({
                     >
                       {column.title}
                     </ThemedText>
-                    
+
                     {/* Items del agrupamiento */}
                     {column.items.map((subitem) => {
-                      const isRouteMatch = (pathname: string, route: string): boolean => {
+                      const isRouteMatch = (
+                        pathname: string,
+                        route: string,
+                      ): boolean => {
                         if (!route) return false;
-                        const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                        const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                        const normalizedPath = pathname
+                          .toLowerCase()
+                          .replace(/^\/+|\/+$/g, "");
+                        const normalizedRoute = route
+                          .toLowerCase()
+                          .replace(/^\/+|\/+$/g, "");
                         if (normalizedPath === normalizedRoute) return true;
-                        if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                        if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                        return normalizedPath.includes('/' + normalizedRoute + '/');
+                        if (normalizedPath.startsWith(normalizedRoute + "/"))
+                          return true;
+                        if (normalizedPath.endsWith("/" + normalizedRoute))
+                          return true;
+                        return normalizedPath.includes(
+                          "/" + normalizedRoute + "/",
+                        );
                       };
-                      
-                      const isActive = activeSubmenuItem === subitem.id || 
-                                       (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                      
+
+                      const isActive =
+                        activeSubmenuItem === subitem.id ||
+                        (subitem.route &&
+                          pathname &&
+                          isRouteMatch(pathname, subitem.route));
+
                       return (
                         <TouchableOpacity
                           key={subitem.id}
                           style={[
                             {
-                              flexDirection: 'row',
-                              alignItems: 'center',
+                              flexDirection: "row",
+                              alignItems: "center",
                               paddingVertical: 10,
                               paddingHorizontal: 16,
                               paddingLeft: 24,
-                              borderBottomWidth: colIdx === activeItem.columns!.length - 1 && subitem === column.items[column.items.length - 1] ? 0 : 1,
+                              borderBottomWidth:
+                                colIdx === activeItem.columns!.length - 1 &&
+                                subitem ===
+                                  column.items[column.items.length - 1]
+                                  ? 0
+                                  : 1,
                               borderBottomColor: colors.border,
                             },
-                            isActive && styles.activeSubmenuItem
+                            isActive && styles.activeSubmenuItem,
                           ]}
-                          onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                          onPress={() =>
+                            handleSubmenuItemPress(subitem, activeItem.id)
+                          }
                         >
                           {subitem.icon && (
                             <DynamicIcon
                               name={subitem.icon}
                               size={16}
-                              color={isActive ? activeItemColor : colors.textSecondary}
+                              color={
+                                isActive
+                                  ? activeItemColor
+                                  : colors.textSecondary
+                              }
                               style={{ marginRight: 12 }}
                             />
                           )}
-                          <ThemedText 
-                            type="body2" 
-                            style={{ 
+                          <ThemedText
+                            type="body2"
+                            style={{
                               color: isActive ? activeItemColor : colors.text,
-                              fontWeight: isActive ? '600' : '400',
+                              fontWeight: isActive ? "600" : "400",
                             }}
                           >
                             {subitem.label}
@@ -1671,7 +2173,9 @@ export function HorizontalMenu({
                     {
                       backgroundColor: colors.background,
                       borderColor: colors.border,
-                      ...(Platform.OS === 'web' ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' } : { shadowColor: colors.text }),
+                      ...(Platform.OS === "web"
+                        ? { boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)" }
+                        : { shadowColor: colors.text }),
                       left: submenuPosition.left,
                     },
                   ]}
@@ -1689,45 +2193,80 @@ export function HorizontalMenu({
                           {column.title}
                         </ThemedText>
                         <View
-                          style={[styles.megaMenuColumnLine, { backgroundColor: colors.border }]}
+                          style={[
+                            styles.megaMenuColumnLine,
+                            { backgroundColor: colors.border },
+                          ]}
                         />
                         {column.items.map((subitem) => {
-                          const isRouteMatch = (pathname: string, route: string): boolean => {
+                          const isRouteMatch = (
+                            pathname: string,
+                            route: string,
+                          ): boolean => {
                             if (!route) return false;
-                            const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                            const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                            const normalizedPath = pathname
+                              .toLowerCase()
+                              .replace(/^\/+|\/+$/g, "");
+                            const normalizedRoute = route
+                              .toLowerCase()
+                              .replace(/^\/+|\/+$/g, "");
                             if (normalizedPath === normalizedRoute) return true;
-                            if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                            if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                            return normalizedPath.includes('/' + normalizedRoute + '/');
+                            if (
+                              normalizedPath.startsWith(normalizedRoute + "/")
+                            )
+                              return true;
+                            if (normalizedPath.endsWith("/" + normalizedRoute))
+                              return true;
+                            return normalizedPath.includes(
+                              "/" + normalizedRoute + "/",
+                            );
                           };
-                          
-                          const isActive = activeSubmenuItem === subitem.id || 
-                                           (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                          
+
+                          const isActive =
+                            activeSubmenuItem === subitem.id ||
+                            (subitem.route &&
+                              pathname &&
+                              isRouteMatch(pathname, subitem.route));
+
                           return (
                             <TouchableOpacity
                               key={subitem.id}
                               style={[
-                                styles.megaMenuItem, 
+                                styles.megaMenuItem,
                                 { borderBottomColor: colors.border },
-                                isActive && styles.activeMegaMenuItem
+                                isActive && styles.activeMegaMenuItem,
                               ]}
-                              onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                              onPress={() =>
+                                handleSubmenuItemPress(subitem, activeItem.id)
+                              }
                             >
-                              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "flex-start",
+                                  gap: 8,
+                                }}
+                              >
                                 {subitem.icon && (
                                   <DynamicIcon
                                     name={subitem.icon}
                                     size={16}
-                                    color={isActive ? activeItemColor : colors.textSecondary}
+                                    color={
+                                      isActive
+                                        ? activeItemColor
+                                        : colors.textSecondary
+                                    }
                                   />
                                 )}
-                                <ThemedText 
-                                  type="body2" 
+                                <ThemedText
+                                  type="body2"
                                   style={[
                                     styles.megaMenuItemText,
-                                    { color: isActive ? activeItemColor : colors.text }
+                                    {
+                                      color: isActive
+                                        ? activeItemColor
+                                        : colors.text,
+                                    },
                                   ]}
                                 >
                                   {subitem.label}
@@ -1750,55 +2289,90 @@ export function HorizontalMenu({
                     {
                       backgroundColor: colors.background,
                       borderColor: colors.border,
-                      ...(Platform.OS === 'web' ? { boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' } : { shadowColor: colors.text }),
+                      ...(Platform.OS === "web"
+                        ? { boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)" }
+                        : { shadowColor: colors.text }),
                       left: submenuPosition.left,
                     },
                   ]}
                 >
                   {activeItem.submenu.map((subitem) => {
-                    const isRouteMatch = (pathname: string, route: string): boolean => {
+                    const isRouteMatch = (
+                      pathname: string,
+                      route: string,
+                    ): boolean => {
                       if (!route) return false;
-                      const normalizedPath = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
-                      const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+                      const normalizedPath = pathname
+                        .toLowerCase()
+                        .replace(/^\/+|\/+$/g, "");
+                      const normalizedRoute = route
+                        .toLowerCase()
+                        .replace(/^\/+|\/+$/g, "");
                       if (normalizedPath === normalizedRoute) return true;
-                      if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-                      if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-                      return normalizedPath.includes('/' + normalizedRoute + '/');
+                      if (normalizedPath.startsWith(normalizedRoute + "/"))
+                        return true;
+                      if (normalizedPath.endsWith("/" + normalizedRoute))
+                        return true;
+                      return normalizedPath.includes(
+                        "/" + normalizedRoute + "/",
+                      );
                     };
-                    
-                    const isActive = activeSubmenuItem === subitem.id || 
-                                     (subitem.route && pathname && isRouteMatch(pathname, subitem.route));
-                    
+
+                    const isActive =
+                      activeSubmenuItem === subitem.id ||
+                      (subitem.route &&
+                        pathname &&
+                        isRouteMatch(pathname, subitem.route));
+
                     return (
                       <TouchableOpacity
                         key={subitem.id}
                         style={[
-                          styles.desktopSubmenuItem, 
+                          styles.desktopSubmenuItem,
                           { borderBottomColor: colors.border },
-                          isActive && styles.activeSubmenuItem
+                          isActive && styles.activeSubmenuItem,
                         ]}
-                        onPress={() => handleSubmenuItemPress(subitem, activeItem.id)}
+                        onPress={() =>
+                          handleSubmenuItemPress(subitem, activeItem.id)
+                        }
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "flex-start",
+                            gap: 8,
+                          }}
+                        >
                           {subitem.icon && (
                             <DynamicIcon
                               name={subitem.icon}
                               size={18}
-                              color={isActive ? activeItemColor : colors.textSecondary}
+                              color={
+                                isActive
+                                  ? activeItemColor
+                                  : colors.textSecondary
+                              }
                             />
                           )}
                           <View style={{ flex: 1 }}>
-                            <ThemedText 
-                              type="defaultSemiBold" 
+                            <ThemedText
+                              type="defaultSemiBold"
                               style={[
                                 styles.submenuItemTitle,
-                                { color: isActive ? activeItemColor : colors.text }
+                                {
+                                  color: isActive
+                                    ? activeItemColor
+                                    : colors.text,
+                                },
                               ]}
                             >
                               {subitem.label}
                             </ThemedText>
                             {subitem.description && (
-                              <ThemedText type="caption" style={styles.submenuItemDescription}>
+                              <ThemedText
+                                type="caption"
+                                style={styles.submenuItemDescription}
+                              >
                                 {subitem.description}
                               </ThemedText>
                             )}
