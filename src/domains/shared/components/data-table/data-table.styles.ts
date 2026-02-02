@@ -3,15 +3,15 @@
  * Reestructurado para mejor distribución de columnas
  */
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from "react-native";
 
 export const createDataTableStyles = (isMobile: boolean = false) =>
   StyleSheet.create({
     container: {
       flex: 1,
       borderRadius: 12,
-      overflow: 'hidden',
-      width: '100%',
+      overflow: "hidden",
+      width: "100%",
       minHeight: 400,
       padding: 0,
       paddingHorizontal: 0,
@@ -20,30 +20,30 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
     },
     horizontalScrollContainer: {
       flex: 1,
-      width: '100%',
+      width: "100%",
       minHeight: 0, // Permite que el scroll funcione correctamente
     },
     horizontalScrollContent: {
-      minWidth: '100%',
+      minWidth: "100%",
       flexGrow: 1,
     },
     tableWrapper: {
       flex: 1,
-      minWidth: '100%',
+      minWidth: "100%",
       minHeight: 0, // Permite que el scroll funcione correctamente
     },
     loadingContainer: {
       padding: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     loadingText: {
       marginTop: 16,
     },
     emptyContainer: {
       padding: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     emptyText: {
       marginTop: 16,
@@ -53,51 +53,51 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
     },
     headerRow: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      minWidth: '100%',
-      width: '100%',
+      flexDirection: "row",
+      alignItems: "stretch",
+      minWidth: "100%",
+      width: "100%",
     },
     headerCell: {
       paddingVertical: 12,
       paddingHorizontal: isMobile ? 12 : 16,
       borderRightWidth: 1,
-      justifyContent: 'center',
+      justifyContent: "center",
       minHeight: 48,
       zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
     },
     headerCellCenter: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     headerCellRight: {
-      alignItems: 'flex-end',
+      alignItems: "flex-end",
     },
     headerText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     body: {
       flex: 1,
       minHeight: 0, // Importante para que el scroll funcione correctamente
     },
     row: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
+      flexDirection: "row",
+      alignItems: "stretch",
       borderBottomWidth: 1,
       minHeight: 56,
-      width: '100%',
+      width: "100%",
     },
     stripedRow: {
-      backgroundColor: 'rgba(0, 0, 0, 0.02)',
+      backgroundColor: "rgba(0, 0, 0, 0.02)",
     },
     cell: {
       paddingVertical: 12,
       paddingHorizontal: isMobile ? 12 : 16,
       borderRightWidth: 1,
-      justifyContent: 'center',
+      justifyContent: "center",
       minHeight: 56,
       // Permitir que las celdas crezcan según el contenido
-      alignItems: 'stretch',
+      alignItems: "stretch",
     },
     cellFirst: {
       paddingLeft: isMobile ? 16 : 16,
@@ -106,62 +106,60 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       paddingRight: isMobile ? 16 : 16,
     },
     cellCenter: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     cellRight: {
-      alignItems: 'flex-end',
+      alignItems: "flex-end",
     },
     cellText: {
       fontSize: 14,
     },
     pagination: {
-      flexDirection: 'row',
-      justifyContent: isMobile ? 'space-between' : 'space-between',
-      alignItems: 'center',
-      flexWrap: isMobile ? 'wrap' : 'nowrap',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flexWrap: "nowrap",
       padding: isMobile ? 8 : 16,
       paddingHorizontal: isMobile ? 8 : 16,
       borderTopWidth: 1,
       gap: isMobile ? 8 : 16,
-      flexShrink: 0, // La paginación no se comprime
+      flexShrink: 0,
     },
     paginationInfo: {
       flex: 1,
       minWidth: isMobile ? 140 : 150,
     },
+    /** En móvil: esquina izquierda (Showing X-Y of Z). */
     paginationInfoMobile: {
-      flexGrow: 1,
-      width: '100%',
-      marginBottom: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingBottom: 10,
+      flexShrink: 0,
+      alignItems: "flex-start",
+      justifyContent: "center",
     },
     paginationControls: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: isMobile ? 8 : 16,
-      flexWrap: 'wrap',
+      flexWrap: "wrap",
       flexShrink: 1,
     },
+    /** En móvil: al lado derecho (Page X of Y + botones). */
     paginationControlsMobile: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      alignItems: "center",
       gap: 8,
-      flexGrow: 1,
-      flexBasis: 'auto',
+      flexShrink: 0,
     },
     limitSelector: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: isMobile ? 4 : 8,
     },
     limitLabel: {
       fontSize: isMobile ? 12 : 14,
     },
     limitOptions: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 4,
     },
     limitOption: {
@@ -170,23 +168,23 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       borderRadius: 6,
       borderWidth: 1,
       minWidth: isMobile ? 32 : 40,
-      alignItems: 'center',
+      alignItems: "center",
     },
     pageButtons: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: isMobile ? 4 : 8,
       flexShrink: 0,
     },
     pageButtonsMobile: {
-      marginLeft: 'auto',
+      marginLeft: "auto",
     },
     pageButton: {
       padding: isMobile ? 6 : 8,
       borderRadius: 6,
       borderWidth: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       minWidth: isMobile ? 32 : 36,
       minHeight: isMobile ? 32 : 36,
     },
@@ -196,20 +194,19 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
     pageIndicator: {
       paddingHorizontal: isMobile ? 8 : 12,
       minWidth: isMobile ? 80 : 100,
-      alignItems: 'center',
+      alignItems: "center",
     },
     // Estilos para acciones
     actionsContainer: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: isMobile ? 4 : 8,
-      alignItems: 'center',
-      justifyContent: 'flex-end',
+      alignItems: "center",
+      justifyContent: "flex-end",
     },
     actionButton: {
       padding: isMobile ? 6 : 8,
       borderRadius: 6,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
   });
-
