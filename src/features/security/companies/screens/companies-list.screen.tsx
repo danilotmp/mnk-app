@@ -3,37 +3,64 @@
  * Lista de empresas con paginación, búsqueda y filtros
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/ui/button';
-import { InlineAlert } from '@/components/ui/inline-alert';
-import { SideModal } from '@/components/ui/side-modal';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { CompaniesService, CompanyCreateForm, CompanyEditForm } from '@/src/features/security/companies';
-import { Company, CompanyFilters } from '@/src/features/security/companies/types/domain';
-import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
-import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
-import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
-import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
-import { useRouteAccessGuard } from '@/src/infrastructure/access';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
-import { createCompaniesListStyles } from '@/src/styles/pages/companies-list.styles';
-import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/ui/button";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { SideModal } from "@/components/ui/side-modal";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
+import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
+import { SearchFilterBar } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar";
+import { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
+import {
+    CompaniesService,
+    CompanyCreateForm,
+    CompanyEditForm,
+} from "@/src/features/security/companies";
+import {
+    Company,
+    CompanyFilters,
+} from "@/src/features/security/companies/types/domain";
+import { useRouteAccessGuard } from "@/src/infrastructure/access";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { extractErrorInfo } from "@/src/infrastructure/messages/error-utils";
+import { Ionicons } from "@expo/vector-icons";
+import { usePathname } from "expo-router";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { ActivityIndicator, View } from "react-native";
+import { createCompaniesListScreenStyles } from "./companies-list.screen.styles";
 
 export function CompaniesListScreen() {
-  const { colors } = useTheme();
+  const { colors, spacing, typography, pageLayout, borderRadius } = useTheme();
   const { t } = useTranslation();
   const pathname = usePathname();
   const alert = useAlert();
   const { isMobile } = useResponsive();
-  const styles = createCompaniesListStyles(isMobile);
+  const styles = useMemo(
+    () =>
+      createCompaniesListScreenStyles(
+        {
+          colors,
+          spacing,
+          typography,
+          pageLayout,
+          borderRadius,
+        },
+        isMobile,
+      ),
+    [colors, spacing, typography, pageLayout, borderRadius, isMobile],
+  );
   const usersTranslations = (t.security?.users as any) || {};
   const commonTranslations = (t.common as any) || {};
 
@@ -49,11 +76,13 @@ export function CompaniesListScreen() {
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [formActions, setFormActions] = useState<{ 
-    isLoading: boolean; 
-    handleSubmit: () => void; 
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
+    null,
+  );
+  const [formActions, setFormActions] = useState<{
+    isLoading: boolean;
+    handleSubmit: () => void;
     handleCancel: () => void;
     generalError?: { message: string; detail?: string } | null;
   } | null>(null);
@@ -65,93 +94,100 @@ export function CompaniesListScreen() {
     hasNext: false,
     hasPrev: false,
   });
-  const [localFilter, setLocalFilter] = useState(''); // Filtro local para la tabla
+  const [localFilter, setLocalFilter] = useState(""); // Filtro local para la tabla
   const [filters, setFilters] = useState<CompanyFilters>({
     page: 1,
     limit: 10,
-    search: '',
+    search: "",
     status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     code: undefined,
     name: undefined,
     email: undefined,
   });
-  
+
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
-  const filtersSignatureRef = useRef<string>('');
+  const filtersSignatureRef = useRef<string>("");
   const loadCompaniesRef = useRef<(filters: CompanyFilters) => Promise<void>>();
 
   /**
    * Cargar empresas
    */
-  const loadCompanies = useCallback(async (currentFilters: CompanyFilters) => {
-    // Prevenir llamadas simultáneas
-    if (loadingRef.current) {
-      return;
-    }
+  const loadCompanies = useCallback(
+    async (currentFilters: CompanyFilters) => {
+      // Prevenir llamadas simultáneas
+      if (loadingRef.current) {
+        return;
+      }
 
-    try {
-      loadingRef.current = true;
-      setLoading(true);
-      setError(null);
-      setHasError(false);
-      
-      const response = await CompaniesService.getCompanies(currentFilters);
-      
-      // Asegurar que la respuesta tenga la estructura correcta
-      if (response && response.data) {
-        setCompanies(Array.isArray(response.data) ? response.data : []);
-        
-        // Usar meta de la respuesta del backend
-        if (response.meta) {
-          setPagination({
-            page: response.meta.page || currentFilters.page || 1,
-            limit: response.meta.limit || currentFilters.limit || 10,
-            total: response.meta.total || 0,
-            totalPages: response.meta.totalPages || 0,
-            hasNext: response.meta.hasNext || false,
-            hasPrev: response.meta.hasPrev || false,
-          });
+      try {
+        loadingRef.current = true;
+        setLoading(true);
+        setError(null);
+        setHasError(false);
+
+        const response = await CompaniesService.getCompanies(currentFilters);
+
+        // Asegurar que la respuesta tenga la estructura correcta
+        if (response && response.data) {
+          setCompanies(Array.isArray(response.data) ? response.data : []);
+
+          // Usar meta de la respuesta del backend
+          if (response.meta) {
+            setPagination({
+              page: response.meta.page || currentFilters.page || 1,
+              limit: response.meta.limit || currentFilters.limit || 10,
+              total: response.meta.total || 0,
+              totalPages: response.meta.totalPages || 0,
+              hasNext: response.meta.hasNext || false,
+              hasPrev: response.meta.hasPrev || false,
+            });
+          } else {
+            setPagination({
+              page: currentFilters.page || 1,
+              limit: currentFilters.limit || 10,
+              total: Array.isArray(response.data) ? response.data.length : 0,
+              totalPages: 1,
+              hasNext: false,
+              hasPrev: false,
+            });
+          }
         } else {
+          setCompanies([]);
           setPagination({
             page: currentFilters.page || 1,
             limit: currentFilters.limit || 10,
-            total: Array.isArray(response.data) ? response.data.length : 0,
-            totalPages: 1,
+            total: 0,
+            totalPages: 0,
             hasNext: false,
             hasPrev: false,
           });
         }
-      } else {
-        setCompanies([]);
-        setPagination({
-          page: currentFilters.page || 1,
-          limit: currentFilters.limit || 10,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        });
-      }
-      
-      setHasError(false);
-    } catch (error: any) {
-      // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
-      // En este caso, establecer hasError para evitar loops infinitos
-      if (handleApiError(error)) {
+
+        setHasError(false);
+      } catch (error: any) {
+        // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
+        // En este caso, establecer hasError para evitar loops infinitos
+        if (handleApiError(error)) {
+          setHasError(true);
+          return;
+        }
+        const { message: errorMessage, detail: detailString } =
+          extractErrorInfo(
+            error,
+            t.security?.companies?.loadError || "Error al cargar empresas",
+          );
+        setError(errorMessage);
         setHasError(true);
-        return;
+        // Mostrar error con detalles
+        alert.showError(errorMessage, false, undefined, detailString, error);
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
       }
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.companies?.loadError || 'Error al cargar empresas');
-      setError(errorMessage);
-      setHasError(true);
-      // Mostrar error con detalles
-      alert.showError(errorMessage, false, undefined, detailString, error);
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, [alert, handleApiError, t]);
+    },
+    [alert, handleApiError, t],
+  );
 
   // Actualizar ref para evitar re-renders
   loadCompaniesRef.current = loadCompanies;
@@ -164,20 +200,20 @@ export function CompaniesListScreen() {
     return JSON.stringify({
       page: filters.page ?? 1,
       limit: filters.limit ?? 10,
-      search: filters.search || '',
+      search: filters.search || "",
       status: filters.status !== undefined ? filters.status : null,
-      code: filters.code || '',
-      name: filters.name || '',
-      email: filters.email || '',
+      code: filters.code || "",
+      name: filters.name || "",
+      email: filters.email || "",
     });
   }, [
     filters.page,
     filters.limit,
-    filters.search || '',
+    filters.search || "",
     filters.status,
-    filters.code || '',
-    filters.name || '',
-    filters.email || '',
+    filters.code || "",
+    filters.name || "",
+    filters.email || "",
   ]);
 
   /**
@@ -190,7 +226,7 @@ export function CompaniesListScreen() {
     if (hasError) {
       return;
     }
-    
+
     if (!isScreenFocused || !hasAccess || accessLoading) {
       return;
     }
@@ -202,7 +238,7 @@ export function CompaniesListScreen() {
 
     // Actualizar signature ANTES de la llamada para evitar llamadas duplicadas
     filtersSignatureRef.current = filtersSignature;
-    
+
     // Usar ref para evitar dependencias en el useEffect
     if (loadCompaniesRef.current) {
       loadCompaniesRef.current(filters);
@@ -240,20 +276,21 @@ export function CompaniesListScreen() {
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
 
-    if (key === 'deleted') {
+    if (key === "deleted") {
       setFilters((prev) => ({
         ...prev,
-        status: value === 'deleted' ? -1 : undefined,
+        status: value === "deleted" ? -1 : undefined,
         page: 1,
       }));
       return;
     }
 
     // Convertir status de string a number si es necesario
-    const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
+    const processedValue =
+      key === "status" && value !== "" ? parseInt(value, 10) : value;
     setFilters((prev) => ({
       ...prev,
-      [key]: value === '' ? undefined : processedValue,
+      [key]: value === "" ? undefined : processedValue,
       page: 1,
     }));
   };
@@ -262,13 +299,13 @@ export function CompaniesListScreen() {
     setFilters({
       page: 1,
       limit: 10,
-      search: '',
+      search: "",
       status: undefined,
       code: undefined,
       name: undefined,
       email: undefined,
     });
-    setLocalFilter(''); // Limpiar también el filtro local
+    setLocalFilter(""); // Limpiar también el filtro local
     setHasError(false);
   };
 
@@ -279,13 +316,13 @@ export function CompaniesListScreen() {
     if (!localFilter.trim()) {
       return companies;
     }
-    
+
     const filterLower = localFilter.toLowerCase().trim();
     return companies.filter((company) => {
-      const code = (company.code || '').toLowerCase();
-      const name = (company.name || '').toLowerCase();
-      const email = (company.email || '').toLowerCase();
-      
+      const code = (company.code || "").toLowerCase();
+      const name = (company.name || "").toLowerCase();
+      const email = (company.email || "").toLowerCase();
+
       return (
         code.includes(filterLower) ||
         name.includes(filterLower) ||
@@ -297,7 +334,7 @@ export function CompaniesListScreen() {
   const handleCreateCompany = () => {
     setFormActions(null);
     setSelectedCompanyId(null);
-    setModalMode('create');
+    setModalMode("create");
     setIsModalVisible(true);
   };
 
@@ -309,7 +346,7 @@ export function CompaniesListScreen() {
   const handleEditCompany = (company: Company) => {
     setFormActions(null);
     setSelectedCompanyId(company.id);
-    setModalMode('edit');
+    setModalMode("edit");
     setIsModalVisible(true);
   };
 
@@ -339,12 +376,15 @@ export function CompaniesListScreen() {
     try {
       await CompaniesService.deleteCompany(company.id);
       await loadCompanies(filters);
-      alert.showSuccess(t.security?.companies?.delete || 'Empresa eliminada');
+      alert.showSuccess(t.security?.companies?.delete || "Empresa eliminada");
     } catch (error: any) {
       if (handleApiError(error)) {
         return;
       }
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al eliminar empresa');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(
+        error,
+        "Error al eliminar empresa",
+      );
       alert.showError(errorMessage, false, undefined, detailString, error);
     }
   };
@@ -354,15 +394,18 @@ export function CompaniesListScreen() {
    */
   const confirmDeleteCompany = (company: Company) => {
     const companiesTranslations = (t.security?.companies as any) || {};
-    const title = companiesTranslations.deleteConfirmTitle || commonTranslations.confirm || 'Eliminar empresa';
+    const title =
+      companiesTranslations.deleteConfirmTitle ||
+      commonTranslations.confirm ||
+      "Eliminar empresa";
     const messageTemplate =
       companiesTranslations.deleteConfirmMessage ||
-      '¿Seguro que deseas eliminar la empresa {name}? Esta acción no se puede deshacer.';
+      "¿Seguro que deseas eliminar la empresa {name}? Esta acción no se puede deshacer.";
 
     // Usar nombre, código o ID como identificador para el mensaje
     const identifier = company.name || company.code || company.id;
-    const message = messageTemplate.includes('{name}')
-      ? messageTemplate.replace('{name}', identifier)
+    const message = messageTemplate.includes("{name}")
+      ? messageTemplate.replace("{name}", identifier)
       : messageTemplate;
 
     // Mostrar diálogo de confirmación y ejecutar eliminación si se confirma
@@ -371,28 +414,28 @@ export function CompaniesListScreen() {
 
   const columns: TableColumn<Company>[] = [
     {
-      key: 'code',
-      label: t.security?.companies?.code || 'Código',
-      width: '18%',
+      key: "code",
+      label: t.security?.companies?.code || "Código",
+      width: "18%",
     },
     {
-      key: 'name',
-      label: t.security?.companies?.name || 'Nombre',
-      width: '28%',
+      key: "name",
+      label: t.security?.companies?.name || "Nombre",
+      width: "28%",
     },
     {
-      key: 'email',
-      label: t.security?.companies?.email || 'Email',
-      width: '26%',
+      key: "email",
+      label: t.security?.companies?.email || "Email",
+      width: "26%",
     },
     {
-      key: 'status',
-      label: t.security?.users?.status || 'Estado',
-      width: '18%',
-      align: 'center',
+      key: "status",
+      label: t.security?.users?.status || "Estado",
+      width: "18%",
+      align: "center",
       render: (company) => (
-        <StatusBadge 
-          status={company.status} 
+        <StatusBadge
+          status={company.status}
           statusDescription={company.statusDescription}
           size="small"
         />
@@ -402,26 +445,42 @@ export function CompaniesListScreen() {
 
   const filterConfigs: FilterConfig[] = [
     {
-      key: 'status',
-      label: t.security?.users?.status || 'Estado',
-      type: 'select',
+      key: "status",
+      label: t.security?.users?.status || "Estado",
+      type: "select",
       options: [
-        { key: 'all', value: '', label: t.common?.all || 'Todos' },
-        { key: 'active', value: '1', label: t.security?.users?.active || 'Activo' },
-        { key: 'inactive', value: '0', label: t.security?.users?.inactive || 'Inactivo' },
-        { key: 'pending', value: '2', label: t.security?.users?.pending || 'Pendiente' },
-        { key: 'suspended', value: '3', label: t.security?.users?.suspended || 'Suspendido' },
+        { key: "all", value: "", label: t.common?.all || "Todos" },
+        {
+          key: "active",
+          value: "1",
+          label: t.security?.users?.active || "Activo",
+        },
+        {
+          key: "inactive",
+          value: "0",
+          label: t.security?.users?.inactive || "Inactivo",
+        },
+        {
+          key: "pending",
+          value: "2",
+          label: t.security?.users?.pending || "Pendiente",
+        },
+        {
+          key: "suspended",
+          value: "3",
+          label: t.security?.users?.suspended || "Suspendido",
+        },
       ],
     },
     {
-      key: 'deleted',
-      label: t.security?.companies?.deletedFilter || 'Empresas',
-      type: 'select',
+      key: "deleted",
+      label: t.security?.companies?.deletedFilter || "Empresas",
+      type: "select",
       options: [
         {
-          key: 'deleted',
-          value: 'deleted',
-          label: t.security?.companies?.deletedUser || 'Eliminadas',
+          key: "deleted",
+          value: "deleted",
+          label: t.security?.companies?.deletedUser || "Eliminadas",
         },
       ],
     },
@@ -429,9 +488,13 @@ export function CompaniesListScreen() {
 
   if (accessLoading) {
     return (
-      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ThemedView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
-        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+        <ThemedText style={{ marginTop: 12 }}>
+          {t.common?.loading || "Cargando..."}
+        </ThemedText>
       </ThemedView>
     );
   }
@@ -442,25 +505,48 @@ export function CompaniesListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.content}>
+      <View style={[styles.content, isMobile && styles.contentMobile]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTitle}>
-            <ThemedText type="h3" style={styles.title}>
-              {t.security?.companies?.title || 'Administración de Empresas'}
-            </ThemedText>
-            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-              {t.security?.companies?.subtitle || 'Gestiona las empresas registradas en el sistema'}
+            <View style={styles.headerRow}>
+              <DynamicIcon
+                name="Ionicons:business"
+                size={
+                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                }
+                color={colors.primary}
+                style={styles.headerIcon}
+              />
+              <ThemedText
+                type="h1"
+                style={isMobile ? styles.titleMobile : styles.title}
+              >
+                {t.security?.companies?.title || "Administración de Empresas"}
+              </ThemedText>
+            </View>
+            <ThemedText type="body1" style={styles.subtitle}>
+              {t.security?.companies?.subtitle ||
+                "Gestiona las empresas registradas en el sistema"}
             </ThemedText>
           </View>
-          <Button
-            title={isMobile ? '' : (t.security?.companies?.create || 'Crear Empresa')}
-            onPress={handleCreateCompany}
-            variant="primary"
-            size="md"
-          >
-            <Ionicons name="add" size={20} color="#FFFFFF" style={!isMobile ? { marginRight: 8 } : undefined} />
-          </Button>
+          <View style={styles.actionsContainer}>
+            <Button
+              title={
+                isMobile ? "" : t.security?.companies?.create || "Crear Empresa"
+              }
+              onPress={handleCreateCompany}
+              variant="primary"
+              size="md"
+            >
+              <Ionicons
+                name="add"
+                size={20}
+                color="#FFFFFF"
+                style={!isMobile ? { marginRight: spacing.sm } : undefined}
+              />
+            </Button>
+          </View>
         </View>
 
         {/* Barra de búsqueda y filtros */}
@@ -468,19 +554,27 @@ export function CompaniesListScreen() {
           filterValue={localFilter}
           onFilterChange={handleLocalFilterChange}
           onSearchSubmit={handleSearchSubmit}
-          filterPlaceholder={t.security?.companies?.filterPlaceholder || 'Filtrar por código, nombre o email...'}
-          searchPlaceholder={t.security?.companies?.searchPlaceholder || 'Buscar por código, nombre o email...'}
+          filterPlaceholder={
+            t.security?.companies?.filterPlaceholder ||
+            "Filtrar por código, nombre o email..."
+          }
+          searchPlaceholder={
+            t.security?.companies?.searchPlaceholder ||
+            "Buscar por código, nombre o email..."
+          }
           filters={filterConfigs}
           activeFilters={{
             status:
               filters.status !== undefined && filters.status !== -1
                 ? filters.status.toString()
-                : '',
-            deleted: filters.status === -1 ? 'deleted' : '',
+                : "",
+            deleted: filters.status === -1 ? "deleted" : "",
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}
           onClearFilters={handleClearFilters}
-          filteredCount={localFilter.trim() ? filteredCompanies.length : undefined}
+          filteredCount={
+            localFilter.trim() ? filteredCompanies.length : undefined
+          }
           totalCount={pagination.total}
         />
 
@@ -490,20 +584,25 @@ export function CompaniesListScreen() {
             data={filteredCompanies}
             columns={columns}
             loading={loading}
-            emptyMessage={t.security?.companies?.empty || 'No hay empresas disponibles'}
+            emptyMessage={
+              t.security?.companies?.empty || "No hay empresas disponibles"
+            }
             onRowPress={handleEditCompany}
             keyExtractor={(company) => company.id}
             showPagination={true}
-            actionsColumnLabel={t.common?.actions || 'Acciones'}
+            actionsColumnLabel={t.common?.actions || "Acciones"}
             pagination={{
               page: pagination.page,
               limit: pagination.limit,
-              total: localFilter.trim() ? filteredCompanies.length : pagination.total,
-              totalPages: localFilter.trim() 
+              total: localFilter.trim()
+                ? filteredCompanies.length
+                : pagination.total,
+              totalPages: localFilter.trim()
                 ? Math.ceil(filteredCompanies.length / pagination.limit)
                 : pagination.totalPages,
               hasNext: localFilter.trim()
-                ? pagination.page < Math.ceil(filteredCompanies.length / pagination.limit)
+                ? pagination.page <
+                  Math.ceil(filteredCompanies.length / pagination.limit)
                 : pagination.hasNext,
               hasPrev: localFilter.trim()
                 ? pagination.page > 1
@@ -514,11 +613,11 @@ export function CompaniesListScreen() {
             }}
             editAction={{
               onPress: (company) => handleEditCompany(company),
-              tooltip: t.security?.companies?.editShort || 'Editar',
+              tooltip: t.security?.companies?.editShort || "Editar",
             }}
             deleteAction={{
               onPress: (company) => confirmDeleteCompany(company),
-              tooltip: t.security?.companies?.deleteShort || 'Eliminar',
+              tooltip: t.security?.companies?.deleteShort || "Eliminar",
             }}
           />
         </View>
@@ -529,14 +628,16 @@ export function CompaniesListScreen() {
             visible={isModalVisible}
             onClose={handleCloseModal}
             title={
-              modalMode === 'edit'
-                ? t.security?.companies?.edit || 'Editar Empresa'
-                : t.security?.companies?.create || 'Crear Empresa'
+              modalMode === "edit"
+                ? t.security?.companies?.edit || "Editar Empresa"
+                : t.security?.companies?.create || "Crear Empresa"
             }
             subtitle={
-              modalMode === 'edit'
-                ? (t.security?.companies?.editSubtitle || 'Modifica los datos de la empresa')
-                : (t.security?.companies?.createSubtitle || 'Completa los datos para registrar una nueva empresa')
+              modalMode === "edit"
+                ? t.security?.companies?.editSubtitle ||
+                  "Modifica los datos de la empresa"
+                : t.security?.companies?.createSubtitle ||
+                  "Completa los datos para registrar una nueva empresa"
             }
             topAlert={
               formActions?.generalError ? (
@@ -566,9 +667,9 @@ export function CompaniesListScreen() {
                   />
                   <Button
                     title={
-                      modalMode === 'edit'
+                      modalMode === "edit"
                         ? t.common.save
-                        : t.security?.companies?.create || 'Crear Empresa'
+                        : t.security?.companies?.create || "Crear Empresa"
                     }
                     onPress={formActions.handleSubmit}
                     variant="primary"
@@ -579,7 +680,7 @@ export function CompaniesListScreen() {
               ) : null
             }
           >
-            {modalMode === 'edit' && selectedCompanyId ? (
+            {modalMode === "edit" && selectedCompanyId ? (
               <CompanyEditForm
                 companyId={selectedCompanyId}
                 onSuccess={handleFormSuccess}
@@ -589,7 +690,7 @@ export function CompaniesListScreen() {
                 onFormReady={setFormActions}
               />
             ) : null}
-            {modalMode === 'create' ? (
+            {modalMode === "create" ? (
               <CompanyCreateForm
                 onSuccess={handleFormSuccess}
                 onCancel={handleCloseModal}
