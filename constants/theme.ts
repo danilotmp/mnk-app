@@ -371,3 +371,26 @@ export const PageLayout = {
   /** Tamaño de icono junto a subtítulo/cuerpo (smartphone). */
   iconSubtitleMobile: 18,
 };
+
+/**
+ * Estándar para modales de administración (SideModal, CenteredModal).
+ * Basado en el modal "Create User": título y subtítulo correctos; padding de cabecera como referencia.
+ */
+export const ModalLayout = {
+  /** Padding de la cabecera del modal (titulo + subtitulo). Mismo en web y smartphone. */
+  headerPadding: 25,
+  /** Padding de la cabecera en móvil (si se quiere distinto; por defecto igual que headerPadding). */
+  headerPaddingMobile: 25,
+  /** Espacio entre título y subtítulo del modal. */
+  titleSubtitleGap: 4,
+  /** Espacio entre bloque título/subtítulo y botón cerrar. */
+  headerGap: 16,
+  /** Padding del botón cerrar. */
+  closeButtonPadding: 8,
+  /** Border radius del botón cerrar. */
+  closeButtonBorderRadius: 8,
+  /** Padding del footer del modal. */
+  footerPadding: 25,
+  /** Gap entre elementos del footer. */
+  footerGap: 12,
+};

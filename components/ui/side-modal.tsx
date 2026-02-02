@@ -5,13 +5,20 @@
  * Header y footer fijos, solo el contenido hace scroll
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { createSideModalStyles } from '@/src/styles/components/side-modal.styles';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { createSideModalStyles } from "@/src/styles/components/side-modal.styles";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useRef } from "react";
+import {
+    Animated,
+    Modal,
+    Pressable,
+    ScrollView,
+    View,
+    useWindowDimensions,
+} from "react-native";
 
 interface SideModalProps {
   visible: boolean;
@@ -24,23 +31,32 @@ interface SideModalProps {
   topAlert?: React.ReactNode; // Alerta que aparece encima del título del modal
 }
 
-export function SideModal({ visible, onClose, title, subtitle, children, footer, width, topAlert }: SideModalProps) {
-  const { colors, isDark } = useTheme();
+export function SideModal({
+  visible,
+  onClose,
+  title,
+  subtitle,
+  children,
+  footer,
+  width,
+  topAlert,
+}: SideModalProps) {
+  const { colors, isDark, modalLayout } = useTheme();
   const { isMobile } = useResponsive();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const styles = createSideModalStyles(colors, isMobile);
+  const styles = createSideModalStyles({ colors, modalLayout }, isMobile);
   const slideAnim = useRef(new Animated.Value(windowWidth)).current;
 
   // Determinar el ancho por defecto según la plataforma
-  const defaultWidth = isMobile ? '100%' : '33.33%';
+  const defaultWidth = isMobile ? "100%" : "33.33%";
   const effectiveWidth = width || defaultWidth;
 
   // Calcular altura estándar del modal: altura de ventana menos padding arriba y abajo (16px cada uno)
   const modalHeight = windowHeight - 32; // 16px arriba + 16px abajo
 
   // Usar surfaceVariant en modo dark para evitar transparencia, o background si está disponible
-  const modalBackgroundColor = isDark 
-    ? (colors.surfaceVariant || colors.background || '#1E293B')
+  const modalBackgroundColor = isDark
+    ? colors.surfaceVariant || colors.background || "#1E293B"
     : colors.surface;
 
   useEffect(() => {
@@ -61,11 +77,14 @@ export function SideModal({ visible, onClose, title, subtitle, children, footer,
   }, [visible, slideAnim, windowWidth]);
 
   // Calcular el ancho del modal
-  const modalWidth = typeof effectiveWidth === 'string' && effectiveWidth.includes('%')
-    ? (windowWidth * parseFloat(effectiveWidth)) / 100
-    : typeof effectiveWidth === 'number'
-    ? effectiveWidth
-    : isMobile ? windowWidth : windowWidth * 0.3333;
+  const modalWidth =
+    typeof effectiveWidth === "string" && effectiveWidth.includes("%")
+      ? (windowWidth * parseFloat(effectiveWidth)) / 100
+      : typeof effectiveWidth === "number"
+        ? effectiveWidth
+        : isMobile
+          ? windowWidth
+          : windowWidth * 0.3333;
 
   return (
     <Modal
@@ -104,15 +123,17 @@ export function SideModal({ visible, onClose, title, subtitle, children, footer,
                   {title}
                 </ThemedText>
                 {subtitle && (
-                  <ThemedText type="body2" style={{ color: (colors as any).subtitle || colors.textSecondary }}>
+                  <ThemedText
+                    type="body2"
+                    style={{
+                      color: (colors as any).subtitle || colors.textSecondary,
+                    }}
+                  >
                     {subtitle}
                   </ThemedText>
                 )}
               </View>
-              <Pressable
-                style={styles.closeButton}
-                onPress={onClose}
-              >
+              <Pressable style={styles.closeButton} onPress={onClose}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
@@ -139,4 +160,3 @@ export function SideModal({ visible, onClose, title, subtitle, children, footer,
     </Modal>
   );
 }
-

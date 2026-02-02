@@ -2,6 +2,7 @@ import {
     BrandColors,
     DarkTheme,
     LightTheme,
+    ModalLayout,
     PageLayout,
     Typography,
 } from "@/constants/theme";
@@ -20,6 +21,7 @@ export function useTheme() {
     shadows: theme.shadows,
     typography: Typography,
     pageLayout: PageLayout,
+    modalLayout: ModalLayout,
     brandColors: BrandColors,
     isDark,
     isLight: !isDark,
