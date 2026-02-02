@@ -3,44 +3,68 @@
  * Lista de roles con paginación, búsqueda y filtros
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/ui/button';
-import { CenteredModal } from '@/components/ui/centered-modal';
-import { InlineAlert } from '@/components/ui/inline-alert';
-import { SideModal } from '@/components/ui/side-modal';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { RolesService, RoleCreateForm, RoleEditForm } from '@/src/features/security/roles';
-import { RolePermissionsModal } from '@/src/domains/security/components';
-import { PermissionsManagementContent } from '@/src/features/security/permissions/components/permissions-management-content/permissions-management-content';
-import { Role, RoleFilters } from '@/src/features/security/roles/types/domain';
-import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
-import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
-import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
-import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
-import { useRouteAccessGuard } from '@/src/infrastructure/access';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
-import { createRolesListStyles } from '@/src/styles/pages/roles-list.styles';
-import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { useCompanyOptions } from '@/src/domains/security/hooks';
-import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/ui/button";
+import { CenteredModal } from "@/components/ui/centered-modal";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { SideModal } from "@/components/ui/side-modal";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { RolePermissionsModal } from "@/src/domains/security/components";
+import { useCompanyOptions } from "@/src/domains/security/hooks";
+import { DynamicIcon, SearchFilterBar } from "@/src/domains/shared/components";
+import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
+import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
+import { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
+import { useMultiCompany } from "@/src/domains/shared/hooks";
+import { PermissionsManagementContent } from "@/src/features/security/permissions/components/permissions-management-content/permissions-management-content";
+import {
+    RoleCreateForm,
+    RoleEditForm,
+    RolesService,
+} from "@/src/features/security/roles";
+import { Role, RoleFilters } from "@/src/features/security/roles/types/domain";
+import { useRouteAccessGuard } from "@/src/infrastructure/access";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { extractErrorInfo } from "@/src/infrastructure/messages/error-utils";
+import { Ionicons } from "@expo/vector-icons";
+import { usePathname } from "expo-router";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { ActivityIndicator, View } from "react-native";
+import { createRolesListScreenStyles } from "./roles-list.screen.styles";
 
 export function RolesListScreen() {
-  const { colors } = useTheme();
+  const { colors, spacing, typography, pageLayout, borderRadius } = useTheme();
   const { t } = useTranslation();
   const pathname = usePathname();
   const { currentCompany } = useMultiCompany();
   const { companies } = useCompanyOptions();
   const alert = useAlert();
   const { isMobile } = useResponsive();
-  const styles = createRolesListStyles(isMobile);
+
+  const styles = useMemo(
+    () =>
+      createRolesListScreenStyles(
+        {
+          colors,
+          spacing,
+          typography,
+          pageLayout,
+          borderRadius,
+        },
+        isMobile,
+      ),
+    [colors, spacing, typography, pageLayout, borderRadius, isMobile],
+  );
   const usersTranslations = (t.security?.users as any) || {};
   const commonTranslations = (t.common as any) || {};
 
@@ -56,20 +80,29 @@ export function RolesListScreen() {
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
-  const [formActions, setFormActions] = useState<{ 
-    isLoading: boolean; 
-    handleSubmit: () => void; 
+  const [formActions, setFormActions] = useState<{
+    isLoading: boolean;
+    handleSubmit: () => void;
     handleCancel: () => void;
     generalError?: { message: string; detail?: string } | null;
   } | null>(null);
-  const [isPermissionsModalVisible, setIsPermissionsModalVisible] = useState(false);
-  const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState<Role | null>(null);
-  const [isEditPermissionsModalVisible, setIsEditPermissionsModalVisible] = useState(false);
-  const [selectedRoleForEditPermissions, setSelectedRoleForEditPermissions] = useState<Role | null>(null);
-  const [permissionsModalError, setPermissionsModalError] = useState<{ message: string; detail?: string } | null>(null);
-  const [permissionsModalSuccess, setPermissionsModalSuccess] = useState<string | null>(null);
+  const [isPermissionsModalVisible, setIsPermissionsModalVisible] =
+    useState(false);
+  const [selectedRoleForPermissions, setSelectedRoleForPermissions] =
+    useState<Role | null>(null);
+  const [isEditPermissionsModalVisible, setIsEditPermissionsModalVisible] =
+    useState(false);
+  const [selectedRoleForEditPermissions, setSelectedRoleForEditPermissions] =
+    useState<Role | null>(null);
+  const [permissionsModalError, setPermissionsModalError] = useState<{
+    message: string;
+    detail?: string;
+  } | null>(null);
+  const [permissionsModalSuccess, setPermissionsModalSuccess] = useState<
+    string | null
+  >(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -78,90 +111,97 @@ export function RolesListScreen() {
     hasNext: false,
     hasPrev: false,
   });
-  const [localFilter, setLocalFilter] = useState(''); // Filtro local para la tabla
+  const [localFilter, setLocalFilter] = useState(""); // Filtro local para la tabla
   const [filters, setFilters] = useState<RoleFilters>({
     page: 1,
     limit: 10,
-    search: '',
+    search: "",
     status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     isSystem: undefined,
   });
-  
+
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
-  const filtersSignatureRef = useRef<string>('');
+  const filtersSignatureRef = useRef<string>("");
 
   /**
    * Cargar roles
    */
-  const loadRoles = useCallback(async (currentFilters: RoleFilters) => {
-    // Prevenir llamadas simultáneas
-    if (loadingRef.current) {
-      return;
-    }
+  const loadRoles = useCallback(
+    async (currentFilters: RoleFilters) => {
+      // Prevenir llamadas simultáneas
+      if (loadingRef.current) {
+        return;
+      }
 
-    try {
-      loadingRef.current = true;
-      setLoading(true);
-      setError(null);
-      setHasError(false);
-      
-      const response = await RolesService.getRoles(currentFilters);
-      
-      // Asegurar que la respuesta tenga la estructura correcta
-      if (response && response.data) {
-        setRoles(Array.isArray(response.data) ? response.data : []);
-        
-        // Usar meta de la respuesta del backend
-        if (response.meta) {
-          setPagination({
-            page: response.meta.page || currentFilters.page || 1,
-            limit: response.meta.limit || currentFilters.limit || 10,
-            total: response.meta.total || 0,
-            totalPages: response.meta.totalPages || 0,
-            hasNext: response.meta.hasNext || false,
-            hasPrev: response.meta.hasPrev || false,
-          });
+      try {
+        loadingRef.current = true;
+        setLoading(true);
+        setError(null);
+        setHasError(false);
+
+        const response = await RolesService.getRoles(currentFilters);
+
+        // Asegurar que la respuesta tenga la estructura correcta
+        if (response && response.data) {
+          setRoles(Array.isArray(response.data) ? response.data : []);
+
+          // Usar meta de la respuesta del backend
+          if (response.meta) {
+            setPagination({
+              page: response.meta.page || currentFilters.page || 1,
+              limit: response.meta.limit || currentFilters.limit || 10,
+              total: response.meta.total || 0,
+              totalPages: response.meta.totalPages || 0,
+              hasNext: response.meta.hasNext || false,
+              hasPrev: response.meta.hasPrev || false,
+            });
+          } else {
+            setPagination({
+              page: currentFilters.page || 1,
+              limit: currentFilters.limit || 10,
+              total: Array.isArray(response.data) ? response.data.length : 0,
+              totalPages: 1,
+              hasNext: false,
+              hasPrev: false,
+            });
+          }
         } else {
+          setRoles([]);
           setPagination({
             page: currentFilters.page || 1,
             limit: currentFilters.limit || 10,
-            total: Array.isArray(response.data) ? response.data.length : 0,
-            totalPages: 1,
+            total: 0,
+            totalPages: 0,
             hasNext: false,
             hasPrev: false,
           });
         }
-      } else {
-        setRoles([]);
-        setPagination({
-          page: currentFilters.page || 1,
-          limit: currentFilters.limit || 10,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        });
-      }
-      
-      setHasError(false);
-    } catch (error: any) {
-      // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
-      // En este caso, establecer hasError para evitar loops infinitos
-      if (handleApiError(error)) {
+
+        setHasError(false);
+      } catch (error: any) {
+        // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
+        // En este caso, establecer hasError para evitar loops infinitos
+        if (handleApiError(error)) {
+          setHasError(true);
+          return;
+        }
+        const { message: errorMessage, detail: detailString } =
+          extractErrorInfo(
+            error,
+            t.security?.roles?.loadError || "Error al cargar roles",
+          );
+        setError(errorMessage);
         setHasError(true);
-        return;
+        // Mostrar error con detalles
+        alert.showError(errorMessage, false, undefined, detailString, error);
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
       }
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.roles?.loadError || 'Error al cargar roles');
-      setError(errorMessage);
-      setHasError(true);
-      // Mostrar error con detalles
-      alert.showError(errorMessage, false, undefined, detailString, error);
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, [alert, handleApiError, t]);
+    },
+    [alert, handleApiError, t],
+  );
 
   /**
    * Efecto para cargar roles cuando cambian los filtros
@@ -173,7 +213,7 @@ export function RolesListScreen() {
     if (hasError) {
       return;
     }
-    
+
     if (!isScreenFocused || !hasAccess || accessLoading) {
       return;
     }
@@ -218,10 +258,10 @@ export function RolesListScreen() {
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
 
-    if (key === 'deleted') {
+    if (key === "deleted") {
       setFilters((prev) => ({
         ...prev,
-        status: value === 'deleted' ? -1 : undefined,
+        status: value === "deleted" ? -1 : undefined,
         page: 1,
       }));
       return;
@@ -229,7 +269,7 @@ export function RolesListScreen() {
 
     // Manejar filtros boolean (isSystem)
     // El componente SearchFilterBar envía true, false o undefined
-    if (key === 'isSystem') {
+    if (key === "isSystem") {
       setFilters((prev) => ({
         ...prev,
         isSystem: value, // Mantener el valor boolean (true/false) o undefined
@@ -239,10 +279,11 @@ export function RolesListScreen() {
     }
 
     // Convertir status de string a number si es necesario
-    const processedValue = key === 'status' && value !== '' ? parseInt(value, 10) : value;
+    const processedValue =
+      key === "status" && value !== "" ? parseInt(value, 10) : value;
     setFilters((prev) => ({
       ...prev,
-      [key]: value === '' ? undefined : processedValue,
+      [key]: value === "" ? undefined : processedValue,
       page: 1,
     }));
   };
@@ -251,20 +292,23 @@ export function RolesListScreen() {
     setFilters({
       page: 1,
       limit: 10,
-      search: '',
+      search: "",
       status: undefined,
       isSystem: undefined,
     });
-    setLocalFilter(''); // Limpiar también el filtro local
+    setLocalFilter(""); // Limpiar también el filtro local
     setHasError(false);
   };
 
   // Función para obtener el nombre de la empresa por su ID
-  const getCompanyName = useCallback((companyId?: string) => {
-    if (!companyId) return '-';
-    const company = companies.find(c => c.id === companyId);
-    return company?.name || '-';
-  }, [companies]);
+  const getCompanyName = useCallback(
+    (companyId?: string) => {
+      if (!companyId) return "-";
+      const company = companies.find((c) => c.id === companyId);
+      return company?.name || "-";
+    },
+    [companies],
+  );
 
   /**
    * Filtrar roles localmente según el filtro local
@@ -273,14 +317,14 @@ export function RolesListScreen() {
     if (!localFilter.trim()) {
       return roles;
     }
-    
+
     const filterLower = localFilter.toLowerCase().trim();
     return roles.filter((role) => {
-      const name = (role.name || '').toLowerCase();
-      const code = (role.code || '').toLowerCase();
-      const description = (role.description || '').toLowerCase();
+      const name = (role.name || "").toLowerCase();
+      const code = (role.code || "").toLowerCase();
+      const description = (role.description || "").toLowerCase();
       const companyName = getCompanyName(role.companyId).toLowerCase();
-      
+
       return (
         name.includes(filterLower) ||
         code.includes(filterLower) ||
@@ -293,7 +337,7 @@ export function RolesListScreen() {
   const handleCreateRole = () => {
     setFormActions(null);
     setSelectedRoleId(null);
-    setModalMode('create');
+    setModalMode("create");
     setIsModalVisible(true);
   };
 
@@ -305,7 +349,7 @@ export function RolesListScreen() {
   const handleEditRole = (role: Role) => {
     setFormActions(null);
     setSelectedRoleId(role.id);
-    setModalMode('edit');
+    setModalMode("edit");
     setIsModalVisible(true);
   };
 
@@ -333,18 +377,21 @@ export function RolesListScreen() {
    */
   const handleDeleteRole = async (role: Role) => {
     if (role.isSystem) {
-      alert.showError('No se pueden eliminar roles del sistema');
+      alert.showError("No se pueden eliminar roles del sistema");
       return;
     }
     try {
       await RolesService.deleteRole(role.id);
       await loadRoles(filters);
-      alert.showSuccess(t.security?.roles?.delete || 'Rol eliminado');
+      alert.showSuccess(t.security?.roles?.delete || "Rol eliminado");
     } catch (error: any) {
       if (handleApiError(error)) {
         return;
       }
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al eliminar rol');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(
+        error,
+        "Error al eliminar rol",
+      );
       alert.showError(errorMessage, false, undefined, detailString, error);
     }
   };
@@ -357,21 +404,24 @@ export function RolesListScreen() {
     // Validar que no sea un rol del sistema antes de mostrar confirmación
     // (Aunque el botón no debería mostrarse, esta validación es defensiva)
     if (role.isSystem) {
-      alert.showError('No se pueden eliminar roles del sistema');
+      alert.showError("No se pueden eliminar roles del sistema");
       return;
     }
 
     const rolesTranslations = (t.security?.roles as any) || {};
-    const title = rolesTranslations.deleteConfirmTitle || commonTranslations.confirm || 'Eliminar rol';
+    const title =
+      rolesTranslations.deleteConfirmTitle ||
+      commonTranslations.confirm ||
+      "Eliminar rol";
     const messageTemplate =
       rolesTranslations.deleteConfirmMessage ||
-      '¿Seguro que deseas eliminar el rol {name}? Esta acción no se puede deshacer.';
+      "¿Seguro que deseas eliminar el rol {name}? Esta acción no se puede deshacer.";
 
     // Usar nombre, código o ID como identificador para el mensaje
     const identifier = role.name || role.code || role.id;
-    const message = messageTemplate.includes('{name}')
-      ? messageTemplate.replace('{name}', identifier)
-      : messageTemplate.replace('{email}', identifier); // Fallback para compatibilidad
+    const message = messageTemplate.includes("{name}")
+      ? messageTemplate.replace("{name}", identifier)
+      : messageTemplate.replace("{email}", identifier); // Fallback para compatibilidad
 
     // Mostrar diálogo de confirmación y ejecutar eliminación si se confirma
     alert.showConfirm(title, message, () => handleDeleteRole(role));
@@ -379,63 +429,69 @@ export function RolesListScreen() {
 
   const columns: TableColumn<Role>[] = [
     {
-      key: 'company',
-      label: t.security?.roles?.company || 'Empresa',
-      width: '18%',
+      key: "company",
+      label: t.security?.roles?.company || "Empresa",
+      width: "18%",
       render: (role) => (
-        <ThemedText type="body2">
-          {getCompanyName(role.companyId)}
-        </ThemedText>
+        <ThemedText type="body2">{getCompanyName(role.companyId)}</ThemedText>
       ),
     },
     {
-      key: 'code',
-      label: t.security?.roles?.code || 'Código',
-      width: '15%',
+      key: "code",
+      label: t.security?.roles?.code || "Código",
+      width: "15%",
     },
     {
-      key: 'name',
-      label: t.security?.roles?.name || 'Nombre',
-      width: '18%',
+      key: "name",
+      label: t.security?.roles?.name || "Nombre",
+      width: "18%",
     },
     {
-      key: 'description',
-      label: t.security?.roles?.description || 'Descripción',
-      width: '20%',
+      key: "description",
+      label: t.security?.roles?.description || "Descripción",
+      width: "20%",
     },
     {
-      key: 'isSystem',
-      label: t.security?.roles?.system || 'Sistema',
-      width: '8%',
-      align: 'center',
+      key: "isSystem",
+      label: t.security?.roles?.system || "Sistema",
+      width: "8%",
+      align: "center",
       render: (role) => (
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ alignItems: "center", justifyContent: "center" }}>
           {role.isSystem ? (
-            <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.primary}
+            />
           ) : (
-            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color={colors.textSecondary}
+            />
           )}
         </View>
       ),
     },
     {
-      key: 'status',
-      label: t.security?.users?.status || 'Estado',
-      width: '15%',
-      align: 'center',
+      key: "status",
+      label: t.security?.users?.status || "Estado",
+      width: "15%",
+      align: "center",
       render: (role) => (
-        <StatusBadge 
-          status={role.status} 
+        <StatusBadge
+          status={role.status}
           statusDescription={role.statusDescription}
           size="small"
         />
       ),
     },
     {
-      key: 'permissions',
-      label: t.security?.roles?.permissions || 'Permisos',
-      width: '8%',
-      align: 'center',
+      key: "permissions",
+      label: t.security?.roles?.permissions || "Permisos",
+      width: "8%",
+      align: "center",
       render: (role) => (
         <ThemedText type="body2" variant="secondary">
           {role.permissions?.length || 0}
@@ -446,41 +502,61 @@ export function RolesListScreen() {
 
   const filterConfigs: FilterConfig[] = [
     {
-      key: 'status',
-      label: usersTranslations.status || 'Estado',
-      type: 'select',
+      key: "status",
+      label: usersTranslations.status || "Estado",
+      type: "select",
       options: [
-        { key: 'all', value: '', label: commonTranslations.all || 'Todos' },
-        { key: 'active', value: '1', label: usersTranslations.active || 'Activo' },
-        { key: 'inactive', value: '0', label: usersTranslations.inactive || 'Inactivo' },
-        { key: 'pending', value: '2', label: usersTranslations.pending || 'Pendiente' },
-        { key: 'suspended', value: '3', label: usersTranslations.suspended || 'Suspendido' },
-      ],
-    },
-    {
-      key: 'deleted',
-      label: usersTranslations.deletedFilter || 'Usuarios',
-      type: 'select',
-      options: [
+        { key: "all", value: "", label: commonTranslations.all || "Todos" },
         {
-          key: 'deleted',
-          value: 'deleted',
-          label: usersTranslations.deletedUser || 'Eliminados',
+          key: "active",
+          value: "1",
+          label: usersTranslations.active || "Activo",
+        },
+        {
+          key: "inactive",
+          value: "0",
+          label: usersTranslations.inactive || "Inactivo",
+        },
+        {
+          key: "pending",
+          value: "2",
+          label: usersTranslations.pending || "Pendiente",
+        },
+        {
+          key: "suspended",
+          value: "3",
+          label: usersTranslations.suspended || "Suspendido",
         },
       ],
     },
     {
-      key: 'isSystem',
-      label: t.security?.roles?.system || 'Sistema',
-      type: 'boolean',
+      key: "deleted",
+      label: usersTranslations.deletedFilter || "Usuarios",
+      type: "select",
+      options: [
+        {
+          key: "deleted",
+          value: "deleted",
+          label: usersTranslations.deletedUser || "Eliminados",
+        },
+      ],
+    },
+    {
+      key: "isSystem",
+      label: t.security?.roles?.system || "Sistema",
+      type: "boolean",
     },
   ];
 
   if (accessLoading) {
     return (
-      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ThemedView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
-        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+        <ThemedText style={{ marginTop: 12 }}>
+          {t.common?.loading || "Cargando..."}
+        </ThemedText>
       </ThemedView>
     );
   }
@@ -491,24 +567,42 @@ export function RolesListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
+      <View style={[styles.content, isMobile && styles.contentMobile]}>
+        {/* Header con icono, título y subtítulo (estandarizado) */}
         <View style={styles.header}>
           <View style={styles.headerTitle}>
-            <ThemedText type="h3" style={styles.title}>
-              {t.security?.roles?.title || 'Administración de Roles'}
-            </ThemedText>
-            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-              {t.security?.roles?.subtitle || 'Gestiona los roles del sistema'}
+            <View style={styles.headerRow}>
+              <DynamicIcon
+                name="Ionicons:shield-checkmark"
+                size={
+                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                }
+                color={colors.primary}
+                style={styles.headerIcon}
+              />
+              <ThemedText
+                type="h2"
+                style={isMobile ? styles.titleMobile : styles.title}
+              >
+                {t.security?.roles?.title || "Administración de Roles"}
+              </ThemedText>
+            </View>
+            <ThemedText type="body1" style={styles.subtitle}>
+              {t.security?.roles?.subtitle || "Gestiona los roles del sistema"}
             </ThemedText>
           </View>
           <Button
-            title={isMobile ? '' : (t.security?.roles?.create || 'Crear Rol')}
+            title={isMobile ? "" : t.security?.roles?.create || "Crear Rol"}
             onPress={handleCreateRole}
             variant="primary"
             size="md"
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" style={!isMobile ? { marginRight: 8 } : undefined} />
+            <Ionicons
+              name="add"
+              size={pageLayout.iconSubtitle}
+              color="#FFFFFF"
+              style={!isMobile ? { marginRight: spacing.sm } : undefined}
+            />
           </Button>
         </View>
 
@@ -517,15 +611,21 @@ export function RolesListScreen() {
           filterValue={localFilter}
           onFilterChange={handleLocalFilterChange}
           onSearchSubmit={handleSearchSubmit}
-          filterPlaceholder={t.security?.roles?.filterPlaceholder || 'Filtrar por nombre o código...'}
-          searchPlaceholder={t.security?.roles?.searchPlaceholder || 'Buscar por nombre o código...'}
+          filterPlaceholder={
+            t.security?.roles?.filterPlaceholder ||
+            "Filtrar por nombre o código..."
+          }
+          searchPlaceholder={
+            t.security?.roles?.searchPlaceholder ||
+            "Buscar por nombre o código..."
+          }
           filters={filterConfigs}
           activeFilters={{
             status:
               filters.status !== undefined && filters.status !== -1
                 ? filters.status.toString()
-                : '',
-            deleted: filters.status === -1 ? 'deleted' : '',
+                : "",
+            deleted: filters.status === -1 ? "deleted" : "",
             isSystem: filters.isSystem,
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}
@@ -540,20 +640,25 @@ export function RolesListScreen() {
             data={filteredRoles}
             columns={columns}
             loading={loading}
-            emptyMessage={t.security?.roles?.empty || 'No hay roles disponibles'}
+            emptyMessage={
+              t.security?.roles?.empty || "No hay roles disponibles"
+            }
             onRowPress={handleEditRole}
             keyExtractor={(role) => role.id}
             showPagination={true}
-            actionsColumnLabel={t.common?.actions || 'Acciones'}
+            actionsColumnLabel={t.common?.actions || "Acciones"}
             pagination={{
               page: pagination.page,
               limit: pagination.limit,
-              total: localFilter.trim() ? filteredRoles.length : pagination.total,
-              totalPages: localFilter.trim() 
+              total: localFilter.trim()
+                ? filteredRoles.length
+                : pagination.total,
+              totalPages: localFilter.trim()
                 ? Math.ceil(filteredRoles.length / pagination.limit)
                 : pagination.totalPages,
               hasNext: localFilter.trim()
-                ? pagination.page < Math.ceil(filteredRoles.length / pagination.limit)
+                ? pagination.page <
+                  Math.ceil(filteredRoles.length / pagination.limit)
                 : pagination.hasNext,
               hasPrev: localFilter.trim()
                 ? pagination.page > 1
@@ -564,18 +669,18 @@ export function RolesListScreen() {
             }}
             editAction={{
               onPress: (role) => handleEditRole(role),
-              tooltip: t.security?.roles?.editShort || 'Editar',
+              tooltip: t.security?.roles?.editShort || "Editar",
             }}
             deleteAction={{
               onPress: (role) => confirmDeleteRole(role),
-              tooltip: t.security?.roles?.deleteShort || 'Eliminar',
+              tooltip: t.security?.roles?.deleteShort || "Eliminar",
               visible: (role) => !role.isSystem, // Solo mostrar si NO es del sistema
             }}
             actions={[
               {
-                id: 'view-permissions',
-                icon: 'git-network',
-                tooltip: t.security?.roles?.viewPermissions || 'Ver permisos',
+                id: "view-permissions",
+                icon: "git-network",
+                tooltip: t.security?.roles?.viewPermissions || "Ver permisos",
                 onPress: (role) => {
                   setSelectedRoleForPermissions(role);
                   setIsPermissionsModalVisible(true);
@@ -591,14 +696,16 @@ export function RolesListScreen() {
             visible={isModalVisible}
             onClose={handleCloseModal}
             title={
-              modalMode === 'edit'
-                ? t.security?.roles?.edit || 'Editar Rol'
-                : t.security?.roles?.create || 'Crear Rol'
+              modalMode === "edit"
+                ? t.security?.roles?.edit || "Editar Rol"
+                : t.security?.roles?.create || "Crear Rol"
             }
             subtitle={
-              modalMode === 'edit'
-                ? (t.security?.roles?.editSubtitle || 'Modifica los datos del rol')
-                : (t.security?.roles?.createSubtitle || 'Completa los datos para registrar un nuevo rol')
+              modalMode === "edit"
+                ? t.security?.roles?.editSubtitle ||
+                  "Modifica los datos del rol"
+                : t.security?.roles?.createSubtitle ||
+                  "Completa los datos para registrar un nuevo rol"
             }
             topAlert={
               formActions?.generalError ? (
@@ -628,9 +735,9 @@ export function RolesListScreen() {
                   />
                   <Button
                     title={
-                      modalMode === 'edit'
+                      modalMode === "edit"
                         ? t.common.save
-                        : t.security?.roles?.create || 'Crear Rol'
+                        : t.security?.roles?.create || "Crear Rol"
                     }
                     onPress={formActions.handleSubmit}
                     variant="primary"
@@ -641,7 +748,7 @@ export function RolesListScreen() {
               ) : null
             }
           >
-            {modalMode === 'edit' && selectedRoleId ? (
+            {modalMode === "edit" && selectedRoleId ? (
               <RoleEditForm
                 roleId={selectedRoleId}
                 onSuccess={handleFormSuccess}
@@ -651,7 +758,7 @@ export function RolesListScreen() {
                 onFormReady={setFormActions}
               />
             ) : null}
-            {modalMode === 'create' ? (
+            {modalMode === "create" ? (
               <RoleCreateForm
                 onSuccess={handleFormSuccess}
                 onCancel={handleCloseModal}
@@ -675,7 +782,7 @@ export function RolesListScreen() {
             // Cerrar el modal de vista
             setIsPermissionsModalVisible(false);
             setSelectedRoleForPermissions(null);
-            
+
             // Abrir el modal de edición de permisos
             setSelectedRoleForEditPermissions(role);
             setIsEditPermissionsModalVisible(true);
@@ -691,8 +798,11 @@ export function RolesListScreen() {
             setPermissionsModalError(null);
             setPermissionsModalSuccess(null);
           }}
-          title={t.security?.permissions?.title || 'Administración de Permisos'}
-          subtitle={t.security?.permissions?.subtitle || 'Gestiona los permisos del sistema'}
+          title={t.security?.permissions?.title || "Administración de Permisos"}
+          subtitle={
+            t.security?.permissions?.subtitle ||
+            "Gestiona los permisos del sistema"
+          }
           width="90%"
           height="90%"
           topAlert={
@@ -717,7 +827,9 @@ export function RolesListScreen() {
           }
         >
           <PermissionsManagementContent
-            initialCompanyId={selectedRoleForEditPermissions?.companyId || currentCompany?.id}
+            initialCompanyId={
+              selectedRoleForEditPermissions?.companyId || currentCompany?.id
+            }
             initialRoleId={selectedRoleForEditPermissions?.id}
             onClose={() => {
               setIsEditPermissionsModalVisible(false);
@@ -739,4 +851,3 @@ export function RolesListScreen() {
     </ThemedView>
   );
 }
-
