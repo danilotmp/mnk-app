@@ -3,64 +3,94 @@
  * Guía al usuario a través de las capas de información necesarias
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { CommercialService } from '@/src/domains/commercial';
-import { CommercialCapabilities, LayerProgress } from '@/src/domains/commercial/types';
-import { useCompany } from '@/src/domains/shared';
-import { SearchFilterBar } from '@/src/domains/shared/components';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { CompanySetupLayer } from '../components/company-setup-layer/company-setup-layer';
-import { InstitutionalLayer } from '../components/institutional-layer/institutional-layer';
-import { InteractionGuidelinesLayer } from '../components/interaction-guidelines-layer';
-import { OperationalLayer } from '../components/operational-layer/operational-layer';
-import { PaymentsLayer } from '../components/payments-layer/payments-layer';
-import { RecommendationsLayer } from '../components/recommendations-layer/recommendations-layer';
-import { WhatsAppConnectionLayer, WhatsAppConnectionLayerRef } from '../components/whatsapp-connection-layer';
-import { WizardStep, WizardStepper } from '../components/wizard-stepper';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { CommercialService } from "@/src/domains/commercial";
+import {
+  CommercialCapabilities,
+  LayerProgress,
+} from "@/src/domains/commercial/types";
+import { useCompany } from "@/src/domains/shared";
+import { DynamicIcon, SearchFilterBar } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { ScrollView, TouchableOpacity, View } from "react-native";
+import { CompanySetupLayer } from "../components/company-setup-layer/company-setup-layer";
+import { InstitutionalLayer } from "../components/institutional-layer/institutional-layer";
+import { InteractionGuidelinesLayer } from "../components/interaction-guidelines-layer";
+import { OperationalLayer } from "../components/operational-layer/operational-layer";
+import { PaymentsLayer } from "../components/payments-layer/payments-layer";
+import { RecommendationsLayer } from "../components/recommendations-layer/recommendations-layer";
+import {
+  WhatsAppConnectionLayer,
+  WhatsAppConnectionLayerRef,
+} from "../components/whatsapp-connection-layer";
+import { WizardStep, WizardStepper } from "../components/wizard-stepper";
+import { createCommercialSetupScreenStyles } from "./commercial-setup.screen.styles";
 
 export function CommercialSetupScreen() {
-  const { colors } = useTheme();
+  const { colors, spacing, typography, pageLayout, borderRadius } = useTheme();
   const { t } = useTranslation();
   const { isMobile } = useResponsive();
   const router = useRouter();
+
+  const styles = useMemo(
+    () =>
+      createCommercialSetupScreenStyles({
+        colors,
+        spacing,
+        typography,
+        pageLayout,
+        borderRadius,
+      }),
+    [colors, spacing, typography, pageLayout, borderRadius],
+  );
   const alert = useAlert();
   const params = useLocalSearchParams<{ product?: string; layer?: string }>();
   const { company, user, branch } = useCompany();
 
   const [loading, setLoading] = useState(true);
   const [layerProgress, setLayerProgress] = useState<LayerProgress[]>([]);
-  const [currentLayer, setCurrentLayer] = useState<string>('institutional');
+  const [currentLayer, setCurrentLayer] = useState<string>("institutional");
   const [showLayer0, setShowLayer0] = useState(false);
-  const [recommendationsFilter, setRecommendationsFilter] = useState('');
-  const [interactionGuidelinesFilter, setInteractionGuidelinesFilter] = useState('');
-  const [offeringsFilter, setOfferingsFilter] = useState('');
+  const [recommendationsFilter, setRecommendationsFilter] = useState("");
+  const [interactionGuidelinesFilter, setInteractionGuidelinesFilter] =
+    useState("");
+  const [offeringsFilter, setOfferingsFilter] = useState("");
   const whatsappConnectionRef = useRef<WhatsAppConnectionLayerRef | null>(null);
 
   // Detectar si necesita Capa 0 (crear empresa/sucursal)
   const needsCompanySetup = (): boolean => {
     if (!user) return true;
     if (!company) return true;
-    
+
     // Detectar empresa de invitado
-    const code = (company.code || '').toUpperCase();
-    const name = (company.name || '').toUpperCase();
-    const isGuest = code.includes('GUEST') || code.includes('INVITADO') || 
-                    name.includes('GUEST') || name.includes('INVITADO') ||
-                    code === 'DEFAULT' || name === 'EMPRESA POR DEFECTO';
-    
+    const code = (company.code || "").toUpperCase();
+    const name = (company.name || "").toUpperCase();
+    const isGuest =
+      code.includes("GUEST") ||
+      code.includes("INVITADO") ||
+      name.includes("GUEST") ||
+      name.includes("INVITADO") ||
+      code === "DEFAULT" ||
+      name === "EMPRESA POR DEFECTO";
+
     if (isGuest) return true;
     if (!branch) return true;
-    
+
     return false;
   };
 
@@ -68,14 +98,19 @@ export function CommercialSetupScreen() {
   useEffect(() => {
     // Si no está logueado, redirigir a login
     if (!user) {
-      router.replace('/auth/login?redirect=' + encodeURIComponent('/commercial/setup?product=' + (params.product || 'chat-ia')));
+      router.replace(
+        "/auth/login?redirect=" +
+          encodeURIComponent(
+            "/commercial/setup?product=" + (params.product || "chat-ia"),
+          ),
+      );
       return;
     }
 
     // Si viene con layer=0, mostrar Capa 0
-    if (params.layer === '0') {
+    if (params.layer === "0") {
       setShowLayer0(true);
-      setCurrentLayer('institutional'); // Por defecto, pero no se mostrará hasta completar Capa 0
+      setCurrentLayer("institutional"); // Por defecto, pero no se mostrará hasta completar Capa 0
       return;
     }
 
@@ -100,51 +135,60 @@ export function CommercialSetupScreen() {
   // Función helper para marcar una capa como completada u omitida
   // NO llama a updateCapabilities para evitar bucles infinitos
   // El GET en getLayerProgress se encargará de crear/actualizar el recurso cuando sea necesario
-  const markLayerAsCompleted = useCallback(async (layer: string, hasData: boolean = false) => {
-    if (!company?.id) return;
-    
-    try {
-      // Mapear capa a capacidad correspondiente
-      const capabilityMap: Record<string, keyof CommercialCapabilities> = {
-        'institutional': 'canAnswerAboutBusiness', // También puede activar canAnswerAboutLocation
-        'offerings': 'canAnswerAboutPrices',
-        'interactionGuidelines': 'canAnswerAboutBusiness', // Las directrices mejoran la interacción general
-        'payments': 'canAnswerAboutPayment',
-        'recommendations': 'canRecommend', // También puede activar canSuggestProducts
-      };
-      
-      const capabilityKey = capabilityMap[layer];
-      
-      // NO llamar a updateCapabilities aquí para evitar bucles infinitos
-      // Solo actualizar el estado local
-      // El GET en getLayerProgress se encargará de crear/actualizar el recurso cuando sea necesario
-      
-      // Actualizar el progreso local
-      // Cuando se completa u omite una capa, siempre se marca como completada al 100%
-      // (completada con datos = 100%, completada sin datos/omitida = 100% también)
-      setLayerProgress(prev => {
-        const updated = prev.map(l => l.layer === layer 
-          ? { ...l, completed: true, completionPercentage: 100, skipped: !hasData }
-          : l
-        );
-        // Si no existe la capa en el progreso, agregarla
-        if (!updated.find(l => l.layer === layer)) {
-          updated.push({
-            layer: layer as any,
-            completed: true,
-            completionPercentage: 100, // Siempre 100% cuando se completa u omite
-            enabledCapabilities: capabilityKey ? [capabilityKey] : [],
-            missingFields: hasData ? [] : [layer],
-            skipped: !hasData,
-          });
-        }
-        return updated;
-      });
-    } catch (error: any) {
-      console.error('Error al marcar capa como completada:', error);
-      // No mostrar error al usuario - solo log
-    }
-  }, [company?.id]);
+  const markLayerAsCompleted = useCallback(
+    async (layer: string, hasData: boolean = false) => {
+      if (!company?.id) return;
+
+      try {
+        // Mapear capa a capacidad correspondiente
+        const capabilityMap: Record<string, keyof CommercialCapabilities> = {
+          institutional: "canAnswerAboutBusiness", // También puede activar canAnswerAboutLocation
+          offerings: "canAnswerAboutPrices",
+          interactionGuidelines: "canAnswerAboutBusiness", // Las directrices mejoran la interacción general
+          payments: "canAnswerAboutPayment",
+          recommendations: "canRecommend", // También puede activar canSuggestProducts
+        };
+
+        const capabilityKey = capabilityMap[layer];
+
+        // NO llamar a updateCapabilities aquí para evitar bucles infinitos
+        // Solo actualizar el estado local
+        // El GET en getLayerProgress se encargará de crear/actualizar el recurso cuando sea necesario
+
+        // Actualizar el progreso local
+        // Cuando se completa u omite una capa, siempre se marca como completada al 100%
+        // (completada con datos = 100%, completada sin datos/omitida = 100% también)
+        setLayerProgress((prev) => {
+          const updated = prev.map((l) =>
+            l.layer === layer
+              ? {
+                  ...l,
+                  completed: true,
+                  completionPercentage: 100,
+                  skipped: !hasData,
+                }
+              : l,
+          );
+          // Si no existe la capa en el progreso, agregarla
+          if (!updated.find((l) => l.layer === layer)) {
+            updated.push({
+              layer: layer as any,
+              completed: true,
+              completionPercentage: 100, // Siempre 100% cuando se completa u omite
+              enabledCapabilities: capabilityKey ? [capabilityKey] : [],
+              missingFields: hasData ? [] : [layer],
+              skipped: !hasData,
+            });
+          }
+          return updated;
+        });
+      } catch (error: any) {
+        console.error("Error al marcar capa como completada:", error);
+        // No mostrar error al usuario - solo log
+      }
+    },
+    [company?.id],
+  );
 
   // Cargar progreso de capas - evitar llamados repetitivos
   const loadProgress = useCallback(async () => {
@@ -155,56 +199,67 @@ export function CommercialSetupScreen() {
 
     try {
       const progress = await CommercialService.getLayerProgress(company.id);
-      
+
       // Definir el orden de las capas
-      const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
-      
+      const layerOrder = [
+        "institutional",
+        "offerings",
+        "interactionGuidelines",
+        "payments",
+        "recommendations",
+        "whatsappConnection",
+      ];
+
       // Filtrar capa 'operational' del progreso
-      const filteredProgress = progress.filter(p => p.layer !== 'operational');
-      
+      const filteredProgress = progress.filter(
+        (p) => p.layer !== "operational",
+      );
+
       // Encontrar la última etapa completada
       let lastCompletedIndex = -1;
       for (let i = layerOrder.length - 1; i >= 0; i--) {
         const layerId = layerOrder[i];
-        const layerProgress = filteredProgress.find(p => p.layer === layerId);
+        const layerProgress = filteredProgress.find((p) => p.layer === layerId);
         if (layerProgress?.completed) {
           lastCompletedIndex = i;
           break;
         }
       }
-      
+
       // Si no hay capas completadas, buscar la última capa con datos (completionPercentage > 0)
       let lastWithDataIndex = -1;
       if (lastCompletedIndex < 0) {
         for (let i = layerOrder.length - 1; i >= 0; i--) {
           const layerId = layerOrder[i];
-          const layerProgress = filteredProgress.find(p => p.layer === layerId);
+          const layerProgress = filteredProgress.find(
+            (p) => p.layer === layerId,
+          );
           if (layerProgress && layerProgress.completionPercentage > 0) {
             lastWithDataIndex = i;
             break;
           }
         }
       }
-      
+
       // Determinar qué capa mostrar:
       // 1. Si hay etapas completadas, mostrar la última completada
       // 2. Si no hay etapas completadas pero hay capas con datos, mostrar la última con datos
       // 3. Si no hay ninguna con datos, mostrar la primera (institutional)
-      let targetLayer = 'institutional';
+      let targetLayer = "institutional";
       if (lastCompletedIndex >= 0) {
         targetLayer = layerOrder[lastCompletedIndex];
       } else if (lastWithDataIndex >= 0) {
         targetLayer = layerOrder[lastWithDataIndex];
       }
-      
+
       setCurrentLayer(targetLayer);
-      
+
       // IMPORTANTE: Cuando cambia la empresa, reemplazar completamente el progreso
       // No preservar el progreso de la empresa anterior
       setLayerProgress(filteredProgress);
     } catch (error: any) {
       // Error silencioso - solo log (no mostrar toast en pantalla)
-      console.error('Error al cargar el progreso:', error);
+      console.error("Error al cargar el progreso:", error);
       // En caso de error, limpiar el progreso para evitar mostrar datos de otra empresa
       setLayerProgress([]);
     } finally {
@@ -218,7 +273,7 @@ export function CommercialSetupScreen() {
   useEffect(() => {
     // Cuando cambia company.id, limpiar el progreso anterior para evitar mostrar datos de otra empresa
     setLayerProgress([]);
-    setCurrentLayer('institutional'); // Resetear a la primera capa
+    setCurrentLayer("institutional"); // Resetear a la primera capa
   }, [company?.id]);
 
   useEffect(() => {
@@ -230,54 +285,104 @@ export function CommercialSetupScreen() {
 
   // Definir pasos por defecto (sin capa 'operational' - se unificó con recomendaciones)
   const defaultSteps: WizardStep[] = [
-    { id: 'institutional', label: 'Contexto Institucional', layer: 'institutional', completed: false, enabled: true, completionPercentage: 0 },
-    { id: 'offerings', label: 'Ofertas', layer: 'offerings', completed: false, enabled: true, completionPercentage: 0 },
-    { id: 'interactionGuidelines', label: 'Directrices de Interacción', layer: 'interactionGuidelines', completed: false, enabled: true, completionPercentage: 0 },
-    { id: 'payments', label: 'Pagos', layer: 'payments', completed: false, enabled: true, completionPercentage: 0 },
-    { id: 'recommendations', label: 'Recomendaciones', layer: 'recommendations', completed: false, enabled: true, completionPercentage: 0 },
-    { id: 'whatsappConnection', label: 'Conexión WhatsApp', layer: 'whatsappConnection', completed: false, enabled: true, completionPercentage: 0 },
+    {
+      id: "institutional",
+      label: "Contexto Institucional",
+      layer: "institutional",
+      completed: false,
+      enabled: true,
+      completionPercentage: 0,
+    },
+    {
+      id: "offerings",
+      label: "Ofertas",
+      layer: "offerings",
+      completed: false,
+      enabled: true,
+      completionPercentage: 0,
+    },
+    {
+      id: "interactionGuidelines",
+      label: "Directrices de Interacción",
+      layer: "interactionGuidelines",
+      completed: false,
+      enabled: true,
+      completionPercentage: 0,
+    },
+    {
+      id: "payments",
+      label: "Pagos",
+      layer: "payments",
+      completed: false,
+      enabled: true,
+      completionPercentage: 0,
+    },
+    {
+      id: "recommendations",
+      label: "Recomendaciones",
+      layer: "recommendations",
+      completed: false,
+      enabled: true,
+      completionPercentage: 0,
+    },
+    {
+      id: "whatsappConnection",
+      label: "Conexión WhatsApp",
+      layer: "whatsappConnection",
+      completed: false,
+      enabled: true,
+      completionPercentage: 0,
+    },
   ];
 
   // Convertir LayerProgress a WizardStep (sin capa 'operational')
   // Si layerProgress está vacío, usar pasos por defecto
-  const wizardSteps: WizardStep[] = layerProgress.length > 0
-    ? layerProgress
-        .filter(layer => layer.layer !== 'operational') // Filtrar capa 'operational'
-        .map((layer) => ({
-          id: layer.layer,
-          label:
-            layer.layer === 'institutional'
-              ? 'Contexto Institucional'
-              : layer.layer === 'offerings'
-              ? 'Ofertas'
-              : layer.layer === 'interactionGuidelines'
-              ? 'Directrices de Interacción'
-              : layer.layer === 'payments'
-              ? 'Pagos'
-              : layer.layer === 'recommendations'
-              ? 'Recomendaciones'
-              : layer.layer === 'whatsappConnection'
-              ? 'Conexión WhatsApp'
-              : layer.layer, // Fallback al nombre de la capa
-          layer: layer.layer,
-          completed: layer.completed,
-          enabled: true,
-          completionPercentage: layer.completionPercentage,
-          skipped: layer.skipped,
-        }))
-    : defaultSteps;
+  const wizardSteps: WizardStep[] =
+    layerProgress.length > 0
+      ? layerProgress
+          .filter((layer) => layer.layer !== "operational") // Filtrar capa 'operational'
+          .map((layer) => ({
+            id: layer.layer,
+            label:
+              layer.layer === "institutional"
+                ? "Contexto Institucional"
+                : layer.layer === "offerings"
+                  ? "Ofertas"
+                  : layer.layer === "interactionGuidelines"
+                    ? "Directrices de Interacción"
+                    : layer.layer === "payments"
+                      ? "Pagos"
+                      : layer.layer === "recommendations"
+                        ? "Recomendaciones"
+                        : layer.layer === "whatsappConnection"
+                          ? "Conexión WhatsApp"
+                          : layer.layer, // Fallback al nombre de la capa
+            layer: layer.layer,
+            completed: layer.completed,
+            enabled: true,
+            completionPercentage: layer.completionPercentage,
+            skipped: layer.skipped,
+          }))
+      : defaultSteps;
 
   const handleStepPress = (step: WizardStep) => {
     // Definir el orden de las capas
-    const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
-    
+    const layerOrder = [
+      "institutional",
+      "offerings",
+      "interactionGuidelines",
+      "payments",
+      "recommendations",
+      "whatsappConnection",
+    ];
+
     const currentIndex = layerOrder.indexOf(currentLayer);
     const targetIndex = layerOrder.indexOf(step.layer);
-    
+
     // Obtener el estado de la etapa actual
-    const currentStep = wizardSteps.find(s => s.layer === currentLayer);
+    const currentStep = wizardSteps.find((s) => s.layer === currentLayer);
     const isCurrentCompleted = currentStep?.completed || false;
-    
+
     // Permitir navegación si:
     // 1. Es una etapa anterior (targetIndex < currentIndex) - siempre permitido
     // 2. Es la etapa actual (targetIndex === currentIndex) - siempre permitido
@@ -298,22 +403,43 @@ export function CommercialSetupScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isMobile && styles.scrollContentMobile,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons
+              name="arrow-back"
+              size={pageLayout.iconSubtitle}
+              color={colors.text}
+            />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <ThemedText type="h2" style={styles.title}>
-              Configuración de Chat IA
-            </ThemedText>
-            <ThemedText type="body1" style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Completa la información para que la IA pueda interactuar mejor con tus clientes
+            <View style={styles.titleRow}>
+              <DynamicIcon
+                name="MaterialCommunityIcons:cellphone-cog"
+                size={
+                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                }
+                color={colors.primary}
+                style={styles.titleIcon}
+              />
+              <ThemedText
+                type="h2"
+                style={isMobile ? styles.titleMobile : styles.title}
+              >
+                Configuración de Chat IA
+              </ThemedText>
+            </View>
+            <ThemedText type="body1" style={styles.subtitle}>
+              Completa la información para que la IA pueda interactuar mejor con
+              tus clientes
             </ThemedText>
           </View>
         </View>
@@ -321,8 +447,8 @@ export function CommercialSetupScreen() {
         {/* Stepper Visual (solo si no está en Capa 0) */}
         {!showLayer0 && (
           <Card variant="elevated" style={styles.stepperCard}>
-            <WizardStepper 
-              steps={wizardSteps} 
+            <WizardStepper
+              steps={wizardSteps}
               currentStep={currentLayer}
               onStepPress={handleStepPress}
             />
@@ -335,7 +461,7 @@ export function CommercialSetupScreen() {
             <CompanySetupLayer
               onComplete={() => {
                 setShowLayer0(false);
-                setCurrentLayer('institutional');
+                setCurrentLayer("institutional");
                 // Recargar progreso después de crear empresa
                 if (company?.id) {
                   loadProgress();
@@ -346,57 +472,88 @@ export function CommercialSetupScreen() {
         ) : (
           <>
             {/* Contenido de la Capa Actual */}
-            <Card variant="elevated" style={[styles.contentCard, currentLayer === 'interactionGuidelines' && { gap: 0 }]}>
-              <View style={{ 
-                flexDirection: isMobile ? 'column' : 'row', 
-                alignItems: 'flex-start', 
-                justifyContent: 'space-between', 
-                marginBottom: currentLayer === 'interactionGuidelines' ? 0 : 16,
-                gap: isMobile ? 16 : 0
-              }}>
-                <View style={{ flex: 1, alignItems: 'flex-start', width: isMobile ? '100%' : undefined }}>
-                  <ThemedText type="h4" style={styles.contentTitle}>
-                    {wizardSteps.find(s => s.id === currentLayer)?.label || 'Capa'}
+            <Card
+              variant="elevated"
+              style={[
+                styles.contentCard,
+                currentLayer === "interactionGuidelines" && { gap: 0 },
+              ]}
+            >
+              <View
+                style={[
+                  isMobile
+                    ? styles.contentHeaderRowMobile
+                    : styles.contentHeaderRow,
+                  currentLayer === "interactionGuidelines" &&
+                    styles.contentHeaderRowNoMargin,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.contentHeaderCol,
+                    isMobile && { width: "100%" },
+                  ]}
+                >
+                  {/* Subtítulo del wizard: ej. Contexto Institucional, Ofertas, Directrices de Interacción, etc. */}
+                  <ThemedText
+                    type="body1"
+                    style={
+                      isMobile
+                        ? styles.layerSubtitleMobile
+                        : styles.layerSubtitle
+                    }
+                  >
+                    {wizardSteps.find((s) => s.id === currentLayer)?.label ||
+                      "Capa"}
                   </ThemedText>
-                  {currentLayer === 'recommendations' && (
-                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
-                      Crea recomendaciones informativas, de orientación, sugerencias y upsell que la IA puede ofrecer durante las conversaciones.
+                  {currentLayer === "recommendations" && (
+                    <ThemedText type="body2" style={styles.contentDescription}>
+                      Crea recomendaciones informativas, de orientación,
+                      sugerencias y upsell que la IA puede ofrecer durante las
+                      conversaciones.
                     </ThemedText>
                   )}
-                  {currentLayer === 'interactionGuidelines' && (
-                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
-                      Configura la personalidad y el estilo de comunicación de tu asistente IA. Define cómo debe saludar, despedirse y el tono que debe usar en cada interacción.
+                  {currentLayer === "interactionGuidelines" && (
+                    <ThemedText type="body2" style={styles.contentDescription}>
+                      Configura la personalidad y el estilo de comunicación de
+                      tu asistente IA. Define cómo debe saludar, despedirse y el
+                      tono que debe usar en cada interacción.
                     </ThemedText>
                   )}
-                  {currentLayer === 'institutional' && (
-                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
-                      Cuéntanos sobre tu empresa: a qué se dedica, en qué industria está, y cómo opera.
+                  {currentLayer === "institutional" && (
+                    <ThemedText type="body2" style={styles.contentDescription}>
+                      Cuéntanos sobre tu empresa: a qué se dedica, en qué
+                      industria está, y cómo opera.
                     </ThemedText>
                   )}
-                  {currentLayer === 'offerings' && (
-                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
-                      Configura tus ofertas (productos, servicios y paquetes) y precios para que la IA pueda informar valores a los clientes.
+                  {currentLayer === "offerings" && (
+                    <ThemedText type="body2" style={styles.contentDescription}>
+                      Configura tus ofertas (productos, servicios y paquetes) y
+                      precios para que la IA pueda informar valores a los
+                      clientes.
                     </ThemedText>
                   )}
-                  {currentLayer === 'payments' && (
-                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
-                      Define los métodos de pago aceptados y cómo los clientes pueden realizar pagos.
+                  {currentLayer === "payments" && (
+                    <ThemedText type="body2" style={styles.contentDescription}>
+                      Define los métodos de pago aceptados y cómo los clientes
+                      pueden realizar pagos.
                     </ThemedText>
                   )}
-                  {currentLayer === 'whatsappConnection' && (
-                    <ThemedText type="body2" style={[styles.contentDescription, { color: colors.textSecondary, marginTop: 12 }]}>
-                      Conecta tu cuenta de WhatsApp para que la IA pueda interactuar con tus clientes. Escanea el código QR con tu teléfono.
+                  {currentLayer === "whatsappConnection" && (
+                    <ThemedText type="body2" style={styles.contentDescription}>
+                      Conecta tu cuenta de WhatsApp para que la IA pueda
+                      interactuar con tus clientes. Escanea el código QR con tu
+                      teléfono.
                     </ThemedText>
                   )}
                 </View>
-                {currentLayer === 'offerings' && (
-                  <View style={{ 
-                    flex: isMobile ? undefined : 1, 
-                    marginLeft: isMobile ? 0 : 16, 
-                    marginTop: isMobile ? 0 : 0,
-                    maxWidth: isMobile ? '100%' : 400,
-                    width: isMobile ? '100%' : undefined
-                  }}>
+                {currentLayer === "offerings" && (
+                  <View
+                    style={[
+                      styles.filterWrapper,
+                      isMobile && styles.filterWrapperMobile,
+                    ]}
+                  >
                     <SearchFilterBar
                       filterValue={offeringsFilter}
                       onFilterChange={setOfferingsFilter}
@@ -409,40 +566,46 @@ export function CommercialSetupScreen() {
                     />
                   </View>
                 )}
-                {currentLayer === 'whatsappConnection' && (
-                  <View style={{ 
-                    flex: isMobile ? undefined : 0,
-                    marginLeft: isMobile ? 0 : 16, 
-                    marginTop: isMobile ? 0 : 0,
-                    alignItems: isMobile ? 'stretch' : 'center',
-                    justifyContent: 'center',
-                    minWidth: isMobile ? '100%' : 220
-                  }}>
+                {currentLayer === "whatsappConnection" && (
+                  <View
+                    style={[
+                      styles.buttonWrapper,
+                      isMobile && styles.buttonWrapperMobile,
+                    ]}
+                  >
                     <Button
-                      title={isMobile ? '' : 'Crear Conexión'}
+                      title={isMobile ? "" : "Crear Conexión"}
                       onPress={() => {
                         whatsappConnectionRef.current?.handleCreate();
                       }}
                       variant="primary"
                       size="md"
-                      style={{ width: isMobile ? '100%' : 220 }}
+                      style={{ width: isMobile ? "100%" : 220 }}
                     >
-                      <Ionicons name="add" size={20} color="#FFFFFF" style={!isMobile ? { marginRight: 8 } : undefined} />
+                      <Ionicons
+                        name="add"
+                        size={pageLayout.iconSubtitle}
+                        color="#FFFFFF"
+                        style={
+                          !isMobile ? { marginRight: spacing.sm } : undefined
+                        }
+                      />
                     </Button>
                   </View>
                 )}
-                {currentLayer === 'recommendations' && (
-                  <View style={{ 
-                    flex: isMobile ? undefined : 1, 
-                    marginLeft: isMobile ? 0 : 16, 
-                    marginTop: isMobile ? 0 : 0,
-                    maxWidth: isMobile ? '100%' : 400,
-                    width: isMobile ? '100%' : undefined
-                  }}>
+                {currentLayer === "recommendations" && (
+                  <View
+                    style={[
+                      styles.filterWrapper,
+                      isMobile && styles.filterWrapperMobile,
+                    ]}
+                  >
                     <SearchFilterBar
                       filterValue={recommendationsFilter}
                       onFilterChange={setRecommendationsFilter}
-                      onSearchSubmit={(search) => setRecommendationsFilter(search)}
+                      onSearchSubmit={(search) =>
+                        setRecommendationsFilter(search)
+                      }
                       filterPlaceholder="Filtrar por mensaje..."
                       searchPlaceholder="Buscar recomendaciones..."
                       filters={[]}
@@ -451,18 +614,19 @@ export function CommercialSetupScreen() {
                     />
                   </View>
                 )}
-                {currentLayer === 'interactionGuidelines' && (
-                  <View style={{ 
-                    flex: isMobile ? undefined : 1, 
-                    marginLeft: isMobile ? 0 : 16, 
-                    marginTop: isMobile ? 0 : 0,
-                    maxWidth: isMobile ? '100%' : 400,
-                    width: isMobile ? '100%' : undefined
-                  }}>
+                {currentLayer === "interactionGuidelines" && (
+                  <View
+                    style={[
+                      styles.filterWrapper,
+                      isMobile && styles.filterWrapperMobile,
+                    ]}
+                  >
                     <SearchFilterBar
                       filterValue={interactionGuidelinesFilter}
                       onFilterChange={setInteractionGuidelinesFilter}
-                      onSearchSubmit={(search) => setInteractionGuidelinesFilter(search)}
+                      onSearchSubmit={(search) =>
+                        setInteractionGuidelinesFilter(search)
+                      }
                       filterPlaceholder="Filtrar por título o descripción..."
                       searchPlaceholder="Buscar directrices..."
                       filters={[]}
@@ -474,23 +638,35 @@ export function CommercialSetupScreen() {
               </View>
 
               {/* Renderizar componente de la capa actual */}
-              <View style={[styles.layerContent, currentLayer === 'interactionGuidelines' && { paddingTop: 0, marginTop: 0 }]}>
-                {currentLayer === 'institutional' && (
+              <View
+                style={[
+                  styles.layerContent,
+                  currentLayer === "interactionGuidelines" &&
+                    styles.layerContentNoPadding,
+                ]}
+              >
+                {currentLayer === "institutional" && (
                   <InstitutionalLayer
                     onProgressUpdate={(progress) => {
-                      setLayerProgress(prev => {
-                        const updated = prev.map(l => l.layer === 'institutional' 
-                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
-                          : l
+                      setLayerProgress((prev) => {
+                        const updated = prev.map((l) =>
+                          l.layer === "institutional"
+                            ? {
+                                ...l,
+                                completionPercentage: progress,
+                                completed: progress === 100,
+                              }
+                            : l,
                         );
                         // Si no existe la capa en el progreso, agregarla
-                        if (!updated.find(l => l.layer === 'institutional')) {
+                        if (!updated.find((l) => l.layer === "institutional")) {
                           updated.push({
-                            layer: 'institutional',
+                            layer: "institutional",
                             completed: progress === 100,
                             completionPercentage: progress,
                             enabledCapabilities: [],
-                            missingFields: progress === 100 ? [] : ['institutional'],
+                            missingFields:
+                              progress === 100 ? [] : ["institutional"],
                           });
                         }
                         return updated;
@@ -507,23 +683,29 @@ export function CommercialSetupScreen() {
                     }}
                   />
                 )}
-                {currentLayer === 'offerings' && (
+                {currentLayer === "offerings" && (
                   <OperationalLayer
                     searchFilter={offeringsFilter}
                     onProgressUpdate={(progress) => {
-                      setLayerProgress(prev => {
-                        const updated = prev.map(l => l.layer === 'offerings' 
-                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
-                          : l
+                      setLayerProgress((prev) => {
+                        const updated = prev.map((l) =>
+                          l.layer === "offerings"
+                            ? {
+                                ...l,
+                                completionPercentage: progress,
+                                completed: progress === 100,
+                              }
+                            : l,
                         );
                         // Si no existe la capa en el progreso, agregarla
-                        if (!updated.find(l => l.layer === 'offerings')) {
+                        if (!updated.find((l) => l.layer === "offerings")) {
                           updated.push({
-                            layer: 'offerings',
+                            layer: "offerings",
                             completed: progress === 100,
                             completionPercentage: progress,
                             enabledCapabilities: [],
-                            missingFields: progress === 100 ? [] : ['offerings'],
+                            missingFields:
+                              progress === 100 ? [] : ["offerings"],
                           });
                         }
                         return updated;
@@ -540,28 +722,40 @@ export function CommercialSetupScreen() {
                     }}
                   />
                 )}
-                {currentLayer === 'interactionGuidelines' && (
+                {currentLayer === "interactionGuidelines" && (
                   <InteractionGuidelinesLayer
                     searchFilter={interactionGuidelinesFilter}
                     onProgressUpdate={(progress) => {
-                      setLayerProgress(prev => {
-                        const existingLayer = prev.find(l => l.layer === 'interactionGuidelines');
+                      setLayerProgress((prev) => {
+                        const existingLayer = prev.find(
+                          (l) => l.layer === "interactionGuidelines",
+                        );
                         // Si la capa ya está marcada como completada, no sobrescribir el estado
                         if (existingLayer && existingLayer.completed) {
                           return prev; // Mantener el estado de completado
                         }
                         // Solo actualizar el progreso si no está completada
-                        const updated = prev.map(l => l.layer === 'interactionGuidelines' 
-                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
-                          : l
+                        const updated = prev.map((l) =>
+                          l.layer === "interactionGuidelines"
+                            ? {
+                                ...l,
+                                completionPercentage: progress,
+                                completed: progress === 100,
+                              }
+                            : l,
                         );
-                        if (!updated.find(l => l.layer === 'interactionGuidelines')) {
+                        if (
+                          !updated.find(
+                            (l) => l.layer === "interactionGuidelines",
+                          )
+                        ) {
                           updated.push({
-                            layer: 'interactionGuidelines',
+                            layer: "interactionGuidelines",
                             completed: progress === 100,
                             completionPercentage: progress,
                             enabledCapabilities: [],
-                            missingFields: progress === 100 ? [] : ['interactionGuidelines'],
+                            missingFields:
+                              progress === 100 ? [] : ["interactionGuidelines"],
                           });
                         }
                         return updated;
@@ -571,16 +765,32 @@ export function CommercialSetupScreen() {
                       // Actualizar capacidades cuando hay datos
                     }}
                     onComplete={async (hasData) => {
-                      await markLayerAsCompleted('interactionGuidelines', hasData || false);
+                      await markLayerAsCompleted(
+                        "interactionGuidelines",
+                        hasData || false,
+                      );
                       // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
                       // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                     onSkip={async () => {
-                      await markLayerAsCompleted('interactionGuidelines', false);
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
+                      await markLayerAsCompleted(
+                        "interactionGuidelines",
+                        false,
+                      );
+                      setCurrentLayer((prevLayer) => {
+                        const layerOrder = [
+                          "institutional",
+                          "offerings",
+                          "interactionGuidelines",
+                          "payments",
+                          "recommendations",
+                          "whatsappConnection",
+                        ];
                         const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                        if (
+                          currentIndex >= 0 &&
+                          currentIndex < layerOrder.length - 1
+                        ) {
                           return layerOrder[currentIndex + 1];
                         }
                         return prevLayer;
@@ -588,29 +798,39 @@ export function CommercialSetupScreen() {
                     }}
                   />
                 )}
-                {currentLayer === 'payments' && (
+                {currentLayer === "payments" && (
                   <PaymentsLayer
-                    isCompleted={layerProgress.find(l => l.layer === 'payments')?.completed || false}
+                    isCompleted={
+                      layerProgress.find((l) => l.layer === "payments")
+                        ?.completed || false
+                    }
                     onProgressUpdate={(progress) => {
-                      setLayerProgress(prev => {
-                        const existingLayer = prev.find(l => l.layer === 'payments');
+                      setLayerProgress((prev) => {
+                        const existingLayer = prev.find(
+                          (l) => l.layer === "payments",
+                        );
                         // Si la capa ya está marcada como completada, no sobrescribir el estado
                         if (existingLayer && existingLayer.completed) {
                           return prev; // Mantener el estado de completado
                         }
                         // Solo actualizar el progreso si no está completada
-                        const updated = prev.map(l => l.layer === 'payments' 
-                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
-                          : l
+                        const updated = prev.map((l) =>
+                          l.layer === "payments"
+                            ? {
+                                ...l,
+                                completionPercentage: progress,
+                                completed: progress === 100,
+                              }
+                            : l,
                         );
                         // Si no existe la capa en el progreso, agregarla
-                        if (!updated.find(l => l.layer === 'payments')) {
+                        if (!updated.find((l) => l.layer === "payments")) {
                           updated.push({
-                            layer: 'payments',
+                            layer: "payments",
                             completed: progress === 100,
                             completionPercentage: progress,
                             enabledCapabilities: [],
-                            missingFields: progress === 100 ? [] : ['payments'],
+                            missingFields: progress === 100 ? [] : ["payments"],
                           });
                         }
                         return updated;
@@ -621,17 +841,27 @@ export function CommercialSetupScreen() {
                     }}
                     onComplete={async (hasData: boolean = false) => {
                       // Marcar como completada con los datos proporcionados
-                      await markLayerAsCompleted('payments', hasData);
+                      await markLayerAsCompleted("payments", hasData);
                       // NO navegar automáticamente - el usuario puede navegar manualmente haciendo clic en las etapas
                       // Solo navegar automáticamente cuando se carga el wizard inicialmente (en loadProgress)
                     }}
                     onSkip={async () => {
                       // Marcar como omitida sin datos
-                      await markLayerAsCompleted('payments', false);
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
+                      await markLayerAsCompleted("payments", false);
+                      setCurrentLayer((prevLayer) => {
+                        const layerOrder = [
+                          "institutional",
+                          "offerings",
+                          "interactionGuidelines",
+                          "payments",
+                          "recommendations",
+                          "whatsappConnection",
+                        ];
                         const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                        if (
+                          currentIndex >= 0 &&
+                          currentIndex < layerOrder.length - 1
+                        ) {
                           return layerOrder[currentIndex + 1];
                         }
                         return prevLayer;
@@ -639,30 +869,43 @@ export function CommercialSetupScreen() {
                     }}
                   />
                 )}
-                {currentLayer === 'recommendations' && (
+                {currentLayer === "recommendations" && (
                   <RecommendationsLayer
                     searchFilter={recommendationsFilter}
-                    isCompleted={layerProgress.find(l => l.layer === 'recommendations')?.completed || false}
+                    isCompleted={
+                      layerProgress.find((l) => l.layer === "recommendations")
+                        ?.completed || false
+                    }
                     onProgressUpdate={(progress) => {
-                      setLayerProgress(prev => {
-                        const existingLayer = prev.find(l => l.layer === 'recommendations');
+                      setLayerProgress((prev) => {
+                        const existingLayer = prev.find(
+                          (l) => l.layer === "recommendations",
+                        );
                         // Si la capa ya está marcada como completada, no sobrescribir el estado
                         if (existingLayer && existingLayer.completed) {
                           return prev; // Mantener el estado de completado
                         }
                         // Solo actualizar el progreso si no está completada
-                        const updated = prev.map(l => l.layer === 'recommendations' 
-                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
-                          : l
+                        const updated = prev.map((l) =>
+                          l.layer === "recommendations"
+                            ? {
+                                ...l,
+                                completionPercentage: progress,
+                                completed: progress === 100,
+                              }
+                            : l,
                         );
                         // Si no existe la capa en el progreso, agregarla
-                        if (!updated.find(l => l.layer === 'recommendations')) {
+                        if (
+                          !updated.find((l) => l.layer === "recommendations")
+                        ) {
                           updated.push({
-                            layer: 'recommendations',
+                            layer: "recommendations",
                             completed: progress === 100,
                             completionPercentage: progress,
                             enabledCapabilities: [],
-                            missingFields: progress === 100 ? [] : ['recommendations'],
+                            missingFields:
+                              progress === 100 ? [] : ["recommendations"],
                           });
                         }
                         return updated;
@@ -673,12 +916,22 @@ export function CommercialSetupScreen() {
                     }}
                     onComplete={async (hasData: boolean = false) => {
                       // Marcar como completada con los datos proporcionados
-                      await markLayerAsCompleted('recommendations', hasData);
+                      await markLayerAsCompleted("recommendations", hasData);
                       // Navegar automáticamente a la siguiente etapa (whatsappConnection)
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
+                      setCurrentLayer((prevLayer) => {
+                        const layerOrder = [
+                          "institutional",
+                          "offerings",
+                          "interactionGuidelines",
+                          "payments",
+                          "recommendations",
+                          "whatsappConnection",
+                        ];
                         const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                        if (
+                          currentIndex >= 0 &&
+                          currentIndex < layerOrder.length - 1
+                        ) {
                           return layerOrder[currentIndex + 1];
                         }
                         return prevLayer;
@@ -686,12 +939,22 @@ export function CommercialSetupScreen() {
                     }}
                     onSkip={async () => {
                       // Marcar como omitida sin datos
-                      await markLayerAsCompleted('recommendations', false);
+                      await markLayerAsCompleted("recommendations", false);
                       // Navegar automáticamente a la siguiente etapa (whatsappConnection)
-                      setCurrentLayer(prevLayer => {
-                        const layerOrder = ['institutional', 'offerings', 'interactionGuidelines', 'payments', 'recommendations', 'whatsappConnection'];
+                      setCurrentLayer((prevLayer) => {
+                        const layerOrder = [
+                          "institutional",
+                          "offerings",
+                          "interactionGuidelines",
+                          "payments",
+                          "recommendations",
+                          "whatsappConnection",
+                        ];
                         const currentIndex = layerOrder.indexOf(prevLayer);
-                        if (currentIndex >= 0 && currentIndex < layerOrder.length - 1) {
+                        if (
+                          currentIndex >= 0 &&
+                          currentIndex < layerOrder.length - 1
+                        ) {
                           return layerOrder[currentIndex + 1];
                         }
                         return prevLayer;
@@ -702,22 +965,30 @@ export function CommercialSetupScreen() {
                     layerDescription="Crea recomendaciones informativas, de orientación, sugerencias y upsell que la IA puede ofrecer durante las conversaciones"
                   />
                 )}
-                {currentLayer === 'whatsappConnection' && (
+                {currentLayer === "whatsappConnection" && (
                   <WhatsAppConnectionLayer
                     ref={whatsappConnectionRef}
                     onProgressUpdate={(progress) => {
-                      setLayerProgress(prev => {
-                        const updated = prev.map(l => l.layer === 'whatsappConnection' 
-                          ? { ...l, completionPercentage: progress, completed: progress === 100 }
-                          : l
+                      setLayerProgress((prev) => {
+                        const updated = prev.map((l) =>
+                          l.layer === "whatsappConnection"
+                            ? {
+                                ...l,
+                                completionPercentage: progress,
+                                completed: progress === 100,
+                              }
+                            : l,
                         );
-                        if (!updated.find(l => l.layer === 'whatsappConnection')) {
+                        if (
+                          !updated.find((l) => l.layer === "whatsappConnection")
+                        ) {
                           updated.push({
-                            layer: 'whatsappConnection',
+                            layer: "whatsappConnection",
                             completed: progress === 100,
                             completionPercentage: progress,
                             enabledCapabilities: [],
-                            missingFields: progress === 100 ? [] : ['whatsappConnection'],
+                            missingFields:
+                              progress === 100 ? [] : ["whatsappConnection"],
                           });
                         }
                         return updated;
@@ -728,7 +999,9 @@ export function CommercialSetupScreen() {
                     }}
                     onComplete={async () => {
                       // Finalizar wizard - todas las capas completadas
-                      alert.showSuccess('¡Configuración completada! Tu Chat IA está listo para usar.');
+                      alert.showSuccess(
+                        "¡Configuración completada! Tu Chat IA está listo para usar.",
+                      );
                       // Opcional: redirigir a otra página
                       // router.push('/interacciones/chat');
                     }}
@@ -742,26 +1015,34 @@ export function CommercialSetupScreen() {
         {/* Información sobre capacidades */}
         <Card variant="outlined" style={styles.infoCard}>
           <View style={styles.infoContent}>
-            <Ionicons name="bulb-outline" size={24} color={colors.primary} />
+            <Ionicons
+              name="bulb-outline"
+              size={pageLayout.iconSubtitle}
+              color={colors.primary}
+            />
             <View style={styles.infoText}>
-              <ThemedText type="body2" style={{ fontWeight: '600', marginBottom: 4 }}>
+              <ThemedText type="body2" style={styles.infoTitle}>
                 ¿Qué se activa con cada capa?
               </ThemedText>
               <ThemedText type="body2" style={{ color: colors.textSecondary }}>
                 {layerProgress
-                  .find(p => p.layer === currentLayer)
-                  ?.enabledCapabilities.map(cap => {
+                  .find((p) => p.layer === currentLayer)
+                  ?.enabledCapabilities.map((cap) => {
                     const labels: Record<string, string> = {
-                      canAnswerAboutBusiness: 'La IA puede responder sobre tu negocio',
-                      canAnswerAboutLocation: 'La IA puede informar ubicaciones',
-                      canAnswerAboutPrices: 'La IA puede informar precios',
-                      canAnswerAboutPayment: 'La IA puede explicar métodos de pago',
-                      canRecommend: 'La IA puede hacer recomendaciones',
-                      canSuggestProducts: 'La IA puede sugerir productos/servicios',
+                      canAnswerAboutBusiness:
+                        "La IA puede responder sobre tu negocio",
+                      canAnswerAboutLocation:
+                        "La IA puede informar ubicaciones",
+                      canAnswerAboutPrices: "La IA puede informar precios",
+                      canAnswerAboutPayment:
+                        "La IA puede explicar métodos de pago",
+                      canRecommend: "La IA puede hacer recomendaciones",
+                      canSuggestProducts:
+                        "La IA puede sugerir productos/servicios",
                     };
                     return labels[cap] || cap;
                   })
-                  .join(', ') || 'Completa esta capa para activar capacidades'}
+                  .join(", ") || "Completa esta capa para activar capacidades"}
               </ThemedText>
             </View>
           </View>
@@ -770,67 +1051,3 @@ export function CommercialSetupScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-    gap: 12,
-  },
-  backButton: {
-    padding: 8,
-    marginTop: -8,
-    marginLeft: -8,
-  },
-  headerContent: {
-    flex: 1,
-    gap: 8,
-  },
-  title: {
-    marginBottom: 4,
-  },
-  subtitle: {
-    lineHeight: 20,
-  },
-  stepperCard: {
-    padding: 16,
-    marginBottom: 0,
-  },
-  contentCard: {
-    padding: 24,
-    marginBottom: 16,
-    gap: 16,
-  },
-  contentTitle: {
-    marginBottom: 0,
-  },
-  contentDescription: {
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  layerContent: {
-    minHeight: 200,
-  },
-  infoCard: {
-    padding: 16,
-  },
-  infoContent: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
-    gap: 4,
-  },
-});
