@@ -393,4 +393,8 @@ export const ModalLayout = {
   footerPadding: 25,
   /** Gap entre elementos del footer. */
   footerGap: 12,
+  /** Padding del área de contenido del modal (entre cabecera y primer campo). Estandarizado para Users y Roles. */
+  contentPadding: 0,
+  /** Padding del área de contenido en móvil. */
+  contentPaddingMobile: 0,
 };

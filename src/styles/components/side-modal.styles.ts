@@ -72,11 +72,16 @@ export const createSideModalStyles = (
       borderRadius: modalLayout.closeButtonBorderRadius,
     },
     scrollView: {
-      flex: 1, // Toma el espacio disponible entre header y footer
+      flex: 1,
     },
+    /** Área de contenido: mismo padding estándar en Users y Roles (Create/Edit). */
     scrollContent: {
-      padding: 0,
-      paddingBottom: 0,
+      padding: isMobile
+        ? modalLayout.contentPaddingMobile
+        : modalLayout.contentPadding,
+      paddingBottom: isMobile
+        ? modalLayout.contentPaddingMobile
+        : modalLayout.contentPadding,
     },
     footer: {
       flexDirection: "row",
