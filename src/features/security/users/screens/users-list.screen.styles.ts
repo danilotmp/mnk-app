@@ -36,6 +36,7 @@ export interface UsersListScreenTheme {
     headerTitleGap: number;
     headerTitleGapMobile: number;
     subtitleContentGap: number;
+    subtitleContentGapMobile: number;
     iconTitle: number;
     iconTitleMobile: number;
     iconSubtitle: number;
@@ -93,7 +94,9 @@ export function createUsersListScreenStyles(
       alignItems: "flex-start",
       gap: t.spacing.md,
       flexShrink: 0,
-      marginBottom: t.pageLayout.subtitleContentGap,
+      marginBottom: isMobile
+        ? t.pageLayout.subtitleContentGapMobile
+        : t.pageLayout.subtitleContentGap,
     },
     headerTitle: {
       flex: 1,

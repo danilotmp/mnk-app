@@ -355,9 +355,9 @@ export const PageLayout = {
   /** Espacio entre título principal y subtítulo/descripción (smartphone). */
   titleSubtitleGapMobile: 16,
   /** Espacio entre subtítulo y contenido principal de la página (desktop). */
-  subtitleContentGap: 24,
-  /** Espacio entre subtítulo y contenido principal de la página (smartphone). */
-  subtitleContentGapMobile: 24,
+  subtitleContentGap: 10,
+  /** Espacio entre subtítulo y contenido principal de la página (smartphone). Más unido que desktop para páginas de administración. */
+  subtitleContentGapMobile: 0,
   /** Espacio entre header y título de página (desktop). */
   headerTitleGap: 48,
   /** Espacio entre header y título de página (smartphone). */
