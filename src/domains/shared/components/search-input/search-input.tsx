@@ -3,31 +3,33 @@
  * Input de búsqueda con icono y botón de limpiar
  */
 
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { useTheme } from '@/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { TextInput, TouchableOpacity, ViewStyle } from 'react-native';
-import { createSearchInputStyles } from './search-input.styles';
-import type { SearchInputProps } from './search-input.types';
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { TextInput, TouchableOpacity, ViewStyle } from "react-native";
+import { createSearchInputStyles } from "./search-input.styles";
+import type { SearchInputProps } from "./search-input.types";
 
 export function SearchInput({
   value,
   onChangeText,
-  placeholder = 'Buscar...',
+  placeholder = "Buscar...",
   disabled = false,
   containerStyle,
   inputStyle,
   onFocus,
   onBlur,
-  returnKeyType = 'search',
+  returnKeyType = "search",
   onSubmitEditing,
-  autoCapitalize = 'none',
+  autoCapitalize = "none",
   autoCorrect = false,
   showClearButton = true,
 }: SearchInputProps) {
   const { colors } = useTheme();
-  const styles = createSearchInputStyles();
+  const { isMobile } = useResponsive();
+  const styles = createSearchInputStyles(isMobile);
 
   // Estilos del contenedor combinando estilos base y personalizados
   const finalContainerStyle: ViewStyle[] = [
@@ -36,14 +38,22 @@ export function SearchInput({
       backgroundColor: colors.surface,
       borderColor: colors.border,
     },
-    ...(Array.isArray(containerStyle) ? containerStyle : containerStyle ? [containerStyle] : []),
+    ...(Array.isArray(containerStyle)
+      ? containerStyle
+      : containerStyle
+        ? [containerStyle]
+        : []),
   ];
 
   // Estilos del input combinando estilos base y personalizados
   const finalInputStyle: ViewStyle[] = [
     styles.searchInput,
     { color: colors.text },
-    ...(Array.isArray(inputStyle) ? inputStyle : inputStyle ? [inputStyle] : []),
+    ...(Array.isArray(inputStyle)
+      ? inputStyle
+      : inputStyle
+        ? [inputStyle]
+        : []),
   ];
 
   const hasValue = value && value.length > 0;
@@ -54,7 +64,12 @@ export function SearchInput({
       primaryColor={colors.primary}
       error={false}
     >
-      <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+      <Ionicons
+        name="search"
+        size={20}
+        color={colors.textSecondary}
+        style={styles.searchIcon}
+      />
       <TextInput
         style={finalInputStyle}
         placeholder={placeholder}
@@ -71,12 +86,16 @@ export function SearchInput({
       />
       {showClearButton && hasValue && (
         <TouchableOpacity
-          onPress={() => onChangeText('')}
+          onPress={() => onChangeText("")}
           style={styles.clearButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           disabled={disabled}
         >
-          <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+          <Ionicons
+            name="close-circle"
+            size={20}
+            color={colors.textSecondary}
+          />
         </TouchableOpacity>
       )}
     </InputWithFocus>

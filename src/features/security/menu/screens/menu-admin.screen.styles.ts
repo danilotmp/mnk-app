@@ -1,18 +1,123 @@
 /**
- * Estilos para la pantalla de administración del menú
+ * Estilos para la pantalla de administración del menú (Security > Menu).
+ * Usa tokens globales: typography.pageTitle/pageSubtitle, pageLayout, spacing, colors, borderRadius.
+ * Estandarizado igual que Users, Roles, Permissions, Companies, Branches.
  */
 
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, TextStyle, ViewStyle } from "react-native";
 
-export const createMenuAdminStyles = (colors: any) => {
+export interface MenuAdminScreenTheme {
+  colors: {
+    text: string;
+    textSecondary: string;
+    primary: string;
+    border: string;
+    surface: string;
+    surfaceVariant?: string;
+    background: string;
+    success: string;
+    error: string;
+  };
+  spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
+  typography: {
+    pageTitle: { fontSize: number; lineHeight: number; fontWeight: string };
+    pageTitleMobile: {
+      fontSize: number;
+      lineHeight: number;
+      fontWeight: string;
+    };
+    pageSubtitle: { fontSize: number; lineHeight: number };
+    pageSubtitleMobile: { fontSize: number; lineHeight: number };
+  };
+  pageLayout: {
+    headerTitleGap: number;
+    headerTitleGapMobile: number;
+    subtitleContentGap: number;
+    subtitleContentGapMobile: number;
+    iconTitle: number;
+    iconTitleMobile: number;
+  };
+  borderRadius: { sm: number; md: number; lg: number };
+}
+
+export function createMenuAdminStyles(
+  t: MenuAdminScreenTheme,
+  isMobile: boolean,
+) {
+  const c = t.colors;
+  const s = t.spacing;
+  const r = t.borderRadius;
   return StyleSheet.create({
+    // Cabecera de página (icono + título + subtítulo)
+    container: { flex: 1 } as ViewStyle,
+    content: {
+      flex: 1,
+      paddingTop: t.pageLayout.headerTitleGap,
+      paddingHorizontal: s.md,
+      paddingBottom: s.md,
+    } as ViewStyle,
+    contentMobile: {
+      paddingTop: t.pageLayout.headerTitleGapMobile,
+      paddingHorizontal: s.sm,
+    } as ViewStyle,
+    pageHeader: {
+      marginBottom: isMobile
+        ? t.pageLayout.subtitleContentGapMobile
+        : t.pageLayout.subtitleContentGap,
+    } as ViewStyle,
+    pageHeaderTitle: { flex: 1 } as ViewStyle,
+    pageHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: s.sm,
+    } as ViewStyle,
+    pageHeaderIcon: { flexShrink: 0 } as ViewStyle,
+    pageTitle: {
+      ...(t.typography.pageTitle as TextStyle),
+      marginBottom: s.xs,
+    } as TextStyle,
+    pageTitleMobile: {
+      ...(t.typography.pageTitleMobile as TextStyle),
+      marginBottom: s.xs,
+    } as TextStyle,
+    pageSubtitle: {
+      ...(t.typography.pageSubtitle as TextStyle),
+      color: c.textSecondary,
+      paddingLeft: isMobile
+        ? t.pageLayout.iconTitleMobile + s.sm
+        : t.pageLayout.iconTitle + s.sm,
+    } as TextStyle,
+    scrollContent: {
+      paddingVertical: 16,
+      paddingHorizontal: 0,
+    } as ViewStyle,
+    scrollContentMobile: {} as ViewStyle,
+
+    // Barra de búsqueda y acciones (toolbar)
+    toolbarContainer: {
+      paddingVertical: 16,
+      paddingHorizontal: 0,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    } as ViewStyle,
+    toolbarContainerMobile: {} as ViewStyle,
+    toolbarRow: {
+      flexDirection: "row",
+      gap: s.sm,
+      alignItems: "center",
+    } as ViewStyle,
+    toolbarRowMobile: {
+      gap: s.md,
+    } as ViewStyle,
+
     // Estilos del formulario público
     publicToggleContainer: {
-      marginTop: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
+      marginTop: s.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: s.sm,
+    } as ViewStyle,
+    publicToggleContainerMobile: {} as ViewStyle,
     publicToggleLabel: {
       minWidth: 60,
     },
@@ -22,361 +127,418 @@ export const createMenuAdminStyles = (colors: any) => {
       borderRadius: 12,
       borderWidth: 2,
       padding: 3,
-      justifyContent: 'center',
-      position: 'relative',
+      justifyContent: "center",
+      position: "relative",
     },
     publicToggleThumb: {
       width: 18,
       height: 18,
       borderRadius: 9,
     },
-    
-    // Estilos del formulario de edición
+
     formRow: {
-      flexDirection: 'row',
-      gap: 12,
-      flexWrap: 'wrap',
-    },
+      flexDirection: "row",
+      gap: s.sm,
+      flexWrap: "wrap",
+    } as ViewStyle,
     formField: {
       flex: 1,
       minWidth: 180,
-    },
+    } as ViewStyle,
     formFieldWide: {
       flex: 2,
       minWidth: 180,
-    },
+    } as ViewStyle,
     formLabel: {
-      marginBottom: 8,
-    },
+      marginBottom: s.sm,
+    } as ViewStyle,
     descriptionInput: {
       borderWidth: 1,
-      borderRadius: 8,
+      borderRadius: r.md,
       minHeight: 105,
-    },
+    } as ViewStyle,
     actionButtons: {
-      flexDirection: 'row',
-      gap: 8,
-      justifyContent: 'flex-end',
-    },
+      flexDirection: "row",
+      gap: s.sm,
+      justifyContent: "flex-end",
+    } as ViewStyle,
     selectOptions: {
-      flexDirection: 'row',
-      gap: 8,
-      paddingRight: 8, // Padding derecho para permitir scroll completo
-    },
+      flexDirection: "row",
+      gap: s.sm,
+      paddingRight: s.sm,
+    } as ViewStyle,
     selectOption: {
       paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 6,
+      paddingVertical: s.xs,
+      borderRadius: r.sm,
       borderWidth: 1,
       maxHeight: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexShrink: 0, // Evitar que se compriman
-    },
-    
-    // Estilos del item del menú
+      justifyContent: "center",
+      alignItems: "center",
+      flexShrink: 0,
+    } as ViewStyle,
+
     itemContainerBase: {
-      marginBottom: 8,
-    },
+      marginBottom: s.sm,
+    } as ViewStyle,
     itemTitleContainerBase: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: s.md,
+      paddingHorizontal: s.sm,
+      borderRadius: r.md,
       borderWidth: 1,
-      width: '100%',
+      width: "100%",
       marginBottom: 0,
-      borderTopLeftRadius: 8,
-      borderTopRightRadius: 8,
-    },
+      borderTopLeftRadius: r.md,
+      borderTopRightRadius: r.md,
+    } as ViewStyle,
+    itemTitleContainerBaseMobile: {
+      paddingVertical: s.md,
+      paddingHorizontal: s.xs,
+    } as ViewStyle,
     expandCollapseButton: {
-      marginRight: 8,
-    },
+      marginRight: s.sm,
+    } as ViewStyle,
     expandCollapsePlaceholder: {
       width: 28,
-    },
+    } as ViewStyle,
     dragHandle: {
-      marginRight: 8,
-      padding: 4,
-      ...(Platform.OS === 'web' && {
-        cursor: 'grab',
+      marginRight: s.sm,
+      padding: s.xs,
+      ...(Platform.OS === "web" && {
+        cursor: "grab",
       }),
-    },
+    } as ViewStyle,
     itemRow: {
       flex: 1,
-      flexDirection: 'row',
-      gap: 12,
-      alignItems: 'center',
-      flexWrap: 'wrap',
-    },
+      flexDirection: "row",
+      gap: s.sm,
+      alignItems: "center",
+      flexWrap: "wrap",
+    } as ViewStyle,
+    itemRowMobile: {
+      gap: s.md,
+    } as ViewStyle,
     itemIconButton: {
-      padding: 4,
-    },
+      padding: s.xs,
+    } as ViewStyle,
     itemNameButton: {
       flex: 2,
       minWidth: 200,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
+      flexDirection: "row",
+      alignItems: "center",
+      gap: s.sm,
+    } as ViewStyle,
+    itemNameButtonMobile: {
+      minWidth: 0,
+      flex: 1,
+    } as ViewStyle,
     modifiedIndicator: {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: colors.success,
-    },
+      backgroundColor: c.success,
+    } as ViewStyle,
     itemNameText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
+      fontWeight: "600",
+      color: c.text,
+    } as TextStyle,
     itemRouteButton: {
       flex: 2,
       minWidth: 200,
-    },
+    } as ViewStyle,
+    itemRouteButtonMobile: {
+      minWidth: 0,
+      flex: 1,
+    } as ViewStyle,
     itemRouteText: {
-      fontStyle: 'italic',
-    },
+      fontStyle: "italic",
+    } as TextStyle,
     itemStatusButton: {
       flex: 1,
       minWidth: 100,
-      alignItems: 'center',
-      marginRight: 8,
-      flexDirection: 'row',
-      justifyContent: 'center',
+      alignItems: "center",
+      marginRight: s.sm,
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 6,
-    },
+    } as ViewStyle,
+    itemStatusButtonMobile: {
+      minWidth: 70,
+    } as ViewStyle,
     pendingChildIndicator: {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: '#f59e0b', // Color tomate igual que pendiente
-    },
+      backgroundColor: "#f59e0b",
+    } as ViewStyle,
     itemActionsContainer: {
-      flexDirection: 'row',
-      marginLeft: 'auto',
-      gap: 8,
-    },
+      flexDirection: "row",
+      marginLeft: "auto",
+      gap: s.sm,
+    } as ViewStyle,
     itemActionButton: {
-      padding: 4,
-    },
-    
-    // Estilos del drop zone
+      padding: s.xs,
+    } as ViewStyle,
+
     dropZoneBase: {
-      marginTop: 4,
-      padding: 12,
+      marginTop: s.xs,
+      padding: s.sm,
       borderWidth: 2,
-      borderStyle: 'dashed',
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+      borderStyle: "dashed",
+      borderRadius: r.md,
+      alignItems: "center",
+      justifyContent: "center",
+    } as ViewStyle,
     dropZoneText: {
-      color: colors.primary,
-      fontWeight: '600',
-    },
-    
-    // Estilos del formulario de edición
+      color: c.primary,
+      fontWeight: "600",
+    } as TextStyle,
+
     editFormContainer: {
-      width: '100%',
-      backgroundColor: 'transparent', // Se sobrescribe con colors.surface
+      width: "100%",
+      backgroundColor: "transparent",
       borderTopLeftRadius: 0,
       borderTopRightRadius: 0,
-      borderBottomLeftRadius: 8,
-      borderBottomRightRadius: 8,
+      borderBottomLeftRadius: r.md,
+      borderBottomRightRadius: r.md,
       borderWidth: 1,
       borderTopWidth: 0,
-      borderColor: 'transparent', // Se sobrescribe con colors.primary
-      padding: 12,
-      gap: 12,
+      borderColor: "transparent",
+      padding: s.sm,
+      gap: s.sm,
       marginTop: -1,
       zIndex: 0,
-    },
+    } as ViewStyle,
     editFormRow: {
-      flexDirection: 'row',
-      gap: 12,
-      flexWrap: 'wrap',
-    },
+      flexDirection: "row",
+      gap: s.sm,
+      flexWrap: "wrap",
+    } as ViewStyle,
+    editFormRowMobile: {
+      flexDirection: "column",
+      gap: s.md,
+    } as ViewStyle,
     editFormField: {
       flex: 1,
       minWidth: 180,
-    },
+    } as ViewStyle,
+    editFormFieldMobile: {
+      minWidth: 0,
+      width: "100%",
+    } as ViewStyle,
+    editFormFieldMobileWithTopMargin: {
+      marginTop: s.md,
+    } as ViewStyle,
     editFormFieldWide: {
       flex: 2,
       minWidth: 180,
-    },
+    } as ViewStyle,
+    editFormFieldWideMobile: {
+      minWidth: 0,
+      width: "100%",
+    } as ViewStyle,
     editFormLabel: {
-      marginBottom: 8,
-      color: colors.text,
-    },
+      marginBottom: s.sm,
+      color: c.text,
+    } as TextStyle,
     editFormLabelRequired: {
-      color: colors.error,
-    },
+      color: c.error,
+    } as TextStyle,
     iconInputContainer: {
-      flexDirection: 'row',
-      gap: 8,
-      alignItems: 'flex-start',
-    },
+      flexDirection: "row",
+      gap: s.sm,
+      alignItems: "flex-start",
+    } as ViewStyle,
     iconInputWrapper: {
       flex: 1,
-    },
+    } as ViewStyle,
     iconDocumentationButton: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderRadius: 8,
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: c.primary,
+      paddingHorizontal: s.md,
+      paddingVertical: s.sm,
+      borderRadius: r.md,
+      justifyContent: "center",
+      alignItems: "center",
       minHeight: 48,
-    },
+    } as ViewStyle,
     validationError: {
-      color: colors.error,
-      marginTop: 4,
-    },
+      color: c.error,
+      marginTop: s.xs,
+    } as TextStyle,
     textInput: {
-      padding: 12,
-      color: colors.text,
-    },
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      fontSize: 14,
+      color: c.text,
+    } as TextStyle,
     textInputContainerBase: {
       borderWidth: 1,
-      borderRadius: 8,
-      backgroundColor: colors.surface,
-    },
+      borderRadius: r.md,
+      backgroundColor: c.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minHeight: 48,
+    } as ViewStyle,
     textInputContainerError: {
-      borderColor: colors.error,
-    },
+      borderColor: c.error,
+    } as ViewStyle,
     textInputContainerNormal: {
-      borderColor: colors.border,
-    },
+      borderColor: c.border,
+    } as ViewStyle,
     textInputContainerMultiline: {
       minHeight: 105,
-    },
-    
-    // Estilos del botón de agregar agrupamiento
+    } as ViewStyle,
+
     addGroupingButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 12,
-      backgroundColor: colors.surface,
-      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: s.sm,
+      backgroundColor: c.surface,
+      borderRadius: r.md,
       borderWidth: 1,
-      borderColor: colors.border,
-      borderStyle: 'dashed',
-      marginBottom: 8,
-    },
+      borderColor: c.border,
+      borderStyle: "dashed",
+      marginBottom: s.sm,
+    } as ViewStyle,
     addGroupingText: {
-      marginLeft: 8,
-      color: colors.primary,
-    },
-    
-    // Estilos de columnas
+      marginLeft: s.sm,
+      color: c.primary,
+    } as TextStyle,
+
     columnContainerBase: {
-      marginBottom: 16,
-      padding: 12,
-      borderRadius: 8,
-    },
+      marginBottom: s.md,
+      padding: s.sm,
+      borderRadius: r.md,
+    } as ViewStyle,
     columnContainerDragOver: {
-      backgroundColor: colors.primary + '20',
-    },
+      backgroundColor: c.primary + "20",
+    } as ViewStyle,
     columnContainerNormal: {
-      backgroundColor: colors.surfaceVariant,
-    },
+      backgroundColor: c.surfaceVariant || c.surface,
+    } as ViewStyle,
     columnContainerDragging: {
       opacity: 0.5,
-    },
+    } as ViewStyle,
     columnHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-      gap: 8,
-    },
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: s.sm,
+      gap: s.sm,
+    } as ViewStyle,
     columnDragHandle: {
-      marginRight: 8,
-      padding: 4,
-      ...(Platform.OS === 'web' && {
-        cursor: 'grab',
+      marginRight: s.sm,
+      padding: s.xs,
+      ...(Platform.OS === "web" && {
+        cursor: "grab",
       }),
-    },
+    } as ViewStyle,
     columnTitleEditContainer: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
+      flexDirection: "row",
+      alignItems: "center",
+      gap: s.sm,
+    } as ViewStyle,
     columnTitleInput: {
       flex: 1,
-      padding: 8,
-      backgroundColor: colors.background,
-      borderRadius: 4,
+      padding: s.sm,
+      backgroundColor: c.background,
+      borderRadius: r.sm,
       borderWidth: 1,
-      borderColor: colors.primary,
-      color: colors.text,
+      borderColor: c.primary,
+      color: c.text,
       fontSize: 14,
-      fontWeight: '600',
-    },
+      fontWeight: "600",
+    } as TextStyle,
     columnTitleButton: {
-      padding: 4,
-    },
+      padding: s.xs,
+    } as ViewStyle,
     columnTitleButtonText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
+      fontWeight: "600",
+      color: c.text,
+    } as TextStyle,
     columnItemsContainer: {
-      marginTop: 8,
-    },
-    
-    // Estilos del header de búsqueda
-    headerContainer: {
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      gap: 12,
-      alignItems: 'center',
-    },
+      marginTop: s.sm,
+    } as ViewStyle,
+
     searchContainer: {
       flex: 1,
-      position: 'relative',
-    },
+      position: "relative",
+    } as ViewStyle,
+    searchContainerMobile: {
+      minWidth: 0,
+    } as ViewStyle,
     searchIcon: {
-      position: 'absolute',
-      left: 12,
+      position: "absolute",
+      left: s.sm,
       top: 14,
       zIndex: 1,
-    },
+    } as ViewStyle,
     searchClearButton: {
-      position: 'absolute',
-      right: 12,
+      position: "absolute",
+      right: s.sm,
       top: 14,
       zIndex: 1,
-      padding: 4,
-    },
+      padding: s.xs,
+    } as ViewStyle,
     searchInputContainerBase: {
+      flexDirection: "row",
+      alignItems: "center",
       borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      backgroundColor: colors.surface,
+      borderColor: c.border,
+      borderRadius: r.md,
+      backgroundColor: c.surface,
       paddingLeft: 40,
-    },
+      paddingRight: isMobile ? s.sm : s.md,
+      minHeight: isMobile ? 40 : 44,
+    } as ViewStyle,
     searchInputContainerWithValue: {
       paddingRight: 40,
-    },
+    } as ViewStyle,
     searchInputContainerEmpty: {
-      paddingRight: 12,
-    },
+      paddingRight: s.sm,
+    } as ViewStyle,
     searchInput: {
-      padding: 12,
-      color: colors.text,
-    },
-    
-    // Estilos de acciones guardar/cancelar
-    saveCancelActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-  });
-};
+      flex: 1,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      fontSize: isMobile ? 14 : 16,
+      color: c.text,
+    } as TextStyle,
 
+    saveCancelActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: s.sm,
+    } as ViewStyle,
+
+    footer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: s.md,
+      paddingVertical: s.sm,
+      borderTopWidth: 1,
+    } as ViewStyle,
+    footerActions: {
+      flexDirection: "row",
+      gap: s.sm,
+      alignItems: "center",
+    } as ViewStyle,
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    } as ViewStyle,
+    loadingText: {
+      marginTop: s.md,
+    } as ViewStyle,
+    emptyContainer: {
+      alignItems: "center",
+      padding: 40,
+    } as ViewStyle,
+    emptyIcon: {} as ViewStyle,
+  });
+}

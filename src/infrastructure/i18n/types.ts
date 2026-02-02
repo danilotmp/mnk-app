@@ -32,7 +32,7 @@ export interface Translations {
     pageInfo: (page: number, totalPages: number) => string;
     show: string;
   };
-  
+
   navigation: {
     home: string;
     explore: string;
@@ -44,7 +44,7 @@ export interface Translations {
     profile: string;
     logout: string;
   };
-  
+
   menu: {
     inicio: string;
     explorar: string;
@@ -84,7 +84,7 @@ export interface Translations {
     transfers: string;
     payments: string;
   };
-  
+
   pages: {
     home: {
       title: string;
@@ -125,7 +125,7 @@ export interface Translations {
       contactUs: string;
     };
   };
-  
+
   user: {
     profile: string;
     settings: string;
@@ -135,15 +135,15 @@ export interface Translations {
     myProfile: string;
     configuration: string;
   };
-  
+
   language: {
     selectLanguage: string;
   };
-  
+
   menuLabel: {
     menu: string;
   };
-  
+
   auth: {
     login: string;
     logout: string;
@@ -159,14 +159,14 @@ export interface Translations {
     loginSuccess: string;
     loginError: string;
     invalidCredentials: string;
-      emailRequired: string;
-      passwordRequired: string;
-      changePassword: string;
+    emailRequired: string;
+    passwordRequired: string;
+    changePassword: string;
     companyCode: string;
     companyCodePlaceholder: string;
     logoutSuccess: string;
   };
-  
+
   errors: {
     generic: string;
     networkError: string;
@@ -182,7 +182,7 @@ export interface Translations {
     connectionTimeout: string;
     unknownError: string;
   };
-  
+
   api: {
     loginSuccess: string;
     loginFailed: string;
@@ -363,6 +363,8 @@ export interface Translations {
       };
     };
     menuAdmin?: {
+      title?: string;
+      subtitle?: string;
       expand: string;
       collapse: string;
       move: string;
@@ -411,5 +413,4 @@ export interface Translations {
   };
 }
 
-export type Language = 'es' | 'en';
-
+export type Language = "es" | "en";
