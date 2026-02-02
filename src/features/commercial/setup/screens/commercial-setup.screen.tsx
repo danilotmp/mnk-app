@@ -49,14 +49,17 @@ export function CommercialSetupScreen() {
 
   const styles = useMemo(
     () =>
-      createCommercialSetupScreenStyles({
-        colors,
-        spacing,
-        typography,
-        pageLayout,
-        borderRadius,
-      }),
-    [colors, spacing, typography, pageLayout, borderRadius],
+      createCommercialSetupScreenStyles(
+        {
+          colors,
+          spacing,
+          typography,
+          pageLayout,
+          borderRadius,
+        },
+        isMobile,
+      ),
+    [colors, spacing, typography, pageLayout, borderRadius, isMobile],
   );
   const alert = useAlert();
   const params = useLocalSearchParams<{ product?: string; layer?: string }>();

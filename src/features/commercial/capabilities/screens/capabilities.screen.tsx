@@ -41,14 +41,17 @@ export function CapabilitiesScreen() {
 
   const styles = useMemo(
     () =>
-      createCapabilitiesScreenStyles({
-        colors,
-        typography,
-        pageLayout,
-        spacing,
-        borderRadius,
-      }),
-    [colors, typography, pageLayout, spacing, borderRadius],
+      createCapabilitiesScreenStyles(
+        {
+          colors,
+          typography,
+          pageLayout,
+          spacing,
+          borderRadius,
+        },
+        isMobile,
+      ),
+    [colors, typography, pageLayout, spacing, borderRadius, isMobile],
   );
   const router = useRouter();
   const alert = useAlert();

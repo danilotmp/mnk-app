@@ -106,6 +106,7 @@ export interface ContactScreenStyles {
 
 export function createContactScreenStyles(
   t: ContactScreenTheme,
+  isMobile: boolean,
 ): ContactScreenStyles {
   return StyleSheet.create({
     container: {
@@ -161,6 +162,9 @@ export function createContactScreenStyles(
     subtitle: {
       marginTop: t.spacing.sm,
       textAlign: "left",
+      paddingLeft: isMobile
+        ? t.pageLayout.iconTitleMobile + t.spacing.sm
+        : t.pageLayout.iconTitle + t.spacing.sm,
     },
     matrixCardWrapper: {
       width: "70%",

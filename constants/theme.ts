@@ -393,8 +393,12 @@ export const ModalLayout = {
   footerPadding: 25,
   /** Gap entre elementos del footer. */
   footerGap: 12,
-  /** Padding del área de contenido del modal (entre cabecera y primer campo). Estandarizado para Users y Roles. */
+  /** Padding del área de contenido del modal (entre cabecera y primer campo). Estandarizado para Users y Roles (SideModal). */
   contentPadding: 0,
   /** Padding del área de contenido en móvil. */
   contentPaddingMobile: 0,
+  /** Padding del área de contenido en modales centrados (CenteredModal). */
+  contentPaddingCentered: 24,
+  /** Padding del área de contenido en modales centrados en móvil. */
+  contentPaddingCenteredMobile: 16,
 };

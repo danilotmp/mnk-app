@@ -199,6 +199,15 @@ const dynamicStyle = [
 ];
 ```
 
+### 3.4 Modales de administración
+
+Todos los modales de administración usan los tokens de **ModalLayout** del tema (`constants/theme.ts`), expuestos por `useTheme().modalLayout`:
+
+- **SideModal** (Crear/Editar Usuario, Rol, Permiso): cabecera, contenido y footer usan `headerPadding`, `contentPadding`, `footerPadding`, `titleSubtitleGap`, `headerGap`, `closeButtonPadding`, `closeButtonBorderRadius`, `footerGap`.
+- **CenteredModal** (Seleccionar Permiso, selector de ítems de menú, etc.): mismo estándar; cabecera y footer usan los mismos tokens; el área de contenido usa `contentPaddingCentered` / `contentPaddingCenteredMobile`.
+
+Los formularios dentro de modales (p. ej. `PermissionCreateForm`, `PermissionEditForm`, `RoleCreateForm`) deben usar una factory de estilos que reciba `spacing`, `modalLayout` y `borderRadius` del tema, igual que en `role-create-form.styles.ts` y `permission-create-form.styles.ts`.
+
 ---
 
 ## 4. Sistema de Traducciones (i18n)

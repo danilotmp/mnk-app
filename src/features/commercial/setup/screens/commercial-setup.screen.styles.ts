@@ -90,6 +90,7 @@ export interface CommercialSetupScreenStyles {
 
 export function createCommercialSetupScreenStyles(
   t: CommercialSetupScreenTheme,
+  isMobile: boolean,
 ): CommercialSetupScreenStyles {
   return StyleSheet.create({
     container: {
@@ -141,6 +142,9 @@ export function createCommercialSetupScreenStyles(
     subtitle: {
       ...(t.typography.pageSubtitle as TextStyle),
       color: t.colors.textSecondary,
+      paddingLeft: isMobile
+        ? t.pageLayout.iconTitleMobile + t.spacing.sm
+        : t.pageLayout.iconTitle + t.spacing.sm,
     },
     stepperCard: {
       padding: t.spacing.md,

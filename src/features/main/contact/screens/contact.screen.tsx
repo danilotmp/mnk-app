@@ -20,19 +20,22 @@ import { createContactScreenStyles } from "./contact.screen.styles";
 export function ContactScreen() {
   const { colors, typography, pageLayout, spacing, borderRadius } = useTheme();
 
+  const { isMobile } = useResponsive();
   const styles = useMemo(
     () =>
-      createContactScreenStyles({
-        colors,
-        typography,
-        pageLayout,
-        spacing,
-        borderRadius,
-      }),
-    [colors, typography, pageLayout, spacing, borderRadius],
+      createContactScreenStyles(
+        {
+          colors,
+          typography,
+          pageLayout,
+          spacing,
+          borderRadius,
+        },
+        isMobile,
+      ),
+    [colors, typography, pageLayout, spacing, borderRadius, isMobile],
   );
   const { t } = useTranslation();
-  const { isMobile } = useResponsive();
 
   // URL del mapa: obtener una actual desde Google Maps (Compartir > Insertar mapa)
   const googleMapsEmbedUrl =

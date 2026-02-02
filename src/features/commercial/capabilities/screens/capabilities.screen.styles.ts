@@ -100,6 +100,7 @@ export interface CapabilitiesScreenStyles {
 
 export function createCapabilitiesScreenStyles(
   t: CapabilitiesScreenTheme,
+  isMobile: boolean,
 ): CapabilitiesScreenStyles {
   return StyleSheet.create({
     container: {
@@ -144,6 +145,9 @@ export function createCapabilitiesScreenStyles(
     },
     subtitle: {
       marginTop: t.spacing.xs,
+      paddingLeft: isMobile
+        ? t.pageLayout.iconTitleMobile + t.spacing.sm
+        : t.pageLayout.iconTitle + t.spacing.sm,
     },
     productsGrid: {
       flexDirection: "row",

@@ -4,13 +4,20 @@
  * Header y footer fijos, solo el contenido hace scroll
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
-import { createCenteredModalStyles } from '@/src/styles/components/centered-modal.styles';
+import { ThemedText } from "@/components/themed-text";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { createCenteredModalStyles } from "@/src/styles/components/centered-modal.styles";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useRef } from "react";
+import {
+    Animated,
+    Modal,
+    Pressable,
+    ScrollView,
+    View,
+    useWindowDimensions,
+} from "react-native";
 
 interface CenteredModalProps {
   visible: boolean;
@@ -24,40 +31,42 @@ interface CenteredModalProps {
   topAlert?: React.ReactNode; // Alerta que aparece encima del título del modal
 }
 
-export function CenteredModal({ 
-  visible, 
-  onClose, 
-  title, 
-  subtitle, 
-  children, 
-  footer, 
-  width = '90%',
-  height = '90%',
-  topAlert 
+export function CenteredModal({
+  visible,
+  onClose,
+  title,
+  subtitle,
+  children,
+  footer,
+  width = "90%",
+  height = "90%",
+  topAlert,
 }: CenteredModalProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, modalLayout } = useTheme();
   const { isMobile } = useResponsive();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const styles = createCenteredModalStyles(colors, isMobile);
+  const styles = createCenteredModalStyles({ colors, modalLayout }, isMobile);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   // Calcular el ancho y alto del modal
-  const modalWidth = typeof width === 'string' && width.includes('%')
-    ? (windowWidth * parseFloat(width)) / 100
-    : typeof width === 'number'
-    ? width
-    : windowWidth * 0.9;
+  const modalWidth =
+    typeof width === "string" && width.includes("%")
+      ? (windowWidth * parseFloat(width)) / 100
+      : typeof width === "number"
+        ? width
+        : windowWidth * 0.9;
 
-  const modalHeight = typeof height === 'string' && height.includes('%')
-    ? (windowHeight * parseFloat(height)) / 100
-    : typeof height === 'number'
-    ? height
-    : windowHeight * 0.9;
+  const modalHeight =
+    typeof height === "string" && height.includes("%")
+      ? (windowHeight * parseFloat(height)) / 100
+      : typeof height === "number"
+        ? height
+        : windowHeight * 0.9;
 
   // Usar surfaceVariant en modo dark para evitar transparencia, o background si está disponible
-  const modalBackgroundColor = isDark 
-    ? (colors.surfaceVariant || colors.background || '#1E293B')
+  const modalBackgroundColor = isDark
+    ? colors.surfaceVariant || colors.background || "#1E293B"
     : colors.surface;
 
   useEffect(() => {
@@ -114,9 +123,7 @@ export function CenteredModal({
           >
             {/* Top Alert - aparece encima del título */}
             {topAlert && (
-              <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-                {topAlert}
-              </View>
+              <View style={styles.topAlertContainer}>{topAlert}</View>
             )}
 
             {/* Header fijo */}
@@ -126,15 +133,15 @@ export function CenteredModal({
                   {title}
                 </ThemedText>
                 {subtitle && (
-                  <ThemedText type="body2" style={{ color: (colors as any).subtitle || colors.textSecondary }}>
+                  <ThemedText
+                    type="body2"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {subtitle}
                   </ThemedText>
                 )}
               </View>
-              <Pressable
-                style={styles.closeButton}
-                onPress={onClose}
-              >
+              <Pressable style={styles.closeButton} onPress={onClose}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
@@ -161,4 +168,3 @@ export function CenteredModal({
     </Modal>
   );
 }
-

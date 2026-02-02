@@ -116,6 +116,9 @@ export function createRolesListScreenStyles(
     subtitle: {
       ...(t.typography.pageSubtitle as TextStyle),
       color: t.colors.textSecondary,
+      paddingLeft: isMobile
+        ? t.pageLayout.iconTitleMobile + t.spacing.sm
+        : t.pageLayout.iconTitle + t.spacing.sm,
     },
     actionsContainer: {
       flexDirection: "row",

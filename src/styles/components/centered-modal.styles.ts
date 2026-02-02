@@ -1,27 +1,38 @@
-import { Platform, StyleSheet } from 'react-native';
-import type { ThemeColors } from '@/src/styles/themes/theme.types';
+/**
+ * Estilos para el modal centrado (CenteredModal).
+ * Usa tokens de ModalLayout del tema para estandarizar con modales de administración
+ * (Seleccionar Permiso, selector de ítems de menú, etc.).
+ */
 
-export const createCenteredModalStyles = (colors: ThemeColors, isMobile: boolean) => {
-  return StyleSheet.create({
+import { LightTheme, ModalLayout as ModalLayoutType } from "@/constants/theme";
+import { Platform, StyleSheet } from "react-native";
+
+export interface CenteredModalTheme {
+  colors: (typeof LightTheme)["colors"];
+  modalLayout: typeof ModalLayoutType;
+}
+
+export const createCenteredModalStyles = (
+  { colors, modalLayout }: CenteredModalTheme,
+  isMobile: boolean,
+) =>
+  StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
     },
     modalContainer: {
       borderRadius: 16,
-      overflow: 'hidden',
+      overflow: "hidden",
       ...Platform.select({
         web: {
-          boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.3)",
         },
         default: {
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 4,
-          },
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,
           elevation: 8,
@@ -29,41 +40,55 @@ export const createCenteredModalStyles = (colors: ThemeColors, isMobile: boolean
       }),
     },
     header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      paddingHorizontal: 24,
-      paddingVertical: 20,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      paddingHorizontal: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.headerPadding,
+      paddingVertical: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.headerPadding,
       borderBottomWidth: 1,
+      gap: modalLayout.headerGap,
     },
     headerTitle: {
       flex: 1,
-      marginRight: 16,
     },
     title: {
-      marginBottom: 4,
+      marginBottom: modalLayout.titleSubtitleGap,
     },
     closeButton: {
-      padding: 4,
-      borderRadius: 8,
-      justifyContent: 'center',
-      alignItems: 'center',
+      padding: modalLayout.closeButtonPadding,
+      borderRadius: modalLayout.closeButtonBorderRadius,
+      justifyContent: "center",
+      alignItems: "center",
     },
     scrollView: {
       flex: 1,
     },
     scrollContent: {
-      padding: 24,
+      padding: isMobile
+        ? modalLayout.contentPaddingCenteredMobile
+        : modalLayout.contentPaddingCentered,
     },
     footer: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      paddingHorizontal: 24,
-      paddingVertical: 16,
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      alignItems: "center",
+      padding: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.footerPadding,
       borderTopWidth: 1,
-      gap: 12,
+      gap: modalLayout.footerGap,
+    },
+    /** Contenedor del topAlert (encima del título). */
+    topAlertContainer: {
+      paddingHorizontal: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.headerPadding,
+      paddingTop: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.headerPadding,
     },
   });
-};
-
