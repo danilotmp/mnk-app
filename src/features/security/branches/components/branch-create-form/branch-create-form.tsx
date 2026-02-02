@@ -3,21 +3,31 @@
  * Puede usarse tanto en página independiente como en modal
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { useTheme } from '@/hooks/use-theme';
-import { BranchesService } from '../../services';
-import { useCompanyOptions } from '@/src/domains/security/hooks';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
-import { createBranchFormStyles } from './branch-create-form.styles';
-import { BRANCH_TYPES, BranchCreateFormProps, BranchFormData } from './branch-create-form.types';
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { useTheme } from "@/hooks/use-theme";
+import { useCompanyOptions } from "@/src/domains/security/hooks";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { extractErrorInfo } from "@/src/infrastructure/messages/error-utils";
+import { Ionicons } from "@expo/vector-icons";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { ScrollView, TextInput, TouchableOpacity, View } from "react-native";
+import { BranchesService } from "../../services";
+import { createBranchFormStyles } from "./branch-create-form.styles";
+import {
+    BRANCH_TYPES,
+    BranchCreateFormProps,
+    BranchFormData,
+} from "./branch-create-form.types";
 
 export function BranchCreateForm({
   onSuccess,
@@ -26,33 +36,46 @@ export function BranchCreateForm({
   showFooter = true,
   onFormReady,
 }: BranchCreateFormProps) {
-  const { colors } = useTheme();
+  const { colors, spacing, modalLayout, borderRadius } = useTheme();
   const { t } = useTranslation();
   const alert = useAlert();
-  const styles = createBranchFormStyles();
+  const styles = useMemo(
+    () =>
+      createBranchFormStyles({
+        spacing,
+        modalLayout,
+        borderRadius,
+      }),
+    [spacing, modalLayout, borderRadius],
+  );
 
   const { companies, loading: companiesLoading } = useCompanyOptions();
 
   const [formData, setFormData] = useState<BranchFormData>({
-    companyId: '',
-    code: '',
-    name: '',
-    type: 'branch',
-    description: '',
+    companyId: "",
+    code: "",
+    name: "",
+    type: "branch",
+    description: "",
     status: 1,
   });
   const formDataRef = useRef<BranchFormData>({
-    companyId: '',
-    code: '',
-    name: '',
-    type: 'branch',
-    description: '',
+    companyId: "",
+    code: "",
+    name: "",
+    type: "branch",
+    description: "",
     status: 1,
   });
   const statusRef = useRef<number>(1);
-  const [errors, setErrors] = useState<Record<keyof BranchFormData | string, string>>({});
+  const [errors, setErrors] = useState<
+    Record<keyof BranchFormData | string, string>
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generalError, setGeneralError] = useState<{ message: string; detail?: string } | null>(null);
+  const [generalError, setGeneralError] = useState<{
+    message: string;
+    detail?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!formData.companyId && companies.length > 0 && !companiesLoading) {
@@ -60,57 +83,60 @@ export function BranchCreateForm({
     }
   }, [companies, companiesLoading, formData.companyId]);
 
-  const resetError = useCallback((field: keyof BranchFormData) => {
-    setErrors((prev) => {
-      if (!prev[field]) {
-        return prev;
+  const resetError = useCallback(
+    (field: keyof BranchFormData) => {
+      setErrors((prev) => {
+        if (!prev[field]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+      // Limpiar error general cuando el usuario empieza a editar
+      if (generalError) {
+        setGeneralError(null);
       }
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-    // Limpiar error general cuando el usuario empieza a editar
-    if (generalError) {
-      setGeneralError(null);
-    }
-  }, [generalError]);
+    },
+    [generalError],
+  );
 
   const handleChange = useCallback(
     (field: keyof BranchFormData, value: string | number) => {
       setFormData((prev) => {
         let updated = { ...prev, [field]: value };
-        
+
         // Si se está cambiando el código, aplicar transformaciones
-        if (field === 'code' && typeof value === 'string') {
+        if (field === "code" && typeof value === "string") {
           // Convertir a mayúsculas y reemplazar espacios con guiones bajos
-          const processedCode = value.toUpperCase().replace(/\s+/g, '_');
+          const processedCode = value.toUpperCase().replace(/\s+/g, "_");
           updated.code = processedCode;
-          
+
           // Generar nombre automáticamente solo si está vacío o coincide con el nombre generado anteriormente
-          const previousCode = prev.code || '';
-          const previousName = prev.name || '';
-          
+          const previousCode = prev.code || "";
+          const previousName = prev.name || "";
+
           // Calcular el nombre que se generaría a partir del código anterior
           const previousGeneratedName = previousCode
             .toLowerCase()
-            .replace(/_/g, ' ')
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-          
+            .replace(/_/g, " ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+
           // Solo generar nombre si está vacío o si coincide exactamente con el nombre generado anteriormente
           if (!previousName || previousName === previousGeneratedName) {
             // Generar nombre: convertir guiones bajos a espacios y capitalizar primera letra de cada palabra
             const generatedName = processedCode
               .toLowerCase()
-              .replace(/_/g, ' ')
-              .split(' ')
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ');
+              .replace(/_/g, " ")
+              .split(" ")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
             updated.name = generatedName;
           }
         }
-        
+
         // Sincronizar ref inmediatamente
         formDataRef.current = updated;
         return updated;
@@ -119,11 +145,11 @@ export function BranchCreateForm({
         resetError(field);
       }
       // Actualizar ref para status
-      if (field === 'status') {
+      if (field === "status") {
         statusRef.current = value as number;
       }
     },
-    [errors, resetError]
+    [errors, resetError],
   );
 
   const validateForm = useCallback(() => {
@@ -131,13 +157,13 @@ export function BranchCreateForm({
     const currentFormData = formDataRef.current;
 
     if (!currentFormData.companyId) {
-      newErrors.companyId = 'La empresa es requerida';
+      newErrors.companyId = "La empresa es requerida";
     }
     if (!currentFormData.code.trim()) {
-      newErrors.code = 'El código es requerido';
+      newErrors.code = "El código es requerido";
     }
     if (!currentFormData.name.trim()) {
-      newErrors.name = 'El nombre es requerido';
+      newErrors.name = "El nombre es requerido";
     }
 
     setErrors(newErrors);
@@ -160,11 +186,16 @@ export function BranchCreateForm({
         description: currentFormData.description.trim() || undefined,
         status: statusRef.current, // Usar ref para evitar stale closure
       });
-      alert.showSuccess(t.security?.branches?.createSuccess || 'Sucursal creada exitosamente');
+      alert.showSuccess(
+        t.security?.branches?.createSuccess || "Sucursal creada exitosamente",
+      );
       onSuccess?.();
     } catch (error: any) {
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al crear la sucursal');
-      
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(
+        error,
+        "Error al crear la sucursal",
+      );
+
       // Mostrar error en InlineAlert dentro del modal
       setGeneralError({ message: errorMessage, detail: detailString });
     } finally {
@@ -195,7 +226,7 @@ export function BranchCreateForm({
     return (
       <View style={styles.loadingContainer}>
         <ThemedText type="body2" variant="secondary" style={styles.loadingText}>
-          {t.common?.loading || 'Cargando información...'}
+          {t.common?.loading || "Cargando información..."}
         </ThemedText>
       </View>
     );
@@ -205,10 +236,11 @@ export function BranchCreateForm({
     <View style={styles.formHeader}>
       <View style={styles.formHeaderTexts}>
         <ThemedText type="h4" style={{ color: colors.text }}>
-          {t.security?.branches?.createTitle || 'Crear sucursal'}
+          {t.security?.branches?.createTitle || "Crear sucursal"}
         </ThemedText>
         <ThemedText type="body2" variant="secondary">
-          {t.security?.branches?.createSubtitle || 'Completa la información para registrar una nueva sucursal'}
+          {t.security?.branches?.createSubtitle ||
+            "Completa la información para registrar una nueva sucursal"}
         </ThemedText>
       </View>
     </View>
@@ -236,11 +268,17 @@ export function BranchCreateForm({
   ) : null;
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: showFooter ? 0 : 16 }}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: showFooter ? 0 : 16 }}
+    >
       {header}
       <Card variant="flat" style={styles.formCard}>
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             Empresa *
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -255,9 +293,16 @@ export function BranchCreateForm({
                       isSelected && { backgroundColor: colors.primary },
                       { borderColor: colors.border },
                     ]}
-                    onPress={() => handleChange('companyId', company.id)}
+                    onPress={() => handleChange("companyId", company.id)}
                   >
-                    <ThemedText type="body2" style={isSelected ? { color: '#FFFFFF' } : { color: colors.text }}>
+                    <ThemedText
+                      type="body2"
+                      style={
+                        isSelected
+                          ? { color: "#FFFFFF" }
+                          : { color: colors.text }
+                      }
+                    >
                       {company.name}
                     </ThemedText>
                   </TouchableOpacity>
@@ -266,14 +311,20 @@ export function BranchCreateForm({
             </View>
           </ScrollView>
           {errors.companyId ? (
-            <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
+            <ThemedText
+              type="caption"
+              style={[styles.errorText, { color: colors.error }]}
+            >
               {errors.companyId}
             </ThemedText>
           ) : null}
         </View>
 
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             Código *
           </ThemedText>
           <InputWithFocus
@@ -287,25 +338,36 @@ export function BranchCreateForm({
             primaryColor={colors.primary}
             error={!!errors.code}
           >
-            <Ionicons name="barcode-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <Ionicons
+              name="barcode-outline"
+              size={20}
+              color={colors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, { color: colors.text }]}
               placeholder="Código de la sucursal"
               placeholderTextColor={colors.textSecondary}
               value={formData.code}
-              onChangeText={(value) => handleChange('code', value)}
+              onChangeText={(value) => handleChange("code", value)}
               autoCapitalize="characters"
             />
           </InputWithFocus>
           {errors.code ? (
-            <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
+            <ThemedText
+              type="caption"
+              style={[styles.errorText, { color: colors.error }]}
+            >
               {errors.code}
             </ThemedText>
           ) : null}
         </View>
 
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             Nombre *
           </ThemedText>
           <InputWithFocus
@@ -319,24 +381,35 @@ export function BranchCreateForm({
             primaryColor={colors.primary}
             error={!!errors.name}
           >
-            <Ionicons name="storefront-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <Ionicons
+              name="storefront-outline"
+              size={20}
+              color={colors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, { color: colors.text }]}
               placeholder="Nombre de la sucursal"
               placeholderTextColor={colors.textSecondary}
               value={formData.name}
-              onChangeText={(value) => handleChange('name', value)}
+              onChangeText={(value) => handleChange("name", value)}
             />
           </InputWithFocus>
           {errors.name ? (
-            <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
+            <ThemedText
+              type="caption"
+              style={[styles.errorText, { color: colors.error }]}
+            >
               {errors.name}
             </ThemedText>
           ) : null}
         </View>
 
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             Tipo
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -351,9 +424,16 @@ export function BranchCreateForm({
                       isSelected && { backgroundColor: colors.primary },
                       { borderColor: colors.border },
                     ]}
-                    onPress={() => handleChange('type', option.value)}
+                    onPress={() => handleChange("type", option.value)}
                   >
-                    <ThemedText type="body2" style={isSelected ? { color: '#FFFFFF' } : { color: colors.text }}>
+                    <ThemedText
+                      type="body2"
+                      style={
+                        isSelected
+                          ? { color: "#FFFFFF" }
+                          : { color: colors.text }
+                      }
+                    >
                       {option.label}
                     </ThemedText>
                   </TouchableOpacity>
@@ -364,7 +444,10 @@ export function BranchCreateForm({
         </View>
 
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             Descripción
           </ThemedText>
           <InputWithFocus
@@ -374,7 +457,7 @@ export function BranchCreateForm({
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                alignItems: 'flex-start',
+                alignItems: "flex-start",
               },
             ]}
             primaryColor={colors.primary}
@@ -384,7 +467,7 @@ export function BranchCreateForm({
               placeholder="Descripción de la sucursal"
               placeholderTextColor={colors.textSecondary}
               value={formData.description}
-              onChangeText={(value) => handleChange('description', value)}
+              onChangeText={(value) => handleChange("description", value)}
               multiline
             />
           </InputWithFocus>
@@ -392,8 +475,11 @@ export function BranchCreateForm({
 
         {/* Estado */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-            {t.security?.users?.status || 'Estado'} *
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
+            {t.security?.users?.status || "Estado"} *
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.selectOptions}>
@@ -403,17 +489,21 @@ export function BranchCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 1 && {
-                    backgroundColor: '#10b981',
-                    borderColor: '#10b981',
+                    backgroundColor: "#10b981",
+                    borderColor: "#10b981",
                   },
                 ]}
-                onPress={() => handleChange('status', 1)}
+                onPress={() => handleChange("status", 1)}
               >
                 <ThemedText
                   type="caption"
-                  style={formData.status === 1 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  style={
+                    formData.status === 1
+                      ? { color: "#FFFFFF" }
+                      : { color: colors.text }
+                  }
                 >
-                  {t.security?.users?.active || 'Activo'}
+                  {t.security?.users?.active || "Activo"}
                 </ThemedText>
               </TouchableOpacity>
 
@@ -423,17 +513,21 @@ export function BranchCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 0 && {
-                    backgroundColor: '#ef4444',
-                    borderColor: '#ef4444',
+                    backgroundColor: "#ef4444",
+                    borderColor: "#ef4444",
                   },
                 ]}
-                onPress={() => handleChange('status', 0)}
+                onPress={() => handleChange("status", 0)}
               >
                 <ThemedText
                   type="caption"
-                  style={formData.status === 0 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  style={
+                    formData.status === 0
+                      ? { color: "#FFFFFF" }
+                      : { color: colors.text }
+                  }
                 >
-                  {t.security?.users?.inactive || 'Inactivo'}
+                  {t.security?.users?.inactive || "Inactivo"}
                 </ThemedText>
               </TouchableOpacity>
 
@@ -443,17 +537,21 @@ export function BranchCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 2 && {
-                    backgroundColor: '#f59e0b',
-                    borderColor: '#f59e0b',
+                    backgroundColor: "#f59e0b",
+                    borderColor: "#f59e0b",
                   },
                 ]}
-                onPress={() => handleChange('status', 2)}
+                onPress={() => handleChange("status", 2)}
               >
                 <ThemedText
                   type="caption"
-                  style={formData.status === 2 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  style={
+                    formData.status === 2
+                      ? { color: "#FFFFFF" }
+                      : { color: colors.text }
+                  }
                 >
-                  {t.security?.users?.pending || 'Pendiente'}
+                  {t.security?.users?.pending || "Pendiente"}
                 </ThemedText>
               </TouchableOpacity>
 
@@ -463,17 +561,21 @@ export function BranchCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 3 && {
-                    backgroundColor: '#f97316',
-                    borderColor: '#f97316',
+                    backgroundColor: "#f97316",
+                    borderColor: "#f97316",
                   },
                 ]}
-                onPress={() => handleChange('status', 3)}
+                onPress={() => handleChange("status", 3)}
               >
                 <ThemedText
                   type="caption"
-                  style={formData.status === 3 ? { color: '#FFFFFF' } : { color: colors.text }}
+                  style={
+                    formData.status === 3
+                      ? { color: "#FFFFFF" }
+                      : { color: colors.text }
+                  }
                 >
-                  {t.security?.users?.suspended || 'Suspendido'}
+                  {t.security?.users?.suspended || "Suspendido"}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -484,4 +586,3 @@ export function BranchCreateForm({
     </ScrollView>
   );
 }
-

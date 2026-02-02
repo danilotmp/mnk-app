@@ -1,79 +1,88 @@
 /**
- * Estilos para formularios de sucursal (crear/editar)
- * Compartidos entre branch-create-form y branch-edit-form
+ * Estilos para formularios de sucursal (crear/editar).
+ * Usa tokens de ModalLayout y spacing del tema para estandarizar con modales de administración
+ * (Roles, Users, Permissions, Companies).
  */
 
-import { StyleSheet } from 'react-native';
+import { ModalLayout } from "@/constants/theme";
+import { StyleSheet } from "react-native";
 
-export const createBranchFormStyles = () =>
+export interface BranchFormTheme {
+  spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
+  modalLayout: typeof ModalLayout;
+  borderRadius: { sm: number; md: number };
+}
+
+export const createBranchFormStyles = (t: BranchFormTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
     },
     loadingContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       padding: 40,
     },
     loadingText: {
-      marginTop: 16,
+      marginTop: t.spacing.md,
     },
     scrollContent: {
-      padding: 16,
-      gap: 16,
+      padding: t.spacing.md,
+      gap: t.spacing.md,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 16,
-      marginBottom: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: t.modalLayout.headerGap,
+      marginBottom: t.spacing.sm,
     },
     headerTitle: {
       flex: 1,
     },
     formHeader: {
-      marginBottom: 16,
+      marginBottom: t.spacing.md,
     },
     formHeaderTexts: {
-      gap: 4,
+      gap: t.spacing.xs,
     },
     formFooter: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
-      paddingHorizontal: 16,
-      paddingBottom: 16,
+      flexDirection: "row",
+      gap: t.modalLayout.footerGap,
+      marginTop: t.spacing.sm,
+      paddingHorizontal: t.spacing.md,
+      paddingBottom: t.spacing.md,
     },
+    /** Card del formulario: mismo padding que cabecera del modal. */
     formCard: {
-      padding: 24,
+      padding: t.modalLayout.headerPadding,
       gap: 18,
     },
     inputGroup: {
-      gap: 8,
+      gap: t.spacing.sm,
     },
     inlineInputs: {
-      flexDirection: 'row',
-      gap: 16,
+      flexDirection: "row",
+      gap: t.spacing.md,
     },
     inlineInput: {
       flex: 1,
     },
     label: {
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: t.spacing.md,
       paddingVertical: 12,
-      borderRadius: 8,
+      borderRadius: t.borderRadius.md,
       borderWidth: 1,
-      gap: 8,
+      gap: t.spacing.sm,
     },
     inputIcon: {
-      marginRight: 4,
+      marginRight: t.spacing.xs,
     },
     input: {
       flex: 1,
@@ -85,37 +94,37 @@ export const createBranchFormStyles = () =>
       paddingBottom: 12,
     },
     selectContainer: {
-      borderRadius: 8,
+      borderRadius: t.borderRadius.md,
       borderWidth: 1,
-      padding: 8,
+      padding: t.spacing.sm,
     },
     selectOptions: {
-      flexDirection: 'row',
-      gap: 8,
+      flexDirection: "row",
+      gap: t.spacing.sm,
     },
     selectOption: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 6,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+      borderRadius: t.borderRadius.sm,
       borderWidth: 1,
       minHeight: 32,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     switchGroup: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 12,
     },
     switchLabel: {
       flex: 1,
-      gap: 4,
+      gap: t.spacing.xs,
     },
     actions: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
+      flexDirection: "row",
+      gap: t.modalLayout.footerGap,
+      marginTop: t.spacing.sm,
     },
     cancelButton: {
       flex: 1,
@@ -124,8 +133,7 @@ export const createBranchFormStyles = () =>
       flex: 1,
     },
     errorText: {
-      marginTop: 4,
+      marginTop: t.spacing.xs,
       fontSize: 12,
     },
   });
-
