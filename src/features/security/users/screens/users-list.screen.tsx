@@ -3,37 +3,48 @@
  * Lista de usuarios con paginación, búsqueda y filtros
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/ui/button';
-import { InlineAlert } from '@/components/ui/inline-alert';
-import { SideModal } from '@/components/ui/side-modal';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { Tooltip } from '@/components/ui/tooltip';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { DataTable } from '@/src/domains/shared/components/data-table/data-table';
-import type { TableColumn } from '@/src/domains/shared/components/data-table/data-table.types';
-import { SearchFilterBar } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar';
-import { FilterConfig } from '@/src/domains/shared/components/search-filter-bar/search-filter-bar.types';
-import { useMultiCompany } from '@/src/domains/shared/hooks';
-import { UserCreateForm, UserEditForm, UsersService } from '@/src/features/security/users';
-import { User, UserFilters } from '@/src/features/security/users/types/domain';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { extractErrorInfo } from '@/src/infrastructure/messages/error-utils';
-import { createUsersListStyles } from '@/src/styles/pages/users-list.styles';
-import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/ui/button";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { SideModal } from "@/components/ui/side-modal";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { DynamicIcon, SearchFilterBar } from "@/src/domains/shared/components";
+import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
+import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
+import { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
+import { useMultiCompany } from "@/src/domains/shared/hooks";
+import {
+    UserCreateForm,
+    UserEditForm,
+    UsersService,
+} from "@/src/features/security/users";
+import { User, UserFilters } from "@/src/features/security/users/types/domain";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { extractErrorInfo } from "@/src/infrastructure/messages/error-utils";
+import { Ionicons } from "@expo/vector-icons";
+import { usePathname } from "expo-router";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { createUsersListScreenStyles } from "./users-list.screen.styles";
 
-import { useRouteAccessGuard } from '@/src/infrastructure/access';
+import { useRouteAccessGuard } from "@/src/infrastructure/access";
 
 export function UsersListScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, spacing, typography, pageLayout, borderRadius } =
+    useTheme();
   const { t } = useTranslation();
-  
+
   // Color para iconos de acción: primaryDark en dark theme, primary en light theme
   const actionIconColor = isDark ? colors.primaryDark : colors.primary;
   const commonTranslations = (t.common as any) || {};
@@ -42,7 +53,21 @@ export function UsersListScreen() {
   const alert = useAlert();
   const { currentCompany: company } = useMultiCompany();
   const { isMobile } = useResponsive();
-  const styles = createUsersListStyles(isMobile);
+
+  const styles = useMemo(
+    () =>
+      createUsersListScreenStyles(
+        {
+          colors,
+          spacing,
+          typography,
+          pageLayout,
+          borderRadius,
+        },
+        isMobile,
+      ),
+    [colors, spacing, typography, pageLayout, borderRadius, isMobile],
+  );
 
   const {
     loading: accessLoading,
@@ -55,7 +80,8 @@ export function UsersListScreen() {
    * Validar si un string es un UUID válido
    */
   const isValidUUID = (uuid: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   };
 
@@ -65,12 +91,12 @@ export function UsersListScreen() {
   const loadingRef = useRef(false); // Para evitar llamadas simultáneas
   const justEditedRef = useRef<number | null>(null); // Timestamp para prevenir recarga inmediata tras edición
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formActions, setFormActions] = useState<{ 
-    isLoading: boolean; 
-    handleSubmit: () => void; 
+  const [formActions, setFormActions] = useState<{
+    isLoading: boolean;
+    handleSubmit: () => void;
     handleCancel: () => void;
     generalError?: { message: string; detail?: string } | null;
   } | null>(null);
@@ -82,91 +108,98 @@ export function UsersListScreen() {
     hasNext: false,
     hasPrev: false,
   });
-  const [localFilter, setLocalFilter] = useState(''); // Filtro local para la tabla
+  const [localFilter, setLocalFilter] = useState(""); // Filtro local para la tabla
   const [filters, setFilters] = useState<UserFilters>({
     page: 1,
     limit: 10,
-    search: '',
+    search: "",
     status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     companyId: company?.id && isValidUUID(company.id) ? company.id : undefined,
   });
-  
+
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
 
   /**
    * Cargar usuarios
    */
-  const loadUsers = useCallback(async (currentFilters: UserFilters) => {
-    // Prevenir llamadas simultáneas
-    if (loadingRef.current) {
-      return;
-    }
+  const loadUsers = useCallback(
+    async (currentFilters: UserFilters) => {
+      // Prevenir llamadas simultáneas
+      if (loadingRef.current) {
+        return;
+      }
 
-    try {
-      loadingRef.current = true;
-      setLoading(true);
-      setError(null);
-      setHasError(false);
-      
-      const response = await UsersService.getUsers(currentFilters);
-      
-      // Asegurar que la respuesta tenga la estructura correcta
-      if (response && response.data) {
-        setUsers(Array.isArray(response.data) ? response.data : []);
-        
-        // Usar meta de la respuesta del backend
-        if (response.meta) {
-          setPagination({
-            page: response.meta.page || currentFilters.page || 1,
-            limit: response.meta.limit || currentFilters.limit || 10,
-            total: response.meta.total || 0,
-            totalPages: response.meta.totalPages || 0,
-            hasNext: response.meta.hasNext || false,
-            hasPrev: response.meta.hasPrev || false,
-          });
+      try {
+        loadingRef.current = true;
+        setLoading(true);
+        setError(null);
+        setHasError(false);
+
+        const response = await UsersService.getUsers(currentFilters);
+
+        // Asegurar que la respuesta tenga la estructura correcta
+        if (response && response.data) {
+          setUsers(Array.isArray(response.data) ? response.data : []);
+
+          // Usar meta de la respuesta del backend
+          if (response.meta) {
+            setPagination({
+              page: response.meta.page || currentFilters.page || 1,
+              limit: response.meta.limit || currentFilters.limit || 10,
+              total: response.meta.total || 0,
+              totalPages: response.meta.totalPages || 0,
+              hasNext: response.meta.hasNext || false,
+              hasPrev: response.meta.hasPrev || false,
+            });
+          } else {
+            // Si no hay meta en la respuesta, usar valores por defecto
+            setPagination({
+              page: currentFilters.page || 1,
+              limit: currentFilters.limit || 10,
+              total: Array.isArray(response.data) ? response.data.length : 0,
+              totalPages: 1,
+              hasNext: false,
+              hasPrev: false,
+            });
+          }
         } else {
-          // Si no hay meta en la respuesta, usar valores por defecto
+          setUsers([]);
           setPagination({
             page: currentFilters.page || 1,
             limit: currentFilters.limit || 10,
-            total: Array.isArray(response.data) ? response.data.length : 0,
-            totalPages: 1,
+            total: 0,
+            totalPages: 0,
             hasNext: false,
             hasPrev: false,
           });
         }
-      } else {
-        setUsers([]);
-        setPagination({
-          page: currentFilters.page || 1,
-          limit: currentFilters.limit || 10,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        });
-      }
-      
-      setHasError(false);
-    } catch (error: any) {
-      // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
-      // En este caso, establecer hasError para evitar loops infinitos
-      if (handleApiError(error)) {
-        setHasError(true);
-        return;
-      }
 
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, t.security?.users?.loadError || 'Error al cargar usuarios');
-      setError(errorMessage);
-      setHasError(true);
-      // Mostrar error con detalles
-      alert.showError(errorMessage, false, undefined, detailString, error);
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, [alert, handleApiError, t]);
+        setHasError(false);
+      } catch (error: any) {
+        // Si handleApiError retorna true, significa que el error fue manejado (401, 403, etc.)
+        // En este caso, establecer hasError para evitar loops infinitos
+        if (handleApiError(error)) {
+          setHasError(true);
+          return;
+        }
+
+        const { message: errorMessage, detail: detailString } =
+          extractErrorInfo(
+            error,
+            t.security?.users?.loadError || "Error al cargar usuarios",
+          );
+        setError(errorMessage);
+        setHasError(true);
+        // Mostrar error con detalles
+        alert.showError(errorMessage, false, undefined, detailString, error);
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
+      }
+    },
+    [alert, handleApiError, t],
+  );
 
   /**
    * Efecto para actualizar companyId cuando cambia la empresa
@@ -201,12 +234,12 @@ export function UsersListScreen() {
       }
       justEditedRef.current = null;
     }
-    
+
     // No recargar si hay un error activo (evita loops infinitos)
     if (hasError) {
       return;
     }
-    
+
     if (isScreenFocused && hasAccess && !accessLoading) {
       loadUsers(filters);
     }
@@ -249,30 +282,30 @@ export function UsersListScreen() {
   const handleAdvancedFilterChange = (key: string, value: any) => {
     setHasError(false);
 
-    if (key === 'deleted') {
+    if (key === "deleted") {
       setFilters((prev) => ({
         ...prev,
-        status: value === 'deleted' ? -1 : undefined,
+        status: value === "deleted" ? -1 : undefined,
         page: 1,
       }));
       return;
     }
 
-    if (key === 'status') {
+    if (key === "status") {
       setFilters((prev) => ({
         ...prev,
-        status: value === '' ? undefined : Number.parseInt(value, 10),
+        status: value === "" ? undefined : Number.parseInt(value, 10),
         page: 1,
       }));
       return;
     }
 
     const processedValue =
-      key === 'status' && value !== '' ? Number.parseInt(value, 10) : value;
+      key === "status" && value !== "" ? Number.parseInt(value, 10) : value;
 
     setFilters((prev) => ({
       ...prev,
-      [key]: value === '' ? undefined : processedValue,
+      [key]: value === "" ? undefined : processedValue,
       page: 1,
     }));
   };
@@ -284,11 +317,12 @@ export function UsersListScreen() {
     setFilters({
       page: 1,
       limit: 10,
-      search: '',
+      search: "",
       status: undefined,
-      companyId: company?.id && isValidUUID(company.id) ? company.id : undefined,
+      companyId:
+        company?.id && isValidUUID(company.id) ? company.id : undefined,
     });
-    setLocalFilter(''); // Limpiar también el filtro local
+    setLocalFilter(""); // Limpiar también el filtro local
     setHasError(false);
   };
 
@@ -299,13 +333,13 @@ export function UsersListScreen() {
     if (!localFilter.trim()) {
       return users;
     }
-    
+
     const filterLower = localFilter.toLowerCase().trim();
     return users.filter((user) => {
-      const email = (user.email || '').toLowerCase();
-      const firstName = (user.firstName || '').toLowerCase();
-      const lastName = (user.lastName || '').toLowerCase();
-      
+      const email = (user.email || "").toLowerCase();
+      const firstName = (user.firstName || "").toLowerCase();
+      const lastName = (user.lastName || "").toLowerCase();
+
       return (
         email.includes(filterLower) ||
         firstName.includes(filterLower) ||
@@ -319,8 +353,11 @@ export function UsersListScreen() {
    * Recopilar todas las empresas únicas de todos los usuarios para determinar el orden
    */
   const allCompaniesOrdered = useMemo(() => {
-    const companiesMap = new Map<string, { id: string; name: string; code?: string }>();
-    
+    const companiesMap = new Map<
+      string,
+      { id: string; name: string; code?: string }
+    >();
+
     users.forEach((user) => {
       const userAny = user as any;
       if (userAny.companies && Array.isArray(userAny.companies)) {
@@ -335,7 +372,7 @@ export function UsersListScreen() {
         });
       }
     });
-    
+
     return Array.from(companiesMap.values());
   }, [users]);
 
@@ -343,60 +380,72 @@ export function UsersListScreen() {
    * Paleta de colores del sistema para empresas (a partir de la segunda)
    * Se calcula dentro del useMemo para tener acceso a los colores actualizados
    */
-  const systemCompanyColors = useMemo(() => [
-    colors.primaryDark, // Segunda empresa
-    colors.textSecondary, // Tercera empresa
-    colors.border, // Cuarta empresa
-    colors.surfaceVariant, // Quinta empresa
-    colors.primaryDark || colors.primary, // Sexta empresa
-  ], [actionIconColor, colors.textSecondary, colors.border, colors.surfaceVariant, colors.primaryDark, colors.primary]);
+  const systemCompanyColors = useMemo(
+    () => [
+      colors.primaryDark, // Segunda empresa
+      colors.textSecondary, // Tercera empresa
+      colors.border, // Cuarta empresa
+      colors.surfaceVariant, // Quinta empresa
+      colors.primaryDark || colors.primary, // Sexta empresa
+    ],
+    [
+      actionIconColor,
+      colors.textSecondary,
+      colors.border,
+      colors.surfaceVariant,
+      colors.primaryDark,
+      colors.primary,
+    ],
+  );
 
   /**
    * Función para obtener el color de una empresa por su nombre o ID
    * Primera empresa usa colors.primary, las demás usan colores diferentes del sistema
    */
-  const getCompanyColor = useCallback((companyIdentifier: string | undefined, companyId?: string): string => {
-    if (!companyIdentifier || companyIdentifier.trim() === '') {
-      return colors.primary;
-    }
-    
-    // Buscar la empresa en la lista ordenada por nombre o ID
-    const companyIndex = allCompaniesOrdered.findIndex(
-      c => {
-        const nameMatch = c.name === companyIdentifier;
-        const idMatch = c.id === companyIdentifier || (companyId && c.id === companyId);
-        return nameMatch || idMatch;
+  const getCompanyColor = useCallback(
+    (companyIdentifier: string | undefined, companyId?: string): string => {
+      if (!companyIdentifier || companyIdentifier.trim() === "") {
+        return colors.primary;
       }
-    );
-    
-    // Si es la primera empresa (índice 0), usar el color del badge
-    if (companyIndex === 0) {
-      return colors.primary;
-    }
-    
-    // Si se encuentra la empresa y no es la primera
-    if (companyIndex > 0) {
-      // Usar un color de la paleta según el índice (restar 1 porque el índice 0 es la primera)
-      const colorIndex = (companyIndex - 1) % systemCompanyColors.length;
+
+      // Buscar la empresa en la lista ordenada por nombre o ID
+      const companyIndex = allCompaniesOrdered.findIndex((c) => {
+        const nameMatch = c.name === companyIdentifier;
+        const idMatch =
+          c.id === companyIdentifier || (companyId && c.id === companyId);
+        return nameMatch || idMatch;
+      });
+
+      // Si es la primera empresa (índice 0), usar el color del badge
+      if (companyIndex === 0) {
+        return colors.primary;
+      }
+
+      // Si se encuentra la empresa y no es la primera
+      if (companyIndex > 0) {
+        // Usar un color de la paleta según el índice (restar 1 porque el índice 0 es la primera)
+        const colorIndex = (companyIndex - 1) % systemCompanyColors.length;
+        return systemCompanyColors[colorIndex];
+      }
+
+      // Si no se encuentra la empresa, usar hash para asignar un color
+      let hash = 0;
+      const identifier = (companyIdentifier || companyId || "").trim();
+      for (let i = 0; i < identifier.length; i++) {
+        const char = identifier.codePointAt(i) || 0;
+        hash = (hash << 5) - hash + char;
+        hash = hash & hash;
+      }
+      // Si el hash indica que es "primera" (módulo 2 === 0), usar primary
+      // Si no, usar un color de la paleta
+      if (Math.abs(hash) % 2 === 0) {
+        return colors.primary;
+      }
+      const colorIndex = Math.abs(hash) % systemCompanyColors.length;
       return systemCompanyColors[colorIndex];
-    }
-    
-    // Si no se encuentra la empresa, usar hash para asignar un color
-    let hash = 0;
-    const identifier = (companyIdentifier || companyId || '').trim();
-    for (let i = 0; i < identifier.length; i++) {
-      const char = identifier.codePointAt(i) || 0;
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    // Si el hash indica que es "primera" (módulo 2 === 0), usar primary
-    // Si no, usar un color de la paleta
-    if (Math.abs(hash) % 2 === 0) {
-      return colors.primary;
-    }
-    const colorIndex = Math.abs(hash) % systemCompanyColors.length;
-    return systemCompanyColors[colorIndex];
-  }, [colors.primary, allCompaniesOrdered, systemCompanyColors]);
+    },
+    [colors.primary, allCompaniesOrdered, systemCompanyColors],
+  );
 
   /**
    * Navegar a crear usuario
@@ -404,7 +453,7 @@ export function UsersListScreen() {
   const handleCreateUser = () => {
     setFormActions(null);
     setSelectedUserId(null);
-    setModalMode('create');
+    setModalMode("create");
     setIsModalVisible(true);
   };
 
@@ -417,7 +466,7 @@ export function UsersListScreen() {
     setFormActions(null);
     setSelectedUserId(user.id);
     setSelectedUser(user);
-    setModalMode('edit');
+    setModalMode("edit");
     setIsModalVisible(true);
   };
 
@@ -449,22 +498,27 @@ export function UsersListScreen() {
    * Manejar éxito al editar usuario
    * Optimización: actualizar solo el registro editado localmente sin recargar toda la lista
    */
-  const handleEditSuccess = useCallback((updatedUser?: User) => {
-    if (updatedUser) {
-      // Actualizar el usuario en la lista local con los datos ya recibidos
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === updatedUser.id ? updatedUser : user
-        )
+  const handleEditSuccess = useCallback(
+    (updatedUser?: User) => {
+      if (updatedUser) {
+        // Actualizar el usuario en la lista local con los datos ya recibidos
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === updatedUser.id ? updatedUser : user,
+          ),
+        );
+
+        // Marcar que acabamos de editar para prevenir recarga automática
+        justEditedRef.current = Date.now();
+      }
+
+      handleCloseModal();
+      alert.showSuccess(
+        t.security?.users?.edit || "Usuario actualizado exitosamente",
       );
-      
-      // Marcar que acabamos de editar para prevenir recarga automática
-      justEditedRef.current = Date.now();
-    }
-    
-    handleCloseModal();
-    alert.showSuccess(t.security?.users?.edit || 'Usuario actualizado exitosamente');
-  }, [alert, t]);
+    },
+    [alert, t],
+  );
 
   /**
    * Manejar activar/desactivar usuario
@@ -476,27 +530,33 @@ export function UsersListScreen() {
     try {
       await UsersService.deleteUser(user.id);
       loadUsers(filters);
-      alert.showSuccess(t.security?.users?.deleted || 'Usuario eliminado');
+      alert.showSuccess(t.security?.users?.deleted || "Usuario eliminado");
       handleCloseModal();
     } catch (error: any) {
       if (handleApiError(error)) {
         return;
       }
-      const { message: errorMessage, detail: detailString } = extractErrorInfo(error, 'Error al eliminar usuario');
+      const { message: errorMessage, detail: detailString } = extractErrorInfo(
+        error,
+        "Error al eliminar usuario",
+      );
       alert.showError(errorMessage, false, undefined, detailString, error);
     }
   };
 
   const confirmDeleteUser = (user: User) => {
     const usersTranslations = (t.security?.users as any) || {};
-    const title = usersTranslations.deleteConfirmTitle || commonTranslations.confirm || 'Eliminar usuario';
+    const title =
+      usersTranslations.deleteConfirmTitle ||
+      commonTranslations.confirm ||
+      "Eliminar usuario";
     const messageTemplate =
       usersTranslations.deleteConfirmMessage ||
-      '¿Seguro que deseas eliminar al usuario {email}? Esta acción no se puede deshacer.';
+      "¿Seguro que deseas eliminar al usuario {email}? Esta acción no se puede deshacer.";
 
     const identifier = user.email || user.id;
-    const message = messageTemplate.includes('{email}')
-      ? messageTemplate.replace('{email}', identifier)
+    const message = messageTemplate.includes("{email}")
+      ? messageTemplate.replace("{email}", identifier)
       : messageTemplate;
 
     alert.showConfirm(title, message, () => handleDeleteUser(user));
@@ -507,14 +567,14 @@ export function UsersListScreen() {
    */
   const columns: TableColumn<User>[] = [
     {
-      key: 'email',
-      label: t.security?.users?.email || 'Email',
-      width: '23%',
+      key: "email",
+      label: t.security?.users?.email || "Email",
+      width: "23%",
     },
     {
-      key: 'name',
-      label: t.security?.users?.name || 'Nombre',
-      width: '18%',
+      key: "name",
+      label: t.security?.users?.name || "Nombre",
+      width: "18%",
       render: (user) => (
         <ThemedText type="body2">
           {user.firstName} {user.lastName}
@@ -522,39 +582,58 @@ export function UsersListScreen() {
       ),
     },
     {
-      key: 'phone',
-      label: t.security?.users?.phone || 'Teléfono',
-      width: '13%',
+      key: "phone",
+      label: t.security?.users?.phone || "Teléfono",
+      width: "13%",
     },
     {
-      key: 'role',
-      label: t.security?.users?.role || 'Rol',
-      width: '18%',
+      key: "role",
+      label: t.security?.users?.role || "Rol",
+      width: "18%",
       render: (user) => {
         const userAny = user as any;
-        
+
         // Recopilar todos los roles desde companies
-        const rolesByCompany: Array<{ companyId?: string; companyName?: string; roles: Array<{ name: string; code?: string }> }> = [];
-        
+        const rolesByCompany: Array<{
+          companyId?: string;
+          companyName?: string;
+          roles: Array<{ name: string; code?: string }>;
+        }> = [];
+
         if (userAny.companies && Array.isArray(userAny.companies)) {
           userAny.companies.forEach((company: any) => {
-            if (company.roles && Array.isArray(company.roles) && company.roles.length > 0) {
+            if (
+              company.roles &&
+              Array.isArray(company.roles) &&
+              company.roles.length > 0
+            ) {
               rolesByCompany.push({
                 companyId: company.id,
                 companyName: company.name,
-                roles: company.roles.map((r: any) => ({ name: r.name, code: r.code })),
+                roles: company.roles.map((r: any) => ({
+                  name: r.name,
+                  code: r.code,
+                })),
               });
             }
           });
         }
-        
+
         // Fallback: intentar obtener roles del array legacy
-        if (rolesByCompany.length === 0 && user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+        if (
+          rolesByCompany.length === 0 &&
+          user.roles &&
+          Array.isArray(user.roles) &&
+          user.roles.length > 0
+        ) {
           rolesByCompany.push({
-            roles: user.roles.map((r: any) => ({ name: r.displayName || r.name, code: r.code })),
+            roles: user.roles.map((r: any) => ({
+              name: r.displayName || r.name,
+              code: r.code,
+            })),
           });
         }
-        
+
         // Si no hay roles, mostrar guion
         if (rolesByCompany.length === 0) {
           return (
@@ -563,78 +642,127 @@ export function UsersListScreen() {
             </ThemedText>
           );
         }
-        
+
         // Contar total de roles y empresas
-        const totalRoles = rolesByCompany.reduce((sum, c) => sum + c.roles.length, 0);
+        const totalRoles = rolesByCompany.reduce(
+          (sum, c) => sum + c.roles.length,
+          0,
+        );
         const totalCompanies = rolesByCompany.length;
-        
+
         // Si hay solo una empresa y un rol, mostrar simple
         if (totalCompanies === 1 && totalRoles === 1) {
-          const companyColor = getCompanyColor(rolesByCompany[0].companyName, rolesByCompany[0].companyId);
+          const companyColor = getCompanyColor(
+            rolesByCompany[0].companyName,
+            rolesByCompany[0].companyId,
+          );
           return (
             <View style={styles.roleContainer}>
-              <View style={[styles.roleBadge, { backgroundColor: companyColor + '20' }]}>
-                <Ionicons name="business" size={12} color={companyColor} style={{ marginRight: 4 }} />
-                <ThemedText type="caption" style={{ color: companyColor, fontWeight: '500' }}>
+              <View
+                style={[
+                  styles.roleBadge,
+                  { backgroundColor: companyColor + "20" },
+                ]}
+              >
+                <Ionicons
+                  name="business"
+                  size={12}
+                  color={companyColor}
+                  style={{ marginRight: 4 }}
+                />
+                <ThemedText
+                  type="caption"
+                  style={{ color: companyColor, fontWeight: "500" }}
+                >
                   {rolesByCompany[0].roles[0].name}
                 </ThemedText>
               </View>
             </View>
           );
         }
-        
+
         // Si hay múltiples roles o empresas, mostrar badges con tooltip
         // Limitar a 3 badges visibles, el resto se muestra en tooltip
         const maxVisible = 3;
-        const visibleRoles: Array<{ companyId?: string; companyName?: string; role: { name: string; code?: string }; companyIndex: number; roleIndex: number }> = [];
+        const visibleRoles: Array<{
+          companyId?: string;
+          companyName?: string;
+          role: { name: string; code?: string };
+          companyIndex: number;
+          roleIndex: number;
+        }> = [];
         let count = 0;
-        
+
         rolesByCompany.forEach((companyData, companyIndex) => {
           companyData.roles.forEach((role, roleIndex) => {
             if (count < maxVisible) {
-              visibleRoles.push({ 
-                companyId: companyData.companyId, 
-                companyName: companyData.companyName, 
-                role, 
-                companyIndex, 
-                roleIndex 
+              visibleRoles.push({
+                companyId: companyData.companyId,
+                companyName: companyData.companyName,
+                role,
+                companyIndex,
+                roleIndex,
               });
               count++;
             }
           });
         });
-        
+
         const remainingCount = totalRoles - visibleRoles.length;
-        const tooltipFullText = rolesByCompany.map(c => 
-          `${c.companyName || 'Empresa'}: ${c.roles.map(r => r.name).join(', ')}`
-        ).join('\n');
-        
+        const tooltipFullText = rolesByCompany
+          .map(
+            (c) =>
+              `${c.companyName || "Empresa"}: ${c.roles.map((r) => r.name).join(", ")}`,
+          )
+          .join("\n");
+
         return (
           <View style={styles.roleContainer}>
             {visibleRoles.map((item, index) => {
-              const tooltipText = totalCompanies > 1 
-                ? `${item.companyName || 'Empresa'}: ${item.role.name}`
-                : item.role.name;
-              
+              const tooltipText =
+                totalCompanies > 1
+                  ? `${item.companyName || "Empresa"}: ${item.role.name}`
+                  : item.role.name;
+
               // Obtener el color de la empresa para el icono
               // Priorizar companyName, si no está disponible usar companyId como fallback
-              const companyIdentifier = item.companyName || item.companyId || '';
-              const companyColor = getCompanyColor(companyIdentifier, item.companyId);
-              
+              const companyIdentifier =
+                item.companyName || item.companyId || "";
+              const companyColor = getCompanyColor(
+                companyIdentifier,
+                item.companyId,
+              );
+
               return (
-                <Tooltip key={`${item.companyIndex}-${item.roleIndex}`} text={tooltipText} position="top">
-                  <View 
+                <Tooltip
+                  key={`${item.companyIndex}-${item.roleIndex}`}
+                  text={tooltipText}
+                  position="top"
+                >
+                  <View
                     style={[
-                      styles.roleBadge, 
-                      { 
-                        backgroundColor: companyColor + '20', 
-                        marginRight: index < visibleRoles.length - 1 || remainingCount > 0 ? 4 : 0,
+                      styles.roleBadge,
+                      {
+                        backgroundColor: companyColor + "20",
+                        marginRight:
+                          index < visibleRoles.length - 1 || remainingCount > 0
+                            ? 4
+                            : 0,
                         marginBottom: 4,
-                      }
+                      },
                     ]}
                   >
-                    <Ionicons name="business" size={12} color={companyColor} style={{ marginRight: 4 }} />
-                    <ThemedText type="caption" style={{ color: companyColor, fontWeight: '500' }} numberOfLines={1}>
+                    <Ionicons
+                      name="business"
+                      size={12}
+                      color={companyColor}
+                      style={{ marginRight: 4 }}
+                    />
+                    <ThemedText
+                      type="caption"
+                      style={{ color: companyColor, fontWeight: "500" }}
+                      numberOfLines={1}
+                    >
                       {item.role.name}
                     </ThemedText>
                   </View>
@@ -643,8 +771,20 @@ export function UsersListScreen() {
             })}
             {remainingCount > 0 && (
               <Tooltip text={tooltipFullText} position="top">
-                <View style={[styles.roleBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, marginBottom: 4 }]}>
-                  <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: '500' }}>
+                <View
+                  style={[
+                    styles.roleBadge,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderColor: colors.border,
+                      marginBottom: 4,
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={{ color: colors.textSecondary, fontWeight: "500" }}
+                  >
                     +{remainingCount}
                   </ThemedText>
                 </View>
@@ -655,26 +795,29 @@ export function UsersListScreen() {
       },
     },
     {
-      key: 'status',
-      label: t.security?.users?.status || 'Estado',
-      width: '15%',
-      align: 'center',
+      key: "status",
+      label: t.security?.users?.status || "Estado",
+      width: "15%",
+      align: "center",
       render: (user) => (
-        <StatusBadge 
-          status={user.status} 
+        <StatusBadge
+          status={user.status}
           statusDescription={user.statusDescription}
           size="small"
         />
       ),
     },
     {
-      key: 'actions',
-      label: t.common?.actions || 'Acciones',
-      width: '18%',
-      align: 'center',
+      key: "actions",
+      label: t.common?.actions || "Acciones",
+      width: "18%",
+      align: "center",
       render: (user) => (
         <View style={styles.actionsContainer}>
-          <Tooltip text={t.security?.users?.editShort || 'Editar'} position="left">
+          <Tooltip
+            text={t.security?.users?.editShort || "Editar"}
+            position="left"
+          >
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleEditUser(user)}
@@ -682,7 +825,10 @@ export function UsersListScreen() {
               <Ionicons name="pencil" size={18} color={actionIconColor} />
             </TouchableOpacity>
           </Tooltip>
-          <Tooltip text={t.security?.users?.deleteShort || 'Eliminar'} position="left">
+          <Tooltip
+            text={t.security?.users?.deleteShort || "Eliminar"}
+            position="left"
+          >
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => confirmDeleteUser(user)}
@@ -700,26 +846,42 @@ export function UsersListScreen() {
    */
   const filterConfigs: FilterConfig[] = [
     {
-      key: 'status',
-      label: usersTranslations.status || 'Estado',
-      type: 'select',
+      key: "status",
+      label: usersTranslations.status || "Estado",
+      type: "select",
       options: [
-        { key: 'all', value: '', label: commonTranslations.all || 'Todos' },
-        { key: 'active', value: '1', label: usersTranslations.active || 'Activo' },
-        { key: 'inactive', value: '0', label: usersTranslations.inactive || 'Inactivo' },
-        { key: 'pending', value: '2', label: usersTranslations.pending || 'Pendiente' },
-        { key: 'suspended', value: '3', label: usersTranslations.suspended || 'Suspendido' },
+        { key: "all", value: "", label: commonTranslations.all || "Todos" },
+        {
+          key: "active",
+          value: "1",
+          label: usersTranslations.active || "Activo",
+        },
+        {
+          key: "inactive",
+          value: "0",
+          label: usersTranslations.inactive || "Inactivo",
+        },
+        {
+          key: "pending",
+          value: "2",
+          label: usersTranslations.pending || "Pendiente",
+        },
+        {
+          key: "suspended",
+          value: "3",
+          label: usersTranslations.suspended || "Suspendido",
+        },
       ],
     },
     {
-      key: 'deleted',
-      label: usersTranslations.deletedFilter || 'Usuarios',
-      type: 'select',
+      key: "deleted",
+      label: usersTranslations.deletedFilter || "Usuarios",
+      type: "select",
       options: [
         {
-          key: 'deleted',
-          value: 'deleted',
-          label: usersTranslations.deletedUser || 'Eliminados',
+          key: "deleted",
+          value: "deleted",
+          label: usersTranslations.deletedUser || "Eliminados",
         },
       ],
     },
@@ -727,9 +889,13 @@ export function UsersListScreen() {
 
   if (accessLoading) {
     return (
-      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ThemedView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
-        <ThemedText style={{ marginTop: 12 }}>{t.common?.loading || 'Cargando...'}</ThemedText>
+        <ThemedText style={{ marginTop: 12 }}>
+          {t.common?.loading || "Cargando..."}
+        </ThemedText>
       </ThemedView>
     );
   }
@@ -740,24 +906,43 @@ export function UsersListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
+      <View style={[styles.content, isMobile && styles.contentMobile]}>
+        {/* Header con icono, título y subtítulo (estandarizado) */}
         <View style={styles.header}>
           <View style={styles.headerTitle}>
-            <ThemedText type="h3" style={styles.title}>
-              {t.security?.users?.title || 'Administración de Usuarios'}
-            </ThemedText>
-            <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-              {t.security?.users?.subtitle || 'Gestiona los usuarios del sistema'}
+            <View style={styles.headerRow}>
+              <DynamicIcon
+                name="Ionicons:people"
+                size={
+                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                }
+                color={colors.primary}
+                style={styles.headerIcon}
+              />
+              <ThemedText
+                type="h2"
+                style={isMobile ? styles.titleMobile : styles.title}
+              >
+                {t.security?.users?.title || "Administración de Usuarios"}
+              </ThemedText>
+            </View>
+            <ThemedText type="body1" style={styles.subtitle}>
+              {t.security?.users?.subtitle ||
+                "Gestiona los usuarios del sistema"}
             </ThemedText>
           </View>
           <Button
-            title={isMobile ? '' : (t.security?.users?.create || 'Crear Usuario')}
+            title={isMobile ? "" : t.security?.users?.create || "Crear Usuario"}
             onPress={handleCreateUser}
             variant="primary"
             size="md"
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" style={!isMobile ? { marginRight: 8 } : undefined} />
+            <Ionicons
+              name="add"
+              size={pageLayout.iconSubtitle}
+              color="#FFFFFF"
+              style={!isMobile ? { marginRight: spacing.sm } : undefined}
+            />
           </Button>
         </View>
 
@@ -766,15 +951,21 @@ export function UsersListScreen() {
           filterValue={localFilter}
           onFilterChange={handleLocalFilterChange}
           onSearchSubmit={handleSearchSubmit}
-          filterPlaceholder={t.security?.users?.filterPlaceholder || 'Filtrar por email o nombre...'}
-          searchPlaceholder={t.security?.users?.searchPlaceholder || 'Buscar por email o nombre...'}
+          filterPlaceholder={
+            t.security?.users?.filterPlaceholder ||
+            "Filtrar por email o nombre..."
+          }
+          searchPlaceholder={
+            t.security?.users?.searchPlaceholder ||
+            "Buscar por email o nombre..."
+          }
           filters={filterConfigs}
           activeFilters={{
             status:
               filters.status !== undefined && filters.status !== -1
                 ? filters.status.toString()
-                : '',
-            deleted: filters.status === -1 ? 'deleted' : '',
+                : "",
+            deleted: filters.status === -1 ? "deleted" : "",
           }}
           onAdvancedFilterChange={handleAdvancedFilterChange}
           onClearFilters={handleClearFilters}
@@ -788,19 +979,24 @@ export function UsersListScreen() {
             data={filteredUsers}
             columns={columns}
             loading={loading}
-            emptyMessage={t.security?.users?.empty || 'No hay usuarios disponibles'}
+            emptyMessage={
+              t.security?.users?.empty || "No hay usuarios disponibles"
+            }
             onRowPress={handleEditUser}
             keyExtractor={(user) => user.id}
             showPagination={true}
             pagination={{
               page: pagination.page,
               limit: pagination.limit,
-              total: localFilter.trim() ? filteredUsers.length : pagination.total,
-              totalPages: localFilter.trim() 
+              total: localFilter.trim()
+                ? filteredUsers.length
+                : pagination.total,
+              totalPages: localFilter.trim()
                 ? Math.ceil(filteredUsers.length / pagination.limit)
                 : pagination.totalPages,
               hasNext: localFilter.trim()
-                ? pagination.page < Math.ceil(filteredUsers.length / pagination.limit)
+                ? pagination.page <
+                  Math.ceil(filteredUsers.length / pagination.limit)
                 : pagination.hasNext,
               hasPrev: localFilter.trim()
                 ? pagination.page > 1
@@ -818,14 +1014,16 @@ export function UsersListScreen() {
             visible={isModalVisible}
             onClose={handleCloseModal}
             title={
-              modalMode === 'edit'
-                ? t.security?.users?.edit || 'Editar Usuario'
-                : t.security?.users?.create || 'Crear Usuario'
+              modalMode === "edit"
+                ? t.security?.users?.edit || "Editar Usuario"
+                : t.security?.users?.create || "Crear Usuario"
             }
             subtitle={
-              modalMode === 'edit'
-                ? (t.security?.users?.editSubtitle || 'Modifica los datos del usuario')
-                : (t.security?.users?.createSubtitle || 'Completa los datos para registrar un nuevo usuario')
+              modalMode === "edit"
+                ? t.security?.users?.editSubtitle ||
+                  "Modifica los datos del usuario"
+                : t.security?.users?.createSubtitle ||
+                  "Completa los datos para registrar un nuevo usuario"
             }
             topAlert={
               formActions?.generalError ? (
@@ -847,8 +1045,11 @@ export function UsersListScreen() {
             footer={
               formActions ? (
                 <>
-                  {modalMode === 'edit' && selectedUserId ? (
-                    <Tooltip text={t.security?.users?.deleteShort || 'Eliminar'} position="left">
+                  {modalMode === "edit" && selectedUserId ? (
+                    <Tooltip
+                      text={t.security?.users?.deleteShort || "Eliminar"}
+                      position="left"
+                    >
                       <TouchableOpacity
                         style={[
                           styles.footerIconButton,
@@ -863,16 +1064,25 @@ export function UsersListScreen() {
                           if (selectedUser) {
                             confirmDeleteUser(selectedUser);
                           } else {
-                            const userFromList = users.find((user) => user.id === selectedUserId);
+                            const userFromList = users.find(
+                              (user) => user.id === selectedUserId,
+                            );
                             if (userFromList) {
                               confirmDeleteUser(userFromList);
                             } else {
-                              alert.showError(t.security?.users?.loadError || 'Usuario no encontrado');
+                              alert.showError(
+                                t.security?.users?.loadError ||
+                                  "Usuario no encontrado",
+                              );
                             }
                           }
                         }}
                       >
-                        <Ionicons name="trash" size={18} color={actionIconColor} />
+                        <Ionicons
+                          name="trash"
+                          size={18}
+                          color={actionIconColor}
+                        />
                       </TouchableOpacity>
                     </Tooltip>
                   ) : null}
@@ -885,9 +1095,9 @@ export function UsersListScreen() {
                   />
                   <Button
                     title={
-                      modalMode === 'edit'
+                      modalMode === "edit"
                         ? t.common.save
-                        : t.security?.users?.create || 'Crear Usuario'
+                        : t.security?.users?.create || "Crear Usuario"
                     }
                     onPress={formActions.handleSubmit}
                     variant="primary"
@@ -898,7 +1108,7 @@ export function UsersListScreen() {
               ) : null
             }
           >
-            {modalMode === 'edit' && selectedUserId ? (
+            {modalMode === "edit" && selectedUserId ? (
               <UserEditForm
                 userId={selectedUserId}
                 onSuccess={handleEditSuccess}
@@ -908,7 +1118,7 @@ export function UsersListScreen() {
                 onFormReady={setFormActions}
               />
             ) : null}
-            {modalMode === 'create' ? (
+            {modalMode === "create" ? (
               <UserCreateForm
                 onSuccess={handleCreateSuccess}
                 onCancel={handleCloseModal}
@@ -923,4 +1133,3 @@ export function UsersListScreen() {
     </ThemedView>
   );
 }
-
