@@ -268,7 +268,7 @@ export const Typography = {
   },
   /** Título de página (smartphone). Usar en todas las pantallas en vista móvil. */
   pageTitleMobile: {
-    fontSize: 27,
+    fontSize: 25,
     fontWeight: "bold" as const,
     lineHeight: 32,
   },

@@ -1,81 +1,90 @@
 /**
- * Estilos para formularios de permiso (crear/editar)
- * Compartidos entre permission-create-form y permission-edit-form
+ * Estilos para formularios de permiso (crear/editar).
+ * Usa tokens de ModalLayout y spacing del tema para estandarizar con modales de administración
+ * (Roles, Users) y con Crear/Editar Permiso.
  */
 
-import { StyleSheet } from 'react-native';
+import { ModalLayout } from "@/constants/theme";
+import { StyleSheet } from "react-native";
 
-export const createPermissionFormStyles = () =>
+export interface PermissionFormTheme {
+  spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
+  modalLayout: typeof ModalLayout;
+  borderRadius: { sm: number; md: number };
+}
+
+export const createPermissionFormStyles = (t: PermissionFormTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
     },
     loadingContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       padding: 40,
     },
     loadingText: {
-      marginTop: 16,
+      marginTop: t.spacing.md,
     },
     keyboardView: {
       flex: 1,
     },
     scrollContent: {
-      padding: 16,
-      gap: 16,
+      padding: t.spacing.md,
+      gap: t.spacing.md,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 16,
-      marginBottom: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: t.modalLayout.headerGap,
+      marginBottom: t.spacing.sm,
     },
     backButton: {
-      padding: 8,
+      padding: t.modalLayout.closeButtonPadding,
     },
     headerTitle: {
       flex: 1,
     },
     title: {
-      marginBottom: 4,
+      marginBottom: t.modalLayout.titleSubtitleGap,
     },
     formHeader: {
-      marginBottom: 16,
+      marginBottom: t.spacing.md,
     },
     formHeaderTexts: {
-      gap: 4,
+      gap: t.spacing.xs,
     },
     formFooter: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
-      paddingHorizontal: 16,
-      paddingBottom: 16,
+      flexDirection: "row",
+      gap: t.modalLayout.footerGap,
+      marginTop: t.spacing.sm,
+      paddingHorizontal: t.spacing.md,
+      paddingBottom: t.spacing.md,
     },
+    /** Card del formulario: mismo padding que cabecera del modal. */
     formCard: {
-      padding: 25,
+      padding: t.modalLayout.headerPadding,
       gap: 20,
     },
     inputGroup: {
-      gap: 8,
+      gap: t.spacing.sm,
     },
     label: {
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: t.spacing.md,
       paddingVertical: 12,
-      borderRadius: 8,
+      borderRadius: t.borderRadius.md,
       borderWidth: 1,
-      gap: 8,
+      gap: t.spacing.sm,
     },
     inputIcon: {
-      marginRight: 4,
+      marginRight: t.spacing.xs,
     },
     input: {
       flex: 1,
@@ -87,41 +96,41 @@ export const createPermissionFormStyles = () =>
       paddingBottom: 12,
     },
     errorText: {
-      marginTop: 4,
+      marginTop: t.spacing.xs,
       fontSize: 12,
     },
     selectContainer: {
-      borderRadius: 8,
+      borderRadius: t.borderRadius.md,
       borderWidth: 1,
-      padding: 8,
+      padding: t.spacing.sm,
       minHeight: 48,
     },
     selectOptions: {
-      flexDirection: 'row',
-      gap: 8,
+      flexDirection: "row",
+      gap: t.spacing.sm,
     },
     selectOption: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 6,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+      borderRadius: t.borderRadius.sm,
       borderWidth: 1,
       minHeight: 32,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     switchGroup: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 12,
     },
     switchLabel: {
       flex: 1,
     },
     actions: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
+      flexDirection: "row",
+      gap: t.modalLayout.footerGap,
+      marginTop: t.spacing.sm,
     },
     cancelButton: {
       flex: 1,
@@ -130,4 +139,3 @@ export const createPermissionFormStyles = () =>
       flex: 1,
     },
   });
-
