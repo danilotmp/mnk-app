@@ -2,24 +2,24 @@
  * Estilos para el componente MainLayout
  */
 
-import { StyleSheet } from 'react-native';
-import { BaseTheme } from '@/constants/theme';
+import { BaseTheme } from "@/constants/theme";
+import { StyleSheet } from "react-native";
 
-export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
+export const createMainLayoutStyles = (colors: BaseTheme["colors"]) =>
   StyleSheet.create({
     container: {
       flex: 1,
     },
     unifiedHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingVertical: 8,
       borderBottomWidth: 1,
       zIndex: 9999,
       paddingRight: 16,
       paddingLeft: 0, // Se sobrescribe condicionalmente en el componente para móvil
-      position: 'relative', // Para posicionar el dropdown relativo al header
+      position: "relative", // Para posicionar el dropdown relativo al header
     },
     // Desktop/Tablet
     logoSection: {
@@ -28,42 +28,42 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     },
     menuSection: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginHorizontal: 16,
     },
     userSection: {
       flexShrink: 0,
       minWidth: 150,
-      justifyContent: 'flex-end',
-      flexDirection: 'row',
+      justifyContent: "flex-end",
+      flexDirection: "row",
     },
     // Web Desktop - Tres bloques
     webLeftSection: {
       width: 280, // Mismo ancho que el bloque derecho
       flexShrink: 0,
       paddingLeft: 16,
-      justifyContent: 'flex-start',
-      alignItems: 'flex-start',
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
     },
     webMenuSection: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       paddingHorizontal: 16,
     },
     webRightSection: {
       width: 280, // Mismo ancho que el bloque izquierdo
       flexShrink: 0,
       paddingRight: 16,
-      justifyContent: 'flex-end',
-      alignItems: 'flex-end',
-      flexDirection: 'row',
+      justifyContent: "flex-end",
+      alignItems: "flex-end",
+      flexDirection: "row",
     },
     // Mobile
     mobileRightSection: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
     },
     mobileMenuSection: {
@@ -72,7 +72,7 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     },
     mobileLogoSection: {
       flex: 1,
-      alignItems: 'flex-start',
+      alignItems: "flex-start",
       paddingLeft: 0, // El padding ya está en unifiedHeader
     },
     mobileUserSection: {
@@ -84,7 +84,7 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     // Contenedor del body: menú vertical + contenido
     bodyContainer: {
       flex: 1,
-      flexDirection: 'row',
+      flexDirection: "row",
     },
     bodyContainerWithVerticalMenu: {
       // El menú vertical está dentro de este contenedor
@@ -92,34 +92,30 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     },
     // Estilos para dropdowns de empresas
     companyDropdownContainer: {
-      position: 'relative',
-      width: '100%', // Ocupa todo el ancho del bloque izquierdo
+      position: "relative",
+      width: "100%", // Ocupa todo el ancho del bloque izquierdo
     },
     companyDropdown: {
-      position: 'absolute',
-      top: '100%',
+      position: "absolute",
+      top: "100%",
       left: 0,
       marginTop: 4,
-      borderRadius: 8,
-      borderWidth: 1,
+      borderRadius: 10,
+      borderWidth: 0,
       maxHeight: 300,
       zIndex: 1000,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 5,
+      // Sombra aplicada desde el componente con shadows.lg del tema (visible en light y dark)
     },
     companyDropdownDesktop: {
       zIndex: 10000, // Mayor que el zIndex del header (9999)
-      borderWidth: 1.5, // Borde un poco más grueso
+      borderWidth: 0,
     },
     companyDropdownArrow: {
-      position: 'absolute',
+      position: "absolute",
       width: 0,
       height: 0,
-      borderLeftColor: 'transparent',
-      borderRightColor: 'transparent',
+      borderLeftColor: "transparent",
+      borderRightColor: "transparent",
     },
     companyDropdownArrowOuter: {
       top: -6,
@@ -151,11 +147,14 @@ export const createMainLayoutStyles = (colors: BaseTheme['colors']) =>
     },
     companyDropdownItem: {
       padding: 12,
+      paddingHorizontal: 16,
+      marginHorizontal: 12,
       borderBottomWidth: 1,
     },
     companyDropdownItemDesktop: {
       paddingVertical: 12,
       paddingRight: 12,
+      marginHorizontal: 12,
       borderBottomWidth: 1,
     },
   });

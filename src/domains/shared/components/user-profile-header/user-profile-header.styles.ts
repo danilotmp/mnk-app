@@ -2,13 +2,13 @@
  * Estilos para el componente UserProfileHeader
  */
 
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from "react-native";
 
 export const createUserProfileHeaderStyles = () =>
   StyleSheet.create({
     profileContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
     },
     themeToggleWrapper: {
@@ -23,42 +23,47 @@ export const createUserProfileHeaderStyles = () =>
     languageSelectorWrapperMobile: {
       marginLeft: 4,
     },
+    profileSectionDivider: {
+      width: 2,
+      height: 24,
+      marginHorizontal: 12,
+      borderRadius: 1,
+    },
     loginButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingVertical: 8,
       paddingHorizontal: 12,
       borderRadius: 20,
       gap: 8,
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
     },
     loginButtonMobile: {
       paddingVertical: 4,
       paddingHorizontal: 4,
       borderRadius: 20,
       gap: 0,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       minWidth: 36,
       minHeight: 36,
     },
     loginButtonText: {
       fontSize: 14,
-      marginRight: 4,
     },
     loginIconContainer: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      justifyContent: 'center',
-      alignItems: 'center',
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: "center",
+      alignItems: "center",
     },
     modalControlsContainer: {
-      position: 'absolute',
+      position: "absolute",
       top: 16,
       right: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       zIndex: 10,
     },
     modalControlsContainerMobile: {
@@ -66,8 +71,8 @@ export const createUserProfileHeaderStyles = () =>
       right: 12,
     },
     profileButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingVertical: 8,
       paddingLeft: 16,
       paddingRight: 12,
@@ -76,15 +81,15 @@ export const createUserProfileHeaderStyles = () =>
       borderTopRightRadius: 20,
       borderBottomRightRadius: 20,
       gap: 8,
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       ...Platform.select({
         web: {
-          outline: 'none',
-          outlineStyle: 'none',
+          outline: "none",
+          outlineStyle: "none",
           outlineWidth: 0,
-          outlineColor: 'transparent',
+          outlineColor: "transparent",
           borderWidth: 0,
-          borderColor: 'transparent',
+          borderColor: "transparent",
         },
       }),
     },
@@ -102,16 +107,15 @@ export const createUserProfileHeaderStyles = () =>
       width: 36,
       height: 36,
       borderRadius: 18,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     avatarText: {
       fontSize: 14,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     userInfo: {
       flex: 1,
-      marginRight: 4,
       minWidth: 100,
     },
     userName: {
@@ -121,27 +125,91 @@ export const createUserProfileHeaderStyles = () =>
       fontSize: 10,
       opacity: 0.6,
     },
+    profileButtonWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    profileDropdownTrigger: {
+      padding: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    profileDropdownArrow: {
+      opacity: 0.7,
+    },
+    dropdownMenuContainer: {
+      position: "absolute",
+      top: 72,
+      right: 16,
+      minWidth: 180,
+      borderRadius: 12,
+      paddingVertical: 8,
+      overflow: "visible",
+      ...Platform.select({
+        web: {
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        },
+        default: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 8,
+        },
+      }),
+    },
+    dropdownArrowOuter: {
+      position: "absolute",
+      top: -6,
+      right: 20,
+      width: 0,
+      height: 0,
+      borderLeftWidth: 6,
+      borderRightWidth: 6,
+      borderBottomWidth: 6,
+      borderLeftColor: "transparent",
+      borderRightColor: "transparent",
+    },
+    dropdownArrowInner: {
+      position: "absolute",
+      top: -5,
+      right: 20,
+      width: 0,
+      height: 0,
+      borderLeftWidth: 6,
+      borderRightWidth: 6,
+      borderBottomWidth: 6,
+      borderLeftColor: "transparent",
+      borderRightColor: "transparent",
+    },
+    dropdownMenuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      gap: 10,
+    },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
     },
     modalContainer: {
-      width: '90%',
+      width: "90%",
       maxWidth: 400,
-      maxHeight: '80%',
+      maxHeight: "80%",
     },
     modalContent: {
       borderRadius: 16,
       padding: 24,
-      position: 'relative',
+      position: "relative",
       ...Platform.select({
         web: {
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.25)',
+          boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.25)",
         },
         default: {
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.25,
           shadowRadius: 8,
@@ -150,20 +218,20 @@ export const createUserProfileHeaderStyles = () =>
       }),
     },
     modalHeader: {
-      alignItems: 'center',
+      alignItems: "center",
       marginBottom: 20,
     },
     avatarLarge: {
       width: 80,
       height: 80,
       borderRadius: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       marginBottom: 12,
     },
     avatarTextLarge: {
       fontSize: 32,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     modalUserName: {
       marginBottom: 4,
@@ -185,9 +253,9 @@ export const createUserProfileHeaderStyles = () =>
       marginBottom: 12,
     },
     branchOption: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       padding: 16,
       borderRadius: 12,
       marginBottom: 8,
@@ -196,14 +264,14 @@ export const createUserProfileHeaderStyles = () =>
       flex: 1,
     },
     loadingContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       padding: 16,
     },
     menuOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingVertical: 16,
       gap: 12,
     },
@@ -214,7 +282,6 @@ export const createUserProfileHeaderStyles = () =>
       marginTop: 16,
       padding: 16,
       borderRadius: 12,
-      alignItems: 'center',
+      alignItems: "center",
     },
   });
-

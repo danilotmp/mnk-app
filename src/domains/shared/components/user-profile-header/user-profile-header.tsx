@@ -2,18 +2,17 @@
  * Componente para mostrar el perfil del usuario en el header
  */
 
-import { LoginModal } from '@/components/auth/login-modal';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { isDesktopDevice, isMobileDevice } from '@/constants/breakpoints';
-import { useTheme } from '@/hooks/use-theme';
-import { LanguageSelector, useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { useSession } from '@/src/infrastructure/session';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { LoginModal } from "@/components/auth/login-modal";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { isDesktopDevice, isMobileDevice } from "@/constants/breakpoints";
+import { useTheme } from "@/hooks/use-theme";
+import { LanguageSelector, useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { useSession } from "@/src/infrastructure/session";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   Modal,
   Platform,
@@ -21,27 +20,46 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-} from 'react-native';
-import { useBranches, useCompany, useMultiCompany } from '../../hooks/use-multi-company.hook';
-import { Branch, BranchAccess } from '../../types';
-import { createUserProfileHeaderStyles } from './user-profile-header.styles';
-import { UserProfileHeaderProps } from './user-profile-header.types';
+} from "react-native";
+import {
+  useBranches,
+  useCompany,
+  useMultiCompany,
+} from "../../hooks/use-multi-company.hook";
+import { Branch, BranchAccess } from "../../types";
+import { DynamicIcon } from "../dynamic-icon/dynamic-icon";
+import { createUserProfileHeaderStyles } from "./user-profile-header.styles";
+import { UserProfileHeaderProps } from "./user-profile-header.types";
 
 /**
  * Infiere el tipo de sucursal desde el código
  */
-function inferBranchType(code: string): 'headquarters' | 'branch' | 'warehouse' | 'store' {
+function inferBranchType(
+  code: string,
+): "headquarters" | "branch" | "warehouse" | "store" {
   const upperCode = code.toUpperCase();
-  if (upperCode.includes('HQ') || upperCode.includes('HEADQUARTERS') || upperCode.includes('CASA MATRIZ')) {
-    return 'headquarters';
+  if (
+    upperCode.includes("HQ") ||
+    upperCode.includes("HEADQUARTERS") ||
+    upperCode.includes("CASA MATRIZ")
+  ) {
+    return "headquarters";
   }
-  if (upperCode.includes('WAREHOUSE') || upperCode.includes('ALMACEN') || upperCode.includes('BODEGA')) {
-    return 'warehouse';
+  if (
+    upperCode.includes("WAREHOUSE") ||
+    upperCode.includes("ALMACEN") ||
+    upperCode.includes("BODEGA")
+  ) {
+    return "warehouse";
   }
-  if (upperCode.includes('STORE') || upperCode.includes('TIENDA') || upperCode.includes('LOCAL')) {
-    return 'store';
+  if (
+    upperCode.includes("STORE") ||
+    upperCode.includes("TIENDA") ||
+    upperCode.includes("LOCAL")
+  ) {
+    return "store";
   }
-  return 'branch';
+  return "branch";
 }
 
 export function UserProfileHeader({
@@ -53,36 +71,41 @@ export function UserProfileHeader({
   const styles = createUserProfileHeaderStyles();
   const { user, company, branch: currentBranch } = useCompany();
   const { switchBranch } = useBranches();
-  
+
   // Obtener sucursales directamente desde la empresa actual
   // Nueva estructura: branches están anidados dentro de companies[].branches[]
   const [branches, setBranches] = React.useState<BranchAccess[]>([]);
-  
+
   React.useEffect(() => {
     const loadBranches = async () => {
       if (!company || !user) {
         setBranches([]);
         return;
       }
-      
+
       // Obtener branches desde UserResponse usando UserContextService
-      const { UserSessionService } = await import('@/src/domains/shared/services/user-session.service');
-      const { UserContextService } = await import('@/src/domains/shared/services/user-context.service');
+      const { UserSessionService } =
+        await import("@/src/domains/shared/services/user-session.service");
+      const { UserContextService } =
+        await import("@/src/domains/shared/services/user-context.service");
       const userSessionService = UserSessionService.getInstance();
       const userContextService = UserContextService.getInstance();
-      
+
       const userResponse = await userSessionService.getUser();
       if (!userResponse) {
         setBranches([]);
         return;
       }
-      
+
       // Obtener branches directamente desde company.branches[] (estructura del profile)
-      const branchInfos = userContextService.getBranchesForCompany(company.id, userResponse);
-      
+      const branchInfos = userContextService.getBranchesForCompany(
+        company.id,
+        userResponse,
+      );
+
       // Convertir BranchInfo[] a BranchAccess[] directamente desde company.branches[]
       // Usar la estructura del profile sin depender de user.branches mapeado
-      const branchAccesses: BranchAccess[] = branchInfos.map(branchInfo => {
+      const branchAccesses: BranchAccess[] = branchInfos.map((branchInfo) => {
         // Crear objeto Branch completo desde BranchInfo del profile
         const branchObj: Branch = {
           id: branchInfo.id,
@@ -91,18 +114,18 @@ export function UserProfileHeader({
           type: inferBranchType(branchInfo.code) as any,
           companyId: company.id,
           address: {
-            street: '',
-            city: '',
-            state: '',
-            country: '',
-            postalCode: '',
+            street: "",
+            city: "",
+            state: "",
+            country: "",
+            postalCode: "",
           },
           contactInfo: {
-            phone: '',
-            email: '',
+            phone: "",
+            email: "",
           },
           settings: {
-            timezone: 'America/Guayaquil',
+            timezone: "America/Guayaquil",
             workingHours: {
               monday: { isOpen: false },
               tuesday: { isOpen: false },
@@ -119,31 +142,31 @@ export function UserProfileHeader({
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        
+
         return {
           branchId: branchInfo.id,
           branch: branchObj,
         };
       });
-      
+
       setBranches(branchAccesses);
     };
-    
+
     loadBranches();
-  }, [company?.id, user]); 
+  }, [company?.id, user]);
   const { clearContext } = useMultiCompany();
   const { clearSession } = useSession();
   const [modalVisible, setModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const [profileDropdownVisible, setProfileDropdownVisible] = useState(false);
   const { t } = useTranslation();
   const alert = useAlert();
   const router = useRouter();
-  
+
   // Responsive: Detectar tamaño de pantalla
   const { width } = useWindowDimensions();
   const isMobile = isMobileDevice(width);
   const isDesktop = isDesktopDevice(width);
-
 
   // Si no hay usuario autenticado, mostrar botón de login
   if (!user || !company || !currentBranch) {
@@ -164,22 +187,41 @@ export function UserProfileHeader({
             </View>
           )}
 
+          {/* Línea vertical de separación - Solo en desktop/tablet */}
+          {!isMobile && (
+            <View
+              style={[
+                styles.profileSectionDivider,
+                { backgroundColor: colors.border },
+              ]}
+            />
+          )}
+
           {/* Botón de login - Solo en desktop/tablet */}
           {!isMobile && (
             <TouchableOpacity
-              style={[
-                styles.loginButton,
-                { backgroundColor: 'transparent' }
-              ]}
+              style={[styles.loginButton, { backgroundColor: "transparent" }]}
               onPress={() => setLoginModalVisible(true)}
               activeOpacity={0.7}
             >
-              <ThemedText type="defaultSemiBold" style={[styles.loginButtonText, { color: colors.text }]}>
+              <View
+                style={[
+                  styles.loginIconContainer,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <DynamicIcon
+                  name="FontAwesome5:user-alt"
+                  size={18}
+                  color="#FFFFFF"
+                />
+              </View>
+              <ThemedText
+                type="defaultSemiBold"
+                style={[styles.loginButtonText, { color: colors.text }]}
+              >
                 {t.auth.login}
               </ThemedText>
-              <View style={[styles.loginIconContainer, { backgroundColor: colors.primary }]}>
-                <Ionicons name="person-outline" size={18} color="#FFFFFF" />
-              </View>
             </TouchableOpacity>
           )}
         </View>
@@ -198,52 +240,52 @@ export function UserProfileHeader({
 
   // Obtener iniciales del nombre para el avatar
   const getInitials = () => {
-    const firstName = user?.firstName?.trim() || '';
-    const lastName = user?.lastName?.trim() || '';
-    
+    const firstName = user?.firstName?.trim() || "";
+    const lastName = user?.lastName?.trim() || "";
+
     // Si hay firstName y lastName, usar sus iniciales
     if (firstName && lastName) {
       return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
     }
-    
+
     // Si solo hay firstName, usar su inicial
     if (firstName) {
       return firstName.charAt(0).toUpperCase();
     }
-    
+
     // Si solo hay lastName, usar su inicial
     if (lastName) {
       return lastName.charAt(0).toUpperCase();
     }
-    
+
     // Si no hay nombre, usar la primera letra del email
     if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
-    
+
     // Fallback final
-    return 'U';
+    return "U";
   };
-  
+
   // Obtener nombre completo para mostrar
   const getDisplayName = () => {
-    const firstName = user?.firstName?.trim() || '';
-    const lastName = user?.lastName?.trim() || '';
-    
+    const firstName = user?.firstName?.trim() || "";
+    const lastName = user?.lastName?.trim() || "";
+
     if (firstName && lastName) {
       return `${firstName} ${lastName}`;
     }
-    
+
     if (firstName) {
       return firstName;
     }
-    
+
     if (lastName) {
       return lastName;
     }
-    
+
     // Si no hay nombre, usar el email como fallback
-    return user?.email || 'Usuario';
+    return user?.email || "Usuario";
   };
 
   const handleBranchSwitch = (newBranch: Branch) => {
@@ -256,28 +298,29 @@ export function UserProfileHeader({
 
   const handleLogout = async () => {
     setModalVisible(false);
-    
+
     // Limpiar tokens de autenticación primero
     try {
-      const { authService } = await import('@/src/infrastructure/services/auth.service');
+      const { authService } =
+        await import("@/src/infrastructure/services/auth.service");
       await authService.logout();
     } catch (error) {
       // console.error('Error al hacer logout:', error);
     }
-    
+
     // Limpiar sesión completa (tokens, usuario, etc.)
     await clearSession();
-    
+
     // Limpiar contexto multi-company después de limpiar la sesión
     // Esto actualiza el estado del contexto, lo que causará un re-render
     clearContext();
-    
+
     // Llamar al callback si existe
     onLogout?.();
-    
+
     // Toast de confirmación multilenguaje
-    alert.showSuccess('auth.logoutSuccess');
-    
+    alert.showSuccess("auth.logoutSuccess");
+
     // Usar requestAnimationFrame para asegurar que React procese el cambio de estado
     // del contexto antes de redirigir, permitiendo que el componente se re-renderice
     requestAnimationFrame(() => {
@@ -286,7 +329,7 @@ export function UserProfileHeader({
       setTimeout(() => {
         // Redirigir al Home usando replace para reemplazar la ruta actual
         // Esto evita que el usuario pueda volver atrás a la página anterior
-        router.replace('/');
+        router.replace("/");
       }, 150);
     });
   };
@@ -307,46 +350,139 @@ export function UserProfileHeader({
           </View>
         )}
 
-        {/* Botón de perfil - Solo en desktop/tablet */}
+        {/* Línea vertical de separación - Solo en desktop/tablet */}
         {!isMobile && (
-          <TouchableOpacity
+          <View
             style={[
-              styles.profileButton, 
-              { backgroundColor: 'transparent' },
-              Platform.OS === 'web' && {
-                outline: 'none',
-                outlineStyle: 'none',
-                outlineWidth: 0,
-                outlineColor: 'transparent',
-                borderWidth: 0,
-                borderColor: 'transparent',
-              },
+              styles.profileSectionDivider,
+              { backgroundColor: colors.border },
             ]}
-            onPress={() => setModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            {/* Info del usuario */}
-            <View style={styles.userInfo}>
-              <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
-                {getDisplayName()}
-              </ThemedText>
-              {/* Sucursal solo visible en Desktop */}
-              {isDesktop && currentBranch && (
-                <ThemedText type="caption" variant="secondary" numberOfLines={1}>
-                  {currentBranch.name}
-                </ThemedText>
-              )}
-            </View>
+          />
+        )}
 
-            {/* Avatar */}
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              <ThemedText style={[styles.avatarText, { color: '#FFFFFF' }]}>
-                {getInitials()}
-              </ThemedText>
-            </View>
-          </TouchableOpacity>
+        {/* Botón de perfil + flecha - Solo en desktop/tablet */}
+        {!isMobile && (
+          <View style={styles.profileButtonWrapper}>
+            <TouchableOpacity
+              style={[
+                styles.profileButton,
+                { backgroundColor: "transparent" },
+                Platform.OS === "web" && {
+                  outline: "none",
+                  outlineStyle: "none",
+                  outlineWidth: 0,
+                  outlineColor: "transparent",
+                  borderWidth: 0,
+                  borderColor: "transparent",
+                },
+              ]}
+              onPress={() => setModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              {/* Avatar */}
+              <View
+                style={[styles.avatar, { backgroundColor: colors.primary }]}
+              >
+                <ThemedText style={[styles.avatarText, { color: "#FFFFFF" }]}>
+                  {getInitials()}
+                </ThemedText>
+              </View>
+
+              {/* Info del usuario */}
+              <View style={styles.userInfo}>
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={styles.userName}
+                  numberOfLines={1}
+                >
+                  {getDisplayName()}
+                </ThemedText>
+                {/* Sucursal solo visible en Desktop */}
+                {isDesktop && currentBranch && (
+                  <ThemedText
+                    type="caption"
+                    variant="secondary"
+                    numberOfLines={1}
+                  >
+                    {currentBranch.name}
+                  </ThemedText>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* Flecha que despliega Cerrar sesión */}
+            <TouchableOpacity
+              style={styles.profileDropdownTrigger}
+              onPress={() => setProfileDropdownVisible((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <DynamicIcon
+                name="Ionicons:chevron-down"
+                size={20}
+                color={colors.text}
+                style={styles.profileDropdownArrow}
+              />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
+
+      {/* Desplegable Cerrar sesión (al hacer clic en la flecha) */}
+      <Modal
+        visible={profileDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProfileDropdownVisible(false)}
+      >
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setProfileDropdownVisible(false)}
+          />
+          <View
+            style={[
+              styles.dropdownMenuContainer,
+              {
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {/* Flecha superior del dropdown */}
+            <View
+              style={[
+                styles.dropdownArrowOuter,
+                { borderBottomColor: colors.border },
+              ]}
+            />
+            <View
+              style={[
+                styles.dropdownArrowInner,
+                { borderBottomColor: colors.surface },
+              ]}
+            />
+            <TouchableOpacity
+              style={styles.dropdownMenuItem}
+              onPress={() => {
+                setProfileDropdownVisible(false);
+                handleLogout();
+              }}
+              activeOpacity={0.7}
+            >
+              <DynamicIcon
+                name="Ionicons:log-out-outline"
+                size={20}
+                color={colors.error}
+              />
+              <ThemedText type="defaultSemiBold" variant="error">
+                {t.user.logout}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal con opciones */}
       <Modal
@@ -365,12 +501,24 @@ export function UserProfileHeader({
             onPress={(e) => e.stopPropagation()}
             style={styles.modalContainer}
           >
-            <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <ThemedView
+              style={[
+                styles.modalContent,
+                { backgroundColor: colors.background },
+              ]}
+            >
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Encabezado del modal */}
                 <View style={styles.modalHeader}>
-                  <View style={[styles.avatarLarge, { backgroundColor: colors.primary }]}>
-                    <ThemedText style={[styles.avatarTextLarge, { color: '#FFFFFF' }]}>
+                  <View
+                    style={[
+                      styles.avatarLarge,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <ThemedText
+                      style={[styles.avatarTextLarge, { color: "#FFFFFF" }]}
+                    >
                       {getInitials()}
                     </ThemedText>
                   </View>
@@ -380,19 +528,26 @@ export function UserProfileHeader({
                   <ThemedText type="body2" variant="secondary">
                     {user.email}
                   </ThemedText>
-                  <View style={[styles.badge, { backgroundColor: 'transparent' }]}>
+                  <View
+                    style={[styles.badge, { backgroundColor: "transparent" }]}
+                  >
                     <ThemedText type="caption" variant="primary">
                       {company.name}
                     </ThemedText>
                   </View>
                 </View>
 
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <View
+                  style={[styles.divider, { backgroundColor: colors.border }]}
+                />
 
                 {/* Selector de sucursales */}
                 <View style={styles.section}>
-                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                    {t.user.changeBranch || 'Sucursales'}
+                  <ThemedText
+                    type="defaultSemiBold"
+                    style={styles.sectionTitle}
+                  >
+                    {t.user.changeBranch || "Sucursales"}
                   </ThemedText>
                   {branches && branches.length > 0 ? (
                     branches
@@ -402,7 +557,8 @@ export function UserProfileHeader({
                         if (!branchItem || !branchItem.id) {
                           return null; // No renderizar si no hay branch válido
                         }
-                        const isSelected = currentBranch && branchItem.id === currentBranch.id;
+                        const isSelected =
+                          currentBranch && branchItem.id === currentBranch.id;
                         return (
                           <TouchableOpacity
                             key={branchItem.id || index}
@@ -411,7 +567,7 @@ export function UserProfileHeader({
                               {
                                 backgroundColor: isSelected
                                   ? colors.surface
-                                  : 'transparent',
+                                  : "transparent",
                               },
                             ]}
                             onPress={() => handleBranchSwitch(branchItem)}
@@ -420,13 +576,15 @@ export function UserProfileHeader({
                             <View style={styles.branchOptionInfo}>
                               <ThemedText
                                 type="defaultSemiBold"
-                                variant={isSelected ? undefined : 'primary'}
+                                variant={isSelected ? undefined : "primary"}
                               >
                                 {branchItem.name || `OPCIÓN ${index + 1}`}
                               </ThemedText>
                             </View>
                             {isSelected && (
-                              <ThemedText style={{ color: colors.text }}>✓</ThemedText>
+                              <ThemedText style={{ color: colors.text }}>
+                                ✓
+                              </ThemedText>
                             )}
                           </TouchableOpacity>
                         );
@@ -438,9 +596,13 @@ export function UserProfileHeader({
                     </ThemedText>
                   )}
                 </View>
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <View
+                  style={[styles.divider, { backgroundColor: colors.border }]}
+                />
 
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <View
+                  style={[styles.divider, { backgroundColor: colors.border }]}
+                />
 
                 {/* Opciones del menú */}
                 <View style={styles.section}>
@@ -452,7 +614,9 @@ export function UserProfileHeader({
                     }}
                   >
                     <ThemedText style={styles.menuIcon}>👤</ThemedText>
-                    <ThemedText type="defaultSemiBold">{t.user.myProfile}</ThemedText>
+                    <ThemedText type="defaultSemiBold">
+                      {t.user.myProfile}
+                    </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -463,10 +627,15 @@ export function UserProfileHeader({
                     }}
                   >
                     <ThemedText style={styles.menuIcon}>⚙️</ThemedText>
-                    <ThemedText type="defaultSemiBold">{t.user.configuration}</ThemedText>
+                    <ThemedText type="defaultSemiBold">
+                      {t.user.configuration}
+                    </ThemedText>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOption} onPress={handleLogout}>
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={handleLogout}
+                  >
                     <ThemedText style={styles.menuIcon}>🚪</ThemedText>
                     <ThemedText type="defaultSemiBold" variant="error">
                       {t.user.logout}
@@ -476,10 +645,15 @@ export function UserProfileHeader({
 
                 {/* Botón cerrar */}
                 <TouchableOpacity
-                  style={[styles.closeButton, { backgroundColor: colors.surface }]}
+                  style={[
+                    styles.closeButton,
+                    { backgroundColor: colors.surface },
+                  ]}
                   onPress={() => setModalVisible(false)}
                 >
-                  <ThemedText type="defaultSemiBold">{t.common.close}</ThemedText>
+                  <ThemedText type="defaultSemiBold">
+                    {t.common.close}
+                  </ThemedText>
                 </TouchableOpacity>
               </ScrollView>
             </ThemedView>
@@ -498,4 +672,3 @@ export function UserProfileHeader({
     </>
   );
 }
-

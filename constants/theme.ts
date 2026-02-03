@@ -205,22 +205,23 @@ export const DarkTheme = {
     full: 9999,
   },
   shadows: {
+    // Misma estructura que LightTheme; solo shadowColor cambia por tema para que se vea en fondo oscuro
     sm: {
-      shadowColor: BrandColors.gray[900],
+      shadowColor: "#000000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.3,
       shadowRadius: 2,
       elevation: 2,
     },
     md: {
-      shadowColor: BrandColors.gray[900],
+      shadowColor: "#000000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.4,
       shadowRadius: 4,
       elevation: 4,
     },
     lg: {
-      shadowColor: BrandColors.gray[900],
+      shadowColor: "#000000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.5,
       shadowRadius: 8,

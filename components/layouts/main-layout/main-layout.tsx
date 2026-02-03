@@ -36,7 +36,7 @@ export function MainLayout({
   showNavigation = true,
   menuItems = [],
 }: MainLayoutProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, shadows } = useTheme();
   const { isMobile } = useResponsive();
   const { company, user } = useCompany();
   const { setUserContext } = useMultiCompany();
@@ -359,6 +359,7 @@ export function MainLayout({
           {
             backgroundColor: colors.background,
             borderColor: isDark ? colors.surface : colors.border,
+            ...shadows.lg,
           },
         ]
       : [
@@ -367,6 +368,7 @@ export function MainLayout({
             backgroundColor: colors.background,
             borderColor: colors.border,
             width: titleWidth,
+            ...shadows.lg,
           },
         ];
 
@@ -516,6 +518,7 @@ export function MainLayout({
               borderBottomColor: colors.border,
               paddingLeft: isMobile ? 16 : 0, // Padding izquierdo solo en móvil
               paddingRight: isMobile ? 4 : undefined, // Menos padding derecho en móvil para acercar el botón hamburguesa al borde
+              ...shadows.md,
             },
           ]}
         >
@@ -587,7 +590,7 @@ export function MainLayout({
                           setShowCompanyDropdown(!showCompanyDropdown)
                         }
                         onTitleLayout={(width) => setTitleWidth(width)}
-                        renderDropdown={renderCompanyDropdown(false)}
+                        renderDropdown={undefined}
                       />
                     </View>
                   </View>
