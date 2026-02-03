@@ -7,7 +7,7 @@ export const createRichTextEditorStyles = (colors: any) =>
       borderWidth: 1,
       borderRadius: 8,
       overflow: 'hidden',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.background || '#FFFFFF',
     },
     webview: {
       flex: 1,
@@ -17,6 +17,6 @@ export const createRichTextEditorStyles = (colors: any) =>
       ...StyleSheet.absoluteFillObject,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.05)',
+      backgroundColor: colors.overlay || 'rgba(0,0,0,0.05)',
     },
   });

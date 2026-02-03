@@ -168,7 +168,7 @@ export function RegisterForm({ onSuccess, onLoginLink, isLoading: externalLoadin
         disabled={isLoading || externalLoading}
         style={styles.submitButton}
       >
-        {isLoading && <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />}
+        {isLoading && <ActivityIndicator size="small" color={colors.contrastText} style={{ marginRight: 8 }} />}
       </Button>
 
       <View style={styles.footer}>

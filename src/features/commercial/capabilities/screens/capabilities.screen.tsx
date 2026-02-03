@@ -17,11 +17,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
 import {
-  Animated,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  View,
+    Animated,
+    Image,
+    ScrollView,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { createCapabilitiesScreenStyles } from "./capabilities.screen.styles";
 
@@ -415,12 +415,12 @@ export function CapabilitiesScreen() {
                         <View
                           style={[
                             styles.badge,
-                            { backgroundColor: "#10b981" + "20" },
+                            { backgroundColor: colors.success + "20" },
                           ]}
                         >
                           <ThemedText
                             type="caption"
-                            style={{ color: "#10b981", fontWeight: "600" }}
+                            style={{ color: colors.success, fontWeight: "600" }}
                           >
                             Disponible
                           </ThemedText>

@@ -186,7 +186,7 @@ export function ContactScreen() {
                   <Ionicons
                     name="location"
                     size={pageLayout.iconTitle}
-                    color="#FFFFFF"
+                    color={colors.contrastText}
                   />
                 </View>
                 <View style={styles.matrixCardContent}>

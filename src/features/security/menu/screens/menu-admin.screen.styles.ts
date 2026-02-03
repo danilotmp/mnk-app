@@ -17,6 +17,9 @@ export interface MenuAdminScreenTheme {
     background: string;
     success: string;
     error: string;
+    warning: string;
+    suspended?: string;
+    contrastText: string;
   };
   spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
   typography: {
@@ -271,7 +274,7 @@ export function createMenuAdminStyles(
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: "#f59e0b",
+      backgroundColor: c.warning,
     } as ViewStyle,
     itemActionsContainer: {
       flexDirection: "row",

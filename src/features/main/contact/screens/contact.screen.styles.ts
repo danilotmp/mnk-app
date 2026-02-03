@@ -256,7 +256,7 @@ export function createContactScreenStyles(
       minHeight: 400,
       borderRadius: t.borderRadius.xl,
       overflow: "hidden",
-      backgroundColor: "#e8eaed",
+      backgroundColor: t.colors.borderLight ?? t.colors.surface,
     },
     mapContainerMobile: {
       height: 280,

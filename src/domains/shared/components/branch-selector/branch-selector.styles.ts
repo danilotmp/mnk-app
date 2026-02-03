@@ -4,7 +4,13 @@
 
 import { StyleSheet } from 'react-native';
 
-export const createBranchSelectorStyles = () =>
+export interface BranchSelectorTheme {
+  colors: {
+    overlay: string;
+  };
+}
+
+export const createBranchSelectorStyles = (theme?: BranchSelectorTheme) =>
   StyleSheet.create({
     container: {
       marginVertical: 8,
@@ -21,7 +27,7 @@ export const createBranchSelectorStyles = () =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: theme?.colors.overlay || 'rgba(0, 0, 0, 0.5)',
       justifyContent: 'flex-end',
     },
     modalContent: {

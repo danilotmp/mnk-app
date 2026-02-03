@@ -3,10 +3,13 @@
  * (complementa los estilos de src/styles/components/vertical-menu.styles.ts)
  */
 
-import { StyleSheet } from 'react-native';
-import { BaseTheme } from '@/constants/theme';
+import { BaseTheme } from "@/constants/theme";
+import { StyleSheet } from "react-native";
 
-export const createVerticalMenuAdditionalStyles = (colors: BaseTheme['colors']) =>
+export const createVerticalMenuAdditionalStyles = (
+  colors: BaseTheme["colors"],
+  isDark?: boolean,
+) =>
   StyleSheet.create({
     // Estilos para el contenedor del buscador y bloqueo
     searchContainer: {
@@ -15,8 +18,8 @@ export const createVerticalMenuAdditionalStyles = (colors: BaseTheme['colors']) 
       borderBottomColor: colors.border,
     },
     searchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
     },
     lockButton: {
@@ -24,16 +27,16 @@ export const createVerticalMenuAdditionalStyles = (colors: BaseTheme['colors']) 
     },
     searchInputContainer: {
       flex: 1,
-      position: 'relative',
+      position: "relative",
     },
     searchIcon: {
-      position: 'absolute',
+      position: "absolute",
       left: 10,
       top: 10,
       zIndex: 1,
     },
     clearButton: {
-      position: 'absolute',
+      position: "absolute",
       right: 10,
       top: 8,
       zIndex: 1,
@@ -52,7 +55,7 @@ export const createVerticalMenuAdditionalStyles = (colors: BaseTheme['colors']) 
       fontSize: 14,
     },
     scrollContainerWithHeight: {
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     submenuMargin: {
       marginLeft: 16,
@@ -60,9 +63,9 @@ export const createVerticalMenuAdditionalStyles = (colors: BaseTheme['colors']) 
     chevronMargin: {
       marginLeft: 4,
     },
-    // Estilos dinámicos para el contenedor animado
+    // Estilos dinámicos para el contenedor animado (Dark: surfaceVariant, Light: surface)
     animatedContainer: {
-      backgroundColor: colors.surface,
+      backgroundColor: isDark ? colors.surfaceVariant : colors.surface,
       borderRightColor: colors.border,
     },
   });

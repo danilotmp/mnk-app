@@ -26,14 +26,9 @@ import React, {
     useRef,
     useState,
 } from "react";
-import {
-    ActivityIndicator,
-    ScrollView,
-    TextInput,
-    View
-} from "react-native";
+import { ActivityIndicator, ScrollView, TextInput, View } from "react-native";
 import { RolesService } from "../../services";
-import { createRoleFormStyles } from "../role-create-form/role-create-form.styles";
+import { createRoleFormStyles } from "./role-edit-form.styles";
 import { RoleEditFormProps } from "./role-edit-form.types";
 
 export function RoleEditForm({

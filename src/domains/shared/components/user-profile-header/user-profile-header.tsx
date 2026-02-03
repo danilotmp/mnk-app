@@ -14,17 +14,17 @@ import { useSession } from "@/src/infrastructure/session";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Modal,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Modal,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import {
-  useBranches,
-  useCompany,
-  useMultiCompany,
+    useBranches,
+    useCompany,
+    useMultiCompany,
 } from "../../hooks/use-multi-company.hook";
 import { Branch, BranchAccess } from "../../types";
 import { DynamicIcon } from "../dynamic-icon/dynamic-icon";
@@ -67,8 +67,8 @@ export function UserProfileHeader({
   onSettings,
   onProfile,
 }: UserProfileHeaderProps) {
-  const { colors } = useTheme();
-  const styles = createUserProfileHeaderStyles();
+  const { colors, isDark, shadows } = useTheme();
+  const styles = createUserProfileHeaderStyles({ colors, shadows });
   const { user, company, branch: currentBranch } = useCompany();
   const { switchBranch } = useBranches();
 
@@ -213,7 +213,7 @@ export function UserProfileHeader({
                 <DynamicIcon
                   name="FontAwesome5:user-alt"
                   size={18}
-                  color="#FFFFFF"
+                  color={colors.contrastText}
                 />
               </View>
               <ThemedText
@@ -383,7 +383,9 @@ export function UserProfileHeader({
               <View
                 style={[styles.avatar, { backgroundColor: colors.primary }]}
               >
-                <ThemedText style={[styles.avatarText, { color: "#FFFFFF" }]}>
+                <ThemedText
+                  style={[styles.avatarText, { color: colors.contrastText }]}
+                >
                   {getInitials()}
                 </ThemedText>
               </View>
@@ -444,9 +446,10 @@ export function UserProfileHeader({
             style={[
               styles.dropdownMenuContainer,
               {
-                backgroundColor: colors.surface,
+                backgroundColor: colors.surfaceMid || colors.background,
                 borderWidth: 1,
                 borderColor: colors.border,
+                ...shadows.lg,
               },
             ]}
           >
@@ -460,7 +463,9 @@ export function UserProfileHeader({
             <View
               style={[
                 styles.dropdownArrowInner,
-                { borderBottomColor: colors.surface },
+                {
+                  borderBottomColor: colors.surfaceMid || colors.background,
+                },
               ]}
             />
             <TouchableOpacity
@@ -517,7 +522,10 @@ export function UserProfileHeader({
                     ]}
                   >
                     <ThemedText
-                      style={[styles.avatarTextLarge, { color: "#FFFFFF" }]}
+                      style={[
+                        styles.avatarTextLarge,
+                        { color: colors.contrastText },
+                      ]}
                     >
                       {getInitials()}
                     </ThemedText>

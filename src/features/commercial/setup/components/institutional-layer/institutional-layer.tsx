@@ -3,22 +3,35 @@
  * Recopila información básica sobre la empresa para que la IA entienda qué es y cómo opera
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/ui/button';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { Select, SelectOption } from '@/components/ui/select';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { CatalogService, catalogDetailsToSelectOptions } from '@/src/domains/catalog';
-import { CommercialService } from '@/src/domains/commercial';
-import { CommercialProfile, CommercialProfilePayload } from '@/src/domains/commercial/types';
-import { useCompany } from '@/src/domains/shared';
-import { CustomSwitch } from '@/src/domains/shared/components/custom-switch/custom-switch';
-import { useLanguage, useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/ui/button";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { Select, SelectOption } from "@/components/ui/select";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import {
+    CatalogService,
+    catalogDetailsToSelectOptions,
+} from "@/src/domains/catalog";
+import { CommercialService } from "@/src/domains/commercial";
+import {
+    CommercialProfile,
+    CommercialProfilePayload,
+} from "@/src/domains/commercial/types";
+import { useCompany } from "@/src/domains/shared";
+import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
+import { useLanguage, useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface InstitutionalLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -31,16 +44,20 @@ interface InstitutionalLayerProps {
 // Función para obtener la zona horaria del sistema
 const getSystemTimezone = (): string => {
   try {
-    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+    if (typeof Intl !== "undefined" && Intl.DateTimeFormat) {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
     }
   } catch (error) {
     // Si falla, retornar UTC como fallback
   }
-  return 'UTC';
+  return "UTC";
 };
 
-export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete }: InstitutionalLayerProps) {
+export function InstitutionalLayer({
+  onProgressUpdate,
+  onDataChange,
+  onComplete,
+}: InstitutionalLayerProps) {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
@@ -57,19 +74,23 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
   // Obtener valores por defecto: timezone del sistema/navegador (normalizado a lowercase para coincidir con catálogo)
   const systemTimezone = getSystemTimezone().toLowerCase();
-  const systemLanguage = currentLanguage || company?.settings?.language || 'es';
+  const systemLanguage = currentLanguage || company?.settings?.language || "es";
 
   const [formData, setFormData] = useState({
-    businessDescription: '',
-    industry: '',
-    language: (systemLanguage === 'es' || systemLanguage === 'en' ? systemLanguage : 'es') as 'es' | 'en',
+    businessDescription: "",
+    industry: "",
+    language: (systemLanguage === "es" || systemLanguage === "en"
+      ? systemLanguage
+      : "es") as "es" | "en",
     timezone: systemTimezone, // Usar zona horaria del sistema/navegador por defecto (normalizada a lowercase)
     is24_7: false,
-    defaultTaxMode: 'included' as 'included' | 'excluded',
+    defaultTaxMode: "included" as "included" | "excluded",
     allowsBranchPricing: false,
   });
   // Guardar los datos originales para comparar cambios
-  const [originalFormData, setOriginalFormData] = useState<typeof formData | null>(null);
+  const [originalFormData, setOriginalFormData] = useState<
+    typeof formData | null
+  >(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Los valores de currency, timezone y language vienen del perfil, no del contexto
@@ -83,15 +104,17 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       try {
         // Cargar catálogos en paralelo
         const [industriesResponse, timezonesResponse] = await Promise.all([
-          CatalogService.queryCatalog('INDUSTRIES', company.id, false),
-          CatalogService.queryCatalog('TIMEZONES', company.id, false),
+          CatalogService.queryCatalog("INDUSTRIES", company.id, false),
+          CatalogService.queryCatalog("TIMEZONES", company.id, false),
         ]);
 
-        setIndustries(catalogDetailsToSelectOptions(industriesResponse.details));
+        setIndustries(
+          catalogDetailsToSelectOptions(industriesResponse.details),
+        );
         setTimezones(catalogDetailsToSelectOptions(timezonesResponse.details));
       } catch (error: any) {
-        console.error('Error al cargar catálogos:', error);
-        alert.showError('Error al cargar catálogos', error.message);
+        console.error("Error al cargar catálogos:", error);
+        alert.showError("Error al cargar catálogos", error.message);
         // En caso de error, mantener arrays vacíos
         setIndustries([]);
         setTimezones([]);
@@ -105,24 +128,33 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
   // Función helper para convertir name a code si es necesario
   // Memoizada para evitar recreaciones innecesarias
-  const normalizeIndustryValue = useCallback((industryValue: string | null | undefined): string => {
-    if (!industryValue) return '';
-    
-    // Si el valor ya es un code (coincide con algún code en las opciones), devolverlo
-    const matchingByCode = industries.find(opt => opt.value.toLowerCase() === industryValue.toLowerCase());
-    if (matchingByCode) {
-      return matchingByCode.value;
-    }
-    
-    // Si no coincide por code, buscar por name (label)
-    const matchingByName = industries.find(opt => opt.label === industryValue || opt.label.toLowerCase() === industryValue.toLowerCase());
-    if (matchingByName) {
-      return matchingByName.value; // Devolver el code correspondiente
-    }
-    
-    // Si no se encuentra, devolver el valor original (por si acaso)
-    return industryValue;
-  }, [industries]);
+  const normalizeIndustryValue = useCallback(
+    (industryValue: string | null | undefined): string => {
+      if (!industryValue) return "";
+
+      // Si el valor ya es un code (coincide con algún code en las opciones), devolverlo
+      const matchingByCode = industries.find(
+        (opt) => opt.value.toLowerCase() === industryValue.toLowerCase(),
+      );
+      if (matchingByCode) {
+        return matchingByCode.value;
+      }
+
+      // Si no coincide por code, buscar por name (label)
+      const matchingByName = industries.find(
+        (opt) =>
+          opt.label === industryValue ||
+          opt.label.toLowerCase() === industryValue.toLowerCase(),
+      );
+      if (matchingByName) {
+        return matchingByName.value; // Devolver el code correspondiente
+      }
+
+      // Si no se encuentra, devolver el valor original (por si acaso)
+      return industryValue;
+    },
+    [industries],
+  );
 
   // Sincronizar timezone del formulario con las opciones del catálogo cuando se cargan
   // Normalizar el valor a lowercase para que coincida con las opciones del catálogo
@@ -131,11 +163,13 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
     // Buscar si el timezone actual coincide con alguna opción (comparación case-insensitive)
     const currentTimezoneLower = formData.timezone.toLowerCase();
-    const matchingTimezone = timezones.find(opt => opt.value.toLowerCase() === currentTimezoneLower);
-    
+    const matchingTimezone = timezones.find(
+      (opt) => opt.value.toLowerCase() === currentTimezoneLower,
+    );
+
     // Si encontramos una coincidencia, asegurarnos de que el formato coincida exactamente
     if (matchingTimezone && formData.timezone !== matchingTimezone.value) {
-      setFormData(prev => ({ ...prev, timezone: matchingTimezone.value }));
+      setFormData((prev) => ({ ...prev, timezone: matchingTimezone.value }));
     }
   }, [timezones, formData.timezone]);
 
@@ -150,16 +184,24 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
     // Normalizar el valor actual de industry
     const normalizedIndustry = normalizeIndustryValue(formData.industry);
-    
+
     // Verificar si el valor normalizado existe en las opciones disponibles
-    const optionExists = industries.some(opt => opt.value === normalizedIndustry);
-    
+    const optionExists = industries.some(
+      (opt) => opt.value === normalizedIndustry,
+    );
+
     // Si el valor normalizado es diferente del actual Y existe en las opciones,
     // actualizar el formulario para que el Select muestre la opción correcta preseleccionada
-    if (normalizedIndustry !== formData.industry && normalizedIndustry && optionExists) {
-      setFormData(prev => ({ ...prev, industry: normalizedIndustry }));
+    if (
+      normalizedIndustry !== formData.industry &&
+      normalizedIndustry &&
+      optionExists
+    ) {
+      setFormData((prev) => ({ ...prev, industry: normalizedIndustry }));
       // También actualizar los datos originales para mantener la consistencia
-      setOriginalFormData(prev => prev ? { ...prev, industry: normalizedIndustry } : null);
+      setOriginalFormData((prev) =>
+        prev ? { ...prev, industry: normalizedIndustry } : null,
+      );
     }
   }, [industries, normalizeIndustryValue, formData.industry]); // Solo depender de formData.industry, no de profile?.industry
 
@@ -167,16 +209,18 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   // Limpiar estado cuando cambia la empresa
   useEffect(() => {
     if (!company?.id) return;
-    
+
     // Limpiar inmediatamente el estado del formulario cuando cambia la empresa
     // para evitar mostrar datos de la empresa anterior mientras se carga el nuevo perfil
     const defaultFormData = {
-      businessDescription: '',
-      industry: '',
-      language: (systemLanguage === 'es' || systemLanguage === 'en' ? systemLanguage : 'es') as 'es' | 'en',
+      businessDescription: "",
+      industry: "",
+      language: (systemLanguage === "es" || systemLanguage === "en"
+        ? systemLanguage
+        : "es") as "es" | "en",
       timezone: systemTimezone,
       is24_7: false,
-      defaultTaxMode: 'included' as 'included' | 'excluded',
+      defaultTaxMode: "included" as "included" | "excluded",
       allowsBranchPricing: false,
     };
     setFormData(defaultFormData);
@@ -195,31 +239,36 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       setLoading(true);
-      
+
       try {
         const existingProfile = await CommercialService.getProfile(company.id);
         setProfile(existingProfile);
-        
+
         // Normalizar el valor de industry: convertir name a code si es necesario
         // Si las industrias ya están cargadas, normalizar ahora; si no, se normalizará cuando se carguen
         // Usar el valor del perfil directamente primero, luego el efecto de normalización lo corregirá si es necesario
-        const industryValue = existingProfile.industry || '';
-        const normalizedIndustry = industries.length > 0 && industryValue
-          ? normalizeIndustryValue(industryValue)
-          : industryValue;
-        
+        const industryValue = existingProfile.industry || "";
+        const normalizedIndustry =
+          industries.length > 0 && industryValue
+            ? normalizeIndustryValue(industryValue)
+            : industryValue;
+
         // Mapear los datos al formulario, asegurando que los valores estén presentes
         const profileLanguage = existingProfile.language || systemLanguage;
         const newFormData = {
-          businessDescription: existingProfile.businessDescription || '',
+          businessDescription: existingProfile.businessDescription || "",
           industry: normalizedIndustry,
-          language: (profileLanguage === 'es' || profileLanguage === 'en' ? profileLanguage : 'es') as 'es' | 'en',
+          language: (profileLanguage === "es" || profileLanguage === "en"
+            ? profileLanguage
+            : "es") as "es" | "en",
           timezone: existingProfile.timezone || systemTimezone,
           is24_7: existingProfile.is24_7 ?? false,
-          defaultTaxMode: (existingProfile.defaultTaxMode || 'included') as 'included' | 'excluded',
+          defaultTaxMode: (existingProfile.defaultTaxMode || "included") as
+            | "included"
+            | "excluded",
           allowsBranchPricing: existingProfile.allowsBranchPricing ?? false,
         };
-        
+
         setFormData(newFormData);
         // Guardar los datos originales para comparar cambios
         setOriginalFormData(newFormData);
@@ -228,16 +277,20 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
           // Perfil no existe, es la primera vez - inicializar con valores por defecto
           setProfile(null);
-          
+
           // Usar valores por defecto: timezone del sistema/navegador, language del sistema o empresa
-          const defaultLanguage = (systemLanguage === 'es' || systemLanguage === 'en' ? systemLanguage : 'es') as 'es' | 'en';
+          const defaultLanguage = (
+            systemLanguage === "es" || systemLanguage === "en"
+              ? systemLanguage
+              : "es"
+          ) as "es" | "en";
           const defaultFormData = {
-            businessDescription: '',
-            industry: '',
+            businessDescription: "",
+            industry: "",
             language: defaultLanguage,
             timezone: systemTimezone, // Usar zona horaria del sistema/navegador por defecto
             is24_7: false,
-            defaultTaxMode: 'included' as 'included' | 'excluded',
+            defaultTaxMode: "included" as "included" | "excluded",
             allowsBranchPricing: false,
           };
           setFormData(defaultFormData);
@@ -246,7 +299,10 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           // No mostrar error para 404 - es normal cuando no existe perfil
         } else {
           // Otro tipo de error - mostrar toast
-          const errorMessage = error?.message || error?.result?.description || 'Error al cargar perfil';
+          const errorMessage =
+            error?.message ||
+            error?.result?.description ||
+            "Error al cargar perfil";
           alert.showError(errorMessage);
         }
       } finally {
@@ -263,14 +319,16 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   // Esto asegura que el valor de industry se normalice correctamente después de cargar los catálogos
   useEffect(() => {
     if (!profile || industries.length === 0 || !profile.industry) return;
-    
+
     // Si el formulario ya tiene el valor correcto, no hacer nada
     const normalizedIndustry = normalizeIndustryValue(profile.industry);
     if (formData.industry === normalizedIndustry) return;
-    
+
     // Actualizar el formulario con el valor normalizado
-    setFormData(prev => ({ ...prev, industry: normalizedIndustry }));
-    setOriginalFormData(prev => prev ? { ...prev, industry: normalizedIndustry } : null);
+    setFormData((prev) => ({ ...prev, industry: normalizedIndustry }));
+    setOriginalFormData((prev) =>
+      prev ? { ...prev, industry: normalizedIndustry } : null,
+    );
   }, [industries, profile, normalizeIndustryValue, formData.industry]);
 
   // Calcular progreso
@@ -283,17 +341,17 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       formData.language,
       formData.timezone,
     ];
-    const completedFields = fields.filter(f => f && f.trim()).length;
+    const completedFields = fields.filter((f) => f && f.trim()).length;
     const progress = Math.round((completedFields / fields.length) * 100);
-    
+
     onProgressUpdate?.(progress);
     onDataChange?.(completedFields > 0);
   }, [formData, company?.id, onProgressUpdate, onDataChange]);
 
   const handleChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const next = { ...prev };
         delete next[field];
         return next;
@@ -304,12 +362,13 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
   // Función para detectar si hay cambios en el formulario
   const hasChanges = (): boolean => {
     if (!originalFormData) return true; // Si no hay datos originales, considerar que hay cambios (nuevo perfil)
-    
+
     return (
-      formData.businessDescription.trim() !== (originalFormData.businessDescription || '').trim() ||
-      formData.industry.trim() !== (originalFormData.industry || '').trim() ||
+      formData.businessDescription.trim() !==
+        (originalFormData.businessDescription || "").trim() ||
+      formData.industry.trim() !== (originalFormData.industry || "").trim() ||
       formData.language !== originalFormData.language ||
-      formData.timezone.trim() !== (originalFormData.timezone || '').trim() ||
+      formData.timezone.trim() !== (originalFormData.timezone || "").trim() ||
       formData.is24_7 !== originalFormData.is24_7 ||
       formData.defaultTaxMode !== originalFormData.defaultTaxMode ||
       formData.allowsBranchPricing !== originalFormData.allowsBranchPricing
@@ -333,17 +392,19 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
       // Construir payload - asegurar que los campos se envíen correctamente
       const trimmedDescription = formData.businessDescription.trim();
       const trimmedTimezone = formData.timezone.trim();
-      
+
       // Normalizar industry: asegurarse de que siempre se envíe el code, no el name
       let normalizedIndustry = formData.industry.trim();
       if (normalizedIndustry && industries.length > 0) {
         normalizedIndustry = normalizeIndustryValue(normalizedIndustry);
       }
-      
+
       const payload: CommercialProfilePayload = {
         companyId: company.id,
         // Enviar campos solo si tienen contenido (no undefined para evitar eliminarlos del JSON)
-        ...(trimmedDescription ? { businessDescription: trimmedDescription } : {}),
+        ...(trimmedDescription
+          ? { businessDescription: trimmedDescription }
+          : {}),
         ...(normalizedIndustry ? { industry: normalizedIndustry } : {}),
         language: formData.language,
         ...(trimmedTimezone ? { timezone: trimmedTimezone } : {}),
@@ -354,45 +415,56 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
       // Usar UPSERT unificado - el backend decide si crear o actualizar
       await CommercialService.upsertProfile(payload);
-      alert.showSuccess(profile ? 'Información actualizada correctamente' : 'Información guardada correctamente');
+      alert.showSuccess(
+        profile
+          ? "Información actualizada correctamente"
+          : "Información guardada correctamente",
+      );
 
       // Recargar perfil después de guardar (solo si no hay error)
       try {
         const updated = await CommercialService.getProfile(company.id);
         setProfile(updated);
-        
+
         // Actualizar formData con los valores guardados
         const updatedLanguage = updated.language || systemLanguage;
         const newFormData = {
-          businessDescription: updated.businessDescription || '',
-          industry: updated.industry || '',
-          language: (updatedLanguage === 'es' || updatedLanguage === 'en' ? updatedLanguage : 'es') as 'es' | 'en',
+          businessDescription: updated.businessDescription || "",
+          industry: updated.industry || "",
+          language: (updatedLanguage === "es" || updatedLanguage === "en"
+            ? updatedLanguage
+            : "es") as "es" | "en",
           timezone: updated.timezone?.toLowerCase() || systemTimezone,
           is24_7: updated.is24_7 || false,
-          defaultTaxMode: (updated.defaultTaxMode || 'included') as 'included' | 'excluded',
+          defaultTaxMode: (updated.defaultTaxMode || "included") as
+            | "included"
+            | "excluded",
           allowsBranchPricing: updated.allowsBranchPricing || false,
         };
         setFormData(newFormData);
         // Actualizar los datos originales después de guardar
         setOriginalFormData(newFormData);
-        
+
         // Notificar que el progreso está al 100% después de guardar exitosamente
         // (si el usuario guardó, significa que la información está completa)
         onProgressUpdate?.(100);
-        
+
         // No llamar automáticamente a onComplete - el usuario debe presionar "Continuar" para avanzar
       } catch (error: any) {
         // Si falla al recargar, no es crítico - el perfil ya se guardó
-        console.error('Error al recargar perfil después de guardar:', error);
+        console.error("Error al recargar perfil después de guardar:", error);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || 'Error al guardar información';
-      const errorDetail = typeof error?.details === 'object' 
-        ? JSON.stringify(error.details) 
-        : error?.details || error?.result?.description;
-      
+      const errorMessage = error?.message || "Error al guardar información";
+      const errorDetail =
+        typeof error?.details === "object"
+          ? JSON.stringify(error.details)
+          : error?.details || error?.result?.description;
+
       // Mostrar error en toast
-      const fullErrorMessage = errorDetail ? `${errorMessage}: ${errorDetail}` : errorMessage;
+      const fullErrorMessage = errorDetail
+        ? `${errorMessage}: ${errorDetail}`
+        : errorMessage;
       alert.showError(fullErrorMessage);
     } finally {
       setSaving(false);
@@ -412,7 +484,10 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <ThemedText type="body2" style={{ marginTop: 16, color: colors.textSecondary }}>
+        <ThemedText
+          type="body2"
+          style={{ marginTop: 16, color: colors.textSecondary }}
+        >
           Cargando información...
         </ThemedText>
       </View>
@@ -421,17 +496,19 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
-
       <View style={styles.formContainer}>
         {/* Industria */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             ¿En qué industria está tu empresa?
           </ThemedText>
           <Select
             value={formData.industry}
             options={industries}
-            onSelect={(val) => handleChange('industry', val as string)}
+            onSelect={(val) => handleChange("industry", val as string)}
             placeholder="Selecciona una industria"
             searchable={true}
             error={!!errors.industry}
@@ -441,7 +518,10 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
         {/* Descripción del Negocio */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             ¿A qué se dedica tu empresa?
           </ThemedText>
           <InputWithFocus
@@ -449,7 +529,9 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
               styles.textAreaContainer,
               {
                 backgroundColor: colors.surface,
-                borderColor: errors.businessDescription ? colors.error : colors.border,
+                borderColor: errors.businessDescription
+                  ? colors.error
+                  : colors.border,
               },
             ]}
             primaryColor={colors.primary}
@@ -460,13 +542,16 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
               placeholder="Ej: Empresa de desarrollo de software especializada en soluciones empresariales"
               placeholderTextColor={colors.textSecondary}
               value={formData.businessDescription}
-              onChangeText={val => handleChange('businessDescription', val)}
+              onChangeText={(val) => handleChange("businessDescription", val)}
               multiline
               numberOfLines={4}
             />
           </InputWithFocus>
           {errors.businessDescription && (
-            <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+            <ThemedText
+              type="caption"
+              style={{ color: colors.error, marginTop: 4 }}
+            >
               {errors.businessDescription}
             </ThemedText>
           )}
@@ -474,30 +559,40 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
         {/* Atención 24/7 y Precios por sucursal - En la misma línea */}
         <View style={styles.inputGroup}>
-          <View style={[styles.rowContainer, isMobile && { flexDirection: 'column', gap: 0 }]}>
+          <View
+            style={[
+              styles.rowContainer,
+              isMobile && { flexDirection: "column", gap: 0 },
+            ]}
+          >
             {/* Atención 24/7 */}
-            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
+            <View style={[styles.halfWidth, isMobile && { width: "100%" }]}>
               <CustomSwitch
                 value={formData.is24_7}
-                onValueChange={(val) => handleChange('is24_7', val)}
+                onValueChange={(val) => handleChange("is24_7", val)}
                 label="¿Atiendes 24 horas al día, 7 días a la semana?"
               />
             </View>
 
             {/* Precios por sucursal */}
-            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
+            <View style={[styles.halfWidth, isMobile && { width: "100%" }]}>
               <CustomSwitch
                 value={formData.allowsBranchPricing}
-                onValueChange={(val) => handleChange('allowsBranchPricing', val)}
+                onValueChange={(val) =>
+                  handleChange("allowsBranchPricing", val)
+                }
                 label="¿Tus ofertas tienen precios diferentes por sucursal?"
               />
             </View>
           </View>
         </View>
-        
+
         {/* Modo de impuestos por defecto */}
         <View style={styles.inputGroup}>
-          <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+          <ThemedText
+            type="body2"
+            style={[styles.label, { color: colors.text }]}
+          >
             ¿Los precios incluyen impuestos por defecto?
           </ThemedText>
           <View style={styles.radioGroup}>
@@ -505,25 +600,42 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
               style={[
                 styles.radioOption,
                 {
-                  borderColor: formData.defaultTaxMode === 'included' ? colors.primary : colors.border,
-                  backgroundColor: formData.defaultTaxMode === 'included' ? colors.primary + '20' : 'transparent',
+                  borderColor:
+                    formData.defaultTaxMode === "included"
+                      ? colors.primary
+                      : colors.border,
+                  backgroundColor:
+                    formData.defaultTaxMode === "included"
+                      ? colors.primary + "20"
+                      : "transparent",
                 },
               ]}
-              onPress={() => handleChange('defaultTaxMode', 'included')}
+              onPress={() => handleChange("defaultTaxMode", "included")}
             >
               <View
                 style={[
                   styles.radioCircle,
                   {
-                    borderColor: formData.defaultTaxMode === 'included' ? colors.primary : colors.border,
+                    borderColor:
+                      formData.defaultTaxMode === "included"
+                        ? colors.primary
+                        : colors.border,
                   },
                 ]}
               >
-                {formData.defaultTaxMode === 'included' && (
-                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                {formData.defaultTaxMode === "included" && (
+                  <View
+                    style={[
+                      styles.radioDot,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  />
                 )}
               </View>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 12 }}>
+              <ThemedText
+                type="body2"
+                style={{ color: colors.text, marginLeft: 12 }}
+              >
                 Sí, los precios incluyen impuestos
               </ThemedText>
             </TouchableOpacity>
@@ -532,25 +644,42 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
               style={[
                 styles.radioOption,
                 {
-                  borderColor: formData.defaultTaxMode === 'excluded' ? colors.primary : colors.border,
-                  backgroundColor: formData.defaultTaxMode === 'excluded' ? colors.primary + '20' : 'transparent',
+                  borderColor:
+                    formData.defaultTaxMode === "excluded"
+                      ? colors.primary
+                      : colors.border,
+                  backgroundColor:
+                    formData.defaultTaxMode === "excluded"
+                      ? colors.primary + "20"
+                      : "transparent",
                 },
               ]}
-              onPress={() => handleChange('defaultTaxMode', 'excluded')}
+              onPress={() => handleChange("defaultTaxMode", "excluded")}
             >
               <View
                 style={[
                   styles.radioCircle,
                   {
-                    borderColor: formData.defaultTaxMode === 'excluded' ? colors.primary : colors.border,
+                    borderColor:
+                      formData.defaultTaxMode === "excluded"
+                        ? colors.primary
+                        : colors.border,
                   },
                 ]}
               >
-                {formData.defaultTaxMode === 'excluded' && (
-                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                {formData.defaultTaxMode === "excluded" && (
+                  <View
+                    style={[
+                      styles.radioDot,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  />
                 )}
               </View>
-              <ThemedText type="body2" style={{ color: colors.text, marginLeft: 12 }}>
+              <ThemedText
+                type="body2"
+                style={{ color: colors.text, marginLeft: 12 }}
+              >
                 No, los impuestos se agregan aparte
               </ThemedText>
             </TouchableOpacity>
@@ -559,41 +688,67 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
 
         {/* Idioma y Zona Horaria - En la misma línea */}
         <View style={styles.inputGroup}>
-          <View style={[styles.rowContainer, isMobile && { flexDirection: 'column', gap: 0 }]}>
+          <View
+            style={[
+              styles.rowContainer,
+              isMobile && { flexDirection: "column", gap: 0 },
+            ]}
+          >
             {/* Idioma - Obtenido automáticamente del sistema */}
-            <View style={[styles.halfWidth, isMobile && { width: '100%', marginBottom: 0 }]}>
-              <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
+            <View
+              style={[
+                styles.halfWidth,
+                isMobile && { width: "100%", marginBottom: 0 },
+              ]}
+            >
+              <ThemedText
+                type="body2"
+                style={[styles.label, { color: colors.text }]}
+              >
                 Idioma principal
               </ThemedText>
               <Select
                 value={formData.language}
                 options={[
-                  { value: 'es', label: 'Español' },
-                  { value: 'en', label: 'English' },
+                  { value: "es", label: "Español" },
+                  { value: "en", label: "English" },
                 ]}
-                onSelect={(val) => handleChange('language', val as string)}
+                onSelect={(val) => handleChange("language", val as string)}
                 placeholder="Selecciona un idioma"
                 searchable={false}
               />
-              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+              <ThemedText
+                type="caption"
+                style={{ color: colors.textSecondary, marginTop: 4 }}
+              >
                 Se toma automáticamente del idioma configurado en el sistema
               </ThemedText>
             </View>
 
             {/* Zona Horaria - Obtenida automáticamente del sistema */}
-            <View style={[styles.halfWidth, isMobile && { width: '100%' }]}>
-              <ThemedText type="body2" style={[styles.label, { color: colors.text, marginTop: isMobile ? 16 : 0 }]}>
+            <View style={[styles.halfWidth, isMobile && { width: "100%" }]}>
+              <ThemedText
+                type="body2"
+                style={[
+                  styles.label,
+                  { color: colors.text, marginTop: isMobile ? 16 : 0 },
+                ]}
+              >
                 Zona horaria
               </ThemedText>
               <Select
                 value={formData.timezone}
                 options={timezones}
-                onSelect={(val) => handleChange('timezone', val as string)}
+                onSelect={(val) => handleChange("timezone", val as string)}
                 placeholder="Selecciona una zona horaria"
                 searchable={true}
               />
-              <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
-                Se toma automáticamente de la zona horaria del sistema/navegador ({getSystemTimezone()})
+              <ThemedText
+                type="caption"
+                style={{ color: colors.textSecondary, marginTop: 4 }}
+              >
+                Se toma automáticamente de la zona horaria del sistema/navegador
+                ({getSystemTimezone()})
               </ThemedText>
             </View>
           </View>
@@ -602,11 +757,11 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
         {/* Botón Guardar */}
         <Button
           title={
-            saving 
-              ? 'Guardando...' 
-              : hasChanges() 
-              ? 'Guardar Información' 
-              : 'Continuar'
+            saving
+              ? "Guardando..."
+              : hasChanges()
+                ? "Guardar Información"
+                : "Continuar"
           }
           onPress={handleButtonPress}
           variant="primary"
@@ -615,17 +770,34 @@ export function InstitutionalLayer({ onProgressUpdate, onDataChange, onComplete 
           style={styles.saveButton}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+            <ActivityIndicator
+              size="small"
+              color={colors.contrastText}
+              style={{ marginRight: 8 }}
+            />
           ) : (
-            <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons
+              name="arrow-forward-outline"
+              size={20}
+              color={colors.contrastText}
+              style={{ marginRight: 8 }}
+            />
           )}
         </Button>
 
         {/* Información sobre qué se activa */}
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-          <ThemedText type="body2" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
-            Con esta información, la IA podrá responder preguntas sobre tu negocio, ubicación y operación básica.
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={colors.primary}
+          />
+          <ThemedText
+            type="body2"
+            style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
+          >
+            Con esta información, la IA podrá responder preguntas sobre tu
+            negocio, ubicación y operación básica.
           </ThemedText>
         </View>
       </View>
@@ -639,8 +811,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   alert: {
     marginBottom: 16,
@@ -652,12 +824,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -678,10 +850,10 @@ const styles = StyleSheet.create({
   textArea: {
     fontSize: 16,
     minHeight: 130,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   rowContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   halfWidth: {
@@ -693,8 +865,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -704,8 +876,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   radioDot: {
     width: 10,
@@ -716,8 +888,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   infoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     padding: 12,
     borderRadius: 8,
     marginTop: 8,

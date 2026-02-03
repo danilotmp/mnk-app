@@ -108,7 +108,7 @@ export function VerifyEmailForm({ email, onSuccess, onBack }: VerifyEmailFormPro
         disabled={isLoading || code.length !== 6}
         style={styles.submitButton}
       >
-        {isLoading && <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />}
+        {isLoading && <ActivityIndicator size="small" color={colors.contrastText} style={{ marginRight: 8 }} />}
       </Button>
 
       <View style={styles.footer}>

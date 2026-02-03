@@ -626,8 +626,8 @@ export function PermissionCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 1 && {
-                    backgroundColor: "#10b981",
-                    borderColor: "#10b981",
+                    backgroundColor: colors.success,
+                    borderColor: colors.success,
                   },
                 ]}
                 onPress={() => handleChange("status", 1)}
@@ -636,7 +636,7 @@ export function PermissionCreateForm({
                   type="caption"
                   style={
                     formData.status === 1
-                      ? { color: "#FFFFFF" }
+                      ? { color: colors.contrastText }
                       : { color: colors.text }
                   }
                 >
@@ -648,8 +648,8 @@ export function PermissionCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 0 && {
-                    backgroundColor: "#ef4444",
-                    borderColor: "#ef4444",
+                    backgroundColor: colors.error,
+                    borderColor: colors.error,
                   },
                 ]}
                 onPress={() => handleChange("status", 0)}
@@ -658,7 +658,7 @@ export function PermissionCreateForm({
                   type="caption"
                   style={
                     formData.status === 0
-                      ? { color: "#FFFFFF" }
+                      ? { color: colors.contrastText }
                       : { color: colors.text }
                   }
                 >
@@ -670,8 +670,8 @@ export function PermissionCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 2 && {
-                    backgroundColor: "#f59e0b",
-                    borderColor: "#f59e0b",
+                    backgroundColor: colors.warning,
+                    borderColor: colors.warning,
                   },
                 ]}
                 onPress={() => handleChange("status", 2)}
@@ -680,7 +680,7 @@ export function PermissionCreateForm({
                   type="caption"
                   style={
                     formData.status === 2
-                      ? { color: "#FFFFFF" }
+                      ? { color: colors.contrastText }
                       : { color: colors.text }
                   }
                 >
@@ -692,8 +692,8 @@ export function PermissionCreateForm({
                   styles.selectOption,
                   { borderColor: colors.border },
                   formData.status === 3 && {
-                    backgroundColor: "#f97316",
-                    borderColor: "#f97316",
+                    backgroundColor: colors.suspended,
+                    borderColor: colors.suspended,
                   },
                 ]}
                 onPress={() => handleChange("status", 3)}
@@ -702,7 +702,7 @@ export function PermissionCreateForm({
                   type="caption"
                   style={
                     formData.status === 3
-                      ? { color: "#FFFFFF" }
+                      ? { color: colors.contrastText }
                       : { color: colors.text }
                   }
                 >

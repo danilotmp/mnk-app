@@ -7,26 +7,26 @@
  * - BUSCAR: Consulta al API para obtener más datos
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Card } from '@/components/ui/card';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { Tooltip } from '@/components/ui/tooltip';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { Card } from "@/components/ui/card";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useMemo, useState } from "react";
+import { ScrollView, TextInput, TouchableOpacity, View } from "react-native";
 
-import { createSearchFilterBarStyles } from './search-filter-bar.styles';
+import { createSearchFilterBarStyles } from "./search-filter-bar.styles";
 import {
-  type FilterConfig,
-  type FilterOption,
-  type SearchFilterBarProps,
-} from './search-filter-bar.types';
+    type FilterConfig,
+    type FilterOption,
+    type SearchFilterBarProps,
+} from "./search-filter-bar.types";
 
 export function SearchFilterBar({
-  filterValue = '',
+  filterValue = "",
   onFilterChange,
   onSearchSubmit,
   filters = [],
@@ -34,8 +34,8 @@ export function SearchFilterBar({
   onAdvancedFilterChange,
   onClearFilters,
   showClearButton = true,
-  filterPlaceholder = 'Filtrar...',
-  searchPlaceholder = 'Buscar...',
+  filterPlaceholder = "Filtrar...",
+  searchPlaceholder = "Buscar...",
   defaultCollapsed = true,
   filteredCount,
   totalCount,
@@ -48,9 +48,12 @@ export function SearchFilterBar({
 
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
-  const currentPlaceholder = isCollapsed ? filterPlaceholder : searchPlaceholder;
+  const currentPlaceholder = isCollapsed
+    ? filterPlaceholder
+    : searchPlaceholder;
 
-  const hasLocalFilter = typeof filterValue === 'string' && filterValue.trim().length > 0;
+  const hasLocalFilter =
+    typeof filterValue === "string" && filterValue.trim().length > 0;
   const shouldShowHint = showSearchHint && hasLocalFilter;
 
   const toggleFilters = useCallback(() => {
@@ -69,7 +72,7 @@ export function SearchFilterBar({
   const hasActiveFilters = useMemo(() => {
     return Object.entries(activeFilters).some(([, value]) => {
       if (value === undefined || value === null) return false;
-      if (typeof value === 'string' && value.trim() === '') return false;
+      if (typeof value === "string" && value.trim() === "") return false;
       return true;
     });
   }, [activeFilters]);
@@ -77,7 +80,7 @@ export function SearchFilterBar({
   const activeFiltersCount = useMemo(() => {
     return Object.entries(activeFilters).filter(([, value]) => {
       if (value === undefined || value === null) return false;
-      if (typeof value === 'string' && value.trim() === '') return false;
+      if (typeof value === "string" && value.trim() === "") return false;
       return true;
     }).length;
   }, [activeFilters]);
@@ -91,7 +94,10 @@ export function SearchFilterBar({
       return (
         <View
           key={filter.key}
-          style={[styles.filterItem, isSingleOption && styles.filterItemCompact]}
+          style={[
+            styles.filterItem,
+            isSingleOption && styles.filterItemCompact,
+          ]}
         >
           {filter.label ? (
             <ThemedText type="body2" style={styles.filterLabel}>
@@ -110,7 +116,7 @@ export function SearchFilterBar({
                 <View style={styles.selectOptions}>
                   {filter.options!.map((option: FilterOption) => {
                     const isSelected = value === option.value;
-                    const nextValue = isSelected ? '' : option.value;
+                    const nextValue = isSelected ? "" : option.value;
                     return (
                       <TouchableOpacity
                         key={option.key}
@@ -121,13 +127,17 @@ export function SearchFilterBar({
                           },
                           { borderColor: colors.border },
                         ]}
-                        onPress={() => onAdvancedFilterChange?.(filter.key, nextValue)}
+                        onPress={() =>
+                          onAdvancedFilterChange?.(filter.key, nextValue)
+                        }
                       >
                         <ThemedText
                           type="body2"
                           style={[
                             styles.selectOptionText,
-                            isSelected ? { color: '#FFFFFF' } : { color: colors.text },
+                            isSelected
+                              ? { color: colors.contrastText }
+                              : { color: colors.text },
                           ]}
                         >
                           {option.label}
@@ -141,7 +151,7 @@ export function SearchFilterBar({
                   <View style={styles.selectOptions}>
                     {filter.options!.map((option: FilterOption) => {
                       const isSelected = value === option.value;
-                      const nextValue = isSelected ? '' : option.value;
+                      const nextValue = isSelected ? "" : option.value;
                       return (
                         <TouchableOpacity
                           key={option.key}
@@ -152,13 +162,17 @@ export function SearchFilterBar({
                             },
                             { borderColor: colors.border },
                           ]}
-                          onPress={() => onAdvancedFilterChange?.(filter.key, nextValue)}
+                          onPress={() =>
+                            onAdvancedFilterChange?.(filter.key, nextValue)
+                          }
                         >
                           <ThemedText
                             type="body2"
                             style={[
                               styles.selectOptionText,
-                              isSelected ? { color: '#FFFFFF' } : { color: colors.text },
+                              isSelected
+                                ? { color: colors.contrastText }
+                                : { color: colors.text },
                             ]}
                           >
                             {option.label}
@@ -171,7 +185,7 @@ export function SearchFilterBar({
               )
             ) : (
               <ThemedText type="body2" variant="secondary">
-                {filter.placeholder || 'Sin opciones'}
+                {filter.placeholder || "Sin opciones"}
               </ThemedText>
             )}
           </View>
@@ -183,7 +197,7 @@ export function SearchFilterBar({
 
   const renderTextFilter = useCallback(
     (filter: FilterConfig) => {
-      const value = activeFilters[filter.key] || '';
+      const value = activeFilters[filter.key] || "";
       const hasValue = value.trim().length > 0;
 
       return (
@@ -201,16 +215,22 @@ export function SearchFilterBar({
             <TextInput
               style={[styles.textInput, { color: colors.text }]}
               placeholder={filter.placeholder}
-              placeholderTextColor={colors.textSecondary || '#999'}
+              placeholderTextColor={colors.textSecondary}
               value={value}
-              onChangeText={(text) => onAdvancedFilterChange?.(filter.key, text)}
+              onChangeText={(text) =>
+                onAdvancedFilterChange?.(filter.key, text)
+              }
             />
             {hasValue && (
               <TouchableOpacity
-                onPress={() => onAdvancedFilterChange?.(filter.key, '')}
+                onPress={() => onAdvancedFilterChange?.(filter.key, "")}
                 style={styles.clearFilterButton}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary || '#999'} />
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             )}
           </InputWithFocus>
@@ -236,11 +256,20 @@ export function SearchFilterBar({
                 value === true && { backgroundColor: colors.primary },
                 { borderColor: colors.border },
               ]}
-              onPress={() => onAdvancedFilterChange?.(filter.key, value === true ? undefined : true)}
+              onPress={() =>
+                onAdvancedFilterChange?.(
+                  filter.key,
+                  value === true ? undefined : true,
+                )
+              }
             >
               <ThemedText
                 type="body2"
-                style={value === true ? { color: '#FFFFFF' } : { color: colors.text }}
+                style={
+                  value === true
+                    ? { color: colors.contrastText }
+                    : { color: colors.text }
+                }
               >
                 Sí
               </ThemedText>
@@ -252,12 +281,19 @@ export function SearchFilterBar({
                 { borderColor: colors.border },
               ]}
               onPress={() =>
-                onAdvancedFilterChange?.(filter.key, value === false ? undefined : false)
+                onAdvancedFilterChange?.(
+                  filter.key,
+                  value === false ? undefined : false,
+                )
               }
             >
               <ThemedText
                 type="body2"
-                style={value === false ? { color: '#FFFFFF' } : { color: colors.text }}
+                style={
+                  value === false
+                    ? { color: colors.contrastText }
+                    : { color: colors.text }
+                }
               >
                 No
               </ThemedText>
@@ -272,11 +308,11 @@ export function SearchFilterBar({
   const renderFilter = useCallback(
     (filter: FilterConfig) => {
       switch (filter.type) {
-        case 'select':
+        case "select":
           return renderSelectFilter(filter);
-        case 'text':
+        case "text":
           return renderTextFilter(filter);
-        case 'boolean':
+        case "boolean":
           return renderBooleanFilter(filter);
         default:
           return null;
@@ -300,12 +336,12 @@ export function SearchFilterBar({
             ]}
             primaryColor={colors.primary}
           >
-            <Ionicons name="search" size={20} color={colors.textSecondary || '#999'} />
+            <Ionicons name="search" size={20} color={colors.textSecondary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
               placeholder={currentPlaceholder}
-              placeholderTextColor={colors.textSecondary || '#999'}
-              value={filterValue || ''}
+              placeholderTextColor={colors.textSecondary}
+              value={filterValue || ""}
               onChangeText={handleMainInputChange}
               returnKeyType="search"
               onSubmitEditing={() => {
@@ -315,33 +351,54 @@ export function SearchFilterBar({
               }}
             />
             {filterValue && filterValue.length > 0 && (
-              <TouchableOpacity onPress={() => onFilterChange?.('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textSecondary || '#999'} />
+              <TouchableOpacity onPress={() => onFilterChange?.("")}>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             )}
           </InputWithFocus>
 
           <View style={styles.actionButtons}>
-            <Tooltip text={t.common?.search || 'Buscar'} position="top">
+            <Tooltip text={t.common?.search || "Buscar"} position="top">
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: colors.primary },
+                ]}
                 onPress={() => onSearchSubmit?.(filterValue)}
               >
-                <Ionicons name="search" size={isMobile ? 20 : 18} color="#FFFFFF" />
+                <Ionicons
+                  name="search"
+                  size={isMobile ? 20 : 18}
+                  color={colors.contrastText}
+                />
               </TouchableOpacity>
             </Tooltip>
 
             {filters.length > 0 && (
-              <Tooltip 
-                text={isMobile ? '' : isCollapsed ? (t.common?.showFilters || 'Mostrar filtros') : (t.common?.hideFilters || 'Ocultar filtros')} 
+              <Tooltip
+                text={
+                  isMobile
+                    ? ""
+                    : isCollapsed
+                      ? t.common?.showFilters || "Mostrar filtros"
+                      : t.common?.hideFilters || "Ocultar filtros"
+                }
                 position="top"
               >
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.expandButton, { borderColor: colors.border }]}
+                  style={[
+                    styles.actionButton,
+                    styles.expandButton,
+                    { borderColor: colors.border },
+                  ]}
                   onPress={toggleFilters}
                 >
                   <Ionicons
-                    name={isCollapsed ? 'chevron-down' : 'chevron-up'}
+                    name={isCollapsed ? "chevron-down" : "chevron-up"}
                     size={isMobile ? 20 : 18}
                     color={colors.text}
                   />
@@ -355,10 +412,10 @@ export function SearchFilterBar({
           <View style={styles.hintContainer}>
             <ThemedText
               type="caption"
-              style={[styles.hintText, { color: colors.textSecondary || '#999' }]}
+              style={[styles.hintText, { color: colors.textSecondary }]}
             >
               {t.common?.searchHint ||
-                'No se encontraron resultados. Prueba usando la búsqueda para consultar más datos.'}
+                "No se encontraron resultados. Prueba usando la búsqueda para consultar más datos."}
             </ThemedText>
           </View>
         )}
@@ -376,28 +433,37 @@ export function SearchFilterBar({
         </View>
       )}
 
-      {filters.length > 0 && !isCollapsed && showClearButton && hasActiveFilters && (
-        <View style={styles.clearContainer}>
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => {
-              onFilterChange?.('');
-              onClearFilters?.();
-            }}
-          >
-            <Ionicons name="refresh" size={16} color={colors.textSecondary || '#999'} />
-            <ThemedText type="body2" style={[styles.clearText, { color: colors.textSecondary || '#999' }]}>
-              {t.common?.clearFilters || 'Limpiar filtros'}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-      )}
+      {filters.length > 0 &&
+        !isCollapsed &&
+        showClearButton &&
+        hasActiveFilters && (
+          <View style={styles.clearContainer}>
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => {
+                onFilterChange?.("");
+                onClearFilters?.();
+              }}
+            >
+              <Ionicons name="refresh" size={16} color={colors.textSecondary} />
+              <ThemedText
+                type="body2"
+                style={[styles.clearText, { color: colors.textSecondary }]}
+              >
+                {t.common?.clearFilters || "Limpiar filtros"}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {typeof filteredCount === 'number' &&
-        typeof totalCount === 'number' &&
+      {typeof filteredCount === "number" &&
+        typeof totalCount === "number" &&
         filteredCount !== totalCount && (
           <View style={styles.hintContainer}>
-            <ThemedText type="caption" style={[styles.hintText, { color: colors.textSecondary || '#999' }]}>
+            <ThemedText
+              type="caption"
+              style={[styles.hintText, { color: colors.textSecondary }]}
+            >
               {t.common?.filteredResultsMessage
                 ? t.common.filteredResultsMessage(filteredCount, totalCount)
                 : `Mostrando ${filteredCount} de ${totalCount} resultados`}
@@ -407,4 +473,3 @@ export function SearchFilterBar({
     </Card>
   );
 }
-

@@ -4,7 +4,22 @@
 
 import { Platform, StyleSheet } from "react-native";
 
-export const createUserProfileHeaderStyles = () =>
+export interface UserProfileHeaderTheme {
+  colors: {
+    overlay: string;
+  };
+  shadows: {
+    md: {
+      shadowColor: string;
+      shadowOffset: { width: number; height: number };
+      shadowOpacity: number;
+      shadowRadius: number;
+      elevation: number;
+    };
+  };
+}
+
+export const createUserProfileHeaderStyles = (theme?: UserProfileHeaderTheme) =>
   StyleSheet.create({
     profileContainer: {
       flexDirection: "row",
@@ -145,18 +160,7 @@ export const createUserProfileHeaderStyles = () =>
       borderRadius: 12,
       paddingVertical: 8,
       overflow: "visible",
-      ...Platform.select({
-        web: {
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-        },
-        default: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 8,
-        },
-      }),
+      // Sombra aplicada desde el componente con shadows.lg del tema (igual que selector de empresas)
     },
     dropdownArrowOuter: {
       position: "absolute",
@@ -206,9 +210,11 @@ export const createUserProfileHeaderStyles = () =>
       position: "relative",
       ...Platform.select({
         web: {
-          boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.25)",
+          boxShadow: theme?.shadows.md
+            ? `0px ${theme.shadows.md.shadowOffset.height}px ${theme.shadows.md.shadowRadius}px rgba(0, 0, 0, ${theme.shadows.md.shadowOpacity})`
+            : "0px 2px 8px rgba(0, 0, 0, 0.25)",
         },
-        default: {
+        default: theme?.shadows.md || {
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.25,

@@ -2,7 +2,29 @@
  * Tipos para el componente DataTable
  */
 
-import React from 'react';
+import React from "react";
+
+/**
+ * Tema para estilos del DataTable (colores, sombras, isDark).
+ * Se pasa a createDataTableStyles para centralizar borde y sombra en .styles.ts.
+ */
+export interface DataTableTheme {
+  colors: {
+    borderLight: string;
+    surfaceVariant: string;
+    stripedRow?: string; // Color para filas alternadas (striped variant)
+  };
+  shadows: {
+    lg: {
+      shadowColor: string;
+      shadowOffset: { width: number; height: number };
+      shadowOpacity: number;
+      shadowRadius: number;
+      elevation: number;
+    };
+  };
+  isDark: boolean;
+}
 
 /**
  * Configuración de columna
@@ -12,7 +34,7 @@ export interface TableColumn<T = any> {
   label: string;
   render?: (item: T, index: number) => React.ReactNode;
   width?: number | string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   sortable?: boolean;
 }
 
@@ -21,12 +43,12 @@ export interface TableColumn<T = any> {
  * Permite agregar botones de acción específicos por interfaz
  */
 export interface TableAction<T = any> {
-  id: string;                    // Identificador único
-  icon: string;                  // Nombre del icono de Ionicons (ej: "pencil", "trash", "eye", "key")
-  tooltip: string;               // Texto del tooltip
-  onPress: (item: T) => void;    // Función a ejecutar
+  id: string; // Identificador único
+  icon: string; // Nombre del icono de Ionicons (ej: "pencil", "trash", "eye", "key")
+  tooltip: string; // Texto del tooltip
+  onPress: (item: T) => void; // Función a ejecutar
   visible?: (item: T) => boolean; // Opcional: mostrar/ocultar según el item (default: true)
-  order?: number;                // Opcional: orden de visualización (por defecto: orden del array)
+  order?: number; // Opcional: orden de visualización (por defecto: orden del array)
 }
 
 /**
@@ -34,7 +56,7 @@ export interface TableAction<T = any> {
  */
 export interface EditAction<T = any> {
   onPress: (item: T) => void;
-  tooltip?: string;              // Default: 'Editar'
+  tooltip?: string; // Default: 'Editar'
   visible?: (item: T) => boolean; // Opcional: mostrar/ocultar según el item (default: true)
 }
 
@@ -43,7 +65,7 @@ export interface EditAction<T = any> {
  */
 export interface DeleteAction<T = any> {
   onPress: (item: T) => void;
-  tooltip?: string;              // Default: 'Eliminar'
+  tooltip?: string; // Default: 'Eliminar'
   visible?: (item: T) => boolean; // Opcional: mostrar/ocultar según el item (default: true)
 }
 
@@ -69,18 +91,17 @@ export interface DataTableProps<T = any> {
     onLimitChange?: (limit: number) => void;
     limitOptions?: number[];
   };
-  variant?: 'bordered' | 'striped' | 'hover';
-  size?: 'sm' | 'md' | 'lg';
-  
-  // Sistema de acciones configurables
-  actions?: TableAction<T>[];     // Acciones personalizadas (se renderizan primero)
-  editAction?: EditAction<T>;     // Acción estándar de editar (se renderiza antes de eliminar)
-  deleteAction?: DeleteAction<T>; // Acción estándar de eliminar (se renderiza al final)
-  actionsColumnWidth?: string;    // Opcional: ancho de la columna acciones (default: '18%')
-  actionsColumnLabel?: string;    // Opcional: label de la columna (default: 'Acciones')
-  
-  // Opciones adicionales
-  enableRowClick?: boolean;       // Opcional: habilita click en fila para abrir edición (default: false)
-  showRowNumber?: boolean;        // Opcional: muestra columna de contador al inicio (default: false)
-}
+  variant?: "bordered" | "striped" | "hover";
+  size?: "sm" | "md" | "lg";
 
+  // Sistema de acciones configurables
+  actions?: TableAction<T>[]; // Acciones personalizadas (se renderizan primero)
+  editAction?: EditAction<T>; // Acción estándar de editar (se renderiza antes de eliminar)
+  deleteAction?: DeleteAction<T>; // Acción estándar de eliminar (se renderiza al final)
+  actionsColumnWidth?: string; // Opcional: ancho de la columna acciones (default: '18%')
+  actionsColumnLabel?: string; // Opcional: label de la columna (default: 'Acciones')
+
+  // Opciones adicionales
+  enableRowClick?: boolean; // Opcional: habilita click en fila para abrir edición (default: false)
+  showRowNumber?: boolean; // Opcional: muestra columna de contador al inicio (default: false)
+}

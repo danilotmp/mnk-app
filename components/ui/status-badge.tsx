@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { View, StyleSheet } from 'react-native';
 import { getStatusColor, getStatusIcon } from '@/src/domains/shared/types/status.types';
+import { useTheme } from '@/hooks/use-theme';
 
 interface StatusBadgeProps {
   status: number;
@@ -20,7 +21,8 @@ export const StatusBadge = ({
   size = 'medium',
   showIcon = true 
 }: StatusBadgeProps) => {
-  const color = getStatusColor(status);
+  const { colors } = useTheme();
+  const color = getStatusColor(status, colors);
   const icon = getStatusIcon(status);
   
   const sizes = {

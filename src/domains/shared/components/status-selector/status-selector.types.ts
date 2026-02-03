@@ -7,7 +7,7 @@ import { ViewStyle } from 'react-native';
 export interface StatusOption {
   value: number;
   label: string;
-  color: string; // Color de fondo cuando está seleccionado
+  color?: string; // Color de fondo cuando está seleccionado (opcional - se obtiene del theme si no se proporciona)
 }
 
 export interface StatusSelectorProps {

@@ -600,7 +600,7 @@ export function RolesListScreen() {
             <Ionicons
               name="add"
               size={pageLayout.iconSubtitle}
-              color="#FFFFFF"
+              color={colors.contrastText}
               style={!isMobile ? { marginRight: spacing.sm } : undefined}
             />
           </Button>

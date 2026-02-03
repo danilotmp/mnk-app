@@ -215,7 +215,7 @@ export function createHomeScreenStyles(t: HomeScreenTheme): HomeScreenStyles {
       maxWidth: 624,
       borderRadius: t.borderRadius.xl,
       overflow: "hidden",
-      backgroundColor: t.colors.surface ?? "#f5f5f5",
+      backgroundColor: t.colors.surface,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,

@@ -3,39 +3,50 @@
  * Consulta el menú del rol y genera un árbol jerárquico
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { MenuService } from '@/src/infrastructure/menu/menu.service';
-import { MenuItem } from '@/src/infrastructure/menu/types';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
-import { useCompanyOptions } from '../../hooks';
-import { PermissionMenuItem } from '../shared/permission-menu-item';
-import { createPermissionFlowStyles } from './role-permissions-flow.styles';
-import { PermissionFlowProps } from './role-permissions-flow.types';
+import { ThemedText } from "@/components/themed-text";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { MenuService } from "@/src/infrastructure/menu/menu.service";
+import { MenuItem } from "@/src/infrastructure/menu/types";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    ScrollView,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useCompanyOptions } from "../../hooks";
+import { PermissionMenuItem } from "../shared/permission-menu-item";
+import { createPermissionFlowStyles } from "./role-permissions-flow.styles";
+import { PermissionFlowProps } from "./role-permissions-flow.types";
 
-export function PermissionFlow({ permissions, roleName, roleCode, roleId, companyId }: PermissionFlowProps) {
+export function PermissionFlow({
+  permissions,
+  roleName,
+  roleCode,
+  roleId,
+  companyId,
+}: PermissionFlowProps) {
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const styles = createPermissionFlowStyles(colors, isMobile);
   const { companies } = useCompanyOptions();
-  
+
   // Filtrar empresas para mostrar solo la empresa del rol
-  const roleCompany = companies.find(c => c.id === companyId);
+  const roleCompany = companies.find((c) => c.id === companyId);
   const availableCompanies = roleCompany ? [roleCompany] : [];
-  
+
   // Siempre usar la empresa del rol, no permitir cambio
   const selectedCompanyId = companyId;
-  
+
   // Estado para el menú del rol
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
-  
+
   // Estado para rastrear qué items están expandidos (inicialmente todos colapsados)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
@@ -43,15 +54,19 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
    * Verifica si existe un permiso para una ruta y acción específica
    * Lógica híbrida: primero busca por ruta exacta, luego por módulo (retrocompatibilidad)
    */
-  const hasPermissionForRoute = (route: string | undefined, action: string): boolean => {
+  const hasPermissionForRoute = (
+    route: string | undefined,
+    action: string,
+  ): boolean => {
     if (!route) return false;
 
     // 1. Buscar permiso por ruta exacta (sistema nuevo)
-    const routePermission = permissions.find(perm => 
-      perm.route && 
-      perm.route === route && 
-      perm.action === action &&
-      perm.status === 1 // Solo permisos activos
+    const routePermission = permissions.find(
+      (perm) =>
+        perm.route &&
+        perm.route === route &&
+        perm.action === action &&
+        perm.status === 1, // Solo permisos activos
     );
 
     if (routePermission) {
@@ -60,13 +75,16 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
 
     // 2. Si no hay permiso por ruta, buscar por módulo (retrocompatibilidad)
     // Extraer módulo de la ruta: "/security/users" -> "security"
-    const moduleFromRoute = route.split('/').filter(p => p)[0];
+    const moduleFromRoute = route.split("/").filter((p) => p)[0];
     if (moduleFromRoute) {
-      const modulePermission = permissions.find(perm => 
-        perm.module === moduleFromRoute && 
-        perm.action === action &&
-        (perm.route === null || perm.route === undefined || perm.route === '') && // Solo permisos sin ruta
-        perm.status === 1 // Solo permisos activos
+      const modulePermission = permissions.find(
+        (perm) =>
+          perm.module === moduleFromRoute &&
+          perm.action === action &&
+          (perm.route === null ||
+            perm.route === undefined ||
+            perm.route === "") && // Solo permisos sin ruta
+          perm.status === 1, // Solo permisos activos
       );
 
       if (modulePermission) {
@@ -83,7 +101,9 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
    */
   const hasAnyPermissionForRoute = (route: string | undefined): boolean => {
     if (!route) return false;
-    return ['view', 'create', 'edit', 'delete'].some(action => hasPermissionForRoute(route, action));
+    return ["view", "create", "edit", "delete"].some((action) =>
+      hasPermissionForRoute(route, action),
+    );
   };
 
   // Consultar menú del rol cuando cambie el roleId
@@ -96,13 +116,13 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
     const loadMenu = async () => {
       setLoadingMenu(true);
       setMenuError(null);
-      
+
       try {
-        const menu = await MenuService.getMenuForRole(roleId, 'es');
+        const menu = await MenuService.getMenuForRole(roleId, "es");
         setMenuItems(menu);
       } catch (error: any) {
-        console.error('Error al cargar menú del rol:', error);
-        setMenuError(error.message || 'Error al cargar el menú');
+        console.error("Error al cargar menú del rol:", error);
+        setMenuError(error.message || "Error al cargar el menú");
       } finally {
         setLoadingMenu(false);
       }
@@ -111,9 +131,8 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
     loadMenu();
   }, [roleId]);
 
-
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={true}
@@ -121,7 +140,7 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
       {roleName && (
         <View style={styles.roleHeader}>
           <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
-          
+
           {/* Selector de empresa alineado a la izquierda - Solo lectura, muestra solo la empresa del rol */}
           {roleCompany && (
             <View style={styles.companySelector}>
@@ -138,8 +157,8 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                 <ThemedText
                   type="body2"
                   style={{
-                    color: '#FFFFFF',
-                    fontWeight: '600',
+                    color: colors.contrastText,
+                    fontWeight: "600",
                   }}
                 >
                   {roleCompany.name}
@@ -155,7 +174,11 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
           return (
             <View style={styles.emptyState}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <ThemedText type="body2" variant="secondary" style={styles.emptyStateText}>
+              <ThemedText
+                type="body2"
+                variant="secondary"
+                style={styles.emptyStateText}
+              >
                 Cargando menú del rol...
               </ThemedText>
             </View>
@@ -165,8 +188,16 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
         if (menuError) {
           return (
             <View style={styles.emptyState}>
-              <Ionicons name="alert-circle" size={64} color={colors.error || colors.textSecondary} />
-              <ThemedText type="body1" variant="secondary" style={styles.emptyStateText}>
+              <Ionicons
+                name="alert-circle"
+                size={64}
+                color={colors.error || colors.textSecondary}
+              />
+              <ThemedText
+                type="body1"
+                variant="secondary"
+                style={styles.emptyStateText}
+              >
                 {menuError}
               </ThemedText>
             </View>
@@ -176,8 +207,16 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
         if (menuItems.length === 0) {
           return (
             <View style={styles.emptyState}>
-              <Ionicons name="lock-closed" size={64} color={colors.textSecondary} />
-              <ThemedText type="body1" variant="secondary" style={styles.emptyStateText}>
+              <Ionicons
+                name="lock-closed"
+                size={64}
+                color={colors.textSecondary}
+              />
+              <ThemedText
+                type="body1"
+                variant="secondary"
+                style={styles.emptyStateText}
+              >
                 Este rol no tiene menú asignado
               </ThemedText>
             </View>
@@ -188,19 +227,36 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
           <View style={styles.permissionsContainer}>
             {menuItems.map((menuItem, index) => {
               // Estructura jerárquica: items directos y columnas como grupos
-              const directItems: Array<{ id: string; label: string; route?: string; description?: string; isPublic?: boolean }> = [];
+              const directItems: Array<{
+                id: string;
+                label: string;
+                route?: string;
+                description?: string;
+                isPublic?: boolean;
+              }> = [];
               if (menuItem.submenu && menuItem.submenu.length > 0) {
-                directItems.push(...menuItem.submenu.map(sub => ({
-                  ...sub,
-                  isPublic: sub.isPublic,
-                })));
+                directItems.push(
+                  ...menuItem.submenu.map((sub) => ({
+                    ...sub,
+                    isPublic: sub.isPublic,
+                  })),
+                );
               }
-              const columnGroups: Array<{ title?: string; items: Array<{ id: string; label: string; route?: string; description?: string; isPublic?: boolean }> }> = [];
+              const columnGroups: Array<{
+                title?: string;
+                items: Array<{
+                  id: string;
+                  label: string;
+                  route?: string;
+                  description?: string;
+                  isPublic?: boolean;
+                }>;
+              }> = [];
               if (menuItem.columns && menuItem.columns.length > 0) {
                 for (const column of menuItem.columns) {
                   columnGroups.push({
                     title: column.title,
-                    items: (column.items || []).map(item => ({
+                    items: (column.items || []).map((item) => ({
                       ...item,
                       isPublic: item.isPublic,
                     })),
@@ -209,13 +265,15 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
               }
 
               // Usar el código del rol si el label es "OTROS" o similar
-              const displayLabel = menuItem.label.toUpperCase() === 'OTROS' && roleCode 
-                ? roleCode.toUpperCase() 
-                : menuItem.label.toUpperCase();
+              const displayLabel =
+                menuItem.label.toUpperCase() === "OTROS" && roleCode
+                  ? roleCode.toUpperCase()
+                  : menuItem.label.toUpperCase();
 
               const itemId = menuItem.id || `item-${index}`;
               const isExpanded = expandedItems.has(itemId);
-              const hasSubItems = directItems.length > 0 || columnGroups.length > 0;
+              const hasSubItems =
+                directItems.length > 0 || columnGroups.length > 0;
 
               // Toggle para expandir/colapsar
               const toggleExpand = () => {
@@ -244,7 +302,7 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                       }}
                       itemStyle={[
                         styles.permissionItem,
-                        { 
+                        {
                           backgroundColor: colors.background,
                           borderColor: colors.border,
                         },
@@ -264,27 +322,55 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                 <View key={itemId} style={styles.moduleContainer}>
                   {/* Header del módulo/item del menú - siempre clickeable */}
                   <TouchableOpacity
-                    style={[styles.moduleHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    style={[
+                      styles.moduleHeader,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
                     onPress={toggleExpand}
                     activeOpacity={0.7}
                   >
                     <View style={styles.moduleHeaderLeft}>
-                      <View style={[styles.moduleIcon, { backgroundColor: colors.primary + '20' }]}>
-                        <Ionicons name="cube" size={20} color={colors.primary} />
+                      <View
+                        style={[
+                          styles.moduleIcon,
+                          { backgroundColor: colors.primary + "20" },
+                        ]}
+                      >
+                        <Ionicons
+                          name="cube"
+                          size={20}
+                          color={colors.primary}
+                        />
                       </View>
-                      <ThemedText type="body1" style={[styles.moduleTitle, { color: colors.text }]}>
+                      <ThemedText
+                        type="body1"
+                        style={[styles.moduleTitle, { color: colors.text }]}
+                      >
                         {displayLabel}
                       </ThemedText>
-                      <Ionicons 
-                        name={isExpanded ? 'chevron-down' : 'chevron-forward'} 
-                        size={20} 
-                        color={colors.textSecondary} 
+                      <Ionicons
+                        name={isExpanded ? "chevron-down" : "chevron-forward"}
+                        size={20}
+                        color={colors.textSecondary}
                         style={styles.chevronIcon}
                       />
                     </View>
                     <View style={[styles.moduleBadge]}>
-                      <ThemedText type="caption" style={{ color: '#fff', fontWeight: '600' }}>
-                        {directItems.length + columnGroups.reduce((acc, g) => acc + g.items.length, 0)}
+                      <ThemedText
+                        type="caption"
+                        style={{
+                          color: colors.contrastText,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {directItems.length +
+                          columnGroups.reduce(
+                            (acc, g) => acc + g.items.length,
+                            0,
+                          )}
                       </ThemedText>
                     </View>
                   </TouchableOpacity>
@@ -311,7 +397,8 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                                   backgroundColor: colors.background,
                                   borderColor: colors.border,
                                 },
-                                subIndex < directItems.length - 1 && styles.permissionItemNotLast,
+                                subIndex < directItems.length - 1 &&
+                                  styles.permissionItemNotLast,
                               ]}
                               actionsContainerStyle={styles.permissionActions}
                               actionIconsProps={{
@@ -325,13 +412,36 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
 
                       {/* Grupos de columnas */}
                       {columnGroups.map((group, groupIndex) => (
-                        <View key={`group-${groupIndex}`} style={styles.groupContainer}>
-                          <View style={[styles.groupHeader, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-                            <ThemedText type="body2" style={[styles.groupTitle, { color: colors.text }]}>
-                              {group.title || 'Grupo'}
+                        <View
+                          key={`group-${groupIndex}`}
+                          style={styles.groupContainer}
+                        >
+                          <View
+                            style={[
+                              styles.groupHeader,
+                              {
+                                backgroundColor: colors.surfaceVariant,
+                                borderColor: colors.border,
+                              },
+                            ]}
+                          >
+                            <ThemedText
+                              type="body2"
+                              style={[
+                                styles.groupTitle,
+                                { color: colors.text },
+                              ]}
+                            >
+                              {group.title || "Grupo"}
                             </ThemedText>
                             <View style={styles.groupBadge}>
-                              <ThemedText type="caption" style={{ color: colors.text, fontWeight: '600' }}>
+                              <ThemedText
+                                type="caption"
+                                style={{
+                                  color: colors.text,
+                                  fontWeight: "600",
+                                }}
+                              >
                                 {group.items.length}
                               </ThemedText>
                             </View>
@@ -355,9 +465,12 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
                                       backgroundColor: colors.background,
                                       borderColor: colors.border,
                                     },
-                                    subIndex < group.items.length - 1 && styles.permissionItemNotLast,
+                                    subIndex < group.items.length - 1 &&
+                                      styles.permissionItemNotLast,
                                   ]}
-                                  actionsContainerStyle={styles.permissionActions}
+                                  actionsContainerStyle={
+                                    styles.permissionActions
+                                  }
                                   actionIconsProps={{
                                     interactive: false,
                                     hasPermissionForRoute,
@@ -379,4 +492,3 @@ export function PermissionFlow({ permissions, roleName, roleCode, roleId, compan
     </ScrollView>
   );
 }
-

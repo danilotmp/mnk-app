@@ -3,27 +3,34 @@
  * Gestiona reglas y comportamientos esperados por la IA (saludos, despedidas, información requerida, etc.)
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { Tooltip } from '@/components/ui/tooltip';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { CommercialService } from '@/src/domains/commercial';
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { CommercialService } from "@/src/domains/commercial";
 import {
-  InteractionGuideline,
-  InteractionGuidelinePayload,
-} from '@/src/domains/commercial/types';
-import { DynamicIcon } from '@/src/domains/shared/components';
-import { useCompany } from '@/src/domains/shared';
-import { RecordStatus } from '@/src/domains/shared/types/status.types';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+    InteractionGuideline,
+    InteractionGuidelinePayload,
+} from "@/src/domains/commercial/types";
+import { useCompany } from "@/src/domains/shared";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import { RecordStatus } from "@/src/domains/shared/types/status.types";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface InteractionGuidelinesLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -34,12 +41,12 @@ interface InteractionGuidelinesLayerProps {
   isCompleted?: boolean; // Indica si la capa ya está completada
 }
 
-export function InteractionGuidelinesLayer({ 
-  onProgressUpdate, 
-  onDataChange, 
+export function InteractionGuidelinesLayer({
+  onProgressUpdate,
+  onDataChange,
   onComplete,
   onSkip,
-  searchFilter = '',
+  searchFilter = "",
   isCompleted = false,
 }: InteractionGuidelinesLayerProps) {
   const { colors, isDark } = useTheme();
@@ -47,26 +54,32 @@ export function InteractionGuidelinesLayer({
   const { t } = useTranslation();
   const alert = useAlert();
   const { company } = useCompany();
-  
+
   // Color para iconos de acción: primaryDark en dark theme, primary en light theme (igual que en las tablas)
   const actionIconColor = isDark ? colors.primaryDark : colors.primary;
 
   const [loading, setLoading] = useState(false);
   const [guidelines, setGuidelines] = useState<InteractionGuideline[]>([]);
-  const [editingGuidelineId, setEditingGuidelineId] = useState<string | null>(null); // ID de la directriz en edición
+  const [editingGuidelineId, setEditingGuidelineId] = useState<string | null>(
+    null,
+  ); // ID de la directriz en edición
   const [saving, setSaving] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const hasLoadedRef = useRef(false); // Flag para evitar cargas repetitivas
-  const [showStatusOptions, setShowStatusOptions] = useState<string | null>(null); // ID de la directriz que muestra opciones de status
+  const [showStatusOptions, setShowStatusOptions] = useState<string | null>(
+    null,
+  ); // ID de la directriz que muestra opciones de status
   const [showNewForm, setShowNewForm] = useState(false); // Para el formulario de nueva directriz
 
   // Estado del formulario para cada directriz en edición
-  const [editingFormData, setEditingFormData] = useState<Record<string, { title: string; description: string; status: number }>>({});
-  
+  const [editingFormData, setEditingFormData] = useState<
+    Record<string, { title: string; description: string; status: number }>
+  >({});
+
   // Estado para nueva directriz
   const [newFormData, setNewFormData] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     status: RecordStatus.PENDING, // Default: Pendiente (2)
   });
 
@@ -87,7 +100,7 @@ export function InteractionGuidelinesLayer({
         setGuidelines([]);
       } else {
         // Para otros errores, mostrar mensaje pero permitir continuar
-        console.error('Error al cargar directrices:', error);
+        console.error("Error al cargar directrices:", error);
         setGuidelines([]);
         // No mostrar error para permitir agregar directrices
       }
@@ -112,7 +125,7 @@ export function InteractionGuidelinesLayer({
 
     const hasData = guidelines.length > 0;
     const progress = hasData ? 100 : 0;
-    
+
     onProgressUpdate?.(progress);
     onDataChange?.(hasData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,7 +133,7 @@ export function InteractionGuidelinesLayer({
 
   const handleSave = async (guidelineId: string) => {
     if (!company?.id) {
-      alert.showError('No se pudo obtener el ID de la empresa');
+      alert.showError("No se pudo obtener el ID de la empresa");
       return;
     }
 
@@ -128,12 +141,12 @@ export function InteractionGuidelinesLayer({
     if (!formData) return;
 
     if (!formData.title.trim()) {
-      alert.showError('El título es requerido');
+      alert.showError("El título es requerido");
       return;
     }
 
     if (!formData.description.trim()) {
-      alert.showError('La descripción es requerida');
+      alert.showError("La descripción es requerida");
       return;
     }
 
@@ -147,40 +160,43 @@ export function InteractionGuidelinesLayer({
         status: formData.status,
       };
       await CommercialService.updateInteractionGuideline(guidelineId, payload);
-      alert.showSuccess('Directriz actualizada correctamente');
+      alert.showSuccess("Directriz actualizada correctamente");
 
       // Recargar directrices después de guardar
       hasLoadedRef.current = false; // Reset flag para permitir recarga
       setIsLoadingData(false); // Reset flag de carga
       await loadGuidelines();
-      
+
       // Limpiar estado de edición
       setEditingGuidelineId(null);
       setEditingFormData({});
       setShowStatusOptions(null);
     } catch (error: any) {
       // Extraer mensaje de error de diferentes estructuras posibles
-      const errorMessage = error?.message || 
-                          error?.result?.description || 
-                          error?.description || 
-                          'Error al guardar directriz';
-      
+      const errorMessage =
+        error?.message ||
+        error?.result?.description ||
+        error?.description ||
+        "Error al guardar directriz";
+
       // Extraer detalles del error
-      let errorDetail = '';
+      let errorDetail = "";
       if (error?.details) {
-        errorDetail = typeof error.details === 'object' 
-          ? JSON.stringify(error.details) 
-          : String(error.details);
+        errorDetail =
+          typeof error.details === "object"
+            ? JSON.stringify(error.details)
+            : String(error.details);
       } else if (error?.result?.details) {
-        errorDetail = typeof error.result.details === 'object' 
-          ? JSON.stringify(error.result.details) 
-          : String(error.result.details);
+        errorDetail =
+          typeof error.result.details === "object"
+            ? JSON.stringify(error.result.details)
+            : String(error.result.details);
       }
-      
-      const fullMessage = errorDetail 
-        ? `${errorMessage}: ${errorDetail}` 
+
+      const fullMessage = errorDetail
+        ? `${errorMessage}: ${errorDetail}`
         : errorMessage;
-      
+
       alert.showError(fullMessage);
     } finally {
       setSaving(false);
@@ -189,17 +205,17 @@ export function InteractionGuidelinesLayer({
 
   const handleCreateNew = async () => {
     if (!company?.id) {
-      alert.showError('No se pudo obtener el ID de la empresa');
+      alert.showError("No se pudo obtener el ID de la empresa");
       return;
     }
 
     if (!newFormData.title.trim()) {
-      alert.showError('El título es requerido');
+      alert.showError("El título es requerido");
       return;
     }
 
     if (!newFormData.description.trim()) {
-      alert.showError('La descripción es requerida');
+      alert.showError("La descripción es requerida");
       return;
     }
 
@@ -213,27 +229,28 @@ export function InteractionGuidelinesLayer({
         status: newFormData.status,
       };
       await CommercialService.createInteractionGuideline(payload);
-      alert.showSuccess('Directriz creada correctamente');
+      alert.showSuccess("Directriz creada correctamente");
 
       // Recargar directrices después de guardar
       hasLoadedRef.current = false;
       setIsLoadingData(false);
       await loadGuidelines();
-      
+
       // Limpiar formulario
       setNewFormData({
-        title: '',
-        description: '',
+        title: "",
+        description: "",
         status: RecordStatus.PENDING,
       });
       setShowNewForm(false);
     } catch (error: any) {
-      const errorMessage = error?.message || 'Error al crear directriz';
-      const errorDetail = typeof error?.details === 'object' 
-        ? JSON.stringify(error.details) 
-        : error?.details || error?.result?.description;
-      
-      alert.showError(errorMessage + (errorDetail ? `: ${errorDetail}` : ''));
+      const errorMessage = error?.message || "Error al crear directriz";
+      const errorDetail =
+        typeof error?.details === "object"
+          ? JSON.stringify(error.details)
+          : error?.details || error?.result?.description;
+
+      alert.showError(errorMessage + (errorDetail ? `: ${errorDetail}` : ""));
     } finally {
       setSaving(false);
     }
@@ -241,7 +258,7 @@ export function InteractionGuidelinesLayer({
 
   const handleTitleClick = (guideline: InteractionGuideline) => {
     if (editingGuidelineId === guideline.id) return; // Ya está en edición
-    
+
     setEditingGuidelineId(guideline.id);
     setEditingFormData({
       [guideline.id]: {
@@ -257,34 +274,37 @@ export function InteractionGuidelinesLayer({
 
     try {
       await CommercialService.deleteInteractionGuideline(guidelineId);
-      alert.showSuccess('Directriz eliminada correctamente');
+      alert.showSuccess("Directriz eliminada correctamente");
       // Recargar directrices después de eliminar
       hasLoadedRef.current = false; // Reset flag para permitir recarga
       setIsLoadingData(false); // Reset flag de carga
       await loadGuidelines();
     } catch (error: any) {
       // Extraer mensaje de error de diferentes estructuras posibles
-      const errorMessage = error?.message || 
-                          error?.result?.description || 
-                          error?.description || 
-                          'Error al eliminar directriz';
-      
+      const errorMessage =
+        error?.message ||
+        error?.result?.description ||
+        error?.description ||
+        "Error al eliminar directriz";
+
       // Extraer detalles del error
-      let errorDetail = '';
+      let errorDetail = "";
       if (error?.details) {
-        errorDetail = typeof error.details === 'object' 
-          ? JSON.stringify(error.details) 
-          : String(error.details);
+        errorDetail =
+          typeof error.details === "object"
+            ? JSON.stringify(error.details)
+            : String(error.details);
       } else if (error?.result?.details) {
-        errorDetail = typeof error.result.details === 'object' 
-          ? JSON.stringify(error.result.details) 
-          : String(error.result.details);
+        errorDetail =
+          typeof error.result.details === "object"
+            ? JSON.stringify(error.result.details)
+            : String(error.result.details);
       }
-      
-      const fullMessage = errorDetail 
-        ? `${errorMessage}: ${errorDetail}` 
+
+      const fullMessage = errorDetail
+        ? `${errorMessage}: ${errorDetail}`
         : errorMessage;
-      
+
       alert.showError(fullMessage);
     } finally {
       setSaving(false);
@@ -302,7 +322,10 @@ export function InteractionGuidelinesLayer({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <ThemedText type="body2" style={{ marginTop: 16, color: colors.textSecondary }}>
+        <ThemedText
+          type="body2"
+          style={{ marginTop: 16, color: colors.textSecondary }}
+        >
           Cargando directrices de interacción...
         </ThemedText>
       </View>
@@ -318,17 +341,22 @@ export function InteractionGuidelinesLayer({
             <View style={styles.sectionHeader}>
               <Ionicons name="list-outline" size={24} color={colors.primary} />
               <ThemedText type="h4" style={styles.sectionTitle}>
-                Directrices Configuradas ({(() => {
+                Directrices Configuradas (
+                {(() => {
                   const filteredGuidelines = searchFilter.trim()
-                    ? guidelines.filter(g => {
+                    ? guidelines.filter((g) => {
                         const searchLower = searchFilter.toLowerCase().trim();
-                        const title = (g.title || '').toLowerCase();
-                        const description = (g.description || '').toLowerCase();
-                        return title.includes(searchLower) || description.includes(searchLower);
+                        const title = (g.title || "").toLowerCase();
+                        const description = (g.description || "").toLowerCase();
+                        return (
+                          title.includes(searchLower) ||
+                          description.includes(searchLower)
+                        );
                       })
                     : guidelines;
                   return filteredGuidelines.length;
-                })()})
+                })()}
+                )
               </ThemedText>
             </View>
 
@@ -336,268 +364,417 @@ export function InteractionGuidelinesLayer({
               {(() => {
                 // Filtrar directrices según el término de búsqueda
                 const filteredGuidelines = searchFilter.trim()
-                  ? guidelines.filter(g => {
+                  ? guidelines.filter((g) => {
                       const searchLower = searchFilter.toLowerCase().trim();
-                      const title = (g.title || '').toLowerCase();
-                      const description = (g.description || '').toLowerCase();
-                      return title.includes(searchLower) || description.includes(searchLower);
+                      const title = (g.title || "").toLowerCase();
+                      const description = (g.description || "").toLowerCase();
+                      return (
+                        title.includes(searchLower) ||
+                        description.includes(searchLower)
+                      );
                     })
                   : guidelines;
-                
-                return filteredGuidelines.map((guideline) => {
-                const isEditing = editingGuidelineId === guideline.id;
-                const formData = isEditing ? editingFormData[guideline.id] : null;
-                const currentStatus = formData?.status ?? guideline.status;
 
-                return (
-                  <Card
-                    key={guideline.id}
-                    variant="outlined"
-                    style={[styles.guidelineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  >
-                    <View style={styles.guidelineHeader}>
-                      <View style={[styles.guidelineTitleRow, isMobile && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
-                        {isEditing ? (
+                return filteredGuidelines.map((guideline) => {
+                  const isEditing = editingGuidelineId === guideline.id;
+                  const formData = isEditing
+                    ? editingFormData[guideline.id]
+                    : null;
+                  const currentStatus = formData?.status ?? guideline.status;
+
+                  return (
+                    <Card
+                      key={guideline.id}
+                      variant="outlined"
+                      style={[
+                        styles.guidelineCard,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                    >
+                      <View style={styles.guidelineHeader}>
+                        <View
+                          style={[
+                            styles.guidelineTitleRow,
+                            isMobile && {
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                              gap: 12,
+                            },
+                          ]}
+                        >
+                          {isEditing ? (
+                            <InputWithFocus
+                              containerStyle={[
+                                styles.titleInputContainer,
+                                {
+                                  backgroundColor: colors.surface,
+                                  borderColor: colors.border,
+                                  flex: 1,
+                                  width: isMobile ? "100%" : undefined,
+                                },
+                              ]}
+                              primaryColor={colors.primary}
+                            >
+                              <TextInput
+                                style={[
+                                  styles.titleInput,
+                                  { color: colors.text },
+                                ]}
+                                placeholder="Título de la directriz"
+                                placeholderTextColor={colors.textSecondary}
+                                value={formData?.title || ""}
+                                onChangeText={(text) =>
+                                  setEditingFormData((prev) => ({
+                                    ...prev,
+                                    [guideline.id]: {
+                                      ...(prev[guideline.id] || {
+                                        title: guideline.title,
+                                        description: guideline.description,
+                                        status: guideline.status,
+                                      }),
+                                      title: text,
+                                    },
+                                  }))
+                                }
+                                editable={!saving}
+                              />
+                            </InputWithFocus>
+                          ) : (
+                            <TouchableOpacity
+                              style={{
+                                flex: 1,
+                                width: isMobile ? "100%" : undefined,
+                              }}
+                              onPress={() => handleTitleClick(guideline)}
+                              activeOpacity={0.7}
+                            >
+                              <ThemedText
+                                type="h4"
+                                style={{ fontWeight: "700", flex: 1 }}
+                              >
+                                {guideline.title}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          )}
+                          <View
+                            style={[
+                              styles.badgeActionsContainer,
+                              isMobile && { width: "100%" },
+                            ]}
+                          >
+                            {isEditing ? (
+                              <>
+                                <ScrollView
+                                  horizontal
+                                  showsHorizontalScrollIndicator={false}
+                                >
+                                  <View style={styles.statusOptionsContainer}>
+                                    {/* Activo */}
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.statusOption,
+                                        { borderColor: colors.border },
+                                        currentStatus ===
+                                          RecordStatus.ACTIVE && {
+                                          backgroundColor: colors.success,
+                                          borderColor: colors.success,
+                                        },
+                                      ]}
+                                      onPress={() => {
+                                        setEditingFormData((prev) => ({
+                                          ...prev,
+                                          [guideline.id]: {
+                                            ...(prev[guideline.id] || {
+                                              title: guideline.title,
+                                              description:
+                                                guideline.description,
+                                              status: guideline.status,
+                                            }),
+                                            status: RecordStatus.ACTIVE,
+                                          },
+                                        }));
+                                      }}
+                                      disabled={saving}
+                                    >
+                                      <ThemedText
+                                        type="caption"
+                                        style={
+                                          currentStatus === RecordStatus.ACTIVE
+                                            ? { color: colors.contrastText }
+                                            : { color: colors.text }
+                                        }
+                                      >
+                                        {t.security?.users?.active || "Activo"}
+                                      </ThemedText>
+                                    </TouchableOpacity>
+
+                                    {/* Inactivo */}
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.statusOption,
+                                        { borderColor: colors.border },
+                                        currentStatus ===
+                                          RecordStatus.INACTIVE && {
+                                          backgroundColor: colors.error,
+                                          borderColor: colors.error,
+                                        },
+                                      ]}
+                                      onPress={() => {
+                                        setEditingFormData((prev) => ({
+                                          ...prev,
+                                          [guideline.id]: {
+                                            ...(prev[guideline.id] || {
+                                              title: guideline.title,
+                                              description:
+                                                guideline.description,
+                                              status: guideline.status,
+                                            }),
+                                            status: RecordStatus.INACTIVE,
+                                          },
+                                        }));
+                                      }}
+                                      disabled={saving}
+                                    >
+                                      <ThemedText
+                                        type="caption"
+                                        style={
+                                          currentStatus ===
+                                          RecordStatus.INACTIVE
+                                            ? { color: colors.contrastText }
+                                            : { color: colors.text }
+                                        }
+                                      >
+                                        {t.security?.users?.inactive ||
+                                          "Inactivo"}
+                                      </ThemedText>
+                                    </TouchableOpacity>
+
+                                    {/* Pendiente */}
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.statusOption,
+                                        { borderColor: colors.border },
+                                        currentStatus ===
+                                          RecordStatus.PENDING && {
+                                          backgroundColor: colors.warning,
+                                          borderColor: colors.warning,
+                                        },
+                                      ]}
+                                      onPress={() => {
+                                        setEditingFormData((prev) => ({
+                                          ...prev,
+                                          [guideline.id]: {
+                                            ...(prev[guideline.id] || {
+                                              title: guideline.title,
+                                              description:
+                                                guideline.description,
+                                              status: guideline.status,
+                                            }),
+                                            status: RecordStatus.PENDING,
+                                          },
+                                        }));
+                                      }}
+                                      disabled={saving}
+                                    >
+                                      <ThemedText
+                                        type="caption"
+                                        style={
+                                          currentStatus === RecordStatus.PENDING
+                                            ? { color: "#FFFFFF" }
+                                            : { color: colors.text }
+                                        }
+                                      >
+                                        {t.security?.users?.pending ||
+                                          "Pendiente"}
+                                      </ThemedText>
+                                    </TouchableOpacity>
+
+                                    {/* Suspendido */}
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.statusOption,
+                                        { borderColor: colors.border },
+                                        currentStatus ===
+                                          RecordStatus.SUSPENDED && {
+                                          backgroundColor: colors.suspended,
+                                          borderColor: colors.suspended,
+                                        },
+                                      ]}
+                                      onPress={() => {
+                                        setEditingFormData((prev) => ({
+                                          ...prev,
+                                          [guideline.id]: {
+                                            ...(prev[guideline.id] || {
+                                              title: guideline.title,
+                                              description:
+                                                guideline.description,
+                                              status: guideline.status,
+                                            }),
+                                            status: RecordStatus.SUSPENDED,
+                                          },
+                                        }));
+                                      }}
+                                      disabled={saving}
+                                    >
+                                      <ThemedText
+                                        type="caption"
+                                        style={
+                                          currentStatus ===
+                                          RecordStatus.SUSPENDED
+                                            ? { color: colors.contrastText }
+                                            : { color: colors.text }
+                                        }
+                                      >
+                                        {t.security?.users?.suspended ||
+                                          "Suspendido"}
+                                      </ThemedText>
+                                    </TouchableOpacity>
+                                  </View>
+                                </ScrollView>
+                                <TouchableOpacity
+                                  style={styles.cancelButton}
+                                  onPress={() => handleCancel(guideline.id)}
+                                  disabled={saving}
+                                >
+                                  <Ionicons
+                                    name="close"
+                                    size={20}
+                                    color={colors.textSecondary}
+                                  />
+                                </TouchableOpacity>
+                              </>
+                            ) : (
+                              <>
+                                <StatusBadge
+                                  status={
+                                    typeof guideline.status === "number"
+                                      ? guideline.status
+                                      : RecordStatus.ACTIVE
+                                  }
+                                  statusDescription={
+                                    typeof guideline.statusDescription ===
+                                      "string" &&
+                                    guideline.statusDescription.trim() !== ""
+                                      ? guideline.statusDescription
+                                      : guideline.status === RecordStatus.ACTIVE
+                                        ? "Activo"
+                                        : guideline.status ===
+                                            RecordStatus.INACTIVE
+                                          ? "Inactivo"
+                                          : guideline.status ===
+                                              RecordStatus.PENDING
+                                            ? "Pendiente"
+                                            : guideline.status ===
+                                                RecordStatus.SUSPENDED
+                                              ? "Suspendido"
+                                              : "Activo"
+                                  }
+                                  size="small"
+                                />
+                                <View style={styles.actionIconsContainer}>
+                                  <Tooltip text="Editar" position="top">
+                                    <TouchableOpacity
+                                      style={styles.actionIconButton}
+                                      onPress={() =>
+                                        handleTitleClick(guideline)
+                                      }
+                                      disabled={saving}
+                                    >
+                                      <Ionicons
+                                        name="pencil"
+                                        size={18}
+                                        color={actionIconColor}
+                                      />
+                                    </TouchableOpacity>
+                                  </Tooltip>
+                                  <Tooltip text="Eliminar" position="top">
+                                    <TouchableOpacity
+                                      style={styles.actionIconButton}
+                                      onPress={() => handleDelete(guideline.id)}
+                                      disabled={saving}
+                                    >
+                                      <Ionicons
+                                        name="trash"
+                                        size={18}
+                                        color={actionIconColor}
+                                      />
+                                    </TouchableOpacity>
+                                  </Tooltip>
+                                </View>
+                              </>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+
+                      {isEditing ? (
+                        <>
                           <InputWithFocus
                             containerStyle={[
-                              styles.titleInputContainer,
+                              styles.textAreaContainer,
                               {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
-                                flex: 1,
-                                width: isMobile ? '100%' : undefined,
                               },
                             ]}
                             primaryColor={colors.primary}
                           >
                             <TextInput
-                              style={[styles.titleInput, { color: colors.text }]}
-                              placeholder="Título de la directriz"
+                              style={[styles.textArea, { color: colors.text }]}
+                              placeholder="Describe la regla o comportamiento que la IA debe seguir..."
                               placeholderTextColor={colors.textSecondary}
-                              value={formData?.title || ''}
-                              onChangeText={(text) => setEditingFormData(prev => ({
-                                ...prev,
-                                [guideline.id]: { ...prev[guideline.id] || { title: guideline.title, description: guideline.description, status: guideline.status }, title: text }
-                              }))}
+                              value={formData?.description || ""}
+                              onChangeText={(text) =>
+                                setEditingFormData((prev) => ({
+                                  ...prev,
+                                  [guideline.id]: {
+                                    ...(prev[guideline.id] || {
+                                      title: guideline.title,
+                                      description: guideline.description,
+                                      status: guideline.status,
+                                    }),
+                                    description: text,
+                                  },
+                                }))
+                              }
+                              multiline
+                              numberOfLines={6}
+                              textAlignVertical="top"
                               editable={!saving}
                             />
                           </InputWithFocus>
-                        ) : (
-                          <TouchableOpacity
-                            style={{ flex: 1, width: isMobile ? '100%' : undefined }}
-                            onPress={() => handleTitleClick(guideline)}
-                            activeOpacity={0.7}
-                          >
-                            <ThemedText type="h4" style={{ fontWeight: '700', flex: 1 }}>
-                              {guideline.title}
-                            </ThemedText>
-                          </TouchableOpacity>
-                        )}
-                        <View style={[styles.badgeActionsContainer, isMobile && { width: '100%' }]}>
-                          {isEditing ? (
-                            <>
-                              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={styles.statusOptionsContainer}>
-                                  {/* Activo */}
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.statusOption,
-                                      { borderColor: colors.border },
-                                      currentStatus === RecordStatus.ACTIVE && {
-                                        backgroundColor: '#10b981',
-                                        borderColor: '#10b981',
-                                      },
-                                    ]}
-                                    onPress={() => {
-                                      setEditingFormData(prev => ({
-                                        ...prev,
-                                        [guideline.id]: { ...prev[guideline.id] || { title: guideline.title, description: guideline.description, status: guideline.status }, status: RecordStatus.ACTIVE }
-                                      }));
-                                    }}
-                                    disabled={saving}
-                                  >
-                                    <ThemedText
-                                      type="caption"
-                                      style={currentStatus === RecordStatus.ACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
-                                    >
-                                      {t.security?.users?.active || 'Activo'}
-                                    </ThemedText>
-                                  </TouchableOpacity>
-
-                                  {/* Inactivo */}
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.statusOption,
-                                      { borderColor: colors.border },
-                                      currentStatus === RecordStatus.INACTIVE && {
-                                        backgroundColor: '#ef4444',
-                                        borderColor: '#ef4444',
-                                      },
-                                    ]}
-                                    onPress={() => {
-                                      setEditingFormData(prev => ({
-                                        ...prev,
-                                        [guideline.id]: { ...prev[guideline.id] || { title: guideline.title, description: guideline.description, status: guideline.status }, status: RecordStatus.INACTIVE }
-                                      }));
-                                    }}
-                                    disabled={saving}
-                                  >
-                                    <ThemedText
-                                      type="caption"
-                                      style={currentStatus === RecordStatus.INACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
-                                    >
-                                      {t.security?.users?.inactive || 'Inactivo'}
-                                    </ThemedText>
-                                  </TouchableOpacity>
-
-                                  {/* Pendiente */}
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.statusOption,
-                                      { borderColor: colors.border },
-                                      currentStatus === RecordStatus.PENDING && {
-                                        backgroundColor: '#f59e0b',
-                                        borderColor: '#f59e0b',
-                                      },
-                                    ]}
-                                    onPress={() => {
-                                      setEditingFormData(prev => ({
-                                        ...prev,
-                                        [guideline.id]: { ...prev[guideline.id] || { title: guideline.title, description: guideline.description, status: guideline.status }, status: RecordStatus.PENDING }
-                                      }));
-                                    }}
-                                    disabled={saving}
-                                  >
-                                    <ThemedText
-                                      type="caption"
-                                      style={currentStatus === RecordStatus.PENDING ? { color: '#FFFFFF' } : { color: colors.text }}
-                                    >
-                                      {t.security?.users?.pending || 'Pendiente'}
-                                    </ThemedText>
-                                  </TouchableOpacity>
-
-                                  {/* Suspendido */}
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.statusOption,
-                                      { borderColor: colors.border },
-                                      currentStatus === RecordStatus.SUSPENDED && {
-                                        backgroundColor: '#f97316',
-                                        borderColor: '#f97316',
-                                      },
-                                    ]}
-                                    onPress={() => {
-                                      setEditingFormData(prev => ({
-                                        ...prev,
-                                        [guideline.id]: { ...prev[guideline.id] || { title: guideline.title, description: guideline.description, status: guideline.status }, status: RecordStatus.SUSPENDED }
-                                      }));
-                                    }}
-                                    disabled={saving}
-                                  >
-                                    <ThemedText
-                                      type="caption"
-                                      style={currentStatus === RecordStatus.SUSPENDED ? { color: '#FFFFFF' } : { color: colors.text }}
-                                    >
-                                      {t.security?.users?.suspended || 'Suspendido'}
-                                    </ThemedText>
-                                  </TouchableOpacity>
-                                </View>
-                              </ScrollView>
-                              <TouchableOpacity
-                                style={styles.cancelButton}
-                                onPress={() => handleCancel(guideline.id)}
-                                disabled={saving}
-                              >
-                                <Ionicons name="close" size={20} color={colors.textSecondary} />
-                              </TouchableOpacity>
-                            </>
-                          ) : (
-                            <>
-                              <StatusBadge
-                                status={typeof guideline.status === 'number' ? guideline.status : RecordStatus.ACTIVE}
-                                statusDescription={
-                                  (typeof guideline.statusDescription === 'string' && guideline.statusDescription.trim() !== '')
-                                    ? guideline.statusDescription 
-                                    : (guideline.status === RecordStatus.ACTIVE ? 'Activo' : 
-                                       guideline.status === RecordStatus.INACTIVE ? 'Inactivo' : 
-                                       guideline.status === RecordStatus.PENDING ? 'Pendiente' : 
-                                       guideline.status === RecordStatus.SUSPENDED ? 'Suspendido' : 'Activo')
-                                }
-                                size="small"
-                              />
-                              <View style={styles.actionIconsContainer}>
-                                <Tooltip text="Editar" position="top">
-                                  <TouchableOpacity
-                                    style={styles.actionIconButton}
-                                    onPress={() => handleTitleClick(guideline)}
-                                    disabled={saving}
-                                  >
-                                    <Ionicons name="pencil" size={18} color={actionIconColor} />
-                                  </TouchableOpacity>
-                                </Tooltip>
-                                <Tooltip text="Eliminar" position="top">
-                                  <TouchableOpacity
-                                    style={styles.actionIconButton}
-                                    onPress={() => handleDelete(guideline.id)}
-                                    disabled={saving}
-                                  >
-                                    <Ionicons name="trash" size={18} color={actionIconColor} />
-                                  </TouchableOpacity>
-                                </Tooltip>
-                              </View>
-                            </>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-
-                    {isEditing ? (
-                      <>
-                        <InputWithFocus
-                          containerStyle={[styles.textAreaContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                          primaryColor={colors.primary}
+                          <View style={styles.formActions}>
+                            <View style={{ flex: 1 }} />
+                            <Button
+                              title="Cancelar"
+                              onPress={() => handleCancel(guideline.id)}
+                              variant="outlined"
+                              size="md"
+                              disabled={saving}
+                            />
+                            <Button
+                              title="Aceptar"
+                              onPress={() => handleSave(guideline.id)}
+                              variant="primary"
+                              size="md"
+                              disabled={saving}
+                            />
+                          </View>
+                        </>
+                      ) : (
+                        <ThemedText
+                          type="body2"
+                          style={{ color: colors.text, marginTop: 12 }}
                         >
-                          <TextInput
-                            style={[styles.textArea, { color: colors.text }]}
-                            placeholder="Describe la regla o comportamiento que la IA debe seguir..."
-                            placeholderTextColor={colors.textSecondary}
-                            value={formData?.description || ''}
-                            onChangeText={(text) => setEditingFormData(prev => ({
-                              ...prev,
-                              [guideline.id]: { ...prev[guideline.id] || { title: guideline.title, description: guideline.description, status: guideline.status }, description: text }
-                            }))}
-                            multiline
-                            numberOfLines={6}
-                            textAlignVertical="top"
-                            editable={!saving}
-                          />
-                        </InputWithFocus>
-                        <View style={styles.formActions}>
-                          <View style={{ flex: 1 }} />
-                          <Button
-                            title="Cancelar"
-                            onPress={() => handleCancel(guideline.id)}
-                            variant="outlined"
-                            size="md"
-                            disabled={saving}
-                          />
-                          <Button
-                            title="Aceptar"
-                            onPress={() => handleSave(guideline.id)}
-                            variant="primary"
-                            size="md"
-                            disabled={saving}
-                          />
-                        </View>
-                      </>
-                    ) : (
-                      <ThemedText type="body2" style={{ color: colors.text, marginTop: 12 }}>
-                        {guideline.description}
-                      </ThemedText>
-                    )}
-                  </Card>
-                );
-              });
+                          {guideline.description}
+                        </ThemedText>
+                      )}
+                    </Card>
+                  );
+                });
               })()}
             </View>
           </Card>
@@ -607,8 +784,22 @@ export function InteractionGuidelinesLayer({
         {showNewForm ? (
           <Card variant="outlined" style={styles.accordionCard}>
             <View style={styles.guidelineHeader}>
-              <View style={[styles.guidelineTitleRow, isMobile && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
-                <Ionicons name="add-circle-outline" size={24} color={colors.primary} style={{ marginRight: 8 }} />
+              <View
+                style={[
+                  styles.guidelineTitleRow,
+                  isMobile && {
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 12,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="add-circle-outline"
+                  size={24}
+                  color={colors.primary}
+                  style={{ marginRight: 8 }}
+                />
                 <InputWithFocus
                   containerStyle={[
                     styles.titleInputContainer,
@@ -616,7 +807,7 @@ export function InteractionGuidelinesLayer({
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
                       flex: 1,
-                      width: isMobile ? '100%' : undefined,
+                      width: isMobile ? "100%" : undefined,
                     },
                   ]}
                   primaryColor={colors.primary}
@@ -626,11 +817,18 @@ export function InteractionGuidelinesLayer({
                     placeholder="Nueva Directriz"
                     placeholderTextColor={colors.textSecondary}
                     value={newFormData.title}
-                    onChangeText={(text) => setNewFormData(prev => ({ ...prev, title: text }))}
+                    onChangeText={(text) =>
+                      setNewFormData((prev) => ({ ...prev, title: text }))
+                    }
                     editable={!saving}
                   />
                 </InputWithFocus>
-                <View style={[styles.badgeActionsContainer, isMobile && { width: '100%' }]}>
+                <View
+                  style={[
+                    styles.badgeActionsContainer,
+                    isMobile && { width: "100%" },
+                  ]}
+                >
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={styles.statusOptionsContainer}>
                       {/* Activo */}
@@ -639,18 +837,27 @@ export function InteractionGuidelinesLayer({
                           styles.statusOption,
                           { borderColor: colors.border },
                           newFormData.status === RecordStatus.ACTIVE && {
-                            backgroundColor: '#10b981',
-                            borderColor: '#10b981',
+                            backgroundColor: colors.success,
+                            borderColor: colors.success,
                           },
                         ]}
-                        onPress={() => setNewFormData(prev => ({ ...prev, status: RecordStatus.ACTIVE }))}
+                        onPress={() =>
+                          setNewFormData((prev) => ({
+                            ...prev,
+                            status: RecordStatus.ACTIVE,
+                          }))
+                        }
                         disabled={saving}
                       >
                         <ThemedText
                           type="caption"
-                          style={newFormData.status === RecordStatus.ACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                          style={
+                            newFormData.status === RecordStatus.ACTIVE
+                              ? { color: colors.contrastText }
+                              : { color: colors.text }
+                          }
                         >
-                          {t.security?.users?.active || 'Activo'}
+                          {t.security?.users?.active || "Activo"}
                         </ThemedText>
                       </TouchableOpacity>
 
@@ -660,18 +867,27 @@ export function InteractionGuidelinesLayer({
                           styles.statusOption,
                           { borderColor: colors.border },
                           newFormData.status === RecordStatus.INACTIVE && {
-                            backgroundColor: '#ef4444',
-                            borderColor: '#ef4444',
+                            backgroundColor: colors.error,
+                            borderColor: colors.error,
                           },
                         ]}
-                        onPress={() => setNewFormData(prev => ({ ...prev, status: RecordStatus.INACTIVE }))}
+                        onPress={() =>
+                          setNewFormData((prev) => ({
+                            ...prev,
+                            status: RecordStatus.INACTIVE,
+                          }))
+                        }
                         disabled={saving}
                       >
                         <ThemedText
                           type="caption"
-                          style={newFormData.status === RecordStatus.INACTIVE ? { color: '#FFFFFF' } : { color: colors.text }}
+                          style={
+                            newFormData.status === RecordStatus.INACTIVE
+                              ? { color: colors.contrastText }
+                              : { color: colors.text }
+                          }
                         >
-                          {t.security?.users?.inactive || 'Inactivo'}
+                          {t.security?.users?.inactive || "Inactivo"}
                         </ThemedText>
                       </TouchableOpacity>
 
@@ -681,18 +897,27 @@ export function InteractionGuidelinesLayer({
                           styles.statusOption,
                           { borderColor: colors.border },
                           newFormData.status === RecordStatus.PENDING && {
-                            backgroundColor: '#f59e0b',
-                            borderColor: '#f59e0b',
+                            backgroundColor: colors.warning,
+                            borderColor: colors.warning,
                           },
                         ]}
-                        onPress={() => setNewFormData(prev => ({ ...prev, status: RecordStatus.PENDING }))}
+                        onPress={() =>
+                          setNewFormData((prev) => ({
+                            ...prev,
+                            status: RecordStatus.PENDING,
+                          }))
+                        }
                         disabled={saving}
                       >
                         <ThemedText
                           type="caption"
-                          style={newFormData.status === RecordStatus.PENDING ? { color: '#FFFFFF' } : { color: colors.text }}
+                          style={
+                            newFormData.status === RecordStatus.PENDING
+                              ? { color: colors.contrastText }
+                              : { color: colors.text }
+                          }
                         >
-                          {t.security?.users?.pending || 'Pendiente'}
+                          {t.security?.users?.pending || "Pendiente"}
                         </ThemedText>
                       </TouchableOpacity>
 
@@ -702,18 +927,27 @@ export function InteractionGuidelinesLayer({
                           styles.statusOption,
                           { borderColor: colors.border },
                           newFormData.status === RecordStatus.SUSPENDED && {
-                            backgroundColor: '#f97316',
-                            borderColor: '#f97316',
+                            backgroundColor: colors.suspended,
+                            borderColor: colors.suspended,
                           },
                         ]}
-                        onPress={() => setNewFormData(prev => ({ ...prev, status: RecordStatus.SUSPENDED }))}
+                        onPress={() =>
+                          setNewFormData((prev) => ({
+                            ...prev,
+                            status: RecordStatus.SUSPENDED,
+                          }))
+                        }
                         disabled={saving}
                       >
                         <ThemedText
                           type="caption"
-                          style={newFormData.status === RecordStatus.SUSPENDED ? { color: '#FFFFFF' } : { color: colors.text }}
+                          style={
+                            newFormData.status === RecordStatus.SUSPENDED
+                              ? { color: colors.contrastText }
+                              : { color: colors.text }
+                          }
                         >
-                          {t.security?.users?.suspended || 'Suspendido'}
+                          {t.security?.users?.suspended || "Suspendido"}
                         </ThemedText>
                       </TouchableOpacity>
                     </View>
@@ -722,18 +956,29 @@ export function InteractionGuidelinesLayer({
                     style={styles.cancelButton}
                     onPress={() => {
                       setShowNewForm(false);
-                      setNewFormData({ title: '', description: '', status: RecordStatus.PENDING });
+                      setNewFormData({
+                        title: "",
+                        description: "",
+                        status: RecordStatus.PENDING,
+                      });
                     }}
                     disabled={saving}
                   >
-                    <Ionicons name="close" size={20} color={colors.textSecondary} />
+                    <Ionicons
+                      name="close"
+                      size={20}
+                      color={colors.textSecondary}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
 
             <InputWithFocus
-              containerStyle={[styles.textAreaContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              containerStyle={[
+                styles.textAreaContainer,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               primaryColor={colors.primary}
             >
               <TextInput
@@ -741,7 +986,9 @@ export function InteractionGuidelinesLayer({
                 placeholder="Describe la regla o comportamiento que la IA debe seguir..."
                 placeholderTextColor={colors.textSecondary}
                 value={newFormData.description}
-                onChangeText={(text) => setNewFormData(prev => ({ ...prev, description: text }))}
+                onChangeText={(text) =>
+                  setNewFormData((prev) => ({ ...prev, description: text }))
+                }
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
@@ -755,7 +1002,11 @@ export function InteractionGuidelinesLayer({
                 title="Cancelar"
                 onPress={() => {
                   setShowNewForm(false);
-                  setNewFormData({ title: '', description: '', status: RecordStatus.PENDING });
+                  setNewFormData({
+                    title: "",
+                    description: "",
+                    status: RecordStatus.PENDING,
+                  });
                 }}
                 variant="outlined"
                 size="md"
@@ -780,10 +1031,23 @@ export function InteractionGuidelinesLayer({
               style={styles.addButton}
               disabled={saving}
             >
-              <Ionicons name="add-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Ionicons
+                name="add-outline"
+                size={20}
+                color={colors.contrastText}
+                style={{ marginRight: 8 }}
+              />
             </Button>
-            <ThemedText type="body2" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-              Agrega directrices para definir cómo debe comportarse la IA al interactuar con los clientes
+            <ThemedText
+              type="body2"
+              style={{
+                color: colors.textSecondary,
+                marginTop: 12,
+                textAlign: "center",
+              }}
+            >
+              Agrega directrices para definir cómo debe comportarse la IA al
+              interactuar con los clientes
             </ThemedText>
           </Card>
         )}
@@ -791,7 +1055,9 @@ export function InteractionGuidelinesLayer({
         {/* Botones Continuar y Omitir - siempre visibles */}
         <View style={styles.continueButtons}>
           <Button
-            title={guidelines.length > 0 || isCompleted ? "Continuar" : "Omitir"}
+            title={
+              guidelines.length > 0 || isCompleted ? "Continuar" : "Omitir"
+            }
             onPress={() => {
               if (guidelines.length > 0 || isCompleted) {
                 onComplete?.(true);
@@ -804,10 +1070,20 @@ export function InteractionGuidelinesLayer({
             disabled={saving || showNewForm || editingGuidelineId !== null}
             style={styles.continueButton}
           >
-            {(guidelines.length > 0 || isCompleted) ? (
-              <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            {guidelines.length > 0 || isCompleted ? (
+              <Ionicons
+                name="arrow-forward-outline"
+                size={20}
+                color={colors.contrastText}
+                style={{ marginRight: 8 }}
+              />
             ) : (
-              <DynamicIcon name="MaterialCommunityIcons.skip-forward-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <DynamicIcon
+                name="MaterialCommunityIcons.skip-forward-outline"
+                size={20}
+                color={colors.contrastText}
+                style={{ marginRight: 8 }}
+              />
             )}
           </Button>
           {guidelines.length > 0 && onSkip && !isCompleted && (
@@ -816,12 +1092,17 @@ export function InteractionGuidelinesLayer({
               onPress={() => {
                 onSkip?.();
               }}
-                variant="outlined"
-                size="lg"
-                disabled={saving || showNewForm || editingGuidelineId !== null}
+              variant="outlined"
+              size="lg"
+              disabled={saving || showNewForm || editingGuidelineId !== null}
               style={styles.skipButton}
             >
-              <DynamicIcon name="MaterialCommunityIcons.skip-forward-outline" size={20} color={colors.text} style={{ marginRight: 8 }} />
+              <DynamicIcon
+                name="MaterialCommunityIcons.skip-forward-outline"
+                size={20}
+                color={colors.text}
+                style={{ marginRight: 8 }}
+              />
             </Button>
           )}
         </View>
@@ -836,17 +1117,17 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   formContainer: {
     gap: 8,
   },
   infoCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   infoContent: {
     flex: 1,
@@ -859,23 +1140,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   sectionTitle: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   titleHeaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 16,
   },
   titleInputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 8,
@@ -885,7 +1166,7 @@ const styles = StyleSheet.create({
   titleInput: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     padding: 0,
   },
   listContainer: {
@@ -899,9 +1180,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   guidelineTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   badge: {
@@ -910,13 +1191,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeActionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   actionIconsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   actionIconButton: {
@@ -929,9 +1210,9 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   statusOptionsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statusOption: {
     paddingHorizontal: 12,
@@ -940,7 +1221,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   selectOptions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   selectOption: {
@@ -949,29 +1230,29 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     minHeight: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   formCard: {
     padding: 16,
     gap: 16,
   },
   formWrapper: {
-    width: '100%',
+    width: "100%",
   },
   accordionCard: {
     padding: 16,
     marginTop: 8,
     marginBottom: 8,
     gap: 16,
-    width: '100%',
+    width: "100%",
   },
   inputGroup: {
     marginBottom: 16,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 8,
@@ -985,7 +1266,7 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   textAreaContainer: {
     borderWidth: 1,
@@ -997,39 +1278,38 @@ const styles = StyleSheet.create({
   textArea: {
     fontSize: 16,
     minHeight: 60,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 16,
   },
   formActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   addCard: {
     padding: 20,
     paddingLeft: 0,
     paddingRight: 0,
-    alignItems: 'center',
+    alignItems: "center",
   },
   addButton: {
-    width: '100%',
+    width: "100%",
   },
   continueButtons: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 12,
     marginTop: 24,
-    width: '100%',
+    width: "100%",
   },
   continueButton: {
-    width: '100%',
+    width: "100%",
   },
   skipButton: {
-    width: '100%',
+    width: "100%",
   },
 });
-

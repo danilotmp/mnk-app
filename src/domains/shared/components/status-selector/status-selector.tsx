@@ -6,23 +6,24 @@
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/src/infrastructure/i18n';
+import { RecordStatus, getStatusColor } from '@/src/domains/shared/types/status.types';
 import React from 'react';
 import { ScrollView, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { createStatusSelectorStyles } from './status-selector.styles';
 import type { StatusOption, StatusSelectorProps } from './status-selector.types';
 
-// Opciones por defecto
-const DEFAULT_OPTIONS: StatusOption[] = [
-  { value: 1, label: 'Activo', color: '#10b981' }, // Verde
-  { value: 0, label: 'Inactivo', color: '#ef4444' }, // Rojo
-  { value: 2, label: 'Pendiente', color: '#f59e0b' }, // Amarillo/Naranja
-  { value: 3, label: 'Suspendido', color: '#f97316' }, // Naranja
+// Opciones por defecto (sin colores hardcoded - se obtienen del theme)
+const DEFAULT_OPTIONS: Omit<StatusOption, 'color'>[] = [
+  { value: RecordStatus.ACTIVE, label: 'Activo' },
+  { value: RecordStatus.INACTIVE, label: 'Inactivo' },
+  { value: RecordStatus.PENDING, label: 'Pendiente' },
+  { value: RecordStatus.SUSPENDED, label: 'Suspendido' },
 ];
 
 // Opciones simples (solo Activo e Inactivo)
-const SIMPLE_OPTIONS: StatusOption[] = [
-  { value: 1, label: 'Activo', color: '#10b981' },
-  { value: 0, label: 'Inactivo', color: '#ef4444' },
+const SIMPLE_OPTIONS: Omit<StatusOption, 'color'>[] = [
+  { value: RecordStatus.ACTIVE, label: 'Activo' },
+  { value: RecordStatus.INACTIVE, label: 'Inactivo' },
 ];
 
 export function StatusSelector({
@@ -40,8 +41,12 @@ export function StatusSelector({
   const { t } = useTranslation();
   const styles = createStatusSelectorStyles();
 
-  // Determinar qué opciones usar
-  const statusOptions: StatusOption[] = options || (simple ? SIMPLE_OPTIONS : DEFAULT_OPTIONS);
+  // Determinar qué opciones usar y añadir colores del theme
+  const baseOptions = options || (simple ? SIMPLE_OPTIONS : DEFAULT_OPTIONS);
+  const statusOptions: StatusOption[] = baseOptions.map((opt) => ({
+    ...opt,
+    color: opt.color || getStatusColor(opt.value, colors),
+  }));
 
   // Mapear labels con traducciones
   const getLabel = (optionValue: number, defaultLabel: string): string => {
@@ -98,7 +103,7 @@ export function StatusSelector({
                   type="caption"
                   style={[
                     styles.optionText,
-                    isSelected ? { color: '#FFFFFF' } : { color: colors.text },
+                    isSelected ? { color: colors.contrastText } : { color: colors.text },
                   ]}
                 >
                   {getLabel(option.value, option.label)}

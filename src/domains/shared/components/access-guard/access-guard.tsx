@@ -1,39 +1,40 @@
 /**
  * Componente para controlar el acceso basado en permisos
- * 
+ *
  * Ejemplos de uso:
- * 
+ *
  * // Permiso único
  * <AccessGuard permission="users.view">
  *   <UsersList />
  * </AccessGuard>
- * 
+ *
  * // Todos los permisos requeridos
  * <AccessGuard permissions={["users.view", "users.edit"]}>
  *   <UserForm />
  * </AccessGuard>
- * 
+ *
  * // Al menos un permiso
  * <AccessGuard anyPermission={["admin.view", "superadmin.view"]}>
  *   <AdminPanel />
  * </AccessGuard>
- * 
+ *
  * // Por módulo y acción
  * <AccessGuard moduleAccess={{ module: "admin", action: "view" }}>
  *   <AdminDashboard />
  * </AccessGuard>
- * 
+ *
  * // Con fallback personalizado
  * <AccessGuard permission="premium.feature" fallback={<UpgradePrompt />}>
  *   <PremiumFeature />
  * </AccessGuard>
  */
 
-import { ThemedText } from '@/components/themed-text';
-import React from 'react';
-import { View } from 'react-native';
-import { usePermissions } from '../../hooks/use-multi-company.hook';
-import { AccessGuardProps } from './access-guard.types';
+import { ThemedText } from "@/components/themed-text";
+import React from "react";
+import { View } from "react-native";
+import { usePermissions } from "../../hooks/use-multi-company.hook";
+import { accessGuardStyles } from "./access-guard.styles";
+import { AccessGuardProps } from "./access-guard.types";
 
 export function AccessGuard({
   children,
@@ -53,22 +54,25 @@ export function AccessGuard({
 
   // Verificar permiso único
   if (permission && !hasPermission(permission)) {
-    return hideOnDenied ? null : (fallback || <AccessDenied />);
+    return hideOnDenied ? null : fallback || <AccessDenied />;
   }
 
   // Verificar todos los permisos
   if (permissions && !hasAllPermissions(permissions)) {
-    return hideOnDenied ? null : (fallback || <AccessDenied />);
+    return hideOnDenied ? null : fallback || <AccessDenied />;
   }
 
   // Verificar al menos un permiso
   if (anyPermission && !hasAnyPermission(anyPermission)) {
-    return hideOnDenied ? null : (fallback || <AccessDenied />);
+    return hideOnDenied ? null : fallback || <AccessDenied />;
   }
 
   // Verificar acceso por módulo y acción
-  if (moduleAccess && !hasModuleAccess(moduleAccess.module, moduleAccess.action)) {
-    return hideOnDenied ? null : (fallback || <AccessDenied />);
+  if (
+    moduleAccess &&
+    !hasModuleAccess(moduleAccess.module, moduleAccess.action)
+  ) {
+    return hideOnDenied ? null : fallback || <AccessDenied />;
   }
 
   // Si pasa todas las validaciones, mostrar el contenido
@@ -80,14 +84,17 @@ export function AccessGuard({
  */
 function AccessDenied() {
   return (
-    <View style={{ padding: 20, alignItems: 'center' }}>
+    <View style={accessGuardStyles.deniedContainer}>
       <ThemedText type="h4" variant="secondary">
         Acceso Denegado
       </ThemedText>
-      <ThemedText type="body2" variant="secondary" style={{ marginTop: 8 }}>
+      <ThemedText
+        type="body2"
+        variant="secondary"
+        style={accessGuardStyles.deniedMessage}
+      >
         No tienes permisos para ver este contenido
       </ThemedText>
     </View>
   );
 }
-

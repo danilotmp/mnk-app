@@ -357,7 +357,7 @@ export function MainLayout({
           styles.companyDropdown,
           styles.companyDropdownDesktop,
           {
-            backgroundColor: colors.background,
+            backgroundColor: colors.surfaceMid || colors.background,
             borderColor: isDark ? colors.surface : colors.border,
             ...shadows.lg,
           },
@@ -365,7 +365,7 @@ export function MainLayout({
       : [
           styles.companyDropdown,
           {
-            backgroundColor: colors.background,
+            backgroundColor: colors.surfaceMid || colors.background,
             borderColor: colors.border,
             width: titleWidth,
             ...shadows.lg,
@@ -483,7 +483,9 @@ export function MainLayout({
           style={[
             styles.companyDropdownArrow,
             styles.companyDropdownArrowInner,
-            { borderBottomColor: colors.background },
+            {
+              borderBottomColor: colors.surfaceMid || colors.background,
+            },
           ]}
         />
         {availableCompanies.map((companyInfo) => {
@@ -514,7 +516,7 @@ export function MainLayout({
           style={[
             styles.unifiedHeader,
             {
-              backgroundColor: colors.background,
+              backgroundColor: colors.surfaceVariant,
               borderBottomColor: colors.border,
               paddingLeft: isMobile ? 16 : 0, // Padding izquierdo solo en móvil
               paddingRight: isMobile ? 4 : undefined, // Menos padding derecho en móvil para acercar el botón hamburguesa al borde

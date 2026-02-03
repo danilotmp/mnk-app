@@ -2,22 +2,16 @@
  * Componente selector de idioma
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import {
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { useLanguage } from './language.context';
-import { useTranslation } from './use-translation';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { Modal, Pressable, TouchableOpacity, View } from "react-native";
+import { languageSelectorStyles } from "./language-selector.styles";
+import { useLanguage } from "./language.context";
+import { useTranslation } from "./use-translation";
 
 export function LanguageSelector() {
   const { colors } = useTheme();
@@ -26,9 +20,11 @@ export function LanguageSelector() {
   const [modalVisible, setModalVisible] = useState(false);
   const { t } = useTranslation();
 
-  const currentLanguage = availableLanguages.find((lang) => lang.code === language);
+  const currentLanguage = availableLanguages.find(
+    (lang) => lang.code === language,
+  );
 
-  const handleSelectLanguage = async (code: 'es' | 'en') => {
+  const handleSelectLanguage = async (code: "es" | "en") => {
     await setLanguage(code);
     setModalVisible(false);
   };
@@ -37,20 +33,20 @@ export function LanguageSelector() {
     <>
       <TouchableOpacity
         style={[
-          styles.button,
+          languageSelectorStyles.button,
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
           },
-          isMobile && styles.mobileButton
+          isMobile && languageSelectorStyles.mobileButton,
         ]}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.7}
         accessibilityLabel={`Idioma actual: ${currentLanguage?.name}`}
         accessibilityHint="Toca para cambiar el idioma"
       >
-        <ThemedText style={styles.flagIcon}>
-          {currentLanguage?.flag || '🌐'}
+        <ThemedText style={languageSelectorStyles.flagIcon}>
+          {currentLanguage?.flag || "🌐"}
         </ThemedText>
       </TouchableOpacity>
 
@@ -61,35 +57,55 @@ export function LanguageSelector() {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable
-          style={styles.modalOverlay}
+          style={[
+            languageSelectorStyles.modalOverlay,
+            { backgroundColor: colors.overlay },
+          ]}
           onPress={() => setModalVisible(false)}
         >
           <ThemedView
-            style={[styles.modalContent, { backgroundColor: colors.background }]}
+            style={[
+              languageSelectorStyles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
             onStartShouldSetResponder={() => true}
           >
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View
+              style={[
+                languageSelectorStyles.header,
+                { borderBottomColor: colors.border },
+              ]}
+            >
               <ThemedText type="h3">{t.language.selectLanguage}</ThemedText>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <ThemedText type="h4">✕</ThemedText>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.languagesList}>
+            <View style={languageSelectorStyles.languagesList}>
               {availableLanguages.map((lang) => (
                 <TouchableOpacity
                   key={lang.code}
                   style={[
-                    styles.languageItem,
-                    { backgroundColor: lang.code === language ? colors.surface : 'transparent' },
+                    languageSelectorStyles.languageItem,
+                    {
+                      backgroundColor:
+                        lang.code === language ? colors.surface : "transparent",
+                    },
                   ]}
                   onPress={() => handleSelectLanguage(lang.code)}
                 >
-                  <ThemedText style={styles.languageFlag}>{lang.flag}</ThemedText>
-                  <View style={styles.languageInfo}>
+                  <ThemedText style={languageSelectorStyles.languageFlag}>
+                    {lang.flag}
+                  </ThemedText>
+                  <View style={languageSelectorStyles.languageInfo}>
                     <ThemedText type="defaultSemiBold">{lang.name}</ThemedText>
                     {lang.code === language && (
-                      <Ionicons name="checkmark" size={24} color={colors.primary} />
+                      <Ionicons
+                        name="checkmark"
+                        size={24}
+                        color={colors.primary}
+                      />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -101,74 +117,3 @@ export function LanguageSelector() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mobileButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  flagIcon: {
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '80%',
-    maxWidth: 400,
-    borderRadius: 16,
-    padding: 24,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.25)',
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 5,
-      },
-    }),
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  languagesList: {
-    gap: 8,
-  },
-  languageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    gap: 16,
-  },
-  languageFlag: {
-    fontSize: 32,
-  },
-  languageInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-});
-

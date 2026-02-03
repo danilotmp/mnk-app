@@ -15,7 +15,7 @@ import { BranchSelectorProps } from './branch-selector.types';
 export function BranchSelector({ onBranchChange }: BranchSelectorProps) {
   const { branches, currentBranch, switchBranch, canSwitch, isLoading } = useBranches();
   const { colors } = useTheme();
-  const styles = createBranchSelectorStyles();
+  const styles = createBranchSelectorStyles({ colors });
   const [modalVisible, setModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
 

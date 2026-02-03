@@ -4,24 +4,46 @@
  */
 
 import { StyleSheet } from "react-native";
+import type { DataTableTheme } from "./data-table.types";
 
-export const createDataTableStyles = (isMobile: boolean = false) =>
+const CONTAINER_BASE = {
+  flex: 1,
+  borderRadius: 10,
+  width: "100%",
+  minHeight: 400,
+  padding: 0,
+  paddingHorizontal: 0,
+  paddingTop: 0,
+  paddingBottom: 0,
+} as const;
+
+export const createDataTableStyles = (
+  isMobile: boolean = false,
+  theme?: DataTableTheme,
+) =>
   StyleSheet.create({
     container: {
-      flex: 1,
-      borderRadius: 12,
-      overflow: "hidden",
-      width: "100%",
-      minHeight: 400,
-      padding: 0,
-      paddingHorizontal: 0,
-      paddingTop: 0,
-      paddingBottom: 0,
+      ...CONTAINER_BASE,
+      ...(theme
+        ? {
+            overflow: "visible" as const,
+            borderWidth: 1,
+            borderColor: theme.isDark
+              ? theme.colors.surfaceVariant
+              : theme.colors.borderLight,
+            ...theme.shadows.lg,
+            shadowOffset: { width: 0, height: 0 },
+            shadowRadius: 16,
+            shadowOpacity: theme.isDark ? 0.35 : 0.15,
+            elevation: 8,
+          }
+        : { overflow: "hidden" as const }),
     },
     horizontalScrollContainer: {
       flex: 1,
       width: "100%",
       minHeight: 0, // Permite que el scroll funcione correctamente
+      borderRadius: 10, // Redondear esquinas del scroll para que respeten el borderRadius del contenedor
     },
     horizontalScrollContent: {
       minWidth: "100%",
@@ -31,6 +53,8 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       flex: 1,
       minWidth: "100%",
       minHeight: 0, // Permite que el scroll funcione correctamente
+      borderRadius: 10, // Redondear esquinas internas para que respeten el borderRadius del contenedor
+      overflow: "hidden", // Clippear contenido interno pero permitir sombra en el Card padre
     },
     loadingContainer: {
       padding: 40,
@@ -50,6 +74,8 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
     },
     header: {
       borderBottomWidth: 1,
+      borderTopLeftRadius: 10, // Redondear esquinas superiores para respetar el borderRadius del contenedor
+      borderTopRightRadius: 10,
       zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
     },
     headerRow: {
@@ -88,7 +114,7 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       width: "100%",
     },
     stripedRow: {
-      backgroundColor: "rgba(0, 0, 0, 0.02)",
+      backgroundColor: theme?.colors.stripedRow || "rgba(0, 0, 0, 0.02)",
     },
     cell: {
       paddingVertical: 12,
@@ -122,6 +148,8 @@ export const createDataTableStyles = (isMobile: boolean = false) =>
       padding: isMobile ? 8 : 16,
       paddingHorizontal: isMobile ? 8 : 16,
       borderTopWidth: 1,
+      borderBottomLeftRadius: 10, // Redondear esquinas inferiores para respetar el borderRadius del contenedor
+      borderBottomRightRadius: 10,
       gap: isMobile ? 8 : 16,
       flexShrink: 0,
     },

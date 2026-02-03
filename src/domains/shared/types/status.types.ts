@@ -19,17 +19,6 @@ export interface EntityWithStatus {
 }
 
 /**
- * Configuración de colores para estados
- */
-export const STATUS_COLORS: Record<number, string> = {
-  [RecordStatus.DELETED]: '#6b7280',    // gray-500
-  [RecordStatus.INACTIVE]: '#ef4444',   // red-500
-  [RecordStatus.ACTIVE]: '#10b981',     // green-500
-  [RecordStatus.PENDING]: '#f59e0b',    // amber-500
-  [RecordStatus.SUSPENDED]: '#f97316',  // orange-500
-};
-
-/**
  * Configuración de iconos para estados
  */
 export const STATUS_ICONS: Record<number, string> = {
@@ -41,10 +30,53 @@ export const STATUS_ICONS: Record<number, string> = {
 };
 
 /**
- * Helper para obtener color del estado
+ * Interfaz para los colores del theme relacionados con estados
  */
-export const getStatusColor = (status: number): string => {
-  return STATUS_COLORS[status] ?? '#9ca3af'; // gray-400 por defecto
+export interface StatusThemeColors {
+  success: string;    // ACTIVE
+  error: string;       // INACTIVE
+  warning: string;    // PENDING
+  suspended: string;  // SUSPENDED
+  deleted?: string;   // DELETED (opcional, fallback a textSecondary)
+  textSecondary?: string; // Fallback para DELETED si no existe deleted
+}
+
+/**
+ * Helper para obtener color del estado desde el theme
+ * @param status - Estado del registro (RecordStatus)
+ * @param colors - Colores del theme (de useTheme().colors)
+ * @returns Color hexadecimal del estado
+ */
+export const getStatusColor = (
+  status: number,
+  colors: StatusThemeColors,
+): string => {
+  switch (status) {
+    case RecordStatus.ACTIVE:
+      return colors.success;
+    case RecordStatus.INACTIVE:
+      return colors.error;
+    case RecordStatus.PENDING:
+      return colors.warning;
+    case RecordStatus.SUSPENDED:
+      return colors.suspended;
+    case RecordStatus.DELETED:
+      return colors.deleted ?? colors.textSecondary ?? '#9ca3af';
+    default:
+      return colors.textSecondary ?? '#9ca3af';
+  }
+};
+
+/**
+ * @deprecated Usar getStatusColor(status, colors) en su lugar
+ * Mantenido solo para compatibilidad temporal
+ */
+export const STATUS_COLORS: Record<number, string> = {
+  [RecordStatus.DELETED]: '#6b7280',
+  [RecordStatus.INACTIVE]: '#ef4444',
+  [RecordStatus.ACTIVE]: '#10b981',
+  [RecordStatus.PENDING]: '#f59e0b',
+  [RecordStatus.SUSPENDED]: '#f97316',
 };
 
 /**

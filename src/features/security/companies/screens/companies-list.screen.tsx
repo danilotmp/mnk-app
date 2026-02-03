@@ -542,7 +542,7 @@ export function CompaniesListScreen() {
               <Ionicons
                 name="add"
                 size={20}
-                color="#FFFFFF"
+                color={colors.contrastText}
                 style={!isMobile ? { marginRight: spacing.sm } : undefined}
               />
             </Button>

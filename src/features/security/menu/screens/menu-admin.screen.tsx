@@ -23,20 +23,20 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import { openBrowserAsync } from "expo-web-browser";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Modal,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { MenuAdminColumn, MenuAdminFormData, MenuAdminItem } from "../types";
 import { createMenuAdminStyles } from "./menu-admin.screen.styles";
@@ -2658,7 +2658,11 @@ export function MenuAdminScreen() {
                       }
                     }}
                   >
-                    <Ionicons name="open-outline" size={20} color="#FFFFFF" />
+                    <Ionicons
+                      name="open-outline"
+                      size={20}
+                      color={colors.contrastText}
+                    />
                   </TouchableOpacity>
                 </View>
                 {validationErrors.icon && (
@@ -2855,8 +2859,8 @@ export function MenuAdminScreen() {
                         styles.selectOption,
                         { borderColor: colors.border },
                         formData.status === 1 && {
-                          backgroundColor: "#10b981",
-                          borderColor: "#10b981",
+                          backgroundColor: colors.success,
+                          borderColor: colors.success,
                         },
                       ]}
                       onPress={() => {
@@ -2873,7 +2877,7 @@ export function MenuAdminScreen() {
                         type="caption"
                         style={
                           formData.status === 1
-                            ? { color: "#FFFFFF" }
+                            ? { color: colors.contrastText }
                             : { color: colors.text }
                         }
                       >
@@ -2887,8 +2891,8 @@ export function MenuAdminScreen() {
                         styles.selectOption,
                         { borderColor: colors.border },
                         formData.status === 0 && {
-                          backgroundColor: "#ef4444",
-                          borderColor: "#ef4444",
+                          backgroundColor: colors.error,
+                          borderColor: colors.error,
                         },
                       ]}
                       onPress={() => {
@@ -2905,7 +2909,7 @@ export function MenuAdminScreen() {
                         type="caption"
                         style={[
                           formData.status === 0
-                            ? { color: "#FFFFFF" }
+                            ? { color: colors.contrastText }
                             : { color: colors.text },
                           { fontSize: 12 },
                         ]}
@@ -2920,8 +2924,8 @@ export function MenuAdminScreen() {
                         styles.selectOption,
                         { borderColor: colors.border },
                         formData.status === 2 && {
-                          backgroundColor: "#f59e0b",
-                          borderColor: "#f59e0b",
+                          backgroundColor: colors.warning,
+                          borderColor: colors.warning,
                         },
                       ]}
                       onPress={() => {
@@ -2938,7 +2942,7 @@ export function MenuAdminScreen() {
                         type="caption"
                         style={[
                           formData.status === 2
-                            ? { color: "#FFFFFF" }
+                            ? { color: colors.contrastText }
                             : { color: colors.text },
                           { fontSize: 12 },
                         ]}
@@ -2953,8 +2957,8 @@ export function MenuAdminScreen() {
                         styles.selectOption,
                         { borderColor: colors.border },
                         formData.status === -1 && {
-                          backgroundColor: "#6b7280",
-                          borderColor: "#6b7280",
+                          backgroundColor: colors.textSecondary,
+                          borderColor: colors.textSecondary,
                         },
                       ]}
                       onPress={() => {
@@ -2971,7 +2975,7 @@ export function MenuAdminScreen() {
                         type="caption"
                         style={[
                           formData.status === -1
-                            ? { color: "#FFFFFF" }
+                            ? { color: colors.contrastText }
                             : { color: colors.text },
                           { fontSize: 12 },
                         ]}
@@ -3547,11 +3551,13 @@ export function MenuAdminScreen() {
                 <Ionicons
                   name="add"
                   size={20}
-                  color="#FFFFFF"
+                  color={colors.contrastText}
                   style={!isMobile ? { marginRight: spacing.sm } : undefined}
                 />
                 {!isMobile && (
-                  <ThemedText style={{ color: "#FFFFFF", fontWeight: "500" }}>
+                  <ThemedText
+                    style={{ color: colors.contrastText, fontWeight: "500" }}
+                  >
                     {menuAdminTranslations.newItem || "Nuevo Item"}
                   </ThemedText>
                 )}
@@ -3639,7 +3645,7 @@ export function MenuAdminScreen() {
                 {savingChanges && (
                   <ActivityIndicator
                     size="small"
-                    color="#FFFFFF"
+                    color={colors.contrastText}
                     style={{ marginRight: spacing.sm }}
                   />
                 )}
@@ -3662,7 +3668,7 @@ export function MenuAdminScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: colors.overlay,
             justifyContent: "center",
             alignItems: "center",
             padding: 20,

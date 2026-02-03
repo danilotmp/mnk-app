@@ -85,6 +85,7 @@ export const LightTheme = {
     background: "#FFFFFF",
     surface: "#f8f9fa", // rgb(248, 249, 250) - Color del botón de tema
     surfaceVariant: BrandColors.gray[100],
+    surfaceMid: "#F5F7F8", // Color intermedio entre background y surfaceVariant (para header/footer de tabla)
 
     // Colores de texto
     text: "#1e2538", // rgb(30, 41, 59) - Color oscuro para modo claro
@@ -96,11 +97,17 @@ export const LightTheme = {
     border: BrandColors.gray[300], // Cambiado de gray[200] a gray[300] para mejor visibilidad
     borderLight: BrandColors.gray[200],
 
-    // Colores de estado
-    success: BrandColors.status.success,
-    warning: BrandColors.status.warning,
-    error: BrandColors.status.error,
+    // Colores de estado - alineados con uso en código
+    success: "#10b981", // Verde para ACTIVE
+    warning: "#f59e0b", // Amarillo para PENDING
+    error: "#ef4444", // Rojo para INACTIVE
     info: BrandColors.status.info,
+    suspended: "#f97316", // Naranja para SUSPENDED
+    deleted: "#6b7280", // Gris para DELETED
+
+    // Texto sobre botones de color (primary/success/error)
+    contrastText: "#FFFFFF",
+    overlay: "rgba(0, 0, 0, 0.5)",
 
     // Colores de navegación
     tabIconDefault: BrandColors.gray[500],
@@ -149,45 +156,73 @@ export const LightTheme = {
   },
 };
 
-// Tema oscuro - Inspirado en Hapi Trade
+// ─── Paleta Dark: única fuente de valores hex/rgba para el tema oscuro.
+// Cada color se define una vez; los colores semánticos (colors.xxx) referencian esta paleta.
+// Así se puede cambiar un uso (p. ej. botón) sin afectar otro (p. ej. icono) y cada tema es independiente.
+const DarkPalette = {
+  primary: "#0087FF",
+  primaryLight: "#7ee0ff",
+  primaryDark: "#00a8cc",
+  secondary: "#00d4aa",
+  secondaryLight: "#33e0bb",
+  accent: "#4dd4ff",
+  background: "#1e2538",
+  surface: "rgba(188,197,239,.2)",
+  surfaceVariant: "#151b2e",
+  surfaceMid: "#1a1f33", // Color intermedio entre background y surfaceVariant (para header/footer de tabla)
+  border: "#1e2538",
+  borderLight: "#2a3142",
+  text: "#ffffff",
+  textSecondary: "#a0a8c1",
+  textTertiary: "#6b7588",
+  success: "#10b981", // Verde para ACTIVE - alineado con uso en código
+  warning: "#f59e0b", // Amarillo para PENDING - alineado con uso en código
+  error: "#ef4444", // Rojo para INACTIVE - alineado con uso en código
+  suspended: "#f97316", // Naranja para SUSPENDED - alineado con uso en código
+  deleted: "#6b7280", // Gris para DELETED - alineado con uso en código
+  contrastText: "#FFFFFF",
+  overlay: "rgba(0, 0, 0, 0.5)",
+  tabIconDefault: "#6b7588",
+  shadow: "#000000",
+} as const;
+
+// Tema oscuro - Inspirado en Hapi Trade. Colores administrados por paleta; variables por uso.
 export const DarkTheme = {
   colors: {
-    // Colores principales - Cyan/Turquesa brillante (estilo Hapi)
-    primary: baseTheme.brand.primary, //'#0087FF',      // Mismo color que buttonTheme.brand.primary
-    primaryLight: "#7ee0ff", // Cyan más claro
-    primaryDark: "#00a8cc", // Cyan oscuro
-    secondary: "#00d4aa", // Verde turquesa
-    secondaryLight: "#33e0bb",
-    accent: "#4dd4ff", // Mismo cyan para consistencia
-    accentLight: "#7ee0ff",
+    primary: DarkPalette.primary,
+    primaryLight: DarkPalette.primaryLight,
+    primaryDark: DarkPalette.primaryDark,
+    secondary: DarkPalette.secondary,
+    secondaryLight: DarkPalette.secondaryLight,
+    accent: DarkPalette.accent,
+    accentLight: DarkPalette.primaryLight,
 
-    // Colores de fondo - Azul oscuro profundo (estilo Hapi)
-    background: "#151b2e", // Azul oscuro medio (el que era surface)
-    surface: "rgba(188,197,239,.2)", // Azul claro transparente
-    surfaceVariant: "#1e2538", // Azul oscuro ligeramente más claro
+    background: DarkPalette.background,
+    surface: DarkPalette.surface,
+    surfaceVariant: DarkPalette.surfaceVariant,
+    surfaceMid: DarkPalette.surfaceMid,
 
-    // Colores de texto
-    text: "#ffffff", // Blanco puro para texto principal
-    textSecondary: "#a0a8c1", // Gris azulado claro para texto secundario
-    textTertiary: "#6b7588", // Gris azulado medio
-    subtitle: "#a0a8c1", // Color estándar para subtítulos (gris)
+    text: DarkPalette.text,
+    textSecondary: DarkPalette.textSecondary,
+    textTertiary: DarkPalette.textTertiary,
+    subtitle: DarkPalette.textSecondary,
 
-    // Colores de borde - Sutiles
-    border: "#1e2538", // Bordes sutiles
-    borderLight: "#2a3142", // Bordes más visibles
+    border: DarkPalette.border,
+    borderLight: DarkPalette.borderLight,
 
-    // Colores de estado
-    success: "#00d98d", // Verde brillante (valores positivos)
-    warning: "#ffd93d", // Amarillo brillante
-    error: "#ff3366", // Rojo/Rosa brillante (valores negativos)
-    info: "#4dd4ff", // Cyan (mismo que primary)
+    success: DarkPalette.success,
+    warning: DarkPalette.warning,
+    error: DarkPalette.error,
+    info: DarkPalette.accent,
+    suspended: DarkPalette.suspended,
+    contrastText: DarkPalette.contrastText,
+    overlay: DarkPalette.overlay,
 
-    // Colores de navegación
-    tabIconDefault: "#6b7588",
-    tabIconSelected: "#4dd4ff",
-    tint: "#4dd4ff",
-    icon: "#ffffff", // Iconos blancos en modo oscuro
-    iconSecondary: "#a0a8c1", // Iconos secundarios
+    tabIconDefault: DarkPalette.tabIconDefault,
+    tabIconSelected: DarkPalette.accent,
+    tint: DarkPalette.accent,
+    icon: DarkPalette.text,
+    iconSecondary: DarkPalette.textSecondary,
   },
   spacing: {
     xs: 4,
@@ -205,23 +240,22 @@ export const DarkTheme = {
     full: 9999,
   },
   shadows: {
-    // Misma estructura que LightTheme; solo shadowColor cambia por tema para que se vea en fondo oscuro
     sm: {
-      shadowColor: "#000000",
+      shadowColor: DarkPalette.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.3,
       shadowRadius: 2,
       elevation: 2,
     },
     md: {
-      shadowColor: "#000000",
+      shadowColor: DarkPalette.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.4,
       shadowRadius: 4,
       elevation: 4,
     },
     lg: {
-      shadowColor: "#000000",
+      shadowColor: DarkPalette.shadow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.5,
       shadowRadius: 8,

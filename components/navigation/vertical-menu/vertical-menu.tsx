@@ -6,28 +6,31 @@
  * - Cuando está expandido, muestra iconos + texto
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { useTheme } from '@/hooks/use-theme';
-import { AppConfig } from '@/src/config';
-import { DynamicIcon } from '@/src/domains/shared/components';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { createVerticalMenuStyles } from '@/src/styles/components/vertical-menu.styles';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { ThemedText } from "@/components/themed-text";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { useTheme } from "@/hooks/use-theme";
+import { AppConfig } from "@/src/config";
+import { DynamicIcon } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { createVerticalMenuStyles } from "@/src/styles/components/vertical-menu.styles";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { usePathname } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  Animated,
-  Platform,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import type { MenuColumn, MenuItem } from '../horizontal-menu/horizontal-menu.types';
-import { createVerticalMenuAdditionalStyles } from './vertical-menu.styles';
-import { VerticalMenuProps } from './vertical-menu.types';
+    Animated,
+    Platform,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+} from "react-native";
+import type {
+    MenuColumn,
+    MenuItem,
+} from "../horizontal-menu/horizontal-menu.types";
+import { createVerticalMenuAdditionalStyles } from "./vertical-menu.styles";
+import { VerticalMenuProps } from "./vertical-menu.types";
 
 export function VerticalMenu({
   items,
@@ -36,7 +39,7 @@ export function VerticalMenu({
   onToggleCollapse,
   onExpandedChange,
 }: VerticalMenuProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const pathname = usePathname();
   const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
@@ -51,23 +54,26 @@ export function VerticalMenu({
   // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
   const getActiveItemColor = (): string => {
     const configColor = AppConfig.navigation.activeItemColor;
-    if (configColor === 'red') return '#ff3366';
-    if (configColor === 'blue') return colors.primary;
+    if (configColor === "red") return "#ff3366";
+    if (configColor === "blue") return colors.primary;
     return configColor; // Cualquier otro color se usa directamente
   };
   const activeItemColor = getActiveItemColor();
   const styles = createVerticalMenuStyles(collapsed);
-  const additionalStyles = createVerticalMenuAdditionalStyles(colors);
+  const additionalStyles = createVerticalMenuAdditionalStyles(colors, isDark);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [isManuallyExpanded, setIsManuallyExpanded] = useState<boolean>(!collapsed); // Estado para saber si fue expandido manualmente
+  const [isManuallyExpanded, setIsManuallyExpanded] =
+    useState<boolean>(!collapsed); // Estado para saber si fue expandido manualmente
   const [isHovered, setIsHovered] = useState<boolean>(false); // Estado para hover
-  const [searchValue, setSearchValue] = useState<string>(''); // Estado para búsqueda
+  const [searchValue, setSearchValue] = useState<string>(""); // Estado para búsqueda
 
   // Obtener anchos del menú desde la configuración
   const expandedWidth = AppConfig.navigation.verticalMenuExpandedWidth;
   const collapsedWidth = AppConfig.navigation.verticalMenuCollapsedWidth;
 
-  const [animatedWidth, setAnimatedWidth] = useState<number>(collapsed ? collapsedWidth : expandedWidth); // Estado para rastrear el ancho animado
+  const [animatedWidth, setAnimatedWidth] = useState<number>(
+    collapsed ? collapsedWidth : expandedWidth,
+  ); // Estado para rastrear el ancho animado
   const slideAnim = React.useRef(new Animated.Value(collapsed ? 0 : 1)).current;
   const activeItemIdRef = React.useRef<string | null>(null); // Ref para proteger el activeItemId
 
@@ -101,7 +107,8 @@ export function VerticalMenu({
   // Listener para el ancho animado (opcional, para mayor precisión)
   useEffect(() => {
     const listenerId = slideAnim.addListener(({ value }) => {
-      const currentWidth = value * (expandedWidth - collapsedWidth) + collapsedWidth; // Interpolación: 0 -> collapsedWidth, 1 -> expandedWidth
+      const currentWidth =
+        value * (expandedWidth - collapsedWidth) + collapsedWidth; // Interpolación: 0 -> collapsedWidth, 1 -> expandedWidth
       setAnimatedWidth(currentWidth);
     });
 
@@ -120,12 +127,12 @@ export function VerticalMenu({
   // Función para comparar rutas (igual que HorizontalMenu)
   const isRouteMatch = (currentPath: string, route: string): boolean => {
     if (!route) return false;
-    const normalizedPath = currentPath.toLowerCase().replace(/^\/+|\/+$/g, '');
-    const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, '');
+    const normalizedPath = currentPath.toLowerCase().replace(/^\/+|\/+$/g, "");
+    const normalizedRoute = route.toLowerCase().replace(/^\/+|\/+$/g, "");
     if (normalizedPath === normalizedRoute) return true;
-    if (normalizedPath.startsWith(normalizedRoute + '/')) return true;
-    if (normalizedPath.endsWith('/' + normalizedRoute)) return true;
-    return normalizedPath.includes('/' + normalizedRoute + '/');
+    if (normalizedPath.startsWith(normalizedRoute + "/")) return true;
+    if (normalizedPath.endsWith("/" + normalizedRoute)) return true;
+    return normalizedPath.includes("/" + normalizedRoute + "/");
   };
 
   // Detectar la ruta actual y establecer el item activo
@@ -135,7 +142,10 @@ export function VerticalMenu({
     }
 
     // Función recursiva simple: buscar el item que tiene la ruta actual
-    const findItemByRoute = (menuItems: MenuItem[], currentPath: string): { item: MenuItem | null; parent: MenuItem | null } => {
+    const findItemByRoute = (
+      menuItems: MenuItem[],
+      currentPath: string,
+    ): { item: MenuItem | null; parent: MenuItem | null } => {
       for (const item of menuItems) {
         // Verificar si este item tiene la ruta
         if (item.route && isRouteMatch(currentPath, item.route)) {
@@ -191,7 +201,10 @@ export function VerticalMenu({
 
   const handleItemPress = (item: MenuItem) => {
     // Si tiene submenu o columnas, expandir/colapsar
-    if ((item.submenu && item.submenu.length > 0) || (item.columns && item.columns.length > 0)) {
+    if (
+      (item.submenu && item.submenu.length > 0) ||
+      (item.columns && item.columns.length > 0)
+    ) {
       setExpandedItems((prev) => {
         const newSet = new Set(prev);
         if (newSet.has(item.id)) {
@@ -293,7 +306,11 @@ export function VerticalMenu({
 
   // Función auxiliar recursiva para renderizar solo los hijos de un item (sin el botón principal)
   // Se usa cuando un item tiene hijos y queremos renderizarlos recursivamente
-  const renderVerticalMenuItemChildren = (item: MenuItem, level: number, parentItem: MenuItem): React.ReactNode => {
+  const renderVerticalMenuItemChildren = (
+    item: MenuItem,
+    level: number,
+    parentItem: MenuItem,
+  ): React.ReactNode => {
     const isSubItemActive = (subItem: MenuItem): boolean => {
       return !!(
         activeItemId === subItem.id ||
@@ -309,13 +326,24 @@ export function VerticalMenu({
             {item.submenu.map((subItem) => {
               const isSubActive = isSubItemActive(subItem);
               const isSubExpanded = expandedItems.has(subItem.id);
-              const hasSubChildren = (subItem.submenu && subItem.submenu.length > 0) || (subItem.columns && subItem.columns.length > 0);
+              const hasSubChildren =
+                (subItem.submenu && subItem.submenu.length > 0) ||
+                (subItem.columns && subItem.columns.length > 0);
 
               return (
                 <View key={subItem.id}>
                   <TouchableOpacity
-                    style={[styles.submenuItem, isSubActive && { backgroundColor: activeItemColor + '10' }]}
-                    onPress={() => (hasSubChildren ? handleItemPress(subItem) : handleSubItemPress(parentItem, subItem))}
+                    style={[
+                      styles.submenuItem,
+                      isSubActive && {
+                        backgroundColor: activeItemColor + "10",
+                      },
+                    ]}
+                    onPress={() =>
+                      hasSubChildren
+                        ? handleItemPress(subItem)
+                        : handleSubItemPress(parentItem, subItem)
+                    }
                     activeOpacity={0.7}
                   >
                     <View style={styles.submenuItemContent}>
@@ -323,20 +351,29 @@ export function VerticalMenu({
                         <DynamicIcon
                           name={subItem.icon}
                           size={16}
-                          color={isSubActive ? activeItemColor : colors.textSecondary}
+                          color={
+                            isSubActive ? activeItemColor : colors.textSecondary
+                          }
                           style={styles.submenuItemIcon}
                         />
                       )}
                       <ThemedText
                         type="caption"
-                        style={[styles.submenuItemLabel, { color: isSubActive ? activeItemColor : colors.textSecondary }]}
+                        style={[
+                          styles.submenuItemLabel,
+                          {
+                            color: isSubActive
+                              ? activeItemColor
+                              : colors.textSecondary,
+                          },
+                        ]}
                         numberOfLines={1}
                       >
                         {subItem.label}
                       </ThemedText>
                       {hasSubChildren && (
                         <Ionicons
-                          name={isSubExpanded ? 'chevron-up' : 'chevron-down'}
+                          name={isSubExpanded ? "chevron-up" : "chevron-down"}
                           size={12}
                           color={colors.textSecondary}
                           style={additionalStyles.chevronMargin}
@@ -345,7 +382,9 @@ export function VerticalMenu({
                     </View>
                   </TouchableOpacity>
                   {/* Renderizar recursivamente si tiene hijos y está expandido */}
-                  {isSubExpanded && (subItem.submenu || subItem.columns) && renderVerticalMenuItemChildren(subItem, level + 1, subItem)}
+                  {isSubExpanded &&
+                    (subItem.submenu || subItem.columns) &&
+                    renderVerticalMenuItemChildren(subItem, level + 1, subItem)}
                 </View>
               );
             })}
@@ -356,7 +395,13 @@ export function VerticalMenu({
             {item.columns.map((column, colIdx) => (
               <View key={colIdx} style={styles.columnContainer}>
                 {column.title && (
-                  <ThemedText type="caption" style={[styles.columnTitle, { color: colors.textSecondary, fontWeight: '600' }]}>
+                  <ThemedText
+                    type="caption"
+                    style={[
+                      styles.columnTitle,
+                      { color: colors.textSecondary, fontWeight: "600" },
+                    ]}
+                  >
                     {column.title}
                   </ThemedText>
                 )}
@@ -364,15 +409,28 @@ export function VerticalMenu({
                   const isColActive =
                     activeItemId === colItem.id ||
                     activeItemIdRef.current === colItem.id ||
-                    (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                    (colItem.route &&
+                      pathname &&
+                      isRouteMatch(pathname, colItem.route));
                   const isColExpanded = expandedItems.has(colItem.id);
-                  const hasColChildren = (colItem.submenu && colItem.submenu.length > 0) || (colItem.columns && colItem.columns.length > 0);
+                  const hasColChildren =
+                    (colItem.submenu && colItem.submenu.length > 0) ||
+                    (colItem.columns && colItem.columns.length > 0);
 
                   return (
                     <View key={colItem.id}>
                       <TouchableOpacity
-                        style={[styles.columnItem, isColActive && { backgroundColor: activeItemColor + '10' }]}
-                        onPress={() => (hasColChildren ? handleItemPress(colItem) : handleColumnItemPress(parentItem, colItem))}
+                        style={[
+                          styles.columnItem,
+                          isColActive && {
+                            backgroundColor: activeItemColor + "10",
+                          },
+                        ]}
+                        onPress={() =>
+                          hasColChildren
+                            ? handleItemPress(colItem)
+                            : handleColumnItemPress(parentItem, colItem)
+                        }
                         activeOpacity={0.7}
                       >
                         <View style={styles.columnItemContent}>
@@ -380,20 +438,33 @@ export function VerticalMenu({
                             <DynamicIcon
                               name={colItem.icon}
                               size={16}
-                              color={isColActive ? activeItemColor : colors.textSecondary}
+                              color={
+                                isColActive
+                                  ? activeItemColor
+                                  : colors.textSecondary
+                              }
                               style={styles.columnItemIcon}
                             />
                           )}
                           <ThemedText
                             type="caption"
-                            style={[styles.columnItemLabel, { color: isColActive ? activeItemColor : colors.textSecondary }]}
+                            style={[
+                              styles.columnItemLabel,
+                              {
+                                color: isColActive
+                                  ? activeItemColor
+                                  : colors.textSecondary,
+                              },
+                            ]}
                             numberOfLines={1}
                           >
                             {colItem.label}
                           </ThemedText>
                           {hasColChildren && (
                             <Ionicons
-                              name={isColExpanded ? 'chevron-up' : 'chevron-down'}
+                              name={
+                                isColExpanded ? "chevron-up" : "chevron-down"
+                              }
                               size={12}
                               color={colors.textSecondary}
                               style={additionalStyles.chevronMargin}
@@ -402,7 +473,13 @@ export function VerticalMenu({
                         </View>
                       </TouchableOpacity>
                       {/* Renderizar recursivamente si tiene hijos y está expandido */}
-                      {isColExpanded && (colItem.submenu || colItem.columns) && renderVerticalMenuItemChildren(colItem, level + 1, colItem)}
+                      {isColExpanded &&
+                        (colItem.submenu || colItem.columns) &&
+                        renderVerticalMenuItemChildren(
+                          colItem,
+                          level + 1,
+                          colItem,
+                        )}
                     </View>
                   );
                 })}
@@ -415,7 +492,10 @@ export function VerticalMenu({
   };
 
   // Función para filtrar recursivamente items y sus hijos
-  const filterItemRecursively = (item: MenuItem, searchLower: string): MenuItem | null => {
+  const filterItemRecursively = (
+    item: MenuItem,
+    searchLower: string,
+  ): MenuItem | null => {
     const itemMatches =
       item.label.toLowerCase().includes(searchLower) ||
       item.route?.toLowerCase().includes(searchLower) ||
@@ -451,10 +531,17 @@ export function VerticalMenu({
       }
     }
 
-    if (itemMatches || (filteredSubmenu && filteredSubmenu.length > 0) || (filteredColumns && filteredColumns.length > 0)) {
+    if (
+      itemMatches ||
+      (filteredSubmenu && filteredSubmenu.length > 0) ||
+      (filteredColumns && filteredColumns.length > 0)
+    ) {
       return {
         ...item,
-        submenu: filteredSubmenu && filteredSubmenu.length > 0 ? filteredSubmenu : undefined,
+        submenu:
+          filteredSubmenu && filteredSubmenu.length > 0
+            ? filteredSubmenu
+            : undefined,
         columns: filteredColumns,
       };
     }
@@ -483,7 +570,7 @@ export function VerticalMenu({
           }),
         },
       ]}
-      {...(Platform.OS === 'web'
+      {...(Platform.OS === "web"
         ? {
             onMouseEnter: handleMouseEnter,
             onMouseLeave: handleMouseLeave,
@@ -495,25 +582,40 @@ export function VerticalMenu({
         <View style={additionalStyles.searchRow}>
           {/* Icono de bloqueo/desbloqueo del menú - siempre visible */}
           {onToggleCollapse && (
-            <TouchableOpacity onPress={handleToggleCollapse} activeOpacity={0.7} style={additionalStyles.lockButton}>
+            <TouchableOpacity
+              onPress={handleToggleCollapse}
+              activeOpacity={0.7}
+              style={additionalStyles.lockButton}
+            >
               <MaterialCommunityIcons
-                name={isExpanded ? 'menu-open' : 'menu-close'}
+                name={isExpanded ? "menu-open" : "menu-close"}
                 size={20}
-                color={isManuallyExpanded ? activeItemColor : colors.textSecondary}
+                color={
+                  isManuallyExpanded ? activeItemColor : colors.textSecondary
+                }
               />
             </TouchableOpacity>
           )}
           {/* Input de búsqueda - solo visible cuando el menú está expandido */}
           {shouldShowText && (
             <View style={additionalStyles.searchInputContainer}>
-              <Ionicons name="search" size={18} color={colors.textSecondary} style={additionalStyles.searchIcon} />
+              <Ionicons
+                name="search"
+                size={18}
+                color={colors.textSecondary}
+                style={additionalStyles.searchIcon}
+              />
               {searchValue.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => setSearchValue('')}
+                  onPress={() => setSearchValue("")}
                   style={additionalStyles.clearButton}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
               )}
               <InputWithFocus
@@ -539,8 +641,17 @@ export function VerticalMenu({
       </View>
 
       {/* Contenedor con altura fija y scroll para todo el menú */}
-      <View style={[additionalStyles.scrollContainerWithHeight, { height: shouldShowText ? availableHeight - 60 : availableHeight }]}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
+      <View
+        style={[
+          additionalStyles.scrollContainerWithHeight,
+          { height: shouldShowText ? availableHeight - 60 : availableHeight },
+        ]}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
           {filteredItems.map((item) => {
             const hasSubmenu = item.submenu && item.submenu.length > 0;
             const hasColumns = item.columns && item.columns.length > 0;
@@ -552,7 +663,9 @@ export function VerticalMenu({
             const hasActiveChild = hasSubmenu
               ? item.submenu!.some((subItem) => isSubItemActive(subItem))
               : hasColumns
-                ? item.columns!.some((column) => column.items.some((colItem) => activeItemId === colItem.id))
+                ? item.columns!.some((column) =>
+                    column.items.some((colItem) => activeItemId === colItem.id),
+                  )
                 : false;
 
             return (
@@ -561,31 +674,50 @@ export function VerticalMenu({
                 <TouchableOpacity
                   style={[
                     styles.menuItem,
-                    (isActive || hasActiveChild) && { backgroundColor: activeItemColor + '15' },
-                    { borderLeftColor: (isActive || hasActiveChild) ? activeItemColor : 'transparent' },
+                    (isActive || hasActiveChild) && {
+                      backgroundColor: activeItemColor + "15",
+                    },
+                    {
+                      borderLeftColor:
+                        isActive || hasActiveChild
+                          ? activeItemColor
+                          : "transparent",
+                    },
                   ]}
                   onPress={() => handleItemPress(item)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuItemContent}>
                     <DynamicIcon
-                      name={item.icon || 'ellipse-outline'}
+                      name={item.icon || "ellipse-outline"}
                       size={20}
-                      color={isActive || hasActiveChild ? activeItemColor : colors.textSecondary}
+                      color={
+                        isActive || hasActiveChild
+                          ? activeItemColor
+                          : colors.textSecondary
+                      }
                       style={styles.menuItemIcon}
                     />
                     {shouldShowText && (
                       <>
                         <ThemedText
                           type="body2"
-                          style={[styles.menuItemLabel, { color: (isActive || hasActiveChild) ? activeItemColor : colors.text }]}
+                          style={[
+                            styles.menuItemLabel,
+                            {
+                              color:
+                                isActive || hasActiveChild
+                                  ? activeItemColor
+                                  : colors.text,
+                            },
+                          ]}
                           numberOfLines={1}
                         >
                           {item.label}
                         </ThemedText>
                         {hasChildren && (
                           <Ionicons
-                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
                             size={16}
                             color={colors.textSecondary}
                             style={styles.chevronIcon}
@@ -602,13 +734,24 @@ export function VerticalMenu({
                     {item.submenu!.map((subItem) => {
                       const isSubActive = isSubItemActive(subItem);
                       const isSubExpanded = expandedItems.has(subItem.id);
-                      const hasSubChildren = (subItem.submenu && subItem.submenu.length > 0) || (subItem.columns && subItem.columns.length > 0);
+                      const hasSubChildren =
+                        (subItem.submenu && subItem.submenu.length > 0) ||
+                        (subItem.columns && subItem.columns.length > 0);
 
                       return (
                         <View key={subItem.id}>
                           <TouchableOpacity
-                            style={[styles.submenuItem, isSubActive && { backgroundColor: activeItemColor + '10' }]}
-                            onPress={() => (hasSubChildren ? handleItemPress(subItem) : handleSubItemPress(item, subItem))}
+                            style={[
+                              styles.submenuItem,
+                              isSubActive && {
+                                backgroundColor: activeItemColor + "10",
+                              },
+                            ]}
+                            onPress={() =>
+                              hasSubChildren
+                                ? handleItemPress(subItem)
+                                : handleSubItemPress(item, subItem)
+                            }
                             activeOpacity={0.7}
                           >
                             <View style={styles.submenuItemContent}>
@@ -616,20 +759,35 @@ export function VerticalMenu({
                                 <DynamicIcon
                                   name={subItem.icon}
                                   size={16}
-                                  color={isSubActive ? activeItemColor : colors.textSecondary}
+                                  color={
+                                    isSubActive
+                                      ? activeItemColor
+                                      : colors.textSecondary
+                                  }
                                   style={styles.submenuItemIcon}
                                 />
                               )}
                               <ThemedText
                                 type="caption"
-                                style={[styles.submenuItemLabel, { color: isSubActive ? activeItemColor : colors.textSecondary }]}
+                                style={[
+                                  styles.submenuItemLabel,
+                                  {
+                                    color: isSubActive
+                                      ? activeItemColor
+                                      : colors.textSecondary,
+                                  },
+                                ]}
                                 numberOfLines={1}
                               >
                                 {subItem.label}
                               </ThemedText>
                               {hasSubChildren && (
                                 <Ionicons
-                                  name={isSubExpanded ? 'chevron-up' : 'chevron-down'}
+                                  name={
+                                    isSubExpanded
+                                      ? "chevron-up"
+                                      : "chevron-down"
+                                  }
                                   size={12}
                                   color={colors.textSecondary}
                                   style={additionalStyles.chevronMargin}
@@ -638,7 +796,9 @@ export function VerticalMenu({
                             </View>
                           </TouchableOpacity>
                           {/* Renderizar recursivamente si tiene hijos y está expandido */}
-                          {isSubExpanded && (subItem.submenu || subItem.columns) && renderVerticalMenuItemChildren(subItem, 1, subItem)}
+                          {isSubExpanded &&
+                            (subItem.submenu || subItem.columns) &&
+                            renderVerticalMenuItemChildren(subItem, 1, subItem)}
                         </View>
                       );
                     })}
@@ -652,7 +812,16 @@ export function VerticalMenu({
                       <View key={colIdx} style={styles.columnContainer}>
                         {/* Título de la columna */}
                         {column.title && (
-                          <ThemedText type="caption" style={[styles.columnTitle, { color: colors.textSecondary, fontWeight: '600' }]}>
+                          <ThemedText
+                            type="caption"
+                            style={[
+                              styles.columnTitle,
+                              {
+                                color: colors.textSecondary,
+                                fontWeight: "600",
+                              },
+                            ]}
+                          >
                             {column.title}
                           </ThemedText>
                         )}
@@ -661,15 +830,28 @@ export function VerticalMenu({
                           const isColActive =
                             activeItemId === colItem.id ||
                             activeItemIdRef.current === colItem.id ||
-                            (colItem.route && pathname && isRouteMatch(pathname, colItem.route));
+                            (colItem.route &&
+                              pathname &&
+                              isRouteMatch(pathname, colItem.route));
                           const isColExpanded = expandedItems.has(colItem.id);
-                          const hasColChildren = (colItem.submenu && colItem.submenu.length > 0) || (colItem.columns && colItem.columns.length > 0);
+                          const hasColChildren =
+                            (colItem.submenu && colItem.submenu.length > 0) ||
+                            (colItem.columns && colItem.columns.length > 0);
 
                           return (
                             <View key={colItem.id}>
                               <TouchableOpacity
-                                style={[styles.columnItem, isColActive && { backgroundColor: activeItemColor + '10' }]}
-                                onPress={() => (hasColChildren ? handleItemPress(colItem) : handleColumnItemPress(item, colItem))}
+                                style={[
+                                  styles.columnItem,
+                                  isColActive && {
+                                    backgroundColor: activeItemColor + "10",
+                                  },
+                                ]}
+                                onPress={() =>
+                                  hasColChildren
+                                    ? handleItemPress(colItem)
+                                    : handleColumnItemPress(item, colItem)
+                                }
                                 activeOpacity={0.7}
                               >
                                 <View style={styles.columnItemContent}>
@@ -677,20 +859,35 @@ export function VerticalMenu({
                                     <DynamicIcon
                                       name={colItem.icon}
                                       size={16}
-                                      color={isColActive ? activeItemColor : colors.textSecondary}
+                                      color={
+                                        isColActive
+                                          ? activeItemColor
+                                          : colors.textSecondary
+                                      }
                                       style={styles.columnItemIcon}
                                     />
                                   )}
                                   <ThemedText
                                     type="caption"
-                                    style={[styles.columnItemLabel, { color: isColActive ? activeItemColor : colors.textSecondary }]}
+                                    style={[
+                                      styles.columnItemLabel,
+                                      {
+                                        color: isColActive
+                                          ? activeItemColor
+                                          : colors.textSecondary,
+                                      },
+                                    ]}
                                     numberOfLines={1}
                                   >
                                     {colItem.label}
                                   </ThemedText>
                                   {hasColChildren && (
                                     <Ionicons
-                                      name={isColExpanded ? 'chevron-up' : 'chevron-down'}
+                                      name={
+                                        isColExpanded
+                                          ? "chevron-up"
+                                          : "chevron-down"
+                                      }
                                       size={12}
                                       color={colors.textSecondary}
                                       style={additionalStyles.chevronMargin}
@@ -699,7 +896,13 @@ export function VerticalMenu({
                                 </View>
                               </TouchableOpacity>
                               {/* Renderizar recursivamente si tiene hijos y está expandido */}
-                              {isColExpanded && (colItem.submenu || colItem.columns) && renderVerticalMenuItemChildren(colItem, 1, colItem)}
+                              {isColExpanded &&
+                                (colItem.submenu || colItem.columns) &&
+                                renderVerticalMenuItemChildren(
+                                  colItem,
+                                  1,
+                                  colItem,
+                                )}
                             </View>
                           );
                         })}
