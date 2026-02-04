@@ -68,15 +68,21 @@ export const createDataTableStyles = (
       padding: 40,
       alignItems: "center",
       justifyContent: "center",
+      minHeight: 400,
     },
     emptyText: {
       marginTop: 16,
     },
     header: {
       borderBottomWidth: 1,
-      borderTopLeftRadius: 10, // Redondear esquinas superiores para respetar el borderRadius del contenedor
+      borderTopLeftRadius: 10,
       borderTopRightRadius: 10,
-      zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
+      zIndex: 1,
+      ...(theme && {
+        backgroundColor: theme.colors.surfaceVariant,
+        borderBottomColor: theme.colors.border,
+        ...theme.shadows.sm,
+      }),
     },
     headerRow: {
       flexDirection: "row",
@@ -87,10 +93,16 @@ export const createDataTableStyles = (
     headerCell: {
       paddingVertical: 12,
       paddingHorizontal: isMobile ? 12 : 16,
-      borderRightWidth: 1,
       justifyContent: "center",
       minHeight: 48,
-      zIndex: 1, // Z-index bajo para que tooltips aparezcan por encima
+      zIndex: 1,
+    },
+    headerCellInner: {
+      flex: 1,
+      marginVertical: 6,
+      paddingHorizontal: 8,
+      minHeight: 0,
+      justifyContent: "center",
     },
     headerCellCenter: {
       alignItems: "center",
@@ -109,21 +121,25 @@ export const createDataTableStyles = (
     row: {
       flexDirection: "row",
       alignItems: "stretch",
-      borderBottomWidth: 1,
       minHeight: 56,
       width: "100%",
     },
     stripedRow: {
-      backgroundColor: theme?.colors.stripedRow || "rgba(0, 0, 0, 0.02)",
+      backgroundColor: theme?.colors.stripedRow,
     },
     cell: {
       paddingVertical: 12,
       paddingHorizontal: isMobile ? 12 : 16,
-      borderRightWidth: 1,
       justifyContent: "center",
       minHeight: 56,
-      // Permitir que las celdas crezcan según el contenido
       alignItems: "stretch",
+    },
+    cellInner: {
+      flex: 1,
+      marginVertical: 6,
+      paddingHorizontal: 8,
+      minHeight: 0,
+      justifyContent: "center",
     },
     cellFirst: {
       paddingLeft: isMobile ? 16 : 16,
@@ -148,10 +164,14 @@ export const createDataTableStyles = (
       padding: isMobile ? 8 : 16,
       paddingHorizontal: isMobile ? 8 : 16,
       borderTopWidth: 1,
-      borderBottomLeftRadius: 10, // Redondear esquinas inferiores para respetar el borderRadius del contenedor
+      borderBottomLeftRadius: 10,
       borderBottomRightRadius: 10,
       gap: isMobile ? 8 : 16,
       flexShrink: 0,
+      ...(theme && {
+        backgroundColor: theme.colors.surfaceVariant,
+        borderTopColor: theme.colors.border,
+      }),
     },
     paginationInfo: {
       flex: 1,
@@ -195,6 +215,7 @@ export const createDataTableStyles = (
       paddingVertical: 6,
       borderRadius: 6,
       borderWidth: 1,
+      borderColor: theme?.colors.border,
       minWidth: isMobile ? 32 : 40,
       alignItems: "center",
     },
@@ -211,6 +232,7 @@ export const createDataTableStyles = (
       padding: isMobile ? 6 : 8,
       borderRadius: 6,
       borderWidth: 1,
+      borderColor: theme?.colors.border,
       alignItems: "center",
       justifyContent: "center",
       minWidth: isMobile ? 32 : 36,

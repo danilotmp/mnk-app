@@ -269,6 +269,16 @@ export function InteractionGuidelinesLayer({
     });
   };
 
+  /**
+   * Muestra confirmación y, si el usuario acepta, elimina la directriz.
+   */
+  const confirmDeleteGuideline = (guideline: InteractionGuideline) => {
+    const title = "Eliminar directriz";
+    const name = guideline.title || "esta directriz";
+    const message = `¿Seguro que deseas eliminar la directriz "${name}"? Esta acción no se puede deshacer.`;
+    alert.showConfirm(title, message, () => handleDelete(guideline.id));
+  };
+
   const handleDelete = async (guidelineId: string) => {
     setSaving(true);
 
@@ -389,7 +399,7 @@ export function InteractionGuidelinesLayer({
                       style={[
                         styles.guidelineCard,
                         {
-                          backgroundColor: colors.surface,
+                          backgroundColor: colors.filterInputBackground,
                           borderColor: colors.border,
                         },
                       ]}
@@ -410,7 +420,7 @@ export function InteractionGuidelinesLayer({
                               containerStyle={[
                                 styles.titleInputContainer,
                                 {
-                                  backgroundColor: colors.surface,
+                                  backgroundColor: colors.filterInputBackground,
                                   borderColor: colors.border,
                                   flex: 1,
                                   width: isMobile ? "100%" : undefined,
@@ -693,7 +703,9 @@ export function InteractionGuidelinesLayer({
                                   <Tooltip text="Eliminar" position="top">
                                     <TouchableOpacity
                                       style={styles.actionIconButton}
-                                      onPress={() => handleDelete(guideline.id)}
+                                      onPress={() =>
+                                        confirmDeleteGuideline(guideline)
+                                      }
                                       disabled={saving}
                                     >
                                       <Ionicons
@@ -716,7 +728,7 @@ export function InteractionGuidelinesLayer({
                             containerStyle={[
                               styles.textAreaContainer,
                               {
-                                backgroundColor: colors.surface,
+                                backgroundColor: colors.filterInputBackground,
                                 borderColor: colors.border,
                               },
                             ]}
@@ -804,7 +816,7 @@ export function InteractionGuidelinesLayer({
                   containerStyle={[
                     styles.titleInputContainer,
                     {
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.filterInputBackground,
                       borderColor: colors.border,
                       flex: 1,
                       width: isMobile ? "100%" : undefined,
@@ -977,7 +989,10 @@ export function InteractionGuidelinesLayer({
             <InputWithFocus
               containerStyle={[
                 styles.textAreaContainer,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                {
+                  backgroundColor: colors.filterInputBackground,
+                  borderColor: colors.border,
+                },
               ]}
               primaryColor={colors.primary}
             >
@@ -1100,7 +1115,7 @@ export function InteractionGuidelinesLayer({
               <DynamicIcon
                 name="MaterialCommunityIcons.skip-forward-outline"
                 size={20}
-                color={colors.text}
+                color={colors.primary}
                 style={{ marginRight: 8 }}
               />
             </Button>

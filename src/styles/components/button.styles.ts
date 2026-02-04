@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { ComponentVariant, Size } from '../../domains/shared/types';
-import { BaseTheme } from '../themes/base.theme';
+import { StyleSheet } from "react-native";
+import { ComponentVariant, Size } from "../../domains/shared/types";
+import { BaseTheme } from "../themes/base.theme";
 
 // Estilos específicos para el componente Button
 export const createButtonStyles = (theme: BaseTheme) => {
@@ -8,9 +8,9 @@ export const createButtonStyles = (theme: BaseTheme) => {
     // Estilos base del botón
     base: {
       borderRadius: theme.borders.radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
       fontFamily: theme.typography.fontFamily.primary,
     },
 
@@ -69,12 +69,12 @@ export const createButtonStyles = (theme: BaseTheme) => {
         borderWidth: 0,
       },
       outlined: {
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
         borderWidth: theme.borders.width.sm,
         borderColor: theme.brand.primary,
       },
       ghost: {
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
         borderWidth: 0,
       },
       filled: {
@@ -108,12 +108,12 @@ export const createButtonStyles = (theme: BaseTheme) => {
 
     // Colores de texto por variante
     textColor: {
-      primary: '#FFFFFF',
-      secondary: '#FFFFFF',
-      accent: '#FFFFFF',
+      primary: "#FFFFFF",
+      secondary: "#FFFFFF",
+      accent: "#FFFFFF",
       outlined: theme.brand.primary,
       ghost: theme.brand.primary,
-      filled: '#FFFFFF',
+      filled: "#FFFFFF",
     },
   });
 };
@@ -123,10 +123,10 @@ export const getButtonStyle = (
   theme: BaseTheme,
   variant: ComponentVariant,
   size: Size,
-  disabled: boolean = false
+  disabled: boolean = false,
 ) => {
   const styles = createButtonStyles(theme);
-  
+
   return {
     ...styles.base,
     ...styles.size[size],
@@ -140,13 +140,13 @@ export const getButtonStyle = (
 export const getButtonTextColor = (
   theme: BaseTheme,
   variant: ComponentVariant,
-  disabled: boolean = false
+  disabled: boolean = false,
 ) => {
   const styles = createButtonStyles(theme);
-  
+
   if (disabled) {
-    return theme.colors?.textTertiary || '#9CA3AF';
+    return theme.colors?.textTertiary;
   }
-  
+
   return styles.textColor[variant];
 };

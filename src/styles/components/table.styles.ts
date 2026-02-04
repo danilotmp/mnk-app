@@ -1,36 +1,39 @@
-import { StyleSheet } from 'react-native';
-import { BaseTheme } from '../themes/base.theme';
+import { StyleSheet } from "react-native";
+import { BaseTheme } from "../themes/base.theme";
+
+// Tema con colores (usado por createTheme desde constants/theme)
+type ThemeWithColors = BaseTheme & { colors: Record<string, string> };
 
 // Variantes de tabla
-export type TableVariant = 'bordered' | 'striped' | 'hover' | 'compact';
-export type TableSize = 'sm' | 'md' | 'lg';
+export type TableVariant = "bordered" | "striped" | "hover" | "compact";
+export type TableSize = "sm" | "md" | "lg";
 
 // Estilos específicos para el componente Table
-export const createTableStyles = (theme: BaseTheme) => {
+export const createTableStyles = (theme: ThemeWithColors) => {
   return StyleSheet.create({
     // Contenedor de la tabla
     container: {
-      backgroundColor: theme.colors?.surface || '#F8F9FA',
+      backgroundColor: theme.colors.surface,
       borderRadius: theme.borders.radius.lg,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
 
     // Tabla base
     table: {
-      width: '100%',
+      width: "100%",
     },
 
-    // Encabezado de la tabla
+    // Encabezado de la tabla (mismo color que el header de la app: surfaceVariant)
     header: {
-      backgroundColor: theme.colors?.surfaceVariant || '#F1F3F4',
+      backgroundColor: theme.colors.surfaceVariant,
       borderBottomWidth: theme.borders.width.sm,
-      borderBottomColor: theme.colors?.border || '#E5E7EB',
+      borderBottomColor: theme.colors.border,
     },
 
     // Fila del encabezado
     headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
     },
 
     // Celda del encabezado
@@ -38,7 +41,7 @@ export const createTableStyles = (theme: BaseTheme) => {
       flex: 1,
       padding: theme.spacing.md,
       borderRightWidth: theme.borders.width.xs,
-      borderRightColor: theme.colors?.border || '#E5E7EB',
+      borderRightColor: theme.colors.border,
     },
 
     // Texto del encabezado
@@ -46,31 +49,31 @@ export const createTableStyles = (theme: BaseTheme) => {
       fontFamily: theme.typography.fontFamily.primary,
       fontSize: theme.typography.fontSize.sm,
       fontWeight: theme.typography.fontWeight.semibold,
-      color: theme.colors?.text || '#1F2937',
-      textAlign: 'left',
+      color: theme.colors.text,
+      textAlign: "left",
     },
 
     // Cuerpo de la tabla
     body: {
-      backgroundColor: theme.colors?.background || '#FFFFFF',
+      backgroundColor: theme.colors.background,
     },
 
     // Fila de datos
     row: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       borderBottomWidth: theme.borders.width.xs,
-      borderBottomColor: theme.colors?.borderLight || '#F3F4F6',
+      borderBottomColor: theme.colors.borderLight,
     },
 
     // Fila alternada (para striped)
     stripedRow: {
-      backgroundColor: theme.colors?.surfaceVariant || '#F1F3F4',
+      backgroundColor: theme.colors.surfaceVariant,
     },
 
     // Fila hover (para hover)
     hoverRow: {
-      backgroundColor: theme.colors?.surface || '#F8F9FA',
+      backgroundColor: theme.colors.surface,
     },
 
     // Celda de datos
@@ -78,14 +81,14 @@ export const createTableStyles = (theme: BaseTheme) => {
       flex: 1,
       padding: theme.spacing.md,
       borderRightWidth: theme.borders.width.xs,
-      borderRightColor: theme.colors?.border || '#E5E7EB',
+      borderRightColor: theme.colors.border,
     },
 
     // Texto de la celda
     cellText: {
       fontFamily: theme.typography.fontFamily.primary,
       fontSize: theme.typography.fontSize.sm,
-      color: theme.colors?.text || '#1F2937',
+      color: theme.colors.text,
     },
 
     // Tamaños de tabla
@@ -138,7 +141,7 @@ export const createTableStyles = (theme: BaseTheme) => {
     variant: {
       bordered: {
         borderWidth: theme.borders.width.sm,
-        borderColor: theme.colors?.border || '#E5E7EB',
+        borderColor: theme.colors.border,
       },
       striped: {
         // Se aplica a nivel de fila
@@ -169,28 +172,28 @@ export const createTableStyles = (theme: BaseTheme) => {
       },
     },
 
-    // Paginación
+    // Footer/paginación (mismo color que el header de la app: surfaceVariant)
     pagination: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       padding: theme.spacing.md,
       borderTopWidth: theme.borders.width.sm,
-      borderTopColor: theme.colors?.border || '#E5E7EB',
-      backgroundColor: theme.colors?.surface || '#F8F9FA',
+      borderTopColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceVariant,
     },
 
     // Información de paginación
     paginationInfo: {
       fontFamily: theme.typography.fontFamily.primary,
       fontSize: theme.typography.fontSize.sm,
-      color: theme.colors?.textSecondary || '#6B7280',
+      color: theme.colors.textSecondary,
     },
 
     // Controles de paginación
     paginationControls: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: theme.spacing.sm,
     },
   });
@@ -198,12 +201,12 @@ export const createTableStyles = (theme: BaseTheme) => {
 
 // Función helper para obtener estilos específicos
 export const getTableStyle = (
-  theme: BaseTheme,
+  theme: ThemeWithColors,
   variant: TableVariant,
-  size: TableSize = 'md'
+  size: TableSize = "md",
 ) => {
   const styles = createTableStyles(theme);
-  
+
   return {
     ...styles.container,
     ...styles.variant[variant],

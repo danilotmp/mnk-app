@@ -250,7 +250,7 @@ const createWizardStepperStyles = (colors: any) => {
       overflow: "hidden",
       // Asegurar que el círculo tenga un background sólido
       elevation: 1, // Para Android
-      shadowColor: "#000", // Para iOS
+      shadowColor: colors.shadow ?? "#000",
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0,
       shadowRadius: 0,

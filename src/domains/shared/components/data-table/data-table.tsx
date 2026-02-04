@@ -13,11 +13,11 @@ import { useTranslation } from "@/src/infrastructure/i18n";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useMemo } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    ScrollView,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { createDataTableStyles } from "./data-table.styles";
 import { DataTableProps, TableAction, TableColumn } from "./data-table.types";
@@ -50,10 +50,16 @@ export function DataTable<T = any>({
   const { height: windowHeight } = useWindowDimensions();
   const styles = createDataTableStyles(isMobile, {
     colors: {
-      ...colors,
-      stripedRow: isDark
-        ? "rgba(255, 255, 255, 0.02)"
-        : "rgba(0, 0, 0, 0.02)",
+      border: colors.border,
+      borderLight: colors.borderLight,
+      background: colors.background,
+      surfaceVariant: colors.surfaceVariant,
+      surfaceMid: colors.surfaceMid,
+      stripedRow: colors.stripedRow,
+      text: colors.text,
+      textSecondary: colors.textSecondary,
+      primary: colors.primary,
+      contrastText: colors.contrastText,
     },
     shadows,
     isDark,
@@ -105,7 +111,7 @@ export function DataTable<T = any>({
   const renderActions = useCallback(
     (item: T, index: number) => {
       // Color para iconos deshabilitados
-      const disabledIconColor = colors.textSecondary || "#9ca3af";
+      const disabledIconColor = colors.textSecondary;
 
       return (
         <View style={styles.actionsContainer}>
@@ -553,13 +559,11 @@ export function DataTable<T = any>({
                 column.align === "right" && styles.cellRight,
                 isFirstColumn && styles.cellFirst,
                 isLastColumn && styles.cellLast,
-                {
-                  borderRightWidth: isLastColumn ? 0 : 1,
-                  borderRightColor: colors.border,
-                },
               ]}
             >
-              {renderCell(item, column, index)}
+              <View style={styles.cellInner}>
+                {renderCell(item, column, index)}
+              </View>
             </View>
           );
         })}
@@ -571,11 +575,7 @@ export function DataTable<T = any>({
       return (
         <TouchableOpacity
           key={rowKey}
-          style={[
-            styles.row,
-            isStriped && styles.stripedRow,
-            { borderBottomColor: colors.border },
-          ]}
+          style={[styles.row, isStriped && styles.stripedRow]}
           onPress={() => onRowPress(item, index)}
           activeOpacity={0.7}
         >
@@ -585,14 +585,7 @@ export function DataTable<T = any>({
     }
 
     return (
-      <View
-        key={rowKey}
-        style={[
-          styles.row,
-          isStriped && styles.stripedRow,
-          { borderBottomColor: colors.border },
-        ]}
-      >
+      <View key={rowKey} style={[styles.row, isStriped && styles.stripedRow]}>
         {rowContent}
       </View>
     );
@@ -661,15 +654,7 @@ export function DataTable<T = any>({
       finalLimitOptions.length > 0 ? Math.min(...finalLimitOptions) : limit;
 
     return (
-      <View
-        style={[
-          styles.pagination,
-          {
-            backgroundColor: colors.surfaceMid || colors.background,
-            borderTopColor: colors.border,
-          },
-        ]}
-      >
+      <View style={styles.pagination}>
         {isMobile ? (
           <>
             {/* Información de registros - línea completa */}
@@ -708,13 +693,16 @@ export function DataTable<T = any>({
                             limit === option && {
                               backgroundColor: colors.primary,
                             },
-                            { borderColor: colors.border },
                           ]}
                           onPress={() => onLimitChange(option)}
                         >
                           <ThemedText
                             type="body2"
-                            style={limit === option ? { color: colors.contrastText } : {}}
+                            style={
+                              limit === option
+                                ? { color: colors.contrastText }
+                                : {}
+                            }
                           >
                             {option}
                           </ThemedText>
@@ -732,7 +720,6 @@ export function DataTable<T = any>({
                     style={[
                       styles.pageButton,
                       page === 1 && styles.pageButtonDisabled,
-                      { borderColor: colors.border },
                     ]}
                     onPress={() => onPageChange(1)}
                     disabled={page === 1 || !hasPrev}
@@ -753,7 +740,6 @@ export function DataTable<T = any>({
                   style={[
                     styles.pageButton,
                     !hasPrev && styles.pageButtonDisabled,
-                    { borderColor: colors.border },
                   ]}
                   onPress={() => onPageChange(page - 1)}
                   disabled={!hasPrev}
@@ -778,7 +764,6 @@ export function DataTable<T = any>({
                   style={[
                     styles.pageButton,
                     !hasNext && styles.pageButtonDisabled,
-                    { borderColor: colors.border },
                   ]}
                   onPress={() => onPageChange(page + 1)}
                   disabled={!hasNext}
@@ -796,7 +781,6 @@ export function DataTable<T = any>({
                     style={[
                       styles.pageButton,
                       page === totalPages && styles.pageButtonDisabled,
-                      { borderColor: colors.border },
                     ]}
                     onPress={() => onPageChange(totalPages)}
                     disabled={page === totalPages || !hasNext}
@@ -852,13 +836,16 @@ export function DataTable<T = any>({
                             limit === option && {
                               backgroundColor: colors.primary,
                             },
-                            { borderColor: colors.border },
                           ]}
                           onPress={() => onLimitChange(option)}
                         >
                           <ThemedText
                             type="body2"
-                            style={limit === option ? { color: colors.contrastText } : {}}
+                            style={
+                              limit === option
+                                ? { color: colors.contrastText }
+                                : {}
+                            }
                           >
                             {option}
                           </ThemedText>
@@ -876,7 +863,6 @@ export function DataTable<T = any>({
                     style={[
                       styles.pageButton,
                       page === 1 && styles.pageButtonDisabled,
-                      { borderColor: colors.border },
                     ]}
                     onPress={() => onPageChange(1)}
                     disabled={page === 1 || !hasPrev}
@@ -897,7 +883,6 @@ export function DataTable<T = any>({
                   style={[
                     styles.pageButton,
                     !hasPrev && styles.pageButtonDisabled,
-                    { borderColor: colors.border },
                   ]}
                   onPress={() => onPageChange(page - 1)}
                   disabled={!hasPrev}
@@ -922,7 +907,6 @@ export function DataTable<T = any>({
                   style={[
                     styles.pageButton,
                     !hasNext && styles.pageButtonDisabled,
-                    { borderColor: colors.border },
                   ]}
                   onPress={() => onPageChange(page + 1)}
                   disabled={!hasNext}
@@ -940,7 +924,6 @@ export function DataTable<T = any>({
                     style={[
                       styles.pageButton,
                       page === totalPages && styles.pageButtonDisabled,
-                      { borderColor: colors.border },
                     ]}
                     onPress={() => onPageChange(totalPages)}
                     disabled={page === totalPages || !hasNext}
@@ -990,7 +973,10 @@ export function DataTable<T = any>({
             size={48}
             color={colors.textSecondary}
           />
-          <ThemedText type="body1" variant="secondary" style={styles.emptyText}>
+          <ThemedText
+            type="body1"
+            style={[styles.emptyText, { color: colors.textSecondary }]}
+          >
             {emptyMessage}
           </ThemedText>
         </View>
@@ -1019,16 +1005,7 @@ export function DataTable<T = any>({
           style={{ ...styles.tableWrapper, maxHeight: maxTableHeight } as any}
         >
           {/* Encabezado de la tabla */}
-          <View
-            style={[
-              styles.header,
-              {
-                backgroundColor: colors.surfaceMid || colors.background,
-                borderBottomColor: isDark ? colors.border : "transparent",
-                ...shadows.sm,
-              },
-            ]}
-          >
+          <View style={styles.header}>
             <View style={styles.headerRow}>
               {finalColumns.map((column, colIndex) => {
                 const columnFlex = getColumnFlex(column, colIndex);
@@ -1080,20 +1057,16 @@ export function DataTable<T = any>({
                       column.align === "right" && styles.headerCellRight,
                       isFirstColumn && styles.cellFirst,
                       isLastColumn && styles.cellLast,
-                      {
-                        borderRightWidth: isLastColumn ? 0 : 1,
-                        borderRightColor: isDark
-                          ? colors.border
-                          : "transparent",
-                      },
                     ]}
                   >
-                    <ThemedText
-                      type="defaultSemiBold"
-                      style={styles.headerText}
-                    >
-                      {column.label}
-                    </ThemedText>
+                    <View style={styles.headerCellInner}>
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={styles.headerText}
+                      >
+                        {column.label}
+                      </ThemedText>
+                    </View>
                   </View>
                 );
               })}

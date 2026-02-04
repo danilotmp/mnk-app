@@ -1,17 +1,19 @@
-import { StyleSheet } from 'react-native';
-import { Size } from '../../domains/shared/types';
-import { BaseTheme } from '../themes/base.theme';
+import { StyleSheet } from "react-native";
+import { Size } from "../../domains/shared/types";
+import { BaseTheme } from "../themes/base.theme";
+
+type ThemeWithColors = BaseTheme & { colors: Record<string, string> };
 
 // Variantes de input
-export type InputVariant = 'outlined' | 'filled' | 'underlined';
-export type InputState = 'normal' | 'focused' | 'error' | 'disabled';
+export type InputVariant = "outlined" | "filled" | "underlined";
+export type InputState = "normal" | "focused" | "error" | "disabled";
 
 // Estilos específicos para el componente Input
-export const createInputStyles = (theme: BaseTheme) => {
+export const createInputStyles = (theme: ThemeWithColors) => {
   return StyleSheet.create({
     // Contenedor base del input
     container: {
-      position: 'relative',
+      position: "relative",
     },
 
     // Input base
@@ -19,7 +21,7 @@ export const createInputStyles = (theme: BaseTheme) => {
       fontFamily: theme.typography.fontFamily.primary,
       fontSize: theme.typography.fontSize.md,
       lineHeight: theme.typography.lineHeight.md,
-      color: theme.colors?.text || '#1F2937',
+      color: theme.colors.text,
     },
 
     // Tamaños
@@ -56,30 +58,30 @@ export const createInputStyles = (theme: BaseTheme) => {
       },
     },
 
-    // Variantes
+    // Variantes: mismo color de fondo que el control de email (surface) en Light y Dark
     variant: {
       outlined: {
         borderWidth: theme.borders.width.sm,
         borderRadius: theme.borders.radius.md,
-        backgroundColor: theme.colors?.background || '#FFFFFF',
+        backgroundColor: theme.colors.surface,
       },
       filled: {
         borderWidth: 0,
         borderRadius: theme.borders.radius.md,
-        backgroundColor: theme.colors?.surfaceVariant || '#F1F3F4',
+        backgroundColor: theme.colors.surface,
       },
       underlined: {
         borderWidth: 0,
         borderBottomWidth: theme.borders.width.sm,
         borderRadius: 0,
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
       },
     },
 
-    // Estados
+    // Estados: normal/focused/error mismo fondo; disabled = variación (opacidad) del mismo color
     state: {
       normal: {
-        borderColor: theme.colors?.border || '#E5E7EB',
+        borderColor: theme.colors.border,
       },
       focused: {
         borderColor: theme.brand.primary,
@@ -90,9 +92,9 @@ export const createInputStyles = (theme: BaseTheme) => {
         borderWidth: theme.borders.width.md,
       },
       disabled: {
-        borderColor: theme.colors?.borderLight || '#F3F4F6',
-        backgroundColor: theme.colors?.surfaceVariant || '#F1F3F4',
-        opacity: 0.6,
+        borderColor: theme.colors.borderLight,
+        backgroundColor: theme.colors.surface,
+        opacity: 0.65,
       },
     },
 
@@ -101,16 +103,16 @@ export const createInputStyles = (theme: BaseTheme) => {
       fontFamily: theme.typography.fontFamily.primary,
       fontSize: theme.typography.fontSize.sm,
       fontWeight: theme.typography.fontWeight.medium,
-      color: theme.colors?.textSecondary || '#6B7280',
+      color: theme.colors.textSecondary,
       marginBottom: theme.spacing.xs,
     },
 
     // Label flotante
     floatingLabel: {
-      position: 'absolute',
+      position: "absolute",
       left: theme.spacing.md,
       top: -theme.spacing.xs,
-      backgroundColor: theme.colors?.background || '#FFFFFF',
+      backgroundColor: theme.colors.surface,
       paddingHorizontal: theme.spacing.xs,
       fontSize: theme.typography.fontSize.xs,
       fontWeight: theme.typography.fontWeight.medium,
@@ -121,7 +123,7 @@ export const createInputStyles = (theme: BaseTheme) => {
     helperText: {
       fontFamily: theme.typography.fontFamily.primary,
       fontSize: theme.typography.fontSize.xs,
-      color: theme.colors?.textTertiary || '#9CA3AF',
+      color: theme.colors.textTertiary,
       marginTop: theme.spacing.xs,
     },
 
@@ -135,17 +137,17 @@ export const createInputStyles = (theme: BaseTheme) => {
 
     // Icono
     icon: {
-      position: 'absolute',
+      position: "absolute",
       right: theme.spacing.md,
-      top: '50%',
+      top: "50%",
       transform: [{ translateY: -12 }],
     },
 
     // Icono izquierdo
     leftIcon: {
-      position: 'absolute',
+      position: "absolute",
       left: theme.spacing.md,
-      top: '50%',
+      top: "50%",
       transform: [{ translateY: -12 }],
     },
   });
@@ -153,13 +155,13 @@ export const createInputStyles = (theme: BaseTheme) => {
 
 // Función helper para obtener estilos específicos
 export const getInputStyle = (
-  theme: BaseTheme,
+  theme: ThemeWithColors,
   variant: InputVariant,
-  size: Size = 'md',
-  state: InputState = 'normal'
+  size: Size = "md",
+  state: InputState = "normal",
 ) => {
   const styles = createInputStyles(theme);
-  
+
   return {
     ...styles.input,
     ...styles.size[size],

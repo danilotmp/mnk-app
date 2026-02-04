@@ -24,13 +24,13 @@ export const createSideModalStyles = (
       alignItems: "flex-end",
     },
     modalContainer: {
-      backgroundColor: colors.surfaceVariant || colors.surface || "#1E293B", // Usar surfaceVariant en modo dark para evitar transparencia
+      backgroundColor: colors.surfaceVariant ?? colors.surface,
       ...Platform.select({
         web: {
-          boxShadow: "-2px 0px 10px rgba(0, 0, 0, 0.25)",
+          boxShadow: `-2px 0px 10px ${colors.shadow ?? "#000"}40`,
         },
         default: {
-          shadowColor: "#000",
+          shadowColor: colors.shadow ?? "#000",
           shadowOffset: {
             width: -2,
             height: 0,

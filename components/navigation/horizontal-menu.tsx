@@ -44,7 +44,7 @@ import type {
  * - Mobile: Menú hamburger con drawer
  */
 export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
-  const { colors } = useTheme();
+  const { theme, colors } = useTheme();
   const { isDark } = useThemeMode();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
@@ -237,16 +237,14 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     // TODO: Navegar a pantalla de configuración
   };
 
-  // Obtener el color para items activos según la configuración
-  // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
   const getActiveItemColor = (): string => {
     const configColor = AppConfig.navigation.activeItemColor;
-    if (configColor === "red") return "#ff3366";
+    if (configColor === "red") return colors.error;
     if (configColor === "blue") return colors.primary;
-    return configColor; // Cualquier otro color se usa directamente
+    return configColor;
   };
   const activeItemColor = getActiveItemColor();
-  const styles = createHorizontalMenuStyles(activeItemColor);
+  const styles = createHorizontalMenuStyles(theme, activeItemColor);
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
   const [activeSubmenuItem, setActiveSubmenuItem] = useState<string | null>(
@@ -1997,10 +1995,10 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                   backgroundColor: colors.background,
                   ...Platform.select({
                     web: {
-                      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.25)",
+                      boxShadow: `0px 2px 8px ${colors.shadow}40`,
                     },
                     default: {
-                      shadowColor: "#000",
+                      shadowColor: colors.shadow,
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.25,
                       shadowRadius: 8,

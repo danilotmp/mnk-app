@@ -66,7 +66,10 @@ export function LanguageSelector() {
           <ThemedView
             style={[
               languageSelectorStyles.modalContent,
-              { backgroundColor: colors.background },
+              {
+                backgroundColor: colors.surfaceVariant,
+                shadowColor: colors.shadow,
+              },
             ]}
             onStartShouldSetResponder={() => true}
           >

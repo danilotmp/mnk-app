@@ -3,17 +3,17 @@
  * Muestra un tooltip al hacer hover (web) o mantener presionado (mobile)
  */
 
-import { useTheme } from '@/hooks/use-theme';
-import { createTooltipStyles } from '@/src/styles/components/tooltip.styles';
-import React, { useEffect, useRef, useState } from 'react';
-import { Platform, View, ViewStyle } from 'react-native';
-import { TouchableOpacitySafe } from './touchable-opacity-safe';
-import { ThemedText } from '../themed-text';
+import { useTheme } from "@/hooks/use-theme";
+import { createTooltipStyles } from "@/src/styles/components/tooltip.styles";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, View, ViewStyle } from "react-native";
+import { ThemedText } from "../themed-text";
+import { TouchableOpacitySafe } from "./touchable-opacity-safe";
 
 export interface TooltipProps {
   children: React.ReactNode;
   text: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: "top" | "bottom" | "left" | "right";
   delay?: number;
 }
 
@@ -24,7 +24,7 @@ export interface TooltipProps {
 export function Tooltip({
   children,
   text,
-  position = 'top',
+  position = "top",
   delay = 200,
 }: TooltipProps) {
   const { colors } = useTheme();
@@ -34,7 +34,7 @@ export function Tooltip({
   const containerRef = useRef<View>(null);
 
   const showTooltip = () => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       // En web, usar delay para hover
       timeoutRef.current = setTimeout(() => {
         setVisible(true);
@@ -65,30 +65,31 @@ export function Tooltip({
   // Estilos para posicionamiento
   const getTooltipStyle = (): ViewStyle => {
     // Usar un color de fondo sólido y opaco
-    const backgroundColor = colors.surfaceVariant || colors.surface || '#E5E7EB';
-    
+    const backgroundColor = colors.surfaceVariant ?? colors.surface;
+
     const baseStyle: ViewStyle = {
       ...styles.tooltip,
       backgroundColor, // Fondo sólido y opaco
+      shadowColor: colors.shadow,
     };
 
     switch (position) {
-      case 'top':
+      case "top":
         return {
           ...baseStyle,
           ...styles.tooltipTop,
         };
-      case 'bottom':
+      case "bottom":
         return {
           ...baseStyle,
           ...styles.tooltipBottom,
         };
-      case 'left':
+      case "left":
         return {
           ...baseStyle,
           ...styles.tooltipLeft,
         };
-      case 'right':
+      case "right":
         return {
           ...baseStyle,
           ...styles.tooltipRight,
@@ -100,7 +101,7 @@ export function Tooltip({
 
   // Para web, usar eventos de mouse en el contenedor
   const webProps =
-    Platform.OS === 'web'
+    Platform.OS === "web"
       ? {
           onMouseEnter: showTooltip,
           onMouseLeave: hideTooltip,
@@ -109,7 +110,7 @@ export function Tooltip({
 
   // Para mobile, usar long press
   const mobileProps =
-    Platform.OS !== 'web'
+    Platform.OS !== "web"
       ? {
           onPressIn: showTooltip,
           onPressOut: hideTooltip,
@@ -119,7 +120,7 @@ export function Tooltip({
 
   return (
     <View ref={containerRef} style={styles.container} {...webProps}>
-      {Platform.OS === 'web' ? (
+      {Platform.OS === "web" ? (
         <View>{children}</View>
       ) : (
         <TouchableOpacitySafe activeOpacity={1} {...mobileProps}>
@@ -127,9 +128,9 @@ export function Tooltip({
         </TouchableOpacitySafe>
       )}
       {visible && (
-        <View style={[getTooltipStyle(), { flexWrap: 'wrap' }]}>
-          <ThemedText 
-            type="caption" 
+        <View style={[getTooltipStyle(), { flexWrap: "wrap" }]}>
+          <ThemedText
+            type="caption"
             style={[styles.tooltipText, { color: colors.text }]}
             numberOfLines={2}
             ellipsizeMode="tail"

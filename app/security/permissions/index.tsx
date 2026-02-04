@@ -1021,7 +1021,7 @@ export default function PermissionsListPage() {
               style={[
                 styles.footer,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.surfaceVariant,
                   borderTopColor: colors.border,
                 },
               ]}

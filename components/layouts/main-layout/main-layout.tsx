@@ -6,9 +6,9 @@
 
 import { Header } from "@/components/header";
 import {
-  HorizontalMenu,
-  MenuItem,
-  VerticalMenu,
+    HorizontalMenu,
+    MenuItem,
+    VerticalMenu,
 } from "@/components/navigation";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -16,9 +16,9 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { AppConfig } from "@/src/config";
 import {
-  useCompany,
-  useMultiCompany,
-  UserProfileHeader,
+    useCompany,
+    useMultiCompany,
+    UserProfileHeader,
 } from "@/src/domains/shared";
 import { useMenu } from "@/src/infrastructure/menu";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
@@ -36,7 +36,7 @@ export function MainLayout({
   showNavigation = true,
   menuItems = [],
 }: MainLayoutProps) {
-  const { colors, isDark, shadows } = useTheme();
+  const { colors, shadows } = useTheme();
   const { isMobile } = useResponsive();
   const { company, user } = useCompany();
   const { setUserContext } = useMultiCompany();
@@ -357,15 +357,15 @@ export function MainLayout({
           styles.companyDropdown,
           styles.companyDropdownDesktop,
           {
-            backgroundColor: colors.surfaceMid || colors.background,
-            borderColor: isDark ? colors.surface : colors.border,
+            backgroundColor: colors.dropdownBackground,
+            borderColor: colors.border,
             ...shadows.lg,
           },
         ]
       : [
           styles.companyDropdown,
           {
-            backgroundColor: colors.surfaceMid || colors.background,
+            backgroundColor: colors.dropdownBackground,
             borderColor: colors.border,
             width: titleWidth,
             ...shadows.lg,
@@ -431,14 +431,14 @@ export function MainLayout({
             style={[
               styles.companyDropdownArrow,
               styles.companyDropdownArrowDesktop,
-              { borderBottomColor: isDark ? colors.surface : colors.border },
+              { borderBottomColor: colors.border },
             ]}
           />
           <View
             style={[
               styles.companyDropdownArrow,
               styles.companyDropdownArrowInnerDesktop,
-              { borderBottomColor: colors.background },
+              { borderBottomColor: colors.dropdownBackground },
             ]}
           />
           {availableCompanies.map((companyInfo) => {
@@ -484,7 +484,7 @@ export function MainLayout({
             styles.companyDropdownArrow,
             styles.companyDropdownArrowInner,
             {
-              borderBottomColor: colors.surfaceMid || colors.background,
+              borderBottomColor: colors.dropdownBackground,
             },
           ]}
         />

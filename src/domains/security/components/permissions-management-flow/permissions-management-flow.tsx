@@ -647,7 +647,7 @@ export function PermissionsManagementFlow({
                     style={[
                       styles.moduleHeader,
                       {
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.surfaceVariant,
                         borderColor: colors.border,
                       },
                     ]}

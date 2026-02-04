@@ -108,7 +108,10 @@ export function SearchFilterBar({
             style={[
               styles.selectContainer,
               isSingleOption && styles.selectContainerSingle,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
             ]}
           >
             {hasOptions ? (
@@ -208,7 +211,10 @@ export function SearchFilterBar({
           <InputWithFocus
             containerStyle={[
               styles.textInputContainer,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
             ]}
             primaryColor={colors.primary}
           >
@@ -332,7 +338,10 @@ export function SearchFilterBar({
           <InputWithFocus
             containerStyle={[
               styles.searchInputContainer,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              {
+                backgroundColor: colors.filterInputBackground,
+                borderColor: colors.border,
+              },
             ]}
             primaryColor={colors.primary}
           >

@@ -12,6 +12,7 @@ export interface HomeScreenTheme {
     primary: string;
     border: string;
     surface?: string;
+    shadow?: string;
   };
   spacing: {
     xs: number;
@@ -216,7 +217,7 @@ export function createHomeScreenStyles(t: HomeScreenTheme): HomeScreenStyles {
       borderRadius: t.borderRadius.xl,
       overflow: "hidden",
       backgroundColor: t.colors.surface,
-      shadowColor: "#000",
+      shadowColor: t.colors.shadow ?? "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 12,

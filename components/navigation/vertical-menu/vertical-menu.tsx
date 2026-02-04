@@ -39,7 +39,7 @@ export function VerticalMenu({
   onToggleCollapse,
   onExpandedChange,
 }: VerticalMenuProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const pathname = usePathname();
   const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
@@ -60,7 +60,7 @@ export function VerticalMenu({
   };
   const activeItemColor = getActiveItemColor();
   const styles = createVerticalMenuStyles(collapsed);
-  const additionalStyles = createVerticalMenuAdditionalStyles(colors, isDark);
+  const additionalStyles = createVerticalMenuAdditionalStyles(colors);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isManuallyExpanded, setIsManuallyExpanded] =
     useState<boolean>(!collapsed); // Estado para saber si fue expandido manualmente

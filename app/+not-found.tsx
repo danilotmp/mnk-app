@@ -42,7 +42,7 @@ export default function NotFoundScreen() {
             <View style={[styles.documentBack, styles.documentLeft, { backgroundColor: colors.surfaceVariant }]} />
             <View style={[styles.documentBack, styles.documentRight, { backgroundColor: colors.surfaceVariant }]} />
             {/* Documento principal */}
-            <View style={[styles.documentFront, { backgroundColor: colors.surface }]}>
+            <View style={[styles.documentFront, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
               <ThemedText style={styles.questionMark}>?</ThemedText>
             </View>
           </View>

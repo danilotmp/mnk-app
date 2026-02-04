@@ -325,7 +325,7 @@ export function PermissionFlow({
                     style={[
                       styles.moduleHeader,
                       {
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.surfaceVariant,
                         borderColor: colors.border,
                       },
                     ]}

@@ -60,7 +60,7 @@ export const createCompanyLogoAndMenuContainerStyles = (colors: any) =>
       width: companyNameWidth, // 248px
       maxHeight: 300,
       zIndex: 10000,
-      shadowColor: '#000',
+      shadowColor: colors.shadow ?? '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,

@@ -50,7 +50,7 @@ export const BrandColors = {
   // Grises
   gray: {
     50: "#F8F9FA",
-    100: "#F1F3F4",
+    100: "#F4F6FB",
     200: "#E8EAED",
     300: "#DADCE0",
     400: "#BDC1C6",
@@ -69,52 +69,84 @@ export const BrandColors = {
   },
 };
 
-// Tema claro - Actualizado con colores Hapi
+// ─── Paleta Light: única fuente de valores hex/rgba para el tema claro.
+// Cada color se define una vez; los colores semánticos (colors.xxx) referencian esta paleta.
+// Cambiar un color aquí lo actualiza en toda la app (sin hardcode ni segregación).
+const LightPalette = {
+  primary: baseTheme.brand.primary,
+  primaryLight: BrandColors.blue[100],
+  primaryDark: BrandColors.blue[800],
+  secondary: BrandColors.green[600],
+  secondaryLight: BrandColors.green[100],
+  accent: BrandColors.blue[500],
+  background: "#FFFFFF",
+  surface: "#F8F9FA",
+  surfaceVariant: BrandColors.gray[100],
+  surfaceMid: "#F5F7F8",
+  dropdownBackground: BrandColors.gray[100], // Fondo selector empresas y Cerrar sesión (Light = surfaceVariant)
+  filterInputBackground: BrandColors.gray[100], // Input de filtros (Light = surfaceVariant, mismo que menú)
+  border: BrandColors.gray[300],
+  borderLight: BrandColors.gray[200],
+  text: "#1E2538",
+  textSecondary: BrandColors.gray[700],
+  textTertiary: BrandColors.gray[500],
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  info: BrandColors.status.info,
+  suspended: "#F97316",
+  deleted: "#6B7280",
+  contrastText: "#FFFFFF",
+  overlay: "rgba(0, 0, 0, 0.5)",
+  tabIconDefault: BrandColors.gray[500],
+  tabIconSelected: BrandColors.blue[500],
+  icon: "#1E2538",
+  iconSecondary: BrandColors.gray[600],
+  shadow: BrandColors.gray[900], // Color de sombra (mismo gris que usamos en la paleta)
+} as const;
+
+// Tema claro - Colores administrados por paleta (igual que Dark); una sola fuente de verdad.
 export const LightTheme = {
   colors: {
-    // Colores principales
-    primary: baseTheme.brand.primary, //'#0087FF',      // Mismo color que buttonTheme.brand.primary
-    primaryLight: BrandColors.blue[100],
-    primaryDark: BrandColors.blue[800],
-    secondary: BrandColors.green[600], // Verde más oscuro para modo claro
-    secondaryLight: BrandColors.green[100],
-    accent: BrandColors.blue[500], // Cyan para acentos
-    accentLight: BrandColors.blue[100],
+    primary: LightPalette.primary,
+    primaryLight: LightPalette.primaryLight,
+    primaryDark: LightPalette.primaryDark,
+    secondary: LightPalette.secondary,
+    secondaryLight: LightPalette.secondaryLight,
+    accent: LightPalette.accent,
+    accentLight: LightPalette.primaryLight,
 
-    // Colores de fondo
-    background: "#FFFFFF",
-    surface: "#f8f9fa", // rgb(248, 249, 250) - Color del botón de tema
-    surfaceVariant: BrandColors.gray[100],
-    surfaceMid: "#F5F7F8", // Color intermedio entre background y surfaceVariant (para header/footer de tabla)
+    background: LightPalette.background,
+    surface: LightPalette.surface,
+    surfaceVariant: LightPalette.surfaceVariant,
+    surfaceMid: LightPalette.surfaceMid,
+    dropdownBackground: LightPalette.dropdownBackground,
+    filterInputBackground: LightPalette.filterInputBackground,
+    stripedRow: LightPalette.stripedRow,
 
-    // Colores de texto
-    text: "#1e2538", // rgb(30, 41, 59) - Color oscuro para modo claro
-    textSecondary: BrandColors.gray[700],
-    textTertiary: BrandColors.gray[500],
-    subtitle: BrandColors.gray[700], // Color estándar para subtítulos (gris)
+    text: LightPalette.text,
+    textSecondary: LightPalette.textSecondary,
+    textTertiary: LightPalette.textTertiary,
+    subtitle: LightPalette.textSecondary,
 
-    // Colores de borde
-    border: BrandColors.gray[300], // Cambiado de gray[200] a gray[300] para mejor visibilidad
-    borderLight: BrandColors.gray[200],
+    border: LightPalette.border,
+    borderLight: LightPalette.borderLight,
 
-    // Colores de estado - alineados con uso en código
-    success: "#10b981", // Verde para ACTIVE
-    warning: "#f59e0b", // Amarillo para PENDING
-    error: "#ef4444", // Rojo para INACTIVE
-    info: BrandColors.status.info,
-    suspended: "#f97316", // Naranja para SUSPENDED
-    deleted: "#6b7280", // Gris para DELETED
+    success: LightPalette.success,
+    warning: LightPalette.warning,
+    error: LightPalette.error,
+    info: LightPalette.info,
+    suspended: LightPalette.suspended,
+    deleted: LightPalette.deleted,
+    contrastText: LightPalette.contrastText,
+    overlay: LightPalette.overlay,
 
-    // Texto sobre botones de color (primary/success/error)
-    contrastText: "#FFFFFF",
-    overlay: "rgba(0, 0, 0, 0.5)",
-
-    // Colores de navegación
-    tabIconDefault: BrandColors.gray[500],
-    tabIconSelected: BrandColors.blue[500],
-    tint: BrandColors.blue[500],
-    icon: "#1e2538", // Iconos oscuros en modo claro
-    iconSecondary: BrandColors.gray[600],
+    tabIconDefault: LightPalette.tabIconDefault,
+    tabIconSelected: LightPalette.tabIconSelected,
+    tint: LightPalette.tabIconSelected,
+    icon: LightPalette.icon,
+    iconSecondary: LightPalette.iconSecondary,
+    shadow: LightPalette.shadow,
   },
   spacing: {
     xs: 4,
@@ -133,21 +165,21 @@ export const LightTheme = {
   },
   shadows: {
     sm: {
-      shadowColor: BrandColors.gray[900],
+      shadowColor: LightPalette.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
       shadowRadius: 2,
       elevation: 2,
     },
     md: {
-      shadowColor: BrandColors.gray[900],
+      shadowColor: LightPalette.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.15,
       shadowRadius: 4,
       elevation: 4,
     },
     lg: {
-      shadowColor: BrandColors.gray[900],
+      shadowColor: LightPalette.shadow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 8,
@@ -170,6 +202,8 @@ const DarkPalette = {
   surface: "rgba(188,197,239,.2)",
   surfaceVariant: "#151b2e",
   surfaceMid: "#1a1f33", // Color intermedio entre background y surfaceVariant (para header/footer de tabla)
+  dropdownBackground: "#151b2e", // Fondo selector empresas y Cerrar sesión (Dark = surfaceVariant, sin cambiar)
+  filterInputBackground: "rgba(188,197,239,.2)", // Input de filtros (Dark = surface, sin cambiar)
   border: "#1e2538",
   borderLight: "#2a3142",
   text: "#ffffff",
@@ -183,7 +217,7 @@ const DarkPalette = {
   contrastText: "#FFFFFF",
   overlay: "rgba(0, 0, 0, 0.5)",
   tabIconDefault: "#6b7588",
-  shadow: "#000000",
+  shadow: "#000000", // Dark: negro para sombras
 } as const;
 
 // Tema oscuro - Inspirado en Hapi Trade. Colores administrados por paleta; variables por uso.
@@ -201,6 +235,9 @@ export const DarkTheme = {
     surface: DarkPalette.surface,
     surfaceVariant: DarkPalette.surfaceVariant,
     surfaceMid: DarkPalette.surfaceMid,
+    dropdownBackground: DarkPalette.dropdownBackground,
+    filterInputBackground: DarkPalette.filterInputBackground,
+    stripedRow: DarkPalette.stripedRow,
 
     text: DarkPalette.text,
     textSecondary: DarkPalette.textSecondary,
@@ -213,8 +250,9 @@ export const DarkTheme = {
     success: DarkPalette.success,
     warning: DarkPalette.warning,
     error: DarkPalette.error,
-    info: DarkPalette.accent,
+    info: DarkPalette.info,
     suspended: DarkPalette.suspended,
+    deleted: DarkPalette.deleted,
     contrastText: DarkPalette.contrastText,
     overlay: DarkPalette.overlay,
 
@@ -223,6 +261,7 @@ export const DarkTheme = {
     tint: DarkPalette.accent,
     icon: DarkPalette.text,
     iconSecondary: DarkPalette.textSecondary,
+    shadow: DarkPalette.shadow,
   },
   spacing: {
     xs: 4,

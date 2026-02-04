@@ -1098,7 +1098,17 @@ export function OperationalLayer({
               Ofertas
             </ThemedText>
           </View>
-          <View style={styles.sectionDescriptionContainer}>
+          <View
+            style={[
+              styles.sectionDescriptionContainer,
+              {
+                backgroundColor: colors.filterInputBackground,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 12,
+              },
+            ]}
+          >
             <ThemedText
               type="body2"
               style={[
@@ -1156,7 +1166,7 @@ export function OperationalLayer({
                                 {
                                   backgroundColor: isExpanded
                                     ? colors.primary + "20"
-                                    : colors.surface,
+                                    : colors.filterInputBackground,
                                   borderColor: isExpanded
                                     ? colors.primary
                                     : colors.border,
@@ -1355,7 +1365,8 @@ export function OperationalLayer({
                                       containerStyle={[
                                         styles.inputContainer,
                                         {
-                                          backgroundColor: colors.surface,
+                                          backgroundColor:
+                                            colors.filterInputBackground,
                                           borderColor: colors.border,
                                         },
                                       ]}
@@ -1425,7 +1436,8 @@ export function OperationalLayer({
                                   containerStyle={[
                                     styles.textAreaContainer,
                                     {
-                                      backgroundColor: colors.surface,
+                                      backgroundColor:
+                                        colors.filterInputBackground,
                                       borderColor: colors.border,
                                     },
                                   ]}
@@ -1792,7 +1804,7 @@ export function OperationalLayer({
                     style={[
                       styles.listItem,
                       {
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.filterInputBackground,
                         borderColor: colors.border,
                       },
                     ]}

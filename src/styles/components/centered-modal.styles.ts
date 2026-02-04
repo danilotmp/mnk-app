@@ -24,14 +24,15 @@ export const createCenteredModalStyles = (
       alignItems: "center",
     },
     modalContainer: {
+      backgroundColor: colors.surfaceVariant ?? colors.surface,
       borderRadius: 16,
       overflow: "hidden",
       ...Platform.select({
         web: {
-          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.3)",
+          boxShadow: `0px 4px 8px ${colors.shadow ?? "#000"}4d`,
         },
         default: {
-          shadowColor: "#000",
+          shadowColor: colors.shadow ?? "#000",
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,

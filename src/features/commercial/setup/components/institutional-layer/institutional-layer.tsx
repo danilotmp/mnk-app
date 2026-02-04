@@ -513,6 +513,7 @@ export function InstitutionalLayer({
             searchable={true}
             error={!!errors.industry}
             errorMessage={errors.industry}
+            triggerStyle={{ backgroundColor: colors.filterInputBackground }}
           />
         </View>
 
@@ -528,7 +529,7 @@ export function InstitutionalLayer({
             containerStyle={[
               styles.textAreaContainer,
               {
-                backgroundColor: colors.surface,
+                backgroundColor: colors.filterInputBackground,
                 borderColor: errors.businessDescription
                   ? colors.error
                   : colors.border,
@@ -716,6 +717,7 @@ export function InstitutionalLayer({
                 onSelect={(val) => handleChange("language", val as string)}
                 placeholder="Selecciona un idioma"
                 searchable={false}
+                triggerStyle={{ backgroundColor: colors.filterInputBackground }}
               />
               <ThemedText
                 type="caption"
@@ -742,6 +744,7 @@ export function InstitutionalLayer({
                 onSelect={(val) => handleChange("timezone", val as string)}
                 placeholder="Selecciona una zona horaria"
                 searchable={true}
+                triggerStyle={{ backgroundColor: colors.filterInputBackground }}
               />
               <ThemedText
                 type="caption"

@@ -42,7 +42,7 @@ export function CenteredModal({
   height = "90%",
   topAlert,
 }: CenteredModalProps) {
-  const { colors, isDark, modalLayout } = useTheme();
+  const { colors, modalLayout } = useTheme();
   const { isMobile } = useResponsive();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const styles = createCenteredModalStyles({ colors, modalLayout }, isMobile);
@@ -64,10 +64,8 @@ export function CenteredModal({
         ? height
         : windowHeight * 0.9;
 
-  // Usar surfaceVariant en modo dark para evitar transparencia, o background si está disponible
-  const modalBackgroundColor = isDark
-    ? colors.surfaceVariant || colors.background || "#1E293B"
-    : colors.surface;
+  // Mismo color que el menú vertical (surfaceVariant) en ambos temas
+  const modalBackgroundColor = colors.surfaceVariant ?? colors.surface;
 
   useEffect(() => {
     if (visible) {

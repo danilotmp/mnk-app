@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from "react-native";
 
 export const createRichTextEditorStyles = (colors: any) =>
   StyleSheet.create({
@@ -6,17 +6,17 @@ export const createRichTextEditorStyles = (colors: any) =>
       flex: 1,
       borderWidth: 1,
       borderRadius: 8,
-      overflow: 'hidden',
-      backgroundColor: colors.background || '#FFFFFF',
+      overflow: "hidden",
+      backgroundColor: colors.background,
     },
     webview: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
     },
     loadingContainer: {
       ...StyleSheet.absoluteFillObject,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.overlay || 'rgba(0,0,0,0.05)',
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.overlay,
     },
   });

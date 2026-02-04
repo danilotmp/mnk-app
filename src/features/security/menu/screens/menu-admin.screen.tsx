@@ -3106,7 +3106,10 @@ export function MenuAdminScreen() {
               onPress={() => addNewColumn(item.id)}
               style={[
                 styles.addGroupingButton,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                {
+                  backgroundColor: colors.surfaceVariant,
+                  borderColor: colors.border,
+                },
               ]}
             >
               <Ionicons

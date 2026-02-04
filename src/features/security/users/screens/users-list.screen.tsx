@@ -1055,7 +1055,7 @@ export function UsersListScreen() {
                           styles.footerIconButton,
                           {
                             borderColor: colors.border,
-                            backgroundColor: colors.surface,
+                            backgroundColor: colors.surfaceVariant,
                             opacity: formActions.isLoading ? 0.5 : 1,
                           },
                         ]}

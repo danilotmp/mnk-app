@@ -3,17 +3,17 @@
  * Filtra datos locales (JSONs) sin enviar consultas al backend
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Tooltip } from '@/components/ui/tooltip';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { DynamicIcon, SearchInput } from '@/src/domains/shared/components';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
-import { createPermissionsFlowFiltersStyles } from './permissions-management-flow-filters.styles';
-import { PermissionsFlowFiltersProps } from './permissions-management-flow-filters.types';
+import { ThemedText } from "@/components/themed-text";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { DynamicIcon, SearchInput } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useMemo, useState } from "react";
+import { ScrollView, TouchableOpacity, View } from "react-native";
+import { createPermissionsFlowFiltersStyles } from "./permissions-management-flow-filters.styles";
+import { PermissionsFlowFiltersProps } from "./permissions-management-flow-filters.types";
 
 export function PermissionsFlowFilters({
   menuItems,
@@ -43,33 +43,46 @@ export function PermissionsFlowFilters({
     if (!menuItems || menuItems.length === 0) {
       return [];
     }
-    
+
     const moduleSet = new Set<string>();
-    
+
     menuItems.forEach((item) => {
       if (item.label) {
         // Solo agregar si NO es público (isPublic !== true)
         // Verificar si es público de forma flexible (boolean true, string "true", o número 1)
         const isPublicValue = item.isPublic;
-        const isPublic = isPublicValue === true || 
-                         (typeof isPublicValue === 'string' && isPublicValue === 'true') || 
-                         (typeof isPublicValue === 'number' && isPublicValue === 1);
+        const isPublic =
+          isPublicValue === true ||
+          (typeof isPublicValue === "string" && isPublicValue === "true") ||
+          (typeof isPublicValue === "number" && isPublicValue === 1);
         if (!isPublic) {
           moduleSet.add(item.label);
         }
       }
     });
-    
+
     return Array.from(moduleSet).sort();
   }, [menuItems]);
 
   // Opciones de acciones estándar
   const standardActionOptions = [
-    { value: '', label: t.common?.all || 'Todos', icon: null },
-    { value: 'view', label: t.common?.view || 'Ver', icon: 'eye-outline' },
-    { value: 'create', label: t.common?.create || 'Crear', icon: 'create-outline' },
-    { value: 'edit', label: t.common?.edit || 'Editar', icon: 'pencil-outline' },
-    { value: 'delete', label: t.common?.delete || 'Eliminar', icon: 'trash-outline' },
+    { value: "", label: t.common?.all || "Todos", icon: null },
+    { value: "view", label: t.common?.view || "Ver", icon: "eye-outline" },
+    {
+      value: "create",
+      label: t.common?.create || "Crear",
+      icon: "create-outline",
+    },
+    {
+      value: "edit",
+      label: t.common?.edit || "Editar",
+      icon: "pencil-outline",
+    },
+    {
+      value: "delete",
+      label: t.common?.delete || "Eliminar",
+      icon: "trash-outline",
+    },
   ];
 
   // Agregar permisos personalizados a las opciones de acción
@@ -96,7 +109,11 @@ export function PermissionsFlowFilters({
   // Combinar opciones estándar con permisos personalizados
   const actionOptions = [...standardActionOptions, ...customActionOptions];
 
-  const hasActiveFilters = searchValue.trim() !== '' || selectedModule !== '' || selectedAction !== '' || !showDefaultOptions;
+  const hasActiveFilters =
+    searchValue.trim() !== "" ||
+    selectedModule !== "" ||
+    selectedAction !== "" ||
+    !showDefaultOptions;
 
   return (
     <View style={styles.container}>
@@ -105,10 +122,16 @@ export function PermissionsFlowFilters({
         <SearchInput
           value={searchValue}
           onChangeText={onSearchChange}
-          placeholder={t.security?.permissions?.filterPlaceholder || 'Filtrar por nombre, ruta o descripción...'}
+          placeholder={
+            t.security?.permissions?.filterPlaceholder ||
+            "Filtrar por nombre, ruta o descripción..."
+          }
           containerStyle={[
             styles.searchInputContainer,
-            { backgroundColor: colors.surface, borderColor: colors.border },
+            {
+              backgroundColor: colors.filterInputBackground,
+              borderColor: colors.border,
+            },
           ]}
           inputStyle={[styles.searchInput, { color: colors.text }]}
           autoCapitalize="none"
@@ -117,26 +140,34 @@ export function PermissionsFlowFilters({
 
         <View style={styles.actionButtons}>
           <Tooltip
-            text={isCollapsed ? (t.common?.showFilters || 'Mostrar filtros') : (t.common?.hideFilters || 'Ocultar filtros')}
+            text={
+              isCollapsed
+                ? t.common?.showFilters || "Mostrar filtros"
+                : t.common?.hideFilters || "Ocultar filtros"
+            }
             position="top"
           >
             <TouchableOpacity
-              style={[styles.actionButton, styles.expandButton, { borderColor: colors.border }]}
+              style={[
+                styles.actionButton,
+                styles.expandButton,
+                { borderColor: colors.border },
+              ]}
               onPress={() => setIsCollapsed(!isCollapsed)}
               activeOpacity={0.7}
             >
               <Ionicons
-                name={isCollapsed ? 'chevron-down' : 'chevron-up'}
+                name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={isMobile ? 20 : 18}
                 color={colors.text}
               />
             </TouchableOpacity>
           </Tooltip>
-          
+
           {/* Botón Vista previa */}
           {onShowAllChange && (
             <Tooltip
-              text={t.security?.permissions?.preview || 'Vista previa'}
+              text={t.security?.permissions?.preview || "Vista previa"}
               position="top"
             >
               <TouchableOpacity
@@ -152,9 +183,9 @@ export function PermissionsFlowFilters({
                 activeOpacity={0.7}
               >
                 <Ionicons
-                  name={showAll ? 'eye' : 'eye-off-outline'}
+                  name={showAll ? "eye" : "eye-off-outline"}
                   size={isMobile ? 20 : 18}
-                  color={showAll ? '#FFFFFF' : colors.text}
+                  color={showAll ? "#FFFFFF" : colors.text}
                 />
               </TouchableOpacity>
             </Tooltip>
@@ -169,14 +200,19 @@ export function PermissionsFlowFilters({
           <View style={styles.filtersRow}>
             {/* Sección de Opciones por defecto */}
             <View style={styles.filterSection}>
-              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-              {t.security?.permissions?.show || 'Mostrar'}
+              <ThemedText
+                type="body2"
+                style={[styles.filterLabel, { color: colors.text }]}
+              >
+                {t.security?.permissions?.show || "Mostrar"}
               </ThemedText>
               <TouchableOpacity
                 style={[
                   styles.defaultOptionsButton,
                   {
-                    backgroundColor: showDefaultOptions ? colors.primary : colors.surface,
+                    backgroundColor: showDefaultOptions
+                      ? colors.primary
+                      : colors.surface,
                     borderColor: colors.border,
                   },
                 ]}
@@ -186,18 +222,21 @@ export function PermissionsFlowFilters({
                 <ThemedText
                   type="body2"
                   style={{
-                    color: showDefaultOptions ? '#FFFFFF' : colors.text,
-                    fontWeight: showDefaultOptions ? '600' : '400',
+                    color: showDefaultOptions ? "#FFFFFF" : colors.text,
+                    fontWeight: showDefaultOptions ? "600" : "400",
                   }}
                 >
-                  {t.security?.roles?.defaultOptionsPlural || 'Todo'}
+                  {t.security?.roles?.defaultOptionsPlural || "Todo"}
                 </ThemedText>
               </TouchableOpacity>
             </View>
             {/* Selector de Módulo */}
             <View style={styles.filterSection}>
-              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-                {t.security?.permissions?.module || 'Módulo'}
+              <ThemedText
+                type="body2"
+                style={[styles.filterLabel, { color: colors.text }]}
+              >
+                {t.security?.permissions?.module || "Módulo"}
               </ThemedText>
               <ScrollView
                 horizontal
@@ -208,20 +247,21 @@ export function PermissionsFlowFilters({
                   style={[
                     styles.filterOption,
                     {
-                      backgroundColor: selectedModule === '' ? colors.primary : colors.surface,
+                      backgroundColor:
+                        selectedModule === "" ? colors.primary : colors.surface,
                       borderColor: colors.border,
                     },
                   ]}
-                  onPress={() => onModuleChange('')}
+                  onPress={() => onModuleChange("")}
                 >
                   <ThemedText
                     type="body2"
                     style={{
-                      color: selectedModule === '' ? '#FFFFFF' : colors.text,
-                      fontWeight: selectedModule === '' ? '600' : '400',
+                      color: selectedModule === "" ? "#FFFFFF" : colors.text,
+                      fontWeight: selectedModule === "" ? "600" : "400",
                     }}
                   >
-                    {t.common?.all || 'Todos'}
+                    {t.common?.all || "Todos"}
                   </ThemedText>
                 </TouchableOpacity>
                 {modules.map((module) => (
@@ -230,7 +270,10 @@ export function PermissionsFlowFilters({
                     style={[
                       styles.filterOption,
                       {
-                        backgroundColor: selectedModule === module ? colors.primary : colors.surface,
+                        backgroundColor:
+                          selectedModule === module
+                            ? colors.primary
+                            : colors.surface,
                         borderColor: colors.border,
                       },
                     ]}
@@ -239,8 +282,9 @@ export function PermissionsFlowFilters({
                     <ThemedText
                       type="body2"
                       style={{
-                        color: selectedModule === module ? '#FFFFFF' : colors.text,
-                        fontWeight: selectedModule === module ? '600' : '400',
+                        color:
+                          selectedModule === module ? "#FFFFFF" : colors.text,
+                        fontWeight: selectedModule === module ? "600" : "400",
                       }}
                     >
                       {module}
@@ -250,10 +294,13 @@ export function PermissionsFlowFilters({
               </ScrollView>
             </View>
 
-             {/* Selector de Acción */}
-             <View style={styles.filterSection}>
-              <ThemedText type="body2" style={[styles.filterLabel, { color: colors.text }]}>
-                {t.security?.permissions?.action || 'Acción'}
+            {/* Selector de Acción */}
+            <View style={styles.filterSection}>
+              <ThemedText
+                type="body2"
+                style={[styles.filterLabel, { color: colors.text }]}
+              >
+                {t.security?.permissions?.action || "Acción"}
               </ThemedText>
               <ScrollView
                 horizontal
@@ -262,17 +309,19 @@ export function PermissionsFlowFilters({
               >
                 {actionOptions.map((option) => {
                   const isSelected = selectedAction === option.value;
-                  const iconColor = isSelected ? '#FFFFFF' : colors.text;
-                  
+                  const iconColor = isSelected ? "#FFFFFF" : colors.text;
+
                   // Si es "Todos", mostrar solo texto sin tooltip
-                  if (option.value === '') {
+                  if (option.value === "") {
                     return (
                       <TouchableOpacity
                         key={option.value}
                         style={[
                           styles.filterOption,
                           {
-                            backgroundColor: isSelected ? colors.primary : colors.surface,
+                            backgroundColor: isSelected
+                              ? colors.primary
+                              : colors.surface,
                             borderColor: colors.border,
                           },
                         ]}
@@ -281,8 +330,8 @@ export function PermissionsFlowFilters({
                         <ThemedText
                           type="body2"
                           style={{
-                            color: isSelected ? '#FFFFFF' : colors.text,
-                            fontWeight: isSelected ? '600' : '400',
+                            color: isSelected ? "#FFFFFF" : colors.text,
+                            fontWeight: isSelected ? "600" : "400",
                           }}
                         >
                           {option.label}
@@ -290,61 +339,76 @@ export function PermissionsFlowFilters({
                       </TouchableOpacity>
                     );
                   }
-                  
+
                   // Para los demás botones:
                   // - Si está seleccionado: mostrar icono + texto
                   // - Si NO está seleccionado: mostrar solo icono
                   // Si es un permiso personalizado, usar DynamicIcon
                   const isCustomPermission = (option as any).permission;
-                  const hasIcon = option.icon !== null && option.icon !== undefined;
-                  
+                  const hasIcon =
+                    option.icon !== null && option.icon !== undefined;
+
                   return (
                     <TouchableOpacity
                       key={option.value}
                       style={[
                         styles.filterOption,
                         {
-                          backgroundColor: isSelected ? colors.primary : colors.surface,
+                          backgroundColor: isSelected
+                            ? colors.primary
+                            : colors.surface,
                           borderColor: colors.border,
                         },
                       ]}
                       onPress={() => onActionChange(option.value)}
                     >
                       {isSelected ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          {hasIcon && (
-                            isCustomPermission ? (
-                              <DynamicIcon name={option.icon!} size={16} color={iconColor} />
-                            ) : (
-                              <Ionicons 
-                                name={option.icon as any} 
-                                size={16} 
-                                color={iconColor} 
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          {hasIcon &&
+                            (isCustomPermission ? (
+                              <DynamicIcon
+                                name={option.icon!}
+                                size={16}
+                                color={iconColor}
                               />
-                            )
-                          )}
+                            ) : (
+                              <Ionicons
+                                name={option.icon as any}
+                                size={16}
+                                color={iconColor}
+                              />
+                            ))}
                           <ThemedText
                             type="body2"
                             style={{
                               color: iconColor,
-                              fontWeight: '600',
+                              fontWeight: "600",
                             }}
                           >
                             {option.label}
                           </ThemedText>
                         </View>
                       ) : (
-                        hasIcon && (
-                          isCustomPermission ? (
-                            <DynamicIcon name={option.icon!} size={16} color={iconColor} />
-                          ) : (
-                            <Ionicons 
-                              name={option.icon as any} 
-                              size={16} 
-                              color={iconColor} 
-                            />
-                          )
-                        )
+                        hasIcon &&
+                        (isCustomPermission ? (
+                          <DynamicIcon
+                            name={option.icon!}
+                            size={16}
+                            color={iconColor}
+                          />
+                        ) : (
+                          <Ionicons
+                            name={option.icon as any}
+                            size={16}
+                            color={iconColor}
+                          />
+                        ))
                       )}
                     </TouchableOpacity>
                   );
@@ -361,9 +425,19 @@ export function PermissionsFlowFilters({
                 onPress={onClearFilters}
                 activeOpacity={0.7}
               >
-                <Ionicons name="refresh" size={16} color={colors.textSecondary} />
-                <ThemedText type="body2" style={[styles.clearText, { color: colors.textSecondary, marginLeft: 4 }]}>
-                  {t.common?.clearFilters || 'Limpiar filtros'}
+                <Ionicons
+                  name="refresh"
+                  size={16}
+                  color={colors.textSecondary}
+                />
+                <ThemedText
+                  type="body2"
+                  style={[
+                    styles.clearText,
+                    { color: colors.textSecondary, marginLeft: 4 },
+                  ]}
+                >
+                  {t.common?.clearFilters || "Limpiar filtros"}
                 </ThemedText>
               </TouchableOpacity>
             </View>

@@ -1,18 +1,20 @@
-import { StyleSheet } from 'react-native';
-import { Size } from '../domains/shared/types';
-import { BaseTheme } from './themes/base.theme';
+import { StyleSheet } from "react-native";
+import { Size } from "../domains/shared/types";
+import { BaseTheme } from "./themes/base.theme";
+
+type ThemeWithColors = BaseTheme & { colors: Record<string, string> };
 
 // Estilos globales que se pueden reutilizar en toda la aplicación
-export const createGlobalStyles = (theme: BaseTheme) => {
+export const createGlobalStyles = (theme: ThemeWithColors) => {
   return StyleSheet.create({
     // Contenedores
     container: {
       flex: 1,
-      backgroundColor: theme.colors?.background || '#FFFFFF',
+      backgroundColor: theme.colors.background,
     },
     safeArea: {
       flex: 1,
-      backgroundColor: theme.colors?.background || '#FFFFFF',
+      backgroundColor: theme.colors.background,
     },
     scrollContainer: {
       flex: 1,
@@ -21,19 +23,19 @@ export const createGlobalStyles = (theme: BaseTheme) => {
       padding: theme.spacing.md,
       paddingBottom: theme.spacing.xl,
     },
-    
+
     // Centrado
     center: {
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     centerHorizontal: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     centerVertical: {
-      justifyContent: 'center',
+      justifyContent: "center",
     },
-    
+
     // Espaciado dinámico
     marginTop: (size: Size) => ({
       marginTop: theme.spacing[size],
@@ -56,34 +58,34 @@ export const createGlobalStyles = (theme: BaseTheme) => {
     paddingVertical: (size: Size) => ({
       paddingVertical: theme.spacing[size],
     }),
-    
+
     // Bordes
     border: {
       borderWidth: theme.borders.width.sm,
-      borderColor: theme.colors?.border || '#E5E7EB',
+      borderColor: theme.colors.border,
     },
     borderTop: {
       borderTopWidth: theme.borders.width.sm,
-      borderTopColor: theme.colors?.border || '#E5E7EB',
+      borderTopColor: theme.colors.border,
     },
     borderBottom: {
       borderBottomWidth: theme.borders.width.sm,
-      borderBottomColor: theme.colors?.border || '#E5E7EB',
+      borderBottomColor: theme.colors.border,
     },
     borderLeft: {
       borderLeftWidth: theme.borders.width.sm,
-      borderLeftColor: theme.colors?.border || '#E5E7EB',
+      borderLeftColor: theme.colors.border,
     },
     borderRight: {
       borderRightWidth: theme.borders.width.sm,
-      borderRightColor: theme.colors?.border || '#E5E7EB',
+      borderRightColor: theme.colors.border,
     },
-    
+
     // Bordes redondeados
     rounded: (size: Size) => ({
       borderRadius: theme.borders.radius[size],
     }),
-    
+
     // Sombras
     shadow: {
       ...theme.shadows.sm,
@@ -94,19 +96,19 @@ export const createGlobalStyles = (theme: BaseTheme) => {
     shadowLarge: {
       ...theme.shadows.lg,
     },
-    
+
     // Flex
     flex1: {
       flex: 1,
     },
     flexRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
     },
     flexColumn: {
-      flexDirection: 'column',
+      flexDirection: "column",
     },
     flexWrap: {
-      flexWrap: 'wrap',
+      flexWrap: "wrap",
     },
     flexGrow: {
       flexGrow: 1,
@@ -114,69 +116,69 @@ export const createGlobalStyles = (theme: BaseTheme) => {
     flexShrink: {
       flexShrink: 1,
     },
-    
+
     // Alineación
     alignStart: {
-      alignItems: 'flex-start',
+      alignItems: "flex-start",
     },
     alignEnd: {
-      alignItems: 'flex-end',
+      alignItems: "flex-end",
     },
     alignCenter: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     justifyStart: {
-      justifyContent: 'flex-start',
+      justifyContent: "flex-start",
     },
     justifyEnd: {
-      justifyContent: 'flex-end',
+      justifyContent: "flex-end",
     },
     justifyCenter: {
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     justifyBetween: {
-      justifyContent: 'space-between',
+      justifyContent: "space-between",
     },
     justifyAround: {
-      justifyContent: 'space-around',
+      justifyContent: "space-around",
     },
     justifyEvenly: {
-      justifyContent: 'space-evenly',
+      justifyContent: "space-evenly",
     },
-    
+
     // Texto
     textCenter: {
-      textAlign: 'center',
+      textAlign: "center",
     },
     textLeft: {
-      textAlign: 'left',
+      textAlign: "left",
     },
     textRight: {
-      textAlign: 'right',
+      textAlign: "right",
     },
-    
+
     // Posicionamiento
     absolute: {
-      position: 'absolute',
+      position: "absolute",
     },
     relative: {
-      position: 'relative',
+      position: "relative",
     },
-    
+
     // Tamaños
     fullWidth: {
-      width: '100%',
+      width: "100%",
     },
     fullHeight: {
-      height: '100%',
+      height: "100%",
     },
     halfWidth: {
-      width: '50%',
+      width: "50%",
     },
     halfHeight: {
-      height: '50%',
+      height: "50%",
     },
-    
+
     // Opacidad
     opacity50: {
       opacity: 0.5,
@@ -200,7 +202,7 @@ export const staticStyles = StyleSheet.create({
   gap20: { gap: 20 },
   gap24: { gap: 24 },
   gap32: { gap: 32 },
-  
+
   // Márgenes fijos
   m4: { margin: 4 },
   m8: { margin: 8 },
@@ -209,7 +211,7 @@ export const staticStyles = StyleSheet.create({
   m20: { margin: 20 },
   m24: { margin: 24 },
   m32: { margin: 32 },
-  
+
   // Padding fijo
   p4: { padding: 4 },
   p8: { padding: 8 },
@@ -218,7 +220,7 @@ export const staticStyles = StyleSheet.create({
   p20: { padding: 20 },
   p24: { padding: 24 },
   p32: { padding: 32 },
-  
+
   // Márgenes específicos
   mt4: { marginTop: 4 },
   mt8: { marginTop: 8 },
@@ -227,7 +229,7 @@ export const staticStyles = StyleSheet.create({
   mt20: { marginTop: 20 },
   mt24: { marginTop: 24 },
   mt32: { marginTop: 32 },
-  
+
   mb4: { marginBottom: 4 },
   mb8: { marginBottom: 8 },
   mb12: { marginBottom: 12 },
@@ -235,7 +237,7 @@ export const staticStyles = StyleSheet.create({
   mb20: { marginBottom: 20 },
   mb24: { marginBottom: 24 },
   mb32: { marginBottom: 32 },
-  
+
   ml4: { marginLeft: 4 },
   ml8: { marginLeft: 8 },
   ml12: { marginLeft: 12 },
@@ -243,7 +245,7 @@ export const staticStyles = StyleSheet.create({
   ml20: { marginLeft: 20 },
   ml24: { marginLeft: 24 },
   ml32: { marginLeft: 32 },
-  
+
   mr4: { marginRight: 4 },
   mr8: { marginRight: 8 },
   mr12: { marginRight: 12 },
@@ -251,7 +253,7 @@ export const staticStyles = StyleSheet.create({
   mr20: { marginRight: 20 },
   mr24: { marginRight: 24 },
   mr32: { marginRight: 32 },
-  
+
   // Padding específico
   pt4: { paddingTop: 4 },
   pt8: { paddingTop: 8 },
@@ -260,7 +262,7 @@ export const staticStyles = StyleSheet.create({
   pt20: { paddingTop: 20 },
   pt24: { paddingTop: 24 },
   pt32: { paddingTop: 32 },
-  
+
   pb4: { paddingBottom: 4 },
   pb8: { paddingBottom: 8 },
   pb12: { paddingBottom: 12 },
@@ -268,7 +270,7 @@ export const staticStyles = StyleSheet.create({
   pb20: { paddingBottom: 20 },
   pb24: { paddingBottom: 24 },
   pb32: { paddingBottom: 32 },
-  
+
   pl4: { paddingLeft: 4 },
   pl8: { paddingLeft: 8 },
   pl12: { paddingLeft: 12 },
@@ -276,7 +278,7 @@ export const staticStyles = StyleSheet.create({
   pl20: { paddingLeft: 20 },
   pl24: { paddingLeft: 24 },
   pl32: { paddingLeft: 32 },
-  
+
   pr4: { paddingRight: 4 },
   pr8: { paddingRight: 8 },
   pr12: { paddingRight: 12 },
@@ -284,7 +286,7 @@ export const staticStyles = StyleSheet.create({
   pr20: { paddingRight: 20 },
   pr24: { paddingRight: 24 },
   pr32: { paddingRight: 32 },
-  
+
   // Padding horizontal y vertical
   px4: { paddingHorizontal: 4 },
   px8: { paddingHorizontal: 8 },
@@ -293,7 +295,7 @@ export const staticStyles = StyleSheet.create({
   px20: { paddingHorizontal: 20 },
   px24: { paddingHorizontal: 24 },
   px32: { paddingHorizontal: 32 },
-  
+
   py4: { paddingVertical: 4 },
   py8: { paddingVertical: 8 },
   py12: { paddingVertical: 12 },
@@ -301,7 +303,7 @@ export const staticStyles = StyleSheet.create({
   py20: { paddingVertical: 20 },
   py24: { paddingVertical: 24 },
   py32: { paddingVertical: 32 },
-  
+
   // Márgenes horizontal y vertical
   mx4: { marginHorizontal: 4 },
   mx8: { marginHorizontal: 8 },
@@ -310,7 +312,7 @@ export const staticStyles = StyleSheet.create({
   mx20: { marginHorizontal: 20 },
   mx24: { marginHorizontal: 24 },
   mx32: { marginHorizontal: 32 },
-  
+
   my4: { marginVertical: 4 },
   my8: { marginVertical: 8 },
   my12: { marginVertical: 12 },

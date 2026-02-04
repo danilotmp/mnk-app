@@ -3,19 +3,19 @@
  * Envuelve InputWithFocus con configuración específica para teléfono
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { InputWithFocus } from '@/components/ui/input-with-focus';
-import { useTheme } from '@/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { TextInput, ViewStyle } from 'react-native';
-import { createPhoneInputStyles } from './phone-input.styles';
-import type { PhoneInputProps } from './phone-input.types';
+import { ThemedText } from "@/components/themed-text";
+import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { useTheme } from "@/hooks/use-theme";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { TextInput, ViewStyle } from "react-native";
+import { createPhoneInputStyles } from "./phone-input.styles";
+import type { PhoneInputProps } from "./phone-input.types";
 
 export function PhoneInput({
   value,
   onChangeText,
-  placeholder = 'Teléfono',
+  placeholder = "Teléfono",
   error = false,
   errorMessage,
   disabled = false,
@@ -37,13 +37,21 @@ export function PhoneInput({
       backgroundColor: colors.surface,
       borderColor: error ? colors.error : colors.border,
     },
-    ...(Array.isArray(containerStyle) ? containerStyle : containerStyle ? [containerStyle] : []),
+    ...(Array.isArray(containerStyle)
+      ? containerStyle
+      : containerStyle
+        ? [containerStyle]
+        : []),
   ];
 
   const finalInputStyle: ViewStyle[] = [
     styles.input,
     { color: colors.text },
-    ...(Array.isArray(inputStyle) ? inputStyle : inputStyle ? [inputStyle] : []),
+    ...(Array.isArray(inputStyle)
+      ? inputStyle
+      : inputStyle
+        ? [inputStyle]
+        : []),
   ];
 
   return (
@@ -53,7 +61,12 @@ export function PhoneInput({
         primaryColor={colors.primary}
         error={error}
       >
-        <Ionicons name="call-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+        <Ionicons
+          name="call-outline"
+          size={20}
+          color={colors.textSecondary}
+          style={styles.inputIcon}
+        />
         <TextInput
           style={finalInputStyle}
           placeholder={placeholder}

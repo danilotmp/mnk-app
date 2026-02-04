@@ -121,7 +121,7 @@ export function createCommercialSetupScreenStyles(
     },
     headerContent: {
       flex: 1,
-      gap: t.spacing.sm,
+      // Mismo estándar que Administración de Usuarios: espacio título–subtítulo vía title marginBottom
     },
     titleRow: {
       flexDirection: "row",

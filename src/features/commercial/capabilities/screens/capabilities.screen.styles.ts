@@ -35,12 +35,12 @@ export interface CapabilitiesScreenTheme {
     h5: { fontSize: number; lineHeight: number; fontWeight: string };
   };
   pageLayout: {
-    titleSubtitleGap: number;
-    titleSubtitleGapMobile: number;
     subtitleContentGap: number;
     subtitleContentGapMobile: number;
     headerTitleGap: number;
     headerTitleGapMobile: number;
+    iconTitle: number;
+    iconTitleMobile: number;
   };
   borderRadius: {
     sm: number;
@@ -58,9 +58,11 @@ export interface CapabilitiesScreenStyles {
   contentWrapper: ViewStyle;
   header: ViewStyle;
   headerMobile: ViewStyle;
-  titleRow: ViewStyle;
-  titleIcon: TextStyle;
+  headerTitle: ViewStyle;
+  headerRow: ViewStyle;
+  headerIcon: ViewStyle;
   title: TextStyle;
+  titleMobile: TextStyle;
   subtitle: TextStyle;
   productsGrid: ViewStyle;
   productsGridMobile: ViewStyle;
@@ -68,6 +70,8 @@ export interface CapabilitiesScreenStyles {
   productCardMobile: ViewStyle;
   productCardDisabled: ViewStyle;
   cardImageContainer: ViewStyle;
+  cardImageContainerInner: ViewStyle;
+  cardImageContainerInnerMobile: ViewStyle;
   cardImageContainerMobile: ViewStyle;
   cardImage: ImageStyle;
   iconContainer: ViewStyle;
@@ -123,28 +127,40 @@ export function createCapabilitiesScreenStyles(
       maxWidth: 1400,
       alignSelf: "center",
       width: "100%",
+      paddingHorizontal: t.spacing.lg,
+      minWidth: 0,
     },
+    // Mismo estándar que Administración de Usuarios: headerTitle > headerRow + subtitle, title marginBottom spacing.xs
     header: {
-      marginBottom: t.pageLayout.subtitleContentGap,
-      gap: t.spacing.sm,
+      marginBottom: isMobile
+        ? t.pageLayout.subtitleContentGapMobile
+        : t.pageLayout.subtitleContentGap,
     },
-    headerMobile: {
-      marginBottom: t.pageLayout.subtitleContentGapMobile,
-      gap: t.spacing.xs,
+    headerMobile: {},
+    headerTitle: {
+      flex: 1,
     },
-    titleRow: {
+    headerRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: t.spacing.sm,
     },
-    titleIcon: {
+    headerIcon: {
       flexShrink: 0,
     },
     title: {
+      ...(t.typography.pageTitle as TextStyle),
+      color: t.colors.text,
+      marginBottom: t.spacing.xs,
+    },
+    titleMobile: {
+      ...(t.typography.pageTitleMobile as TextStyle),
+      color: t.colors.text,
       marginBottom: t.spacing.xs,
     },
     subtitle: {
-      marginTop: t.spacing.xs,
+      ...(t.typography.pageSubtitle as TextStyle),
+      color: t.colors.textSecondary,
       paddingLeft: isMobile
         ? t.pageLayout.iconTitleMobile + t.spacing.sm
         : t.pageLayout.iconTitle + t.spacing.sm,
@@ -152,13 +168,15 @@ export function createCapabilitiesScreenStyles(
     productsGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "center",
+      justifyContent: "flex-start",
       gap: t.spacing.md,
       marginBottom: t.spacing.lg,
     },
     productsGridMobile: {
       gap: t.spacing.sm,
       marginBottom: t.spacing.md,
+      marginTop: t.spacing.lg,
+      justifyContent: "center",
       alignItems: "center",
     },
     productCard: {
@@ -176,8 +194,16 @@ export function createCapabilitiesScreenStyles(
       width: "100%",
       height: 160,
       borderRadius: t.borderRadius.md,
-      overflow: "hidden",
       marginBottom: t.spacing.sm,
+    },
+    cardImageContainerInner: {
+      width: "100%",
+      height: "100%",
+      borderRadius: t.borderRadius.md,
+      overflow: "hidden",
+    },
+    cardImageContainerInnerMobile: {
+      borderRadius: t.borderRadius.sm,
     },
     cardImageContainerMobile: {
       height: 140,

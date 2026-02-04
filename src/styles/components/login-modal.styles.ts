@@ -1,25 +1,32 @@
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from "react-native";
 
-export const createLoginModalStyles = () =>
+type LoginModalColors = {
+  surfaceVariant?: string;
+  surface?: string;
+  shadow?: string;
+};
+
+export const createLoginModalStyles = (colors?: LoginModalColors) =>
   StyleSheet.create({
     modalOverlay: { flex: 1 },
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
       padding: 20,
     },
-    modalContainer: { width: '100%', maxWidth: 480, maxHeight: '90%' },
+    modalContainer: { width: "100%", maxWidth: 480, maxHeight: "90%" },
     modalContent: {
+      backgroundColor: colors?.surfaceVariant ?? colors?.surface,
       borderRadius: 16,
-      overflow: 'hidden',
+      overflow: "hidden",
       ...Platform.select({
         web: {
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.25)',
+          boxShadow: `0px 2px 8px ${colors?.shadow ?? "#000"}40`,
         },
         default: {
-          shadowColor: '#000',
+          shadowColor: colors?.shadow ?? "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.25,
           shadowRadius: 8,
@@ -28,29 +35,29 @@ export const createLoginModalStyles = () =>
       }),
     },
     modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
       paddingTop: 40,
       paddingHorizontal: 40,
       paddingBottom: 20,
       borderBottomWidth: 1,
-      borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+      borderBottomColor: "rgba(0, 0, 0, 0.1)",
     },
-    headerContent: { 
-      flex: 1, 
+    headerContent: {
+      flex: 1,
       paddingRight: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 16,
     },
     logoContainer: {
       width: 60,
       height: 60,
       borderRadius: 30,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
     },
     logoImage: {
       width: 60,
@@ -64,10 +71,10 @@ export const createLoginModalStyles = () =>
     scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 },
     card: { padding: 20, gap: 16 },
     inputGroup: { marginBottom: 4 },
-    label: { marginBottom: 8, fontWeight: '600' },
+    label: { marginBottom: 8, fontWeight: "600" },
     inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       borderWidth: 1,
       borderRadius: 12,
       paddingHorizontal: 16,
@@ -79,27 +86,36 @@ export const createLoginModalStyles = () =>
     eyeIcon: { padding: 4 },
     errorText: { marginTop: 4, marginLeft: 4 },
     optionsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       marginTop: 8,
     },
-    rememberMe: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    rememberMe: { flexDirection: "row", alignItems: "center", gap: 8 },
     checkbox: {
       width: 20,
       height: 20,
       borderRadius: 4,
       borderWidth: 2,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     rememberMeText: { fontSize: 14 },
     forgotPassword: { fontSize: 14 },
-    generalError: { textAlign: 'center', marginTop: 8, marginBottom: 8 },
-    loginButton: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    generalError: { textAlign: "center", marginTop: 8, marginBottom: 8 },
+    loginButton: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
     loader: { marginRight: 8 },
-    registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16 },
-    registerLink: { fontWeight: '600' },
+    registerContainer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      marginTop: 16,
+    },
+    registerLink: { fontWeight: "600" },
   });
-
-

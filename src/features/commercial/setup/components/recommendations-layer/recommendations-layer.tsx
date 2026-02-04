@@ -517,7 +517,7 @@ export function RecommendationsLayer({
                           style={[
                             styles.recommendationCard,
                             {
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.filterInputBackground,
                               borderColor: colors.border,
                             },
                           ]}
@@ -1090,7 +1090,7 @@ export function RecommendationsLayer({
                                                 : colors.border,
                                               backgroundColor: isSelected
                                                 ? colors.primary + "20"
-                                                : colors.surface,
+                                                : colors.filterInputBackground,
                                               flex: isMobile ? undefined : 1,
                                               width: isMobile
                                                 ? "100%"
@@ -1348,7 +1348,7 @@ export function RecommendationsLayer({
                                 containerStyle={[
                                   styles.textAreaContainer,
                                   {
-                                    backgroundColor: colors.surface,
+                                    backgroundColor: colors.filterInputBackground,
                                     borderColor: colors.border,
                                   },
                                 ]}
@@ -1441,7 +1441,7 @@ export function RecommendationsLayer({
                                   containerStyle={[
                                     styles.inputContainer,
                                     {
-                                      backgroundColor: colors.surface,
+                                      backgroundColor: colors.filterInputBackground,
                                       borderColor: colors.border,
                                     },
                                   ]}
@@ -1539,7 +1539,7 @@ export function RecommendationsLayer({
                             style={[
                               styles.recommendationCard,
                               {
-                                backgroundColor: colors.surface,
+                                backgroundColor: colors.filterInputBackground,
                                 borderColor: colors.border,
                                 marginTop: 16,
                               },
@@ -1731,7 +1731,7 @@ export function RecommendationsLayer({
                                                           isSelected
                                                             ? colors.primary +
                                                               "20"
-                                                            : colors.surface,
+                                                            : colors.filterInputBackground,
                                                         flex: isMobile
                                                           ? undefined
                                                           : 1,
@@ -2023,7 +2023,7 @@ export function RecommendationsLayer({
                                           containerStyle={[
                                             styles.textAreaContainer,
                                             {
-                                              backgroundColor: colors.surface,
+                                              backgroundColor: colors.filterInputBackground,
                                               borderColor: colors.border,
                                             },
                                           ]}
@@ -2148,7 +2148,7 @@ export function RecommendationsLayer({
                                             containerStyle={[
                                               styles.inputContainer,
                                               {
-                                                backgroundColor: colors.surface,
+                                                backgroundColor: colors.filterInputBackground,
                                                 borderColor: colors.border,
                                               },
                                             ]}
@@ -2264,7 +2264,7 @@ export function RecommendationsLayer({
                             : colors.border,
                           backgroundColor: isSelected
                             ? colors.primary + "20"
-                            : colors.surface,
+                            : colors.filterInputBackground,
                           flex: isMobile ? undefined : 1,
                           width: isMobile ? "100%" : undefined,
                           opacity: isOfferSpecific && !isSelected ? 0.5 : 1, // Hacer más transparente cuando no está seleccionada
@@ -2408,7 +2408,10 @@ export function RecommendationsLayer({
             <InputWithFocus
               containerStyle={[
                 styles.textAreaContainer,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                {
+                  backgroundColor: colors.filterInputBackground,
+                  borderColor: colors.border,
+                },
               ]}
               primaryColor={colors.primary}
             >
@@ -2456,7 +2459,10 @@ export function RecommendationsLayer({
               placeholder="0"
               containerStyle={[
                 styles.inputContainer,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                {
+                  backgroundColor: colors.filterInputBackground,
+                  borderColor: colors.border,
+                },
               ]}
               inputStyle={styles.input}
               min={0}
@@ -2581,7 +2587,7 @@ export function RecommendationsLayer({
               <DynamicIcon
                 name="MaterialCommunityIcons.skip-forward-outline"
                 size={20}
-                color={colors.text}
+                color={colors.primary}
                 style={{ marginRight: 8 }}
               />
             </Button>

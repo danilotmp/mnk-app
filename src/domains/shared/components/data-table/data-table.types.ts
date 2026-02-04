@@ -6,15 +6,29 @@ import React from "react";
 
 /**
  * Tema para estilos del DataTable (colores, sombras, isDark).
- * Se pasa a createDataTableStyles para centralizar borde y sombra en .styles.ts.
+ * Todos los colores provienen del tema centralizado; no se duplican hex/rgba aquí.
  */
 export interface DataTableTheme {
   colors: {
+    border: string;
     borderLight: string;
+    background: string;
     surfaceVariant: string;
-    stripedRow?: string; // Color para filas alternadas (striped variant)
+    surfaceMid: string;
+    stripedRow: string;
+    text: string;
+    textSecondary: string;
+    primary: string;
+    contrastText: string;
   };
   shadows: {
+    sm: {
+      shadowColor: string;
+      shadowOffset: { width: number; height: number };
+      shadowOpacity: number;
+      shadowRadius: number;
+      elevation: number;
+    };
     lg: {
       shadowColor: string;
       shadowOffset: { width: number; height: number };

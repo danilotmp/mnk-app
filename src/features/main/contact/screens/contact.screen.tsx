@@ -18,7 +18,15 @@ import { useTranslation } from "@/src/infrastructure/i18n";
 import { createContactScreenStyles } from "./contact.screen.styles";
 
 export function ContactScreen() {
-  const { colors, typography, pageLayout, spacing, borderRadius } = useTheme();
+  const {
+    colors,
+    typography,
+    pageLayout,
+    spacing,
+    borderRadius,
+    shadows,
+    isDark,
+  } = useTheme();
 
   const { isMobile } = useResponsive();
   const styles = useMemo(
@@ -174,7 +182,14 @@ export function ContactScreen() {
                 style={[
                   styles.matrixCardWrapper,
                   isMobile && styles.matrixCardWrapperMobile,
-                  { backgroundColor: colors.surface },
+                  {
+                    backgroundColor: isDark
+                      ? colors.surface
+                      : colors.surfaceVariant,
+                    ...shadows.lg,
+                    shadowColor: colors.shadow,
+                    shadowOpacity: 0.35,
+                  },
                 ]}
               >
                 <View

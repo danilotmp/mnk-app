@@ -78,7 +78,7 @@ export const createPermissionsCarouselStyles = (colors: ThemeColors) => {
           boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
         },
         default: {
-          shadowColor: '#000',
+          shadowColor: colors.shadow ?? '#000',
           shadowOffset: {
             width: 0,
             height: 2,

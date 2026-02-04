@@ -17,11 +17,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
 import {
-    Animated,
-    Image,
-    ScrollView,
-    TouchableOpacity,
-    View,
+  Animated,
+  Image,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { createCapabilitiesScreenStyles } from "./capabilities.screen.styles";
 
@@ -35,7 +36,8 @@ interface ProductCard {
 }
 
 export function CapabilitiesScreen() {
-  const { colors, typography, pageLayout, spacing, borderRadius } = useTheme();
+  const { colors, typography, pageLayout, spacing, borderRadius, shadows } =
+    useTheme();
   const { t } = useTranslation();
   const { isMobile, width } = useResponsive();
 
@@ -284,49 +286,30 @@ export function CapabilitiesScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentWrapper}>
-          {/* Header */}
+          {/* Header (mismo estándar que Administración de Usuarios) */}
           <View style={[styles.header, isMobile && styles.headerMobile]}>
-            <View
-              style={[
-                styles.titleRow,
-                {
-                  marginBottom: isMobile
-                    ? pageLayout.titleSubtitleGapMobile
-                    : pageLayout.titleSubtitleGap,
-                },
-              ]}
-            >
-              <DynamicIcon
-                name="AntDesign:product"
-                size={
-                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
-                }
-                color={colors.primary}
-                style={styles.titleIcon}
-              />
-              <ThemedText
-                type="h1"
-                style={[
-                  styles.title,
-                  { color: colors.text },
-                  isMobile && typography.pageTitleMobile,
-                ]}
-              >
-                Productos del Sistema
+            <View style={styles.headerTitle}>
+              <View style={styles.headerRow}>
+                <DynamicIcon
+                  name="AntDesign:product"
+                  size={
+                    isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                  }
+                  color={colors.primary}
+                  style={styles.headerIcon}
+                />
+                <ThemedText
+                  type="h2"
+                  style={[isMobile ? styles.titleMobile : styles.title]}
+                >
+                  Productos del Sistema
+                </ThemedText>
+              </View>
+              <ThemedText type="body1" style={styles.subtitle}>
+                Activa y configura las funcionalidades disponibles para tu
+                negocio
               </ThemedText>
             </View>
-            <ThemedText
-              type="body1"
-              style={[
-                styles.subtitle,
-                isMobile
-                  ? typography.pageSubtitleMobile
-                  : typography.pageSubtitle,
-                { color: colors.textSecondary },
-              ]}
-            >
-              Activa y configura las funcionalidades disponibles para tu negocio
-            </ThemedText>
           </View>
 
           {/* Cards de Productos */}
@@ -351,19 +334,38 @@ export function CapabilitiesScreen() {
                     ] as unknown as React.ComponentProps<typeof Card>["style"]
                   }
                 >
-                  {/* Imagen o Icono */}
+                  {/* Imagen o Icono: contenedor con sombra (backgroundColor para iOS) + inner que recorta la imagen */}
                   <View
                     style={[
                       styles.cardImageContainer,
                       isMobile && styles.cardImageContainerMobile,
+                      {
+                        backgroundColor: colors.surface,
+                        shadowColor: colors.shadow,
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.45,
+                        shadowRadius: 12,
+                        elevation: 12,
+                        overflow: "visible",
+                        ...(Platform.OS === "web" && {
+                          boxShadow: `0 6px 12px ${colors.shadow}73`,
+                        }),
+                      },
                     ]}
                   >
                     {product.image ? (
-                      <Image
-                        source={{ uri: product.image }}
-                        style={styles.cardImage}
-                        resizeMode="cover"
-                      />
+                      <View
+                        style={[
+                          styles.cardImageContainerInner,
+                          isMobile && styles.cardImageContainerInnerMobile,
+                        ]}
+                      >
+                        <Image
+                          source={{ uri: product.image }}
+                          style={styles.cardImage}
+                          resizeMode="cover"
+                        />
+                      </View>
                     ) : (
                       <View
                         style={[

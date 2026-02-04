@@ -31,12 +31,12 @@ export const languageSelectorStyles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 16,
     padding: 24,
+    // shadowColor se sobrescribe en el componente con colors.shadow del tema
     ...Platform.select({
       web: {
         boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.25)",
       },
       default: {
-        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 8,

@@ -995,7 +995,7 @@ export function PaymentsLayer({
                       borderColor: isSelected ? colors.primary : colors.border,
                       backgroundColor: isSelected
                         ? colors.primary + "20"
-                        : colors.surface,
+                        : colors.filterInputBackground,
                     },
                   ]}
                   onPress={async () => {
@@ -1080,15 +1080,24 @@ export function PaymentsLayer({
                   }
                 </ThemedText>
               </View>
-              <ThemedText
-                type="body2"
+              <View
                 style={[
                   styles.sectionDescription,
-                  { color: colors.textSecondary },
+                  {
+                    backgroundColor: colors.filterInputBackground,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                  },
                 ]}
               >
-                Agrega las cuentas bancarias o de pago asociadas a este método
-              </ThemedText>
+                <ThemedText
+                  type="body2"
+                  style={{ color: colors.textSecondary, flex: 1 }}
+                >
+                  Agrega las cuentas bancarias o de pago asociadas a este método
+                </ThemedText>
+              </View>
 
               {/* Lista de cuentas */}
               {accounts.length > 0 && (
@@ -1123,7 +1132,7 @@ export function PaymentsLayer({
                                 containerStyle={[
                                   styles.titleInputContainer,
                                   {
-                                    backgroundColor: colors.surface,
+                                    backgroundColor: colors.filterInputBackground,
                                     borderColor: colors.border,
                                     flex: 1,
                                     width: isMobile ? "100%" : undefined,
@@ -1705,7 +1714,7 @@ export function PaymentsLayer({
                                   containerStyle={[
                                     styles.inputContainer,
                                     {
-                                      backgroundColor: colors.surface,
+                                      backgroundColor: colors.filterInputBackground,
                                       borderColor: colors.border,
                                     },
                                   ]}
@@ -1795,7 +1804,7 @@ export function PaymentsLayer({
                                                   : colors.border,
                                               backgroundColor: isSelected
                                                 ? colors.primary + "20"
-                                                : colors.surface,
+                                                : colors.filterInputBackground,
                                             },
                                           ]}
                                           onPress={() => {
@@ -1901,7 +1910,7 @@ export function PaymentsLayer({
                                   containerStyle={[
                                     styles.inputContainer,
                                     {
-                                      backgroundColor: colors.surface,
+                                      backgroundColor: colors.filterInputBackground,
                                       borderColor: colors.border,
                                     },
                                   ]}
@@ -2024,7 +2033,7 @@ export function PaymentsLayer({
                                     containerStyle={[
                                       styles.inputContainer,
                                       {
-                                        backgroundColor: colors.surface,
+                                        backgroundColor: colors.filterInputBackground,
                                         borderColor: colors.border,
                                       },
                                     ]}
@@ -2085,7 +2094,7 @@ export function PaymentsLayer({
                                     containerStyle={[
                                       styles.inputContainer,
                                       {
-                                        backgroundColor: colors.surface,
+                                        backgroundColor: colors.filterInputBackground,
                                         borderColor: colors.border,
                                       },
                                     ]}
@@ -2158,7 +2167,7 @@ export function PaymentsLayer({
                                     containerStyle={[
                                       styles.inputContainer,
                                       {
-                                        backgroundColor: colors.surface,
+                                        backgroundColor: colors.filterInputBackground,
                                         borderColor: colors.border,
                                       },
                                     ]}
@@ -2429,7 +2438,7 @@ export function PaymentsLayer({
                                                               option.value
                                                                 ? colors.primary +
                                                                   "20"
-                                                                : colors.surface,
+                                                                : colors.filterInputBackground,
                                                             flex: 1,
                                                             opacity:
                                                               isAccountSpecific &&
@@ -2873,7 +2882,7 @@ export function PaymentsLayer({
                                                           "") === ""
                                                           ? colors.primary +
                                                             "20"
-                                                          : colors.surface,
+                                                          : colors.filterInputBackground,
                                                     },
                                                   ]}
                                                   onPress={() => {
@@ -2964,7 +2973,7 @@ export function PaymentsLayer({
                                                           acc.id
                                                             ? colors.primary +
                                                               "20"
-                                                            : colors.surface,
+                                                            : colors.filterInputBackground,
                                                       },
                                                     ]}
                                                     onPress={() => {
@@ -3044,7 +3053,8 @@ export function PaymentsLayer({
                                             containerStyle={[
                                               styles.textAreaContainer,
                                               {
-                                                backgroundColor: colors.surface,
+                                                backgroundColor:
+                                                  colors.filterInputBackground,
                                                 borderColor: colors.border,
                                               },
                                             ]}
@@ -3242,7 +3252,7 @@ export function PaymentsLayer({
                         containerStyle={[
                           styles.inputContainer,
                           {
-                            backgroundColor: colors.surface,
+                            backgroundColor: colors.filterInputBackground,
                             borderColor: colors.border,
                           },
                         ]}
@@ -3278,7 +3288,7 @@ export function PaymentsLayer({
                         containerStyle={[
                           styles.inputContainer,
                           {
-                            backgroundColor: colors.surface,
+                            backgroundColor: colors.filterInputBackground,
                             borderColor: colors.border,
                           },
                         ]}
@@ -3346,7 +3356,7 @@ export function PaymentsLayer({
                                         : colors.border,
                                     backgroundColor: isSelected
                                       ? colors.primary + "20"
-                                      : colors.surface,
+                                      : colors.filterInputBackground,
                                   },
                                 ]}
                                 onPress={() => {
@@ -3429,7 +3439,7 @@ export function PaymentsLayer({
                         containerStyle={[
                           styles.inputContainer,
                           {
-                            backgroundColor: colors.surface,
+                            backgroundColor: colors.filterInputBackground,
                             borderColor: colors.border,
                           },
                         ]}
@@ -3508,7 +3518,7 @@ export function PaymentsLayer({
                           containerStyle={[
                             styles.inputContainer,
                             {
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.filterInputBackground,
                               borderColor: colors.border,
                             },
                           ]}
@@ -3547,7 +3557,7 @@ export function PaymentsLayer({
                           containerStyle={[
                             styles.inputContainer,
                             {
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.filterInputBackground,
                               borderColor: colors.border,
                             },
                           ]}
@@ -3595,7 +3605,7 @@ export function PaymentsLayer({
                           containerStyle={[
                             styles.inputContainer,
                             {
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.filterInputBackground,
                               borderColor: colors.border,
                             },
                           ]}
@@ -3677,16 +3687,25 @@ export function PaymentsLayer({
                 Instrucciones de Pago
               </ThemedText>
             </View>
-            <ThemedText
-              type="body2"
+            <View
               style={[
                 styles.sectionDescription,
-                { color: colors.textSecondary },
+                {
+                  backgroundColor: colors.filterInputBackground,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 12,
+                },
               ]}
             >
-              Define mensajes que la IA compartirá con los clientes sobre cómo
-              realizar pagos
-            </ThemedText>
+              <ThemedText
+                type="body2"
+                style={{ color: colors.textSecondary, flex: 1 }}
+              >
+                Define mensajes que la IA compartirá con los clientes sobre cómo
+                realizar pagos
+              </ThemedText>
+            </View>
 
             {/* Lista de instrucciones */}
             {displayedInstructions.length > 0 && (
@@ -3705,7 +3724,13 @@ export function PaymentsLayer({
                     <Card
                       key={instruction.id}
                       variant="outlined"
-                      style={styles.guidelineCard}
+                      style={[
+                        styles.guidelineCard,
+                        {
+                          backgroundColor: colors.filterInputBackground,
+                          borderColor: colors.border,
+                        },
+                      ]}
                     >
                       <View style={styles.guidelineHeader}>
                         <View
@@ -3774,7 +3799,7 @@ export function PaymentsLayer({
                                             backgroundColor:
                                               currentType === option.value
                                                 ? colors.primary + "20"
-                                                : colors.surface,
+                                                : colors.filterInputBackground,
                                             flex: 1,
                                             opacity:
                                               isAccountSpecific &&
@@ -4217,7 +4242,7 @@ export function PaymentsLayer({
                                   backgroundColor:
                                     (formData?.paymentAccountId || "") === ""
                                       ? colors.primary + "20"
-                                      : colors.surface,
+                                      : colors.filterInputBackground,
                                 },
                               ]}
                               onPress={() => {
@@ -4289,7 +4314,7 @@ export function PaymentsLayer({
                                         instruction.paymentAccountId) ===
                                       account.id
                                         ? colors.primary + "20"
-                                        : colors.surface,
+                                        : colors.filterInputBackground,
                                   },
                                 ]}
                                 onPress={() => {
@@ -4359,7 +4384,7 @@ export function PaymentsLayer({
                             containerStyle={[
                               styles.textAreaContainer,
                               {
-                                backgroundColor: colors.surface,
+                                backgroundColor: colors.filterInputBackground,
                                 borderColor: colors.border,
                               },
                             ]}
@@ -4471,7 +4496,7 @@ export function PaymentsLayer({
                                   : colors.border,
                                 backgroundColor: isSelected
                                   ? colors.primary + "20"
-                                  : colors.surface,
+                                  : colors.filterInputBackground,
                                 flex: isMobile ? undefined : 1,
                                 width: isMobile ? "100%" : undefined,
                                 opacity:
@@ -4566,7 +4591,7 @@ export function PaymentsLayer({
                               : colors.border,
                             backgroundColor: !instructionForm.paymentAccountId
                               ? colors.primary + "20"
-                              : colors.surface,
+                              : colors.filterInputBackground,
                           },
                         ]}
                         onPress={() => {
@@ -4613,7 +4638,7 @@ export function PaymentsLayer({
                               backgroundColor:
                                 instructionForm.paymentAccountId === account.id
                                   ? colors.primary + "20"
-                                  : colors.surface,
+                                  : colors.filterInputBackground,
                             },
                           ]}
                           onPress={() => {
@@ -4663,7 +4688,7 @@ export function PaymentsLayer({
                   containerStyle={[
                     styles.textAreaContainer,
                     {
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.filterInputBackground,
                       borderColor: colors.border,
                     },
                   ]}
@@ -4727,7 +4752,10 @@ export function PaymentsLayer({
         )}
 
         {!selectedMethodType && paymentMethods.length > 0 && (
-          <Card variant="outlined" style={styles.infoCard}>
+          <Card
+            variant="outlined"
+            style={[styles.infoCard, { backgroundColor: colors.filterInputBackground }]}
+          >
             <Ionicons
               name="information-circle-outline"
               size={20}
@@ -4744,7 +4772,10 @@ export function PaymentsLayer({
         )}
 
         {paymentMethods.length === 0 && (
-          <Card variant="outlined" style={styles.infoCard}>
+          <Card
+            variant="outlined"
+            style={[styles.infoCard, { backgroundColor: colors.filterInputBackground }]}
+          >
             <Ionicons name="bulb-outline" size={20} color={colors.primary} />
             <ThemedText
               type="body2"
@@ -4806,7 +4837,7 @@ export function PaymentsLayer({
               <DynamicIcon
                 name="MaterialCommunityIcons.skip-forward-outline"
                 size={20}
-                color={colors.text}
+                color={colors.primary}
                 style={{ marginRight: 8 }}
               />
             </Button>

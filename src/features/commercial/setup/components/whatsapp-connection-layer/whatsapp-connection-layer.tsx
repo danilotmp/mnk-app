@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import type { WhatsAppInstance } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
-import { PhoneInput } from "@/src/domains/shared/components";
+import { DynamicIcon, PhoneInput } from "@/src/domains/shared/components";
 import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
 import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
@@ -39,6 +39,8 @@ interface WhatsAppConnectionLayerProps {
   onProgressUpdate?: (progress: number) => void;
   onDataChange?: (hasData: boolean) => void;
   onComplete?: () => void;
+  onSkip?: () => void;
+  isCompleted?: boolean;
 }
 
 export interface WhatsAppConnectionLayerRef {
@@ -625,7 +627,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                       style={[
                         styles.qrImageContainer,
                         {
-                          backgroundColor: colors.surface,
+                          backgroundColor: colors.filterInputBackground,
                           borderColor: colors.border,
                         },
                       ]}
@@ -659,7 +661,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                         style={[
                           styles.qrImageContainer,
                           {
-                            backgroundColor: colors.surface,
+                            backgroundColor: colors.filterInputBackground,
                             borderColor: colors.border,
                           },
                         ]}
@@ -764,7 +766,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                 style={[
                   styles.qrImageContainer,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.filterInputBackground,
                     borderColor: colors.border,
                   },
                 ]}
@@ -846,5 +848,16 @@ const styles = StyleSheet.create({
   qrImage: {
     width: 250,
     height: 250,
+  },
+  continueButtonContainer: {
+    marginTop: 24,
+    marginBottom: 16,
+    gap: 12,
+  },
+  continueButton: {
+    width: "100%",
+  },
+  skipButton: {
+    width: "100%",
   },
 });

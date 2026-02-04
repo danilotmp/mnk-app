@@ -22,22 +22,22 @@ export interface EntityWithStatus {
  * Configuración de iconos para estados
  */
 export const STATUS_ICONS: Record<number, string> = {
-  [RecordStatus.DELETED]: 'trash-outline',
-  [RecordStatus.INACTIVE]: 'close-circle-outline',
-  [RecordStatus.ACTIVE]: 'checkmark-circle-outline',
-  [RecordStatus.PENDING]: 'time-outline',
-  [RecordStatus.SUSPENDED]: 'pause-circle-outline',
+  [RecordStatus.DELETED]: "trash-outline",
+  [RecordStatus.INACTIVE]: "close-circle-outline",
+  [RecordStatus.ACTIVE]: "checkmark-circle-outline",
+  [RecordStatus.PENDING]: "time-outline",
+  [RecordStatus.SUSPENDED]: "pause-circle-outline",
 };
 
 /**
  * Interfaz para los colores del theme relacionados con estados
  */
 export interface StatusThemeColors {
-  success: string;    // ACTIVE
-  error: string;       // INACTIVE
-  warning: string;    // PENDING
-  suspended: string;  // SUSPENDED
-  deleted?: string;   // DELETED (opcional, fallback a textSecondary)
+  success: string; // ACTIVE
+  error: string; // INACTIVE
+  warning: string; // PENDING
+  suspended: string; // SUSPENDED
+  deleted?: string; // DELETED (opcional, fallback a textSecondary)
   textSecondary?: string; // Fallback para DELETED si no existe deleted
 }
 
@@ -61,9 +61,9 @@ export const getStatusColor = (
     case RecordStatus.SUSPENDED:
       return colors.suspended;
     case RecordStatus.DELETED:
-      return colors.deleted ?? colors.textSecondary ?? '#9ca3af';
+      return colors.deleted ?? colors.textSecondary;
     default:
-      return colors.textSecondary ?? '#9ca3af';
+      return colors.textSecondary;
   }
 };
 
@@ -72,18 +72,18 @@ export const getStatusColor = (
  * Mantenido solo para compatibilidad temporal
  */
 export const STATUS_COLORS: Record<number, string> = {
-  [RecordStatus.DELETED]: '#6b7280',
-  [RecordStatus.INACTIVE]: '#ef4444',
-  [RecordStatus.ACTIVE]: '#10b981',
-  [RecordStatus.PENDING]: '#f59e0b',
-  [RecordStatus.SUSPENDED]: '#f97316',
+  [RecordStatus.DELETED]: "#6b7280",
+  [RecordStatus.INACTIVE]: "#ef4444",
+  [RecordStatus.ACTIVE]: "#10b981",
+  [RecordStatus.PENDING]: "#f59e0b",
+  [RecordStatus.SUSPENDED]: "#f97316",
 };
 
 /**
  * Helper para obtener icono del estado
  */
 export const getStatusIcon = (status: number): string => {
-  return STATUS_ICONS[status] ?? 'help-circle-outline';
+  return STATUS_ICONS[status] ?? "help-circle-outline";
 };
 
 /**
@@ -99,4 +99,3 @@ export const isActive = (status: number): boolean => {
 export const isDeleted = (status: number): boolean => {
   return status === RecordStatus.DELETED;
 };
-

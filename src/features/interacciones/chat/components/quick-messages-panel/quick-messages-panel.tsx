@@ -12,12 +12,12 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { quickMessagesPanelStyles } from "./quick-messages-panel.styles";
 import type { QuickMessagesPanelProps } from "./quick-messages-panel.types";
@@ -50,8 +50,8 @@ export const QuickMessagesPanel = React.memo(
 
     // Usar surfaceVariant o background para fondo opaco del modal
     const modalBackgroundColor = isDark
-      ? colors.surfaceVariant || colors.background || "#1E293B"
-      : colors.surfaceVariant || colors.surface || "#FFFFFF";
+      ? (colors.surfaceVariant ?? colors.background)
+      : (colors.surfaceVariant ?? colors.surface);
 
     const filteredQuickMessages = quickMessages.filter(
       (msg) =>

@@ -36,7 +36,7 @@ import type {
  * - Mobile: Menú hamburger con drawer
  */
 export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
-  const { colors } = useTheme();
+  const { theme, colors } = useTheme();
   const { isDark } = useThemeMode();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
@@ -50,16 +50,15 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   > | null>(null);
   const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
 
-  // Obtener el color para items activos según la configuración
-  // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
+  // Obtener el color para items activos según la configuración (centralizado en tema)
   const getActiveItemColor = (): string => {
     const configColor = AppConfig.navigation.activeItemColor;
-    if (configColor === "red") return "#ff3366";
+    if (configColor === "red") return colors.error;
     if (configColor === "blue") return colors.primary;
-    return configColor; // Cualquier otro color se usa directamente
+    return configColor;
   };
   const activeItemColor = getActiveItemColor();
-  const styles = createHorizontalMenuStyles(activeItemColor);
+  const styles = createHorizontalMenuStyles(theme, activeItemColor);
   const additionalStyles = createHorizontalMenuAdditionalStyles(colors);
   const [submenuPosition, setSubmenuPosition] = useState({ left: 0 });
   const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null); // Para rastrear opción activa del menú principal
@@ -1604,26 +1603,19 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                         </TouchableOpacity>
                       )}
                       <InputWithFocus
-                        containerStyle={{
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                          borderRadius: 6,
-                          backgroundColor: colors.background,
-                          paddingLeft: 36,
-                          paddingRight: searchValue.length > 0 ? 36 : 10,
-                          height: 36,
-                        }}
+                        containerStyle={[
+                          additionalStyles.mobileSearchInput,
+                          {
+                            paddingRight: searchValue.length > 0 ? 36 : 10,
+                          },
+                        ]}
                         primaryColor={colors.primary}
                       >
                         <TextInput
                           placeholder="Buscar..."
                           value={searchValue}
                           onChangeText={setSearchValue}
-                          style={{
-                            padding: 8,
-                            color: colors.text,
-                            fontSize: 14,
-                          }}
+                          style={[additionalStyles.mobileSearchInputText, { color: colors.text }]}
                           placeholderTextColor={colors.textSecondary}
                         />
                       </InputWithFocus>

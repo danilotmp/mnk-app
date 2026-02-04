@@ -54,10 +54,8 @@ export function SideModal({
   // Calcular altura estándar del modal: altura de ventana menos padding arriba y abajo (16px cada uno)
   const modalHeight = windowHeight - 32; // 16px arriba + 16px abajo
 
-  // Usar surfaceVariant en modo dark para evitar transparencia, o background si está disponible
-  const modalBackgroundColor = isDark
-    ? colors.surfaceVariant || colors.background || "#1E293B"
-    : colors.surface;
+  // Mismo color que el menú vertical (surfaceVariant) en ambos temas
+  const modalBackgroundColor = colors.surfaceVariant ?? colors.surface;
 
   useEffect(() => {
     if (visible) {

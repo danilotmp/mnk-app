@@ -3,24 +3,33 @@
  * Puede ser usado tanto en la página de permisos como en un modal
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { PermissionsService, useCompanyOptions } from '@/src/domains/security';
-import type { PermissionChange } from '@/src/domains/security/components';
-import { PermissionsFlowFilters, PermissionsManagementFlow } from '@/src/domains/security/components';
-import type { SecurityPermission, SecurityRole } from '@/src/domains/security/types';
-import type { PermissionOperation, RoleFilters } from '@/src/features/security/roles';
-import { RolesService } from '@/src/features/security/roles';
-import { useTranslation } from '@/src/infrastructure/i18n';
-import { MenuItem } from '@/src/infrastructure/menu/types';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { createPermissionsListStyles } from '@/src/styles/pages/permissions-list.styles';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { useResponsive } from "@/hooks/use-responsive";
+import { useTheme } from "@/hooks/use-theme";
+import { PermissionsService, useCompanyOptions } from "@/src/domains/security";
+import type { PermissionChange } from "@/src/domains/security/components";
+import {
+    PermissionsFlowFilters,
+    PermissionsManagementFlow,
+} from "@/src/domains/security/components";
+import type {
+    SecurityPermission,
+    SecurityRole,
+} from "@/src/domains/security/types";
+import type {
+    PermissionOperation,
+    RoleFilters,
+} from "@/src/features/security/roles";
+import { RolesService } from "@/src/features/security/roles";
+import { useTranslation } from "@/src/infrastructure/i18n";
+import { MenuItem } from "@/src/infrastructure/menu/types";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { createPermissionsListStyles } from "@/src/styles/pages/permissions-list.styles";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 
 interface PermissionsManagementContentProps {
   initialCompanyId?: string;
@@ -43,32 +52,41 @@ export function PermissionsManagementContent({
   const { isMobile } = useResponsive();
   const styles = createPermissionsListStyles(isMobile);
 
-  const [rolePermissions, setRolePermissions] = useState<SecurityPermission[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<SecurityPermission[]>(
+    [],
+  );
   const [loadingRolePermissions, setLoadingRolePermissions] = useState(false);
   const [menuRefreshKey, setMenuRefreshKey] = useState(0);
-  
-  const [permissionChanges, setPermissionChanges] = useState<PermissionChange[]>([]);
+
+  const [permissionChanges, setPermissionChanges] = useState<
+    PermissionChange[]
+  >([]);
   const [savingChanges, setSavingChanges] = useState(false);
-  
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(initialCompanyId);
-  const [selectedRoleId, setSelectedRoleId] = useState<string | undefined>(initialRoleId);
+
+  const [selectedCompanyId, setSelectedCompanyId] = useState<
+    string | undefined
+  >(initialCompanyId);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | undefined>(
+    initialRoleId,
+  );
   const [roles, setRoles] = useState<SecurityRole[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
-  
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedModule, setSelectedModule] = useState('');
-  const [selectedAction, setSelectedAction] = useState('');
+
+  const [searchValue, setSearchValue] = useState("");
+  const [selectedModule, setSelectedModule] = useState("");
+  const [selectedAction, setSelectedAction] = useState("");
   const [showDefaultOptions, setShowDefaultOptions] = useState(true);
   const [showAll, setShowAll] = useState(true);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  
+
   const { companies } = useCompanyOptions();
 
   /**
    * Validar si un string es un UUID válido
    */
   const isValidUUID = (uuid: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   };
 
@@ -76,13 +94,18 @@ export function PermissionsManagementContent({
    * Función auxiliar recursiva para buscar menuItemId por route
    * Retorna solo si el id es un UUID válido
    */
-  const findMenuItemIdByRouteRecursive = (route: string, item: MenuItem): string | null => {
+  const findMenuItemIdByRouteRecursive = (
+    route: string,
+    item: MenuItem,
+  ): string | null => {
     // Verificar el item actual
     if (item.route === route) {
       if (isValidUUID(item.id)) {
         return item.id;
       }
-      console.warn(`El menuItem con route "${route}" tiene un id inválido: "${item.id}". Debe ser un UUID.`);
+      console.warn(
+        `El menuItem con route "${route}" tiene un id inválido: "${item.id}". Debe ser un UUID.`,
+      );
     }
 
     // Buscar recursivamente en submenu
@@ -112,7 +135,10 @@ export function PermissionsManagementContent({
    * Buscar menuItemId por route en menuItems (recursivamente)
    * Retorna solo si el id es un UUID válido
    */
-  const findMenuItemIdByRoute = (route: string | undefined, items: MenuItem[]): string | null => {
+  const findMenuItemIdByRoute = (
+    route: string | undefined,
+    items: MenuItem[],
+  ): string | null => {
     if (!route) return null;
 
     for (const item of items) {
@@ -129,31 +155,36 @@ export function PermissionsManagementContent({
   const convertPermissionChangesToOperations = async (
     changes: PermissionChange[],
     menuItems: MenuItem[],
-    rolePermissions: SecurityPermission[]
+    rolePermissions: SecurityPermission[],
   ): Promise<PermissionOperation[]> => {
-    const genericPermissionsResponse = await PermissionsService.getPermissions({});
-    
+    const genericPermissionsResponse = await PermissionsService.getPermissions(
+      {},
+    );
+
     const allPermissions = Array.isArray(genericPermissionsResponse.data)
       ? genericPermissionsResponse.data
-      : (genericPermissionsResponse.data || []);
+      : genericPermissionsResponse.data || [];
 
     const genericPermissionIds: Record<string, string> = {};
-    const actions = ['view', 'create', 'edit', 'delete'];
-    
+    const actions = ["view", "create", "edit", "delete"];
+
     for (const action of actions) {
       const genericPermission = allPermissions.find(
-        (p: SecurityPermission) => p.action === action && (!p.route || p.route === '')
+        (p: SecurityPermission) =>
+          p.action === action && (!p.route || p.route === ""),
       );
       if (genericPermission) {
         genericPermissionIds[action] = genericPermission.id;
       }
     }
 
-    const missingActions = ['view', 'create', 'edit', 'delete'].filter(
-      action => !genericPermissionIds[action]
+    const missingActions = ["view", "create", "edit", "delete"].filter(
+      (action) => !genericPermissionIds[action],
     );
     if (missingActions.length > 0) {
-      throw new Error(`No se encontraron permisos genéricos para: ${missingActions.join(', ')}`);
+      throw new Error(
+        `No se encontraron permisos genéricos para: ${missingActions.join(", ")}`,
+      );
     }
 
     const operations: PermissionOperation[] = [];
@@ -161,28 +192,30 @@ export function PermissionsManagementContent({
     for (const change of changes) {
       const menuItemId = findMenuItemIdByRoute(change.route, menuItems);
       if (!menuItemId) {
-        console.warn(`No se encontró menuItemId válido (UUID) para la ruta: ${change.route}`);
+        console.warn(
+          `No se encontró menuItemId válido (UUID) para la ruta: ${change.route}`,
+        );
         continue;
       }
 
       const originalView = rolePermissions.some(
-        p => p.route === change.route && p.action === 'view'
+        (p) => p.route === change.route && p.action === "view",
       );
       const originalCreate = rolePermissions.some(
-        p => p.route === change.route && p.action === 'create'
+        (p) => p.route === change.route && p.action === "create",
       );
       const originalEdit = rolePermissions.some(
-        p => p.route === change.route && p.action === 'edit'
+        (p) => p.route === change.route && p.action === "edit",
       );
       const originalDelete = rolePermissions.some(
-        p => p.route === change.route && p.action === 'delete'
+        (p) => p.route === change.route && p.action === "delete",
       );
 
       if (change.view !== originalView) {
         operations.push({
           permissionId: genericPermissionIds.view,
           menuItemId,
-          action: change.view ? 'add' : 'remove',
+          action: change.view ? "add" : "remove",
         });
       }
 
@@ -190,7 +223,7 @@ export function PermissionsManagementContent({
         operations.push({
           permissionId: genericPermissionIds.create,
           menuItemId,
-          action: change.create ? 'add' : 'remove',
+          action: change.create ? "add" : "remove",
         });
       }
 
@@ -198,7 +231,7 @@ export function PermissionsManagementContent({
         operations.push({
           permissionId: genericPermissionIds.edit,
           menuItemId,
-          action: change.edit ? 'add' : 'remove',
+          action: change.edit ? "add" : "remove",
         });
       }
 
@@ -206,7 +239,7 @@ export function PermissionsManagementContent({
         operations.push({
           permissionId: genericPermissionIds.delete,
           menuItemId,
-          action: change.delete ? 'add' : 'remove',
+          action: change.delete ? "add" : "remove",
         });
       }
     }
@@ -215,58 +248,66 @@ export function PermissionsManagementContent({
   };
 
   // Cargar roles por empresa
-  const loadRolesByCompany = useCallback(async (companyId: string | undefined) => {
-    if (!companyId) {
-      setRoles([]);
-      setSelectedRoleId(undefined);
-      return;
-    }
-
-    try {
-      setLoadingRoles(true);
-      const roleFilters: RoleFilters = {
-        page: 1,
-        limit: 100,
-      };
-      const response = await RolesService.getRoles(roleFilters);
-      
-      const companyRoles = (response.data || []).filter(role => role.companyId === companyId);
-      setRoles(companyRoles);
-      
-      if (selectedRoleId && !companyRoles.find(r => r.id === selectedRoleId)) {
+  const loadRolesByCompany = useCallback(
+    async (companyId: string | undefined) => {
+      if (!companyId) {
+        setRoles([]);
         setSelectedRoleId(undefined);
+        return;
       }
-      
-      // Si hay un roleId inicial y está en los roles cargados, seleccionarlo automáticamente
-      if (initialRoleId && companyRoles.find(r => r.id === initialRoleId)) {
-        setSelectedRoleId(initialRoleId);
+
+      try {
+        setLoadingRoles(true);
+        const roleFilters: RoleFilters = {
+          page: 1,
+          limit: 100,
+        };
+        const response = await RolesService.getRoles(roleFilters);
+
+        const companyRoles = (response.data || []).filter(
+          (role) => role.companyId === companyId,
+        );
+        setRoles(companyRoles);
+
+        if (
+          selectedRoleId &&
+          !companyRoles.find((r) => r.id === selectedRoleId)
+        ) {
+          setSelectedRoleId(undefined);
+        }
+
+        // Si hay un roleId inicial y está en los roles cargados, seleccionarlo automáticamente
+        if (initialRoleId && companyRoles.find((r) => r.id === initialRoleId)) {
+          setSelectedRoleId(initialRoleId);
+        }
+      } catch (error: any) {
+        console.error("Error al cargar roles:", error);
+        setRoles([]);
+      } finally {
+        setLoadingRoles(false);
       }
-    } catch (error: any) {
-      console.error('Error al cargar roles:', error);
-      setRoles([]);
-    } finally {
-      setLoadingRoles(false);
-    }
-  }, [selectedRoleId, initialRoleId]);
+    },
+    [selectedRoleId, initialRoleId],
+  );
 
   // Cargar permisos del rol cuando cambia selectedRoleId
   useEffect(() => {
     if (selectedRoleId) {
       setPermissionChanges([]);
-      
+
       const loadRolePermissions = async () => {
         try {
           setLoadingRolePermissions(true);
           const role = await RolesService.getRoleById(selectedRoleId);
           setRolePermissions(role.permissions || []);
         } catch (error: any) {
-          console.error('Error al cargar permisos del rol:', error);
+          console.error("Error al cargar permisos del rol:", error);
           setRolePermissions([]);
         } finally {
           setLoadingRolePermissions(false);
         }
       };
-      
+
       loadRolePermissions();
     } else {
       setRolePermissions([]);
@@ -310,11 +351,11 @@ export function PermissionsManagementContent({
       const operations = await convertPermissionChangesToOperations(
         permissionChanges,
         menuItems,
-        rolePermissions
+        rolePermissions,
       );
 
       if (operations.length === 0) {
-        const errorMessage = 'No hay cambios válidos para guardar';
+        const errorMessage = "No hay cambios válidos para guardar";
         if (onError) {
           onError({ message: errorMessage });
         } else {
@@ -326,20 +367,20 @@ export function PermissionsManagementContent({
       const result = await RolesService.bulkUpdateRolePermissions(
         selectedRoleId,
         operations,
-        selectedCompanyId
+        selectedCompanyId,
       );
 
-      if (result && 'summary' in result && result.summary) {
+      if (result && "summary" in result && result.summary) {
         const summary = result.summary;
-        const summaryMessage = `${summary.added > 0 ? `${summary.added} agregado${summary.added > 1 ? 's' : ''}` : ''}${summary.added > 0 && summary.removed > 0 ? ', ' : ''}${summary.removed > 0 ? `${summary.removed} removido${summary.removed > 1 ? 's' : ''}` : ''}`;
-        const successMessage = `Permisos actualizados correctamente${summaryMessage ? ` (${summaryMessage})` : ''}`;
+        const summaryMessage = `${summary.added > 0 ? `${summary.added} agregado${summary.added > 1 ? "s" : ""}` : ""}${summary.added > 0 && summary.removed > 0 ? ", " : ""}${summary.removed > 0 ? `${summary.removed} removido${summary.removed > 1 ? "s" : ""}` : ""}`;
+        const successMessage = `Permisos actualizados correctamente${summaryMessage ? ` (${summaryMessage})` : ""}`;
         if (onSuccess) {
           onSuccess(successMessage);
         } else {
           alert.showSuccess(successMessage);
         }
       } else {
-        const successMessage = 'Permisos actualizados correctamente';
+        const successMessage = "Permisos actualizados correctamente";
         if (onSuccess) {
           onSuccess(successMessage);
         } else {
@@ -354,9 +395,9 @@ export function PermissionsManagementContent({
           setLoadingRolePermissions(true);
           const updatedRole = await RolesService.getRoleById(selectedRoleId);
           setRolePermissions(updatedRole.permissions || []);
-          setMenuRefreshKey(prev => prev + 1);
+          setMenuRefreshKey((prev) => prev + 1);
         } catch (error: any) {
-          console.error('Error al recargar permisos del rol:', error);
+          console.error("Error al recargar permisos del rol:", error);
         } finally {
           setLoadingRolePermissions(false);
         }
@@ -365,14 +406,16 @@ export function PermissionsManagementContent({
       const backendResult = error?.result || error?.response?.data || error;
       const rawDetails = backendResult?.details ?? error?.details;
       const detailString =
-        typeof rawDetails === 'string'
+        typeof rawDetails === "string"
           ? rawDetails
           : rawDetails?.message
-          ? String(rawDetails.message)
-          : undefined;
+            ? String(rawDetails.message)
+            : undefined;
 
       const errorMessage =
-        backendResult?.description || error?.message || 'Error al guardar permisos';
+        backendResult?.description ||
+        error?.message ||
+        "Error al guardar permisos";
 
       if (onError) {
         onError({ message: errorMessage, detail: detailString });
@@ -385,23 +428,33 @@ export function PermissionsManagementContent({
   };
 
   const pendingCount = permissionChanges.reduce((total, change) => {
-    const originalView = rolePermissions.some(p => p.route === change.route && p.action === 'view');
-    const originalCreate = rolePermissions.some(p => p.route === change.route && p.action === 'create');
-    const originalEdit = rolePermissions.some(p => p.route === change.route && p.action === 'edit');
-    const originalDelete = rolePermissions.some(p => p.route === change.route && p.action === 'delete');
-    
+    const originalView = rolePermissions.some(
+      (p) => p.route === change.route && p.action === "view",
+    );
+    const originalCreate = rolePermissions.some(
+      (p) => p.route === change.route && p.action === "create",
+    );
+    const originalEdit = rolePermissions.some(
+      (p) => p.route === change.route && p.action === "edit",
+    );
+    const originalDelete = rolePermissions.some(
+      (p) => p.route === change.route && p.action === "delete",
+    );
+
     let count = 0;
     if (change.view !== originalView) count++;
     if (change.create !== originalCreate) count++;
     if (change.edit !== originalEdit) count++;
     if (change.delete !== originalDelete) count++;
-    
+
     return total + count;
   }, 0);
 
-  const pendingText = typeof t.security?.permissions?.pendingChanges === 'function'
-    ? t.security.permissions.pendingChanges(pendingCount)
-    : (t.security?.permissions?.pendingChanges || `${pendingCount} ${pendingCount === 1 ? 'permiso' : 'permisos'} pendiente${pendingCount === 1 ? '' : 's'} de guardar`);
+  const pendingText =
+    typeof t.security?.permissions?.pendingChanges === "function"
+      ? t.security.permissions.pendingChanges(pendingCount)
+      : t.security?.permissions?.pendingChanges ||
+        `${pendingCount} ${pendingCount === 1 ? "permiso" : "permisos"} pendiente${pendingCount === 1 ? "" : "s"} de guardar`;
 
   return (
     <View style={{ flex: 1 }}>
@@ -409,22 +462,30 @@ export function PermissionsManagementContent({
       <View style={[styles.selectorsContainer, { gap: 16, marginBottom: 16 }]}>
         <View style={{ flex: 1 }}>
           <Select
-            label={t.security?.users?.company || 'Empresa'}
-            placeholder={t.security?.users?.selectCompany || 'Selecciona una empresa'}
+            label={t.security?.users?.company || "Empresa"}
+            placeholder={
+              t.security?.users?.selectCompany || "Selecciona una empresa"
+            }
             value={selectedCompanyId}
-            options={companies.map(comp => ({ value: comp.id, label: comp.name }))}
+            options={companies.map((comp) => ({
+              value: comp.id,
+              label: comp.name,
+            }))}
             onSelect={(value) => handleCompanyChange(value as string)}
             searchable={companies.length > 5}
             required
           />
         </View>
-        
+
         <View style={{ flex: 1 }}>
           <Select
-            label={'Rol'}
-            placeholder={t.security?.roles?.selectRole || 'Selecciona un rol'}
+            label={"Rol"}
+            placeholder={t.security?.roles?.selectRole || "Selecciona un rol"}
             value={selectedRoleId}
-            options={roles.map(role => ({ value: role.id, label: role.name }))}
+            options={roles.map((role) => ({
+              value: role.id,
+              label: role.name,
+            }))}
             onSelect={(value) => handleRoleChange(value as string)}
             searchable={roles.length > 5}
             disabled={!selectedCompanyId || loadingRoles}
@@ -447,9 +508,9 @@ export function PermissionsManagementContent({
         showAll={showAll}
         onShowAllChange={setShowAll}
         onClearFilters={() => {
-          setSearchValue('');
-          setSelectedModule('');
-          setSelectedAction('');
+          setSearchValue("");
+          setSelectedModule("");
+          setSelectedAction("");
           setShowDefaultOptions(true);
         }}
       />
@@ -475,31 +536,51 @@ export function PermissionsManagementContent({
           />
         </View>
       ) : selectedRoleId && loadingRolePermissions ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 40,
+          }}
+        >
           <ActivityIndicator size="large" color={colors.primary} />
-          <ThemedText type="body2" variant="secondary" style={{ marginTop: 16, textAlign: 'center' }}>
+          <ThemedText
+            type="body2"
+            variant="secondary"
+            style={{ marginTop: 16, textAlign: "center" }}
+          >
             Cargando permisos del rol...
           </ThemedText>
         </View>
       ) : (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-          <View style={{ alignItems: 'center', gap: 16 }}>
-            <Ionicons 
-              name="git-branch-outline" 
-              size={64} 
-              color={colors.textSecondary} 
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 40,
+          }}
+        >
+          <View style={{ alignItems: "center", gap: 16 }}>
+            <Ionicons
+              name="git-branch-outline"
+              size={64}
+              color={colors.textSecondary}
             />
-            <ThemedText 
-              type="body1" 
-              style={{ 
-                textAlign: 'center', 
+            <ThemedText
+              type="body1"
+              style={{
+                textAlign: "center",
                 color: colors.textSecondary,
                 maxWidth: 300,
               }}
             >
-              {!selectedCompanyId 
-                ? t.security?.permissions?.selectCompany || 'Selecciona una empresa para comenzar'
-                : t.security?.permissions?.selectRole || 'Selecciona un rol para ver y gestionar sus permisos'}
+              {!selectedCompanyId
+                ? t.security?.permissions?.selectCompany ||
+                  "Selecciona una empresa para comenzar"
+                : t.security?.permissions?.selectRole ||
+                  "Selecciona un rol para ver y gestionar sus permisos"}
             </ThemedText>
           </View>
         </View>
@@ -507,19 +588,35 @@ export function PermissionsManagementContent({
 
       {/* Footer con botón de guardar */}
       {permissionChanges.length > 0 && (
-        <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16 }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: colors.surfaceVariant ?? colors.surface,
+              borderTopColor: colors.border,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingHorizontal: 16,
+            },
+          ]}
+        >
           <ThemedText type="body2" style={{ color: colors.textSecondary }}>
             {pendingText}
           </ThemedText>
           <Button
-            title={t.common?.save || 'Guardar'}
+            title={t.common?.save || "Guardar"}
             onPress={handleSaveChanges}
             variant="primary"
             size="md"
             disabled={savingChanges}
           >
             {savingChanges && (
-              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+              <ActivityIndicator
+                size="small"
+                color="#FFFFFF"
+                style={{ marginRight: 8 }}
+              />
             )}
           </Button>
         </View>
@@ -527,4 +624,3 @@ export function PermissionsManagementContent({
     </View>
   );
 }
-

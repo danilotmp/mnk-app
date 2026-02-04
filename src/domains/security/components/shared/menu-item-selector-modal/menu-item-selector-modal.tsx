@@ -15,11 +15,11 @@ import { MenuItem } from "@/src/infrastructure/menu/types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { createPermissionFlowStyles } from "../../role-permissions-flow/role-permissions-flow.styles";
 
@@ -129,7 +129,7 @@ export function MenuItemSelectorModal({
       paddingVertical: 8,
       borderRadius: 6,
       marginBottom: 16,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceVariant,
     },
     scrollView: {
       flex: 1,
@@ -360,7 +360,7 @@ export function MenuItemSelectorModal({
                   "Filtrar por nombre, código, módulo o acción..."
                 }
                 containerStyle={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.surfaceVariant,
                   borderColor: colors.border,
                 }}
                 inputStyle={{ color: colors.text }}
@@ -460,7 +460,7 @@ export function MenuItemSelectorModal({
                     style={[
                       styles.moduleHeader,
                       {
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.surfaceVariant,
                         borderColor: colors.border,
                       },
                     ]}

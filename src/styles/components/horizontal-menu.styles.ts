@@ -1,9 +1,46 @@
 import { Platform, StyleSheet } from "react-native";
 
+/** Tema para estilos del menú: mismos tokens que light/dark (background, surface, border, overlay, shadows) */
+type MenuTheme = {
+  colors: {
+    overlay: string;
+    background?: string;
+    surface?: string;
+    border?: string;
+    borderLight?: string;
+    primary?: string;
+  };
+  shadows?: {
+    sm?: {
+      shadowColor: string;
+      shadowOffset?: { width: number; height: number };
+      shadowOpacity?: number;
+      shadowRadius?: number;
+      elevation?: number;
+    };
+    md?: {
+      shadowColor: string;
+      shadowOffset?: { width: number; height: number };
+      shadowOpacity?: number;
+      shadowRadius?: number;
+      elevation?: number;
+    };
+  };
+};
+
 export const createHorizontalMenuStyles = (
-  activeItemColor: string = "#ff3366",
-) =>
-  StyleSheet.create({
+  theme: MenuTheme,
+  activeItemColor: string,
+) => {
+  const overlayBg = theme.colors.overlay;
+  const bg = theme.colors.background;
+  const surface = theme.colors.surface;
+  const border = theme.colors.border;
+  const borderLight = theme.colors.borderLight ?? theme.colors.border;
+  const shadowColor =
+    theme.shadows?.md?.shadowColor ?? theme.shadows?.sm?.shadowColor;
+  const shadowMd = theme.shadows?.md;
+  return StyleSheet.create({
     desktopContainer: {
       position: "relative",
       flex: 1,
@@ -24,18 +61,19 @@ export const createHorizontalMenuStyles = (
     hamburgerIcon: { fontSize: 24 },
     mobileMenuOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backgroundColor: overlayBg,
       flexDirection: "row",
     },
     mobileMenuContainer: {
       width: "100%",
       height: "100%",
+      backgroundColor: bg,
       ...Platform.select({
         web: {
-          boxShadow: "2px 0px 8px rgba(0, 0, 0, 0.25)",
+          boxShadow: `2px 0px 8px ${shadowColor}40`,
         },
         default: {
-          shadowColor: "#000",
+          shadowColor,
           shadowOffset: { width: 2, height: 0 },
           shadowOpacity: 0.25,
           shadowRadius: 8,
@@ -48,6 +86,8 @@ export const createHorizontalMenuStyles = (
       alignItems: "center",
       padding: 16,
       borderBottomWidth: 1,
+      borderBottomColor: border,
+      backgroundColor: bg,
       gap: 12,
     },
     mobileHeaderIcon: {
@@ -90,6 +130,8 @@ export const createHorizontalMenuStyles = (
       paddingVertical: 20,
       paddingHorizontal: 16,
       borderTopWidth: 1,
+      borderTopColor: border,
+      backgroundColor: bg,
       gap: 8,
     },
     mobileMenuFooterLogo: {
@@ -106,6 +148,7 @@ export const createHorizontalMenuStyles = (
       alignItems: "center",
       padding: 16,
       borderBottomWidth: 1,
+      borderBottomColor: borderLight,
       borderLeftWidth: 3,
       borderLeftColor: "transparent",
     },
@@ -140,13 +183,17 @@ export const createHorizontalMenuStyles = (
       width: "100%",
       maxWidth: 1200,
       borderWidth: 1,
+      borderColor: border,
       borderRadius: 8,
+      backgroundColor: surface,
       ...Platform.select({
         web: {
-          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)",
+          boxShadow: shadowMd
+            ? `0px ${shadowMd.shadowOffset?.height ?? 4}px ${shadowMd.shadowRadius ?? 12}px ${shadowColor}4d`
+            : `0px 4px 12px ${shadowColor}4d`,
         },
         default: {
-          shadowColor: "#000",
+          shadowColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 12,
@@ -168,11 +215,17 @@ export const createHorizontalMenuStyles = (
       fontWeight: "600",
       letterSpacing: 0.5,
     },
-    megaMenuColumnLine: { height: 1, width: "100%", marginBottom: 12 },
+    megaMenuColumnLine: {
+      height: 1,
+      width: "100%",
+      marginBottom: 12,
+      backgroundColor: borderLight,
+    },
     megaMenuItem: {
       paddingVertical: 10,
       paddingHorizontal: 4,
       borderBottomWidth: 1,
+      borderBottomColor: borderLight,
     },
     activeMegaMenuItem: {
       borderLeftWidth: 3,
@@ -187,13 +240,17 @@ export const createHorizontalMenuStyles = (
       minWidth: 280,
       maxWidth: 320,
       borderWidth: 1,
+      borderColor: border,
       borderRadius: 12,
+      backgroundColor: surface,
       ...Platform.select({
         web: {
-          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
+          boxShadow: shadowMd
+            ? `0px ${shadowMd.shadowOffset?.height ?? 4}px ${shadowMd.shadowRadius ?? 8}px ${shadowColor}1a`
+            : `0px 4px 8px ${shadowColor}1a`,
         },
         default: {
-          shadowColor: "#000",
+          shadowColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
@@ -207,6 +264,7 @@ export const createHorizontalMenuStyles = (
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderBottomWidth: 1,
+      borderBottomColor: borderLight,
     },
     activeSubmenuItem: {
       borderLeftWidth: 3,
@@ -216,3 +274,4 @@ export const createHorizontalMenuStyles = (
     submenuItemTitle: { marginBottom: 4 },
     submenuItemDescription: { opacity: 0.7, lineHeight: 16 },
   });
+};

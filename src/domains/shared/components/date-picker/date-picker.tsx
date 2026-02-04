@@ -192,7 +192,7 @@ export function DatePicker({
           datePickerStyles.inputContainer,
           {
             borderColor: error ? colors.error : colors.border,
-            backgroundColor: disabled ? colors.surfaceVariant : colors.surface,
+            backgroundColor: colors.surface,
           },
         ]}
         primaryColor={colors.primary}

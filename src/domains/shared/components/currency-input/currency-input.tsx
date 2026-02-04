@@ -4,18 +4,18 @@
  * y separa visualmente enteros de decimales (siempre 2 decimales)
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
-import React, { useRef, useState } from 'react';
-import { TextInput, View } from 'react-native';
-import { createCurrencyInputStyles } from './currency-input.styles';
-import type { CurrencyInputProps } from './currency-input.types';
+import { ThemedText } from "@/components/themed-text";
+import { useTheme } from "@/hooks/use-theme";
+import React, { useRef, useState } from "react";
+import { TextInput, View } from "react-native";
+import { createCurrencyInputStyles } from "./currency-input.styles";
+import type { CurrencyInputProps } from "./currency-input.types";
 
 export function CurrencyInput({
   value,
   onChangeText,
-  currency = 'USD',
-  placeholder = '0.00',
+  currency = "USD",
+  placeholder = "0.00",
   disabled = false,
   error = false,
   containerStyle,
@@ -29,82 +29,82 @@ export function CurrencyInput({
   // Obtener color del prefijo de moneda desde las variables del tema
   // rgb(21, 27, 46, 0.5) = rgba con opacidad 0.5 del background del tema
   // colors.background en dark es #151b2e = rgb(21, 27, 46)
-  const getCurrencyPrefixColor = () => {
-    const bgColor = colors.background || '#151b2e';
-    
+  const getCurrencyPrefixColor = (): string | undefined => {
+    const bgColor = colors.background;
+    if (!bgColor) return undefined;
+
     // Convertir hex a RGB si es necesario
-    if (bgColor.startsWith('#')) {
-      const hex = bgColor.replace('#', '');
+    if (bgColor.startsWith("#")) {
+      const hex = bgColor.replace("#", "");
       const r = Number.parseInt(hex.substring(0, 2), 16);
       const g = Number.parseInt(hex.substring(2, 4), 16);
       const b = Number.parseInt(hex.substring(4, 6), 16);
       return `rgba(${r}, ${g}, ${b}, 0.5)`;
     }
-    
+
     // Si ya es rgba, extraer RGB y aplicar opacidad 0.5
-    if (bgColor.startsWith('rgba')) {
+    if (bgColor.startsWith("rgba")) {
       const match = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       if (match) {
         return `rgba(${match[1]}, ${match[2]}, ${match[3]}, 0.5)`;
       }
     }
-    
-    // Fallback
-    return 'rgba(21, 27, 46, 0.5)';
+
+    return undefined;
   };
 
   // Normalizar el valor: siempre mantener como string con formato numérico
-  const normalizedValue = value || '';
-  
+  const normalizedValue = value || "";
+
   // Separar parte entera y decimal
-  const parts = normalizedValue.split('.');
-  const integerPart = parts[0] || '';
-  const decimalPart = parts[1] || '';
+  const parts = normalizedValue.split(".");
+  const integerPart = parts[0] || "";
+  const decimalPart = parts[1] || "";
 
   // Formatear decimales para mostrar (siempre 2 dígitos)
-  const displayDecimal = decimalPart.slice(0, 2).padEnd(2, '0');
+  const displayDecimal = decimalPart.slice(0, 2).padEnd(2, "0");
 
   const handleIntegerChange = (text: string) => {
     // Solo permitir números
-    const cleaned = text.replace(/\D/g, '');
-    
+    const cleaned = text.replace(/\D/g, "");
+
     // Si hay decimales, mantenerlos
     if (decimalPart) {
-      onChangeText(cleaned + '.' + decimalPart);
+      onChangeText(cleaned + "." + decimalPart);
     } else if (cleaned) {
-      onChangeText(cleaned + '.00');
+      onChangeText(cleaned + ".00");
     } else {
-      onChangeText('');
+      onChangeText("");
     }
   };
 
   const handleDecimalChange = (text: string) => {
     // Solo permitir números, máximo 2 dígitos
-    const cleaned = text.replace(/\D/g, '').slice(0, 2);
-    
-    const currentInteger = integerPart || '0';
+    const cleaned = text.replace(/\D/g, "").slice(0, 2);
+
+    const currentInteger = integerPart || "0";
     if (cleaned) {
-      onChangeText(currentInteger + '.' + cleaned.padEnd(2, '0'));
+      onChangeText(currentInteger + "." + cleaned.padEnd(2, "0"));
     } else {
-      onChangeText(currentInteger + '.00');
+      onChangeText(currentInteger + ".00");
     }
   };
 
   const handleBlur = () => {
     setFocused(false);
-    
+
     // Asegurar formato correcto al perder el foco
-    if (normalizedValue && normalizedValue !== '') {
+    if (normalizedValue && normalizedValue !== "") {
       const numValue = Number.parseFloat(normalizedValue);
       if (!Number.isNaN(numValue)) {
         onChangeText(numValue.toFixed(2));
       } else if (integerPart) {
         // Si solo hay parte entera, agregar .00
-        onChangeText(integerPart + '.00');
+        onChangeText(integerPart + ".00");
       }
     } else if (integerPart) {
       // Si hay parte entera pero no decimal, agregar .00
-      onChangeText(integerPart + '.00');
+      onChangeText(integerPart + ".00");
     }
   };
 
@@ -118,11 +118,11 @@ export function CurrencyInput({
         styles.container,
         {
           backgroundColor: colors.surface,
-          borderColor: focused 
-            ? colors.primary 
-            : error 
-            ? colors.error || '#EF4444' 
-            : colors.border,
+          borderColor: focused
+            ? colors.primary
+            : error
+              ? colors.error
+              : colors.border,
           borderWidth: focused ? 2 : 1,
         },
         containerStyle,
@@ -130,8 +130,19 @@ export function CurrencyInput({
       ]}
     >
       {/* Prefijo: Moneda - más oscuro que el resto del input */}
-      <View style={[styles.currencyPrefix, { backgroundColor: getCurrencyPrefixColor(), borderRightColor: colors.border }]}>
-        <ThemedText type="body1" style={[styles.currencyText, { color: colors.textSecondary }]}>
+      <View
+        style={[
+          styles.currencyPrefix,
+          {
+            backgroundColor: getCurrencyPrefixColor(),
+            borderRightColor: colors.border,
+          },
+        ]}
+      >
+        <ThemedText
+          type="body1"
+          style={[styles.currencyText, { color: colors.textSecondary }]}
+        >
           {currency}
         </ThemedText>
       </View>
@@ -143,9 +154,9 @@ export function CurrencyInput({
           ref={integerInputRef}
           style={[
             styles.integerInput,
-            { 
+            {
               color: colors.text,
-              backgroundColor: 'transparent',
+              backgroundColor: "transparent",
             },
             disabled && { color: colors.textSecondary },
           ]}
@@ -153,7 +164,7 @@ export function CurrencyInput({
           onChangeText={handleIntegerChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder={integerPart === '' ? '0' : undefined}
+          placeholder={integerPart === "" ? "0" : undefined}
           placeholderTextColor={colors.textSecondary}
           keyboardType="number-pad"
           editable={!disabled}
@@ -161,19 +172,24 @@ export function CurrencyInput({
         />
 
         {/* Separador decimal */}
-        <ThemedText type="body1" style={[styles.decimalSeparator, { color: colors.text }]}>
+        <ThemedText
+          type="body1"
+          style={[styles.decimalSeparator, { color: colors.text }]}
+        >
           .
         </ThemedText>
 
         {/* Parte decimal - siempre 2 dígitos */}
-        <View style={[styles.decimalSuffix, { backgroundColor: 'transparent' }]}>
+        <View
+          style={[styles.decimalSuffix, { backgroundColor: "transparent" }]}
+        >
           <TextInput
             ref={decimalInputRef}
             style={[
               styles.decimalInput,
-              { 
+              {
                 color: colors.text,
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
               },
               disabled && { color: colors.textSecondary },
             ]}
@@ -193,4 +209,3 @@ export function CurrencyInput({
     </View>
   );
 }
-

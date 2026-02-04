@@ -7,6 +7,8 @@ import { Platform, StyleSheet } from "react-native";
 export interface UserProfileHeaderTheme {
   colors: {
     overlay: string;
+    surfaceVariant?: string;
+    surface?: string;
   };
   shadows: {
     md: {
@@ -205,6 +207,7 @@ export const createUserProfileHeaderStyles = (theme?: UserProfileHeaderTheme) =>
       maxHeight: "80%",
     },
     modalContent: {
+      backgroundColor: theme?.colors?.surfaceVariant ?? theme?.colors?.surface,
       borderRadius: 16,
       padding: 24,
       position: "relative",
@@ -215,7 +218,7 @@ export const createUserProfileHeaderStyles = (theme?: UserProfileHeaderTheme) =>
             : "0px 2px 8px rgba(0, 0, 0, 0.25)",
         },
         default: theme?.shadows.md || {
-          shadowColor: "#000",
+          shadowColor: theme?.colors?.shadow ?? "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.25,
           shadowRadius: 8,

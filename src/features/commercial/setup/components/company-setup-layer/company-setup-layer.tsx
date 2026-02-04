@@ -224,7 +224,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 containerStyle={[
                   styles.inputContainer,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceVariant,
                     borderColor: colors.border,
                   },
                 ]}
@@ -259,7 +259,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 containerStyle={[
                   styles.inputContainer,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceVariant,
                     borderColor: colors.border,
                   },
                 ]}
@@ -333,7 +333,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 containerStyle={[
                   styles.textAreaContainer,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceVariant,
                     borderColor: colors.border,
                   },
                 ]}
@@ -400,7 +400,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 containerStyle={[
                   styles.inputContainer,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceVariant,
                     borderColor: colors.border,
                   },
                 ]}
@@ -435,7 +435,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 containerStyle={[
                   styles.inputContainer,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceVariant,
                     borderColor: colors.border,
                   },
                 ]}

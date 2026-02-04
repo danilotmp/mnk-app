@@ -76,14 +76,15 @@ export const createIconInputStyles = (theme: IconInputTheme) => {
         } as any)),
     },
     disabled: {
-      opacity: 0.5,
+      opacity: 0.65,
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: colors.overlay || "rgba(0, 0, 0, 0.3)",
+      backgroundColor: colors.overlay,
     },
     modalContent: {
       position: "absolute",
+      backgroundColor: colors.surfaceVariant ?? colors.surface,
       borderRadius: 8,
       maxHeight: 200,
       ...Platform.select({
@@ -93,7 +94,7 @@ export const createIconInputStyles = (theme: IconInputTheme) => {
             : "0px 4px 8px rgba(0, 0, 0, 0.25)",
         },
         default: shadows.md || {
-          shadowColor: "#000",
+          shadowColor: colors.shadow ?? "#000",
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.25,
           shadowRadius: 8,
@@ -105,7 +106,7 @@ export const createIconInputStyles = (theme: IconInputTheme) => {
       borderRadius: 8,
       borderWidth: 1,
       maxHeight: 200,
-      backgroundColor: colors.background,
+      backgroundColor: colors.surfaceVariant ?? colors.surface,
       overflow: "hidden",
       opacity: 1,
     },

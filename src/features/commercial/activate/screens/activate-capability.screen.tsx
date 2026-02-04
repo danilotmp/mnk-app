@@ -249,7 +249,7 @@ export function ActivateCapabilityScreen() {
                   containerStyle={[
                     styles.inputContainer,
                     {
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.surfaceVariant,
                       borderColor: error ? colors.error : colors.border,
                     },
                   ]}
@@ -293,7 +293,7 @@ export function ActivateCapabilityScreen() {
                     containerStyle={[
                       styles.inputContainer,
                       {
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.surfaceVariant,
                         borderColor: colors.border,
                       },
                     ]}

@@ -67,7 +67,7 @@ export function UserProfileHeader({
   onSettings,
   onProfile,
 }: UserProfileHeaderProps) {
-  const { colors, isDark, shadows } = useTheme();
+  const { colors, shadows } = useTheme();
   const styles = createUserProfileHeaderStyles({ colors, shadows });
   const { user, company, branch: currentBranch } = useCompany();
   const { switchBranch } = useBranches();
@@ -446,7 +446,7 @@ export function UserProfileHeader({
             style={[
               styles.dropdownMenuContainer,
               {
-                backgroundColor: colors.surfaceMid || colors.background,
+                backgroundColor: colors.dropdownBackground,
                 borderWidth: 1,
                 borderColor: colors.border,
                 ...shadows.lg,
@@ -464,7 +464,7 @@ export function UserProfileHeader({
               style={[
                 styles.dropdownArrowInner,
                 {
-                  borderBottomColor: colors.surfaceMid || colors.background,
+                  borderBottomColor: colors.dropdownBackground,
                 },
               ]}
             />

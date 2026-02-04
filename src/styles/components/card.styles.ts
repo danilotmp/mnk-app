@@ -1,35 +1,37 @@
-import { StyleSheet } from 'react-native';
-import { Size } from '../../domains/shared/types';
-import { BaseTheme } from '../themes/base.theme';
+import { StyleSheet } from "react-native";
+import { Size } from "../../domains/shared/types";
+import { BaseTheme } from "../themes/base.theme";
+
+type ThemeWithColors = BaseTheme & { colors: Record<string, string> };
 
 // Variantes de tarjeta
-export type CardVariant = 'elevated' | 'outlined' | 'filled' | 'flat';
+export type CardVariant = "elevated" | "outlined" | "filled" | "flat";
 
 // Estilos específicos para el componente Card
-export const createCardStyles = (theme: BaseTheme) => {
+export const createCardStyles = (theme: ThemeWithColors) => {
   return StyleSheet.create({
     // Estilos base de la tarjeta
     base: {
       borderRadius: theme.borders.radius.lg,
-      backgroundColor: theme.colors?.surface || '#F8F9FA',
+      backgroundColor: theme.colors.surface,
     },
 
     // Variantes
     variant: {
       elevated: {
         ...theme.shadows.md,
-        backgroundColor: theme.colors?.surface || '#F8F9FA',
+        backgroundColor: theme.colors.surface,
       },
       outlined: {
         borderWidth: theme.borders.width.sm,
-        borderColor: theme.colors?.border || '#E5E7EB',
-        backgroundColor: theme.colors?.surface || '#F8F9FA',
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface,
       },
       filled: {
-        backgroundColor: theme.colors?.surfaceVariant || '#F1F3F4',
+        backgroundColor: theme.colors.surfaceVariant,
       },
       flat: {
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
         borderWidth: 0,
       },
     },
@@ -101,13 +103,13 @@ export const createCardStyles = (theme: BaseTheme) => {
 
 // Función helper para obtener estilos específicos
 export const getCardStyle = (
-  theme: BaseTheme,
+  theme: ThemeWithColors,
   variant: CardVariant,
-  padding: Size = 'md',
-  borderRadius: Size = 'lg'
+  padding: Size = "md",
+  borderRadius: Size = "lg",
 ) => {
   const styles = createCardStyles(theme);
-  
+
   return {
     ...styles.base,
     ...styles.variant[variant],

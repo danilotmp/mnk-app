@@ -8,7 +8,6 @@ import { StyleSheet } from "react-native";
 
 export const createVerticalMenuAdditionalStyles = (
   colors: BaseTheme["colors"],
-  isDark?: boolean,
 ) =>
   StyleSheet.create({
     // Estilos para el contenedor del buscador y bloqueo
@@ -63,9 +62,9 @@ export const createVerticalMenuAdditionalStyles = (
     chevronMargin: {
       marginLeft: 4,
     },
-    // Estilos dinámicos para el contenedor animado (Dark: surfaceVariant, Light: surface)
+    // Mismo fondo que el header (surfaceVariant) en ambos temas
     animatedContainer: {
-      backgroundColor: isDark ? colors.surfaceVariant : colors.surface,
+      backgroundColor: colors.surfaceVariant,
       borderRightColor: colors.border,
     },
   });

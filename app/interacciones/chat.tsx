@@ -2061,6 +2061,7 @@ export default function ChatIAScreen() {
                                     {
                                       backgroundColor: colors.surfaceVariant,
                                       borderColor: colors.border,
+                                      shadowColor: colors.shadow,
                                     }
                                   ]}
                                   data-message-menu={Platform.OS === 'web' ? true : undefined}
@@ -2699,6 +2700,7 @@ export default function ChatIAScreen() {
                     styles.sendButton,
                     {
                       backgroundColor: (messageText.trim() || attachedFiles.length > 0) ? colors.primary : colors.surface,
+                      shadowColor: colors.shadow,
                     },
                     (!messageText.trim() && attachedFiles.length === 0 || sendingMessage) && styles.sendButtonDisabled,
                   ]}
@@ -3289,7 +3291,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginBottom: 0,
     elevation: 2,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -3544,7 +3545,6 @@ const styles = StyleSheet.create({
     maxHeight: 400,
     borderRadius: 12,
     borderWidth: 1,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -3697,7 +3697,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 4,
     zIndex: 10000,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,

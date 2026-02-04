@@ -3,11 +3,20 @@
  * Soporta selección simple y múltiple
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { useTheme } from "@/hooks/use-theme";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import {
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+    type ViewStyle,
+} from "react-native";
 
 export interface SelectOption<T = string> {
   value: T;
@@ -27,13 +36,15 @@ interface SelectProps<T = string> {
   multiple?: boolean;
   searchable?: boolean;
   required?: boolean;
+  /** Estilo del trigger (mismo fondo que inputs: surfaceVariant). */
+  triggerStyle?: ViewStyle;
 }
 
 export function Select<T = string>({
   value,
   options,
   onSelect,
-  placeholder = 'Selecciona una opción',
+  placeholder = "Selecciona una opción",
   label,
   error = false,
   errorMessage,
@@ -41,16 +52,18 @@ export function Select<T = string>({
   multiple = false,
   searchable = false,
   required = false,
+  triggerStyle,
 }: SelectProps<T>) {
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredOptions = searchable && searchQuery
-    ? options.filter((option) =>
-        option.label.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : options;
+  const filteredOptions =
+    searchable && searchQuery
+      ? options.filter((option) =>
+          option.label.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+      : options;
 
   const getSelectedLabel = (): string => {
     if (!value) return placeholder;
@@ -81,7 +94,7 @@ export function Select<T = string>({
     } else {
       onSelect(optionValue);
       setIsOpen(false);
-      setSearchQuery('');
+      setSearchQuery("");
     }
   };
 
@@ -96,7 +109,10 @@ export function Select<T = string>({
     <View style={styles.container}>
       {label && (
         <ThemedText type="body2" style={[styles.label, { color: colors.text }]}>
-          {label} {required && <ThemedText style={{ color: colors.error }}>*</ThemedText>}
+          {label}{" "}
+          {required && (
+            <ThemedText style={{ color: colors.error }}>*</ThemedText>
+          )}
         </ThemedText>
       )}
       <Pressable
@@ -107,6 +123,7 @@ export function Select<T = string>({
             backgroundColor: colors.surface,
             borderColor: error ? colors.error : colors.border,
           },
+          triggerStyle,
           disabled && styles.disabled,
         ]}
         disabled={disabled}
@@ -122,13 +139,16 @@ export function Select<T = string>({
           {getSelectedLabel()}
         </ThemedText>
         <Ionicons
-          name={isOpen ? 'chevron-up' : 'chevron-down'}
+          name={isOpen ? "chevron-up" : "chevron-down"}
           size={20}
           color={colors.textSecondary}
         />
       </Pressable>
       {error && errorMessage && (
-        <ThemedText type="caption" style={[styles.errorText, { color: colors.error }]}>
+        <ThemedText
+          type="caption"
+          style={[styles.errorText, { color: colors.error }]}
+        >
           {errorMessage}
         </ThemedText>
       )}
@@ -139,28 +159,36 @@ export function Select<T = string>({
         animationType="fade"
         onRequestClose={() => {
           setIsOpen(false);
-          setSearchQuery('');
+          setSearchQuery("");
         }}
       >
         <Pressable
           style={styles.modalOverlay}
           onPress={() => {
             setIsOpen(false);
-            setSearchQuery('');
+            setSearchQuery("");
           }}
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            style={[styles.modalContent, { backgroundColor: colors.background }]}
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <ThemedText type="h4" style={[styles.modalTitle, { color: colors.text }]}>
-                {label || 'Seleccionar opción'}
+            <View
+              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+            >
+              <ThemedText
+                type="h4"
+                style={[styles.modalTitle, { color: colors.text }]}
+              >
+                {label || "Seleccionar opción"}
               </ThemedText>
               <TouchableOpacity
                 onPress={() => {
                   setIsOpen(false);
-                  setSearchQuery('');
+                  setSearchQuery("");
                 }}
                 style={styles.closeButton}
               >
@@ -169,8 +197,18 @@ export function Select<T = string>({
             </View>
 
             {searchable && options.length > 5 && (
-              <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
-                <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+              <View
+                style={[
+                  styles.searchContainer,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Ionicons
+                  name="search"
+                  size={20}
+                  color={colors.textSecondary}
+                  style={styles.searchIcon}
+                />
                 <TextInput
                   style={[styles.searchInput, { color: colors.text }]}
                   placeholder="Buscar..."
@@ -180,19 +218,30 @@ export function Select<T = string>({
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
+                    onPress={() => setSearchQuery("")}
                     style={styles.clearSearchButton}
                   >
-                    <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                    <Ionicons
+                      name="close-circle"
+                      size={20}
+                      color={colors.textSecondary}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
             )}
 
-            <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={true}>
+            <ScrollView
+              style={styles.optionsList}
+              showsVerticalScrollIndicator={true}
+            >
               {filteredOptions.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <ThemedText type="body2" variant="secondary" style={styles.emptyText}>
+                  <ThemedText
+                    type="body2"
+                    variant="secondary"
+                    style={styles.emptyText}
+                  >
                     No hay opciones disponibles
                   </ThemedText>
                 </View>
@@ -204,11 +253,15 @@ export function Select<T = string>({
                   return (
                     <TouchableOpacity
                       key={String(option.value)}
-                      onPress={() => !optionDisabled && handleSelect(option.value)}
+                      onPress={() =>
+                        !optionDisabled && handleSelect(option.value)
+                      }
                       style={[
                         styles.option,
                         {
-                          backgroundColor: selected ? colors.primary : 'transparent',
+                          backgroundColor: selected
+                            ? colors.primary
+                            : "transparent",
                           opacity: optionDisabled ? 0.5 : 1,
                         },
                         selected && styles.selectedOption,
@@ -219,7 +272,7 @@ export function Select<T = string>({
                         type="body2"
                         style={[
                           styles.optionText,
-                          { color: selected ? '#FFFFFF' : colors.text },
+                          { color: selected ? "#FFFFFF" : colors.text },
                         ]}
                       >
                         {option.label}
@@ -234,26 +287,38 @@ export function Select<T = string>({
             </ScrollView>
 
             {multiple && Array.isArray(value) && value.length > 0 && (
-              <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
+              <View
+                style={[styles.modalFooter, { borderTopColor: colors.border }]}
+              >
                 <TouchableOpacity
                   onPress={() => {
                     onSelect([]);
                   }}
                   style={styles.clearButton}
                 >
-                  <Ionicons name="refresh" size={16} color={colors.textSecondary || '#999'} />
-                  <ThemedText type="body2" style={{ color: colors.textSecondary || '#999' }}>
+                  <Ionicons
+                    name="refresh"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <ThemedText
+                    type="body2"
+                    style={{ color: colors.textSecondary }}
+                  >
                     Limpiar selección
                   </ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
                     setIsOpen(false);
-                    setSearchQuery('');
+                    setSearchQuery("");
                   }}
-                  style={[styles.doneButton, { backgroundColor: colors.primary }]} 
+                  style={[
+                    styles.doneButton,
+                    { backgroundColor: colors.primary },
+                  ]}
                 >
-                  <ThemedText type="body2" style={{ color: '#FFFFFF' }}>
+                  <ThemedText type="body2" style={{ color: "#FFFFFF" }}>
                     Aceptar
                   </ThemedText>
                 </TouchableOpacity>
@@ -272,12 +337,12 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   select: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 8,
@@ -289,34 +354,33 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.65,
   },
   errorText: {
     marginTop: 4,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 16,
   },
   modalContent: {
-    width: '100%',
+    width: "100%",
     maxWidth: 500,
-    maxHeight: '80%',
+    maxHeight: "80%",
     borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
   },
@@ -327,8 +391,8 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -350,13 +414,13 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: "rgba(0, 0, 0, 0.05)",
   },
   selectedOption: {
     // Estilo adicional para opción seleccionada si es necesario
@@ -366,22 +430,22 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyText: {
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     borderTopWidth: 1,
     gap: 12,
   },
   clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     padding: 8,
   },
@@ -391,4 +455,3 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 });
-
