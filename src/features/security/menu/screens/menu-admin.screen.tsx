@@ -3473,14 +3473,16 @@ export function MenuAdminScreen() {
         <View style={styles.pageHeader}>
           <View style={styles.pageHeaderTitle}>
             <View style={styles.pageHeaderRow}>
-              <DynamicIcon
-                name="Ionicons:menu"
-                size={
-                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
-                }
-                color={colors.primary}
-                style={styles.pageHeaderIcon}
-              />
+              <View style={styles.pageHeaderIconContainer}>
+                <DynamicIcon
+                  name="Ionicons:menu"
+                  size={
+                    isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                  }
+                  color={colors.primary}
+                  style={styles.pageHeaderIcon}
+                />
+              </View>
               <ThemedText
                 type="h1"
                 style={isMobile ? styles.pageTitleMobile : styles.pageTitle}

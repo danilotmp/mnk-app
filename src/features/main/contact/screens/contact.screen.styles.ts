@@ -11,8 +11,11 @@ export interface ContactScreenTheme {
     text: string;
     textSecondary: string;
     primary: string;
+    primaryLight: string;
     border: string;
     surface: string;
+    surfaceVariant?: string;
+    pageTitleColor?: string;
   };
   spacing: {
     xs: number;
@@ -65,6 +68,7 @@ export interface ContactScreenStyles {
   leftColumn: ViewStyle;
   headerSection: ViewStyle;
   headerRow: ViewStyle;
+  headerIconContainer: ViewStyle;
   headerIcon: TextStyle;
   title: TextStyle;
   subtitle: TextStyle;
@@ -150,6 +154,13 @@ export function createContactScreenStyles(
       gap: t.spacing.sm,
       flexWrap: "nowrap",
     },
+    headerIconContainer: {
+      backgroundColor: "rgba(0, 135, 255, 0.09)", // Color más tenue del icono
+      borderRadius: t.borderRadius.lg,
+      padding: t.spacing.sm,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     headerIcon: {
       flexShrink: 0,
     },
@@ -158,13 +169,14 @@ export function createContactScreenStyles(
       marginBottom: 0,
       textAlign: "left",
       flex: 1,
+      color: t.colors.pageTitleColor ?? t.colors.text,
     },
     subtitle: {
       marginTop: t.spacing.sm,
       textAlign: "left",
       paddingLeft: isMobile
-        ? t.pageLayout.iconTitleMobile + t.spacing.sm
-        : t.pageLayout.iconTitle + t.spacing.sm,
+        ? t.pageLayout.iconTitleMobile + t.spacing.sm + t.spacing.sm + t.spacing.sm
+        : t.pageLayout.iconTitle + t.spacing.sm + t.spacing.sm + t.spacing.sm,
     },
     matrixCardWrapper: {
       width: "70%",

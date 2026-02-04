@@ -425,14 +425,16 @@ export function CommercialSetupScreen() {
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <View style={styles.titleRow}>
-              <DynamicIcon
-                name="MaterialCommunityIcons:cellphone-cog"
-                size={
-                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
-                }
-                color={colors.primary}
-                style={styles.titleIcon}
-              />
+              <View style={styles.titleIconContainer}>
+                <DynamicIcon
+                  name="MaterialCommunityIcons:cellphone-cog"
+                  size={
+                    isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                  }
+                  color={colors.primary}
+                  style={styles.titleIcon}
+                />
+              </View>
               <ThemedText
                 type="h2"
                 style={isMobile ? styles.titleMobile : styles.title}

@@ -811,14 +811,16 @@ export default function PermissionsListPage() {
         <View style={styles.header}>
           <View style={styles.headerTitle}>
             <View style={styles.headerRow}>
-              <DynamicIcon
-                name="Ionicons:key"
-                size={
-                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
-                }
-                color={colors.primary}
-                style={styles.headerIcon}
-              />
+              <View style={styles.headerIconContainer}>
+                <DynamicIcon
+                  name="Ionicons:key"
+                  size={
+                    isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                  }
+                  color={colors.primary}
+                  style={styles.headerIcon}
+                />
+              </View>
               <ThemedText
                 type="h2"
                 style={isMobile ? styles.titleMobile : styles.title}

@@ -290,14 +290,16 @@ export function CapabilitiesScreen() {
           <View style={[styles.header, isMobile && styles.headerMobile]}>
             <View style={styles.headerTitle}>
               <View style={styles.headerRow}>
-                <DynamicIcon
-                  name="AntDesign:product"
-                  size={
-                    isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
-                  }
-                  color={colors.primary}
-                  style={styles.headerIcon}
-                />
+                <View style={styles.headerIconContainer}>
+                  <DynamicIcon
+                    name="AntDesign:product"
+                    size={
+                      isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                    }
+                    color={colors.primary}
+                    style={styles.headerIcon}
+                  />
+                </View>
                 <ThemedText
                   type="h2"
                   style={[isMobile ? styles.titleMobile : styles.title]}

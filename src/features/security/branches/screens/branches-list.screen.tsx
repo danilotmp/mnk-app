@@ -488,14 +488,16 @@ export function BranchesListScreen() {
         <View style={styles.header}>
           <View style={styles.headerTitle}>
             <View style={styles.headerRow}>
-              <DynamicIcon
-                name="Ionicons:storefront"
-                size={
-                  isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
-                }
-                color={colors.primary}
-                style={styles.headerIcon}
-              />
+              <View style={styles.headerIconContainer}>
+                <DynamicIcon
+                  name="Ionicons:storefront"
+                  size={
+                    isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                  }
+                  color={colors.primary}
+                  style={styles.headerIcon}
+                />
+              </View>
               <ThemedText
                 type="h1"
                 style={isMobile ? styles.titleMobile : styles.title}

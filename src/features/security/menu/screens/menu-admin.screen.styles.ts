@@ -11,10 +11,12 @@ export interface MenuAdminScreenTheme {
     text: string;
     textSecondary: string;
     primary: string;
+    primaryLight: string;
     border: string;
     surface: string;
     surfaceVariant?: string;
     filterInputBackground?: string;
+    pageTitleColor?: string;
     background: string;
     success: string;
     error: string;
@@ -75,21 +77,30 @@ export function createMenuAdminStyles(
       alignItems: "center",
       gap: s.sm,
     } as ViewStyle,
+    pageHeaderIconContainer: {
+      backgroundColor: "rgba(0, 135, 255, 0.09)", // Color más tenue del icono
+      borderRadius: r.lg,
+      padding: s.sm,
+      alignItems: "center",
+      justifyContent: "center",
+    } as ViewStyle,
     pageHeaderIcon: { flexShrink: 0 } as ViewStyle,
     pageTitle: {
       ...(t.typography.pageTitle as TextStyle),
       marginBottom: s.xs,
+      color: c.pageTitleColor ?? c.text,
     } as TextStyle,
     pageTitleMobile: {
       ...(t.typography.pageTitleMobile as TextStyle),
       marginBottom: s.xs,
+      color: c.pageTitleColor ?? c.text,
     } as TextStyle,
     pageSubtitle: {
       ...(t.typography.pageSubtitle as TextStyle),
       color: c.textSecondary,
       paddingLeft: isMobile
-        ? t.pageLayout.iconTitleMobile + s.sm
-        : t.pageLayout.iconTitle + s.sm,
+        ? t.pageLayout.iconTitleMobile + s.sm + s.sm + s.sm
+        : t.pageLayout.iconTitle + s.sm + s.sm + s.sm,
     } as TextStyle,
     scrollContent: {
       paddingVertical: 16,

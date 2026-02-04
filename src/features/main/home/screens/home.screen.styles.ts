@@ -10,9 +10,12 @@ export interface HomeScreenTheme {
     text: string;
     textSecondary: string;
     primary: string;
+    primaryLight: string;
     border: string;
     surface?: string;
+    surfaceVariant?: string;
     shadow?: string;
+    pageTitleColor?: string;
   };
   spacing: {
     xs: number;
@@ -65,6 +68,7 @@ export interface HomeScreenStyles {
   textColumnDesktop: ViewStyle;
   mainTitleRow: ViewStyle;
   mainTitleRowMobile: ViewStyle;
+  mainTitleIconContainer: ViewStyle;
   mainTitleIcon: TextStyle;
   mainTitle: TextStyle;
   mainTitleMobile: TextStyle;
@@ -146,6 +150,13 @@ export function createHomeScreenStyles(t: HomeScreenTheme): HomeScreenStyles {
     mainTitleRowMobile: {
       marginBottom: t.pageLayout.titleSubtitleGapMobile,
     },
+    mainTitleIconContainer: {
+      backgroundColor: "rgba(0, 135, 255, 0.09)", // Color más tenue del icono
+      borderRadius: t.borderRadius.lg,
+      padding: t.spacing.sm,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     mainTitleIcon: {
       flexShrink: 0,
     },
@@ -154,11 +165,13 @@ export function createHomeScreenStyles(t: HomeScreenTheme): HomeScreenStyles {
       textAlign: "justify",
       flex: 1,
       ...t.typography.pageTitle,
+      color: t.colors.pageTitleColor ?? t.colors.text,
     },
     mainTitleMobile: {
       marginBottom: 0,
       textAlign: "justify",
       ...t.typography.pageTitleMobile,
+      color: t.colors.pageTitleColor ?? t.colors.text,
     },
     description: {
       ...(t.typography.pageSubtitle as TextStyle),

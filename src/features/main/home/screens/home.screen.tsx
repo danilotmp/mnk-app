@@ -95,18 +95,20 @@ export function HomeScreen() {
                 isMobile && styles.mainTitleRowMobile,
               ]}
             >
-              <DynamicIcon
-                name="Entypo:network"
-                size={isMobile ? 28 : 36}
-                color={colors.primary}
-                style={styles.mainTitleIcon}
-              />
+              <View style={styles.mainTitleIconContainer}>
+                <DynamicIcon
+                  name="Entypo:network"
+                  size={isMobile ? 28 : 36}
+                  color={colors.primary}
+                  style={styles.mainTitleIcon}
+                />
+              </View>
               <ThemedText
                 type="h1"
                 style={[
                   styles.mainTitle,
                   isMobile && styles.mainTitleMobile,
-                  { color: colors.text },
+                  { color: colors.pageTitleColor ?? colors.text },
                 ]}
               >
                 Soluciones empresariales con Inteligencia Artificial

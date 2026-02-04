@@ -102,6 +102,7 @@ const LightPalette = {
   icon: "#1E2538",
   iconSecondary: BrandColors.gray[600],
   shadow: BrandColors.gray[900], // Color de sombra (mismo gris que usamos en la paleta)
+  pageTitleColor: "#00338D", // Título de página: mismo que icono en Light (primary)
 } as const;
 
 // Tema claro - Colores administrados por paleta (igual que Dark); una sola fuente de verdad.
@@ -146,6 +147,7 @@ export const LightTheme = {
     icon: LightPalette.icon,
     iconSecondary: LightPalette.iconSecondary,
     shadow: LightPalette.shadow,
+    pageTitleColor: LightPalette.pageTitleColor, // Mismo que icono del título en Light
   },
   spacing: {
     xs: 4,
@@ -217,6 +219,7 @@ const DarkPalette = {
   overlay: "rgba(0, 0, 0, 0.5)",
   tabIconDefault: "#6b7588",
   shadow: "#000000", // Dark: negro para sombras
+  pageTitleColor: "#ffffff", // Título de página: mismo que text en Dark (blanco)
 } as const;
 
 // Tema oscuro - Inspirado en Hapi Trade. Colores administrados por paleta; variables por uso.
@@ -261,6 +264,7 @@ export const DarkTheme = {
     icon: DarkPalette.text,
     iconSecondary: DarkPalette.textSecondary,
     shadow: DarkPalette.shadow,
+    pageTitleColor: DarkPalette.pageTitleColor, // Mismo que texto en Dark (blanco)
   },
   spacing: {
     xs: 4,

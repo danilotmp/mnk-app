@@ -142,22 +142,24 @@ export function ContactScreen() {
               {/* Header con Icono, Título y Subtítulo (mismo estilo que página de Inicio) */}
               <View style={styles.headerSection}>
                 <View style={styles.headerRow}>
-                  <DynamicIcon
-                    name="MaterialCommunityIcons:contacts"
-                    size={
-                      isMobile
-                        ? pageLayout.iconTitleMobile
-                        : pageLayout.iconTitle
-                    }
-                    color={colors.primary}
-                    style={styles.headerIcon}
-                  />
+                  <View style={styles.headerIconContainer}>
+                    <DynamicIcon
+                      name="MaterialCommunityIcons:contacts"
+                      size={
+                        isMobile
+                          ? pageLayout.iconTitleMobile
+                          : pageLayout.iconTitle
+                      }
+                      color={colors.primary}
+                      style={styles.headerIcon}
+                    />
+                  </View>
                   <ThemedText
                     type="h1"
                     style={[
                       styles.title,
-                      { color: colors.text },
                       isMobile && typography.pageTitleMobile,
+                      { color: colors.pageTitleColor ?? colors.text },
                     ]}
                   >
                     {t.pages.contact.title}
