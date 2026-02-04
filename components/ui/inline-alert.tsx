@@ -3,12 +3,13 @@
  * Se muestra directamente en el contenido sin problemas de z-index
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/components/themed-text";
+import { useTheme } from "@/hooks/use-theme";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 
-export type InlineAlertType = 'error' | 'success' | 'warning' | 'info';
+export type InlineAlertType = "error" | "success" | "warning" | "info";
 
 interface InlineAlertProps {
   readonly type: InlineAlertType;
@@ -29,32 +30,33 @@ export function InlineAlert({
   duration = 5000, // Default: 5 segundos, igual que el toast para errores
   autoClose = true, // Por defecto se cierra automáticamente
 }: InlineAlertProps) {
+  const { colors } = useTheme();
   const [showDetail, setShowDetail] = useState(false);
   const [visible, setVisible] = useState(true);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Usar los mismos colores que el Toast
+  // Usar los mismos colores que el Toast; info usa el primary del tema
   const alertColors = {
     error: {
-      background: '#EF4444', // Rojo sólido como el Toast
-      text: '#FFFFFF',
-      icon: 'close-circle' as const,
+      background: "#EF4444", // Rojo sólido como el Toast
+      text: "#FFFFFF",
+      icon: "close-circle" as const,
     },
     success: {
-      background: '#10B981', // Verde sólido como el Toast
-      text: '#FFFFFF',
-      icon: 'checkmark-circle' as const,
+      background: "#10B981", // Verde sólido como el Toast
+      text: "#FFFFFF",
+      icon: "checkmark-circle" as const,
     },
     warning: {
-      background: '#F59E0B', // Amarillo/Naranja sólido como el Toast
-      text: '#FFFFFF',
-      icon: 'warning' as const,
+      background: "#F59E0B", // Amarillo/Naranja sólido como el Toast
+      text: "#FFFFFF",
+      icon: "warning" as const,
     },
     info: {
-      background: '#3B82F6', // Azul sólido como el Toast
-      text: '#FFFFFF',
-      icon: 'information-circle' as const,
+      background: colors.primary,
+      text: "#FFFFFF",
+      icon: "information-circle" as const,
     },
   };
 
@@ -119,7 +121,11 @@ export function InlineAlert({
       <View style={styles.content}>
         {/* Icono */}
         <View style={styles.iconContainer}>
-          <Ionicons name={colorsForType.icon} size={24} color={colorsForType.text} />
+          <Ionicons
+            name={colorsForType.icon}
+            size={24}
+            color={colorsForType.text}
+          />
         </View>
 
         {/* Contenido */}
@@ -132,7 +138,7 @@ export function InlineAlert({
               {title}
             </ThemedText>
           )}
-          {message.includes('\n') || message.includes('\r\n') ? (
+          {message.includes("\n") || message.includes("\r\n") ? (
             // Si hay saltos de línea, dividir y mostrar cada línea
             <View style={styles.messageContainer}>
               {message
@@ -144,16 +150,20 @@ export function InlineAlert({
                     style={[
                       styles.message,
                       { color: colorsForType.text },
-                      index > 0 && styles.messageLine // Agregar margen superior solo a partir de la segunda línea
+                      index > 0 && styles.messageLine, // Agregar margen superior solo a partir de la segunda línea
                     ]}
                   >
-                    {line || ' '} {/* Si la línea está vacía, mostrar un espacio para mantener el salto */}
+                    {line || " "}{" "}
+                    {/* Si la línea está vacía, mostrar un espacio para mantener el salto */}
                   </ThemedText>
                 ))}
             </View>
           ) : (
             // Si no hay saltos de línea, mostrar el mensaje completo
-            <ThemedText type="body2" style={[styles.message, { color: colorsForType.text }]}>
+            <ThemedText
+              type="body2"
+              style={[styles.message, { color: colorsForType.text }]}
+            >
               {message}
             </ThemedText>
           )}
@@ -168,13 +178,20 @@ export function InlineAlert({
               >
                 <View style={styles.detailToggleRow}>
                   <Ionicons
-                    name={showDetail ? ('chevron-up' as const) : ('chevron-down' as const)}
+                    name={
+                      showDetail
+                        ? ("chevron-up" as const)
+                        : ("chevron-down" as const)
+                    }
                     size={16}
                     color={colorsForType.text}
                   />
                   <ThemedText
                     type="caption"
-                    style={[styles.detailToggleText, { color: colorsForType.text }]}
+                    style={[
+                      styles.detailToggleText,
+                      { color: colorsForType.text },
+                    ]}
                   >
                     Detalle
                   </ThemedText>
@@ -216,13 +233,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   iconContainer: {
     marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingTop: 2,
   },
   textContainer: {
@@ -230,11 +247,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: {
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
   },
   messageContainer: {
-    flexDirection: 'column',
+    flexDirection: "column",
   },
   message: {
     lineHeight: 20,
@@ -245,15 +262,15 @@ const styles = StyleSheet.create({
   detailToggle: {
     marginTop: 8,
     marginBottom: 2,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingVertical: 2,
     paddingHorizontal: 0,
     borderRadius: 8,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   detailToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   detailToggleText: {
@@ -262,12 +279,12 @@ const styles = StyleSheet.create({
   detailContainer: {
     marginTop: 7,
     padding: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderRadius: 7,
   },
   detailText: {
     fontSize: 13,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   closeButton: {
     padding: 6,
@@ -275,4 +292,3 @@ const styles = StyleSheet.create({
     marginRight: -6,
   },
 });
-

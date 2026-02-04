@@ -2,8 +2,16 @@ import { StyleSheet } from "react-native";
 import { ComponentVariant, Size } from "../../domains/shared/types";
 import { BaseTheme } from "../themes/base.theme";
 
+// Usar colors.primary del tema (Light/Dark desde constants) cuando exista; si no, brand.primary
+const getPrimaryColor = (
+  theme: BaseTheme & { colors?: { primary?: string } },
+): string => theme.colors?.primary ?? theme.brand.primary;
+
 // Estilos específicos para el componente Button
 export const createButtonStyles = (theme: BaseTheme) => {
+  const primaryColor = getPrimaryColor(
+    theme as BaseTheme & { colors?: { primary?: string } },
+  );
   return StyleSheet.create({
     // Estilos base del botón
     base: {
@@ -54,10 +62,10 @@ export const createButtonStyles = (theme: BaseTheme) => {
       },
     },
 
-    // Variantes de color
+    // Variantes de color (primary/outlined/ghost usan primaryColor = theme.colors.primary o brand.primary)
     variant: {
       primary: {
-        backgroundColor: theme.brand.primary,
+        backgroundColor: primaryColor,
         borderWidth: 0,
       },
       secondary: {
@@ -71,7 +79,7 @@ export const createButtonStyles = (theme: BaseTheme) => {
       outlined: {
         backgroundColor: "transparent",
         borderWidth: theme.borders.width.sm,
-        borderColor: theme.brand.primary,
+        borderColor: primaryColor,
       },
       ghost: {
         backgroundColor: "transparent",
@@ -111,8 +119,8 @@ export const createButtonStyles = (theme: BaseTheme) => {
       primary: "#FFFFFF",
       secondary: "#FFFFFF",
       accent: "#FFFFFF",
-      outlined: theme.brand.primary,
-      ghost: theme.brand.primary,
+      outlined: primaryColor,
+      ghost: primaryColor,
       filled: "#FFFFFF",
     },
   });

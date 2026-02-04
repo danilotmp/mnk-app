@@ -1,9 +1,13 @@
-import { ComponentVariant, Size } from '@/src/domains/shared/types';
-import { useTheme } from '@/src/hooks/use-theme.hook';
-import { getButtonStyle, getButtonTextColor } from '@/src/styles/components/button.styles';
-import React from 'react';
-import { TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
-import { ThemedText } from '../themed-text';
+import { useTheme as useAppTheme } from "@/hooks/use-theme";
+import { ComponentVariant, Size } from "@/src/domains/shared/types";
+import { useTheme } from "@/src/hooks/use-theme.hook";
+import {
+    getButtonStyle,
+    getButtonTextColor,
+} from "@/src/styles/components/button.styles";
+import React from "react";
+import { TextStyle, TouchableOpacity, ViewStyle } from "react-native";
+import { ThemedText } from "../themed-text";
 
 interface ButtonProps {
   title?: string;
@@ -19,17 +23,29 @@ interface ButtonProps {
 export function Button({
   title,
   onPress,
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   disabled = false,
   style,
   textStyle,
   children,
 }: ButtonProps) {
   const { theme, componentStyles } = useTheme();
+  const { colors: appColors } = useAppTheme();
+  // Usar el mismo tema que el resto de la app (selector light/dark) para el color primario
+  const themeWithAppPrimary = {
+    ...theme,
+    brand: { ...theme.brand, primary: appColors.primary },
+    colors: { ...theme.colors, primary: appColors.primary },
+  };
 
-  const buttonStyle = getButtonStyle(theme, variant, size, disabled);
-  const textColor = getButtonTextColor(theme, variant, disabled);
+  const buttonStyle = getButtonStyle(
+    themeWithAppPrimary,
+    variant,
+    size,
+    disabled,
+  );
+  const textColor = getButtonTextColor(themeWithAppPrimary, variant, disabled);
 
   return (
     <TouchableOpacity

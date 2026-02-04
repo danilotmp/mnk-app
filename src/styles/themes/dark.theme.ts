@@ -10,5 +10,6 @@ export interface DarkTheme extends BaseTheme {
 export const darkTheme: DarkTheme = {
   ...baseTheme,
   ...DarkThemeFromConstants,
+  brand: { ...baseTheme.brand, primary: DarkThemeFromConstants.colors.primary },
   colors: DarkThemeFromConstants.colors,
 };

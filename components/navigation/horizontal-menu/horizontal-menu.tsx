@@ -50,11 +50,16 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   > | null>(null);
   const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
 
-  // Obtener el color para items activos según la configuración (centralizado en tema)
+  // Obtener el color para items activos desde el tema cuando sea el azul primario
+  // Unifica: 'blue', '#0087FF', '#007AFF' → colors.primary (del tema Light/Dark)
   const getActiveItemColor = (): string => {
-    const configColor = AppConfig.navigation.activeItemColor;
+    const configColor = String(AppConfig.navigation.activeItemColor || "blue")
+      .trim()
+      .toLowerCase();
     if (configColor === "red") return colors.error;
     if (configColor === "blue") return colors.primary;
+    if (configColor === "#0087ff" || configColor === "#007aff")
+      return colors.primary;
     return configColor;
   };
   const activeItemColor = getActiveItemColor();
@@ -1615,7 +1620,10 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
                           placeholder="Buscar..."
                           value={searchValue}
                           onChangeText={setSearchValue}
-                          style={[additionalStyles.mobileSearchInputText, { color: colors.text }]}
+                          style={[
+                            additionalStyles.mobileSearchInputText,
+                            { color: colors.text },
+                          ]}
                           placeholderTextColor={colors.textSecondary}
                         />
                       </InputWithFocus>

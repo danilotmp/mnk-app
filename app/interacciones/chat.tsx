@@ -2347,7 +2347,12 @@ export default function ChatIAScreen() {
                         ]}
                         onPress={() => handleSelectContact(contact)}
                       >
-                        <View style={styles.contactAvatar}>
+                        <View
+                          style={[
+                            styles.contactAvatar,
+                            { backgroundColor: colors.primary },
+                          ]}
+                        >
                           <ThemedText type="h4" style={{ color: "#FFFFFF" }}>
                             {contact.name.charAt(0).toUpperCase()}
                           </ThemedText>
@@ -3908,10 +3913,14 @@ export default function ChatIAScreen() {
                           <View
                             style={[
                               styles.attachmentMenuIcon,
-                              { backgroundColor: "#2196F3" + "20" },
+                              { backgroundColor: colors.primary + "20" },
                             ]}
                           >
-                            <Ionicons name="images" size={24} color="#2196F3" />
+                            <Ionicons
+                              name="images"
+                              size={24}
+                              color={colors.primary}
+                            />
                           </View>
                           <View style={styles.attachmentMenuText}>
                             <ThemedText
@@ -4675,7 +4684,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#007AFF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,

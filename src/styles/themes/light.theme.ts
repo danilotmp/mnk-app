@@ -10,5 +10,9 @@ export interface LightTheme extends BaseTheme {
 export const lightTheme: LightTheme = {
   ...baseTheme,
   ...LightThemeFromConstants,
+  brand: {
+    ...baseTheme.brand,
+    primary: LightThemeFromConstants.colors.primary,
+  },
   colors: LightThemeFromConstants.colors,
 };

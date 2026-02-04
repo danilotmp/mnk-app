@@ -2310,7 +2310,9 @@ export function MenuAdminScreen() {
       styles.itemTitleContainerBase,
       isMobile && styles.itemTitleContainerBaseMobile,
       {
-        backgroundColor: isDragOver ? colors.primary + "20" : colors.surface,
+        backgroundColor: isDragOver
+          ? colors.primary + "20"
+          : (colors.filterInputBackground ?? colors.surface),
         borderColor: isEditing
           ? colors.primary
           : isDragging
@@ -2586,7 +2588,7 @@ export function MenuAdminScreen() {
               styles.editFormContainer,
               isMobile && styles.editFormContainerMobile,
               {
-                backgroundColor: colors.surface,
+                backgroundColor: colors.filterInputBackground ?? colors.surface,
                 borderColor: colors.primary,
               },
             ]}
@@ -3107,7 +3109,6 @@ export function MenuAdminScreen() {
               style={[
                 styles.addGroupingButton,
                 {
-                  backgroundColor: colors.surfaceVariant,
                   borderColor: colors.border,
                 },
               ]}
@@ -3535,7 +3536,8 @@ export function MenuAdminScreen() {
                     : styles.searchInputContainerEmpty,
                   {
                     borderColor: colors.border,
-                    backgroundColor: colors.surface,
+                    backgroundColor:
+                      colors.filterInputBackground ?? colors.surface,
                   },
                 ]}
                 primaryColor={colors.primary}
@@ -3618,7 +3620,7 @@ export function MenuAdminScreen() {
             style={[
               styles.footer,
               {
-                backgroundColor: colors.surface,
+                backgroundColor: colors.filterInputBackground ?? colors.surface,
                 borderTopColor: colors.border,
               },
             ]}

@@ -3,12 +3,12 @@
  * Muestra cada empresa con sus selectores de sucursales y roles en un carrusel
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { Card } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
-import { useTheme } from '@/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import { ThemedText } from "@/components/themed-text";
+import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
+import { useTheme } from "@/hooks/use-theme";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useRef, useState } from "react";
 import {
     LayoutChangeEvent,
     NativeScrollEvent,
@@ -16,8 +16,8 @@ import {
     ScrollView,
     TouchableOpacity,
     View,
-} from 'react-native';
-import { createCompanyConfigCarouselStyles } from './company-config-carousel.styles';
+} from "react-native";
+import { createCompanyConfigCarouselStyles } from "./company-config-carousel.styles";
 
 interface CompanyConfigCarouselProps {
   selectedCompanyIds: string[];
@@ -100,8 +100,8 @@ export function CompanyConfigCarousel({
       {/* Header con indicador de empresa actual */}
       <View style={styles.header}>
         <ThemedText type="body2" style={styles.headerTitle}>
-            Configuración por Empresa
-          </ThemedText>
+          Configuración por Empresa
+        </ThemedText>
         <View style={styles.headerIndicator}>
           {/* Botón anterior */}
           {currentIndex > 0 && (
@@ -113,7 +113,7 @@ export function CompanyConfigCarousel({
               <Ionicons name="chevron-back" size={20} color={colors.primary} />
             </TouchableOpacity>
           )}
-            <ThemedText type="body2" variant="secondary">
+          <ThemedText type="body2" variant="secondary">
             {currentIndex + 1} de {selectedCompanyIds.length}
           </ThemedText>
           {/* Botón siguiente */}
@@ -123,7 +123,11 @@ export function CompanyConfigCarousel({
               onPress={goToNext}
               disabled={isLoading}
             >
-              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.primary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -131,7 +135,6 @@ export function CompanyConfigCarousel({
 
       {/* Carrusel */}
       <View style={styles.carouselContainer}>
-
         {/* ScrollView horizontal con paginación */}
         <ScrollView
           ref={scrollViewRef}
@@ -147,96 +150,138 @@ export function CompanyConfigCarousel({
           snapToAlignment="start"
         >
           {selectedCompanyIds.map((companyId, index) => {
-            const company = companies.find(c => c.id === companyId);
+            const company = companies.find((c) => c.id === companyId);
             const companyBranchesList = companyBranches[companyId] || [];
             const companyRolesList = companyRoles[companyId] || [];
             const availableBranches = branchesByCompany[companyId] || [];
             const availableRoles = rolesByCompany[companyId] || [];
-            const hasBranchError = !!branchErrors && companyBranchesList.length === 0;
+            const hasBranchError =
+              !!branchErrors && companyBranchesList.length === 0;
             const hasRoleError = !!roleErrors && companyRolesList.length === 0;
 
             return (
-              <View key={companyId} style={[styles.slide, { width: cardWidth }]}>
+              <View
+                key={companyId}
+                style={[styles.slide, { width: cardWidth }]}
+              >
                 <Card variant="elevated" style={styles.companyCard}>
                   {/* Contenedor interno con padding */}
                   <View style={styles.cardContent}>
                     {/* Header de la empresa */}
-                    <View style={styles.companyHeader}>
-                    <View style={styles.companyHeaderContent}>
-                      <Ionicons name="business" size={24} color={colors.primary} />
-                      <View style={styles.companyHeaderText}>
-                        <ThemedText type="h4" style={styles.companyName}>
-                          {company?.name || companyId}
-                        </ThemedText>
-                        <ThemedText type="caption" variant="secondary">
-                          {company?.code || ''}
+                    <View
+                      style={[
+                        styles.companyHeader,
+                        { borderBottomColor: colors.primary + "33" },
+                      ]}
+                    >
+                      <View style={styles.companyHeaderContent}>
+                        <Ionicons
+                          name="business"
+                          size={24}
+                          color={colors.primary}
+                        />
+                        <View style={styles.companyHeaderText}>
+                          <ThemedText type="h4" style={styles.companyName}>
+                            {company?.name || companyId}
+                          </ThemedText>
+                          <ThemedText type="caption" variant="secondary">
+                            {company?.code || ""}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View
+                        style={[
+                          styles.companyBadge,
+                          { backgroundColor: colors.primary + "1A" },
+                        ]}
+                      >
+                        <ThemedText
+                          type="caption"
+                          style={[
+                            styles.companyBadgeText,
+                            { color: colors.primary },
+                          ]}
+                        >
+                          Empresa {index + 1}
                         </ThemedText>
                       </View>
                     </View>
-                    <View style={styles.companyBadge}>
-                      <ThemedText type="caption" style={styles.companyBadgeText}>
-                        Empresa {index + 1}
-                      </ThemedText>
+
+                    {/* Selector de Sucursales */}
+                    <View style={styles.inputGroup}>
+                      <Select
+                        label="Sucursales"
+                        placeholder="Selecciona una o más sucursales"
+                        value={companyBranchesList}
+                        options={
+                          availableBranches.length > 0
+                            ? availableBranches.map((branch) => ({
+                                value: branch.id,
+                                label: branch.name,
+                              }))
+                            : []
+                        }
+                        onSelect={(value) =>
+                          onBranchSelect(companyId, value as string[])
+                        }
+                        error={hasBranchError}
+                        errorMessage={
+                          hasBranchError ? branchErrors || "" : undefined
+                        }
+                        multiple={true}
+                        required
+                        disabled={isLoading || availableBranches.length === 0}
+                        searchable={true}
+                      />
+                      {availableBranches.length === 0 && (
+                        <ThemedText
+                          type="caption"
+                          variant="secondary"
+                          style={styles.emptyMessage}
+                        >
+                          {t?.security?.users?.noBranches ||
+                            "No hay sucursales disponibles para esta empresa"}
+                        </ThemedText>
+                      )}
                     </View>
-                  </View>
 
-                  {/* Selector de Sucursales */}
-                  <View style={styles.inputGroup}>
-                    <Select
-                      label="Sucursales"
-                      placeholder="Selecciona una o más sucursales"
-                      value={companyBranchesList}
-                      options={
-                        availableBranches.length > 0
-                          ? availableBranches.map((branch) => ({
-                              value: branch.id,
-                              label: branch.name,
-                            }))
-                          : []
-                      }
-                      onSelect={(value) => onBranchSelect(companyId, value as string[])}
-                      error={hasBranchError}
-                      errorMessage={hasBranchError ? branchErrors || '' : undefined}
-                      multiple={true}
-                      required
-                      disabled={isLoading || availableBranches.length === 0}
-                      searchable={true}
-                    />
-                    {availableBranches.length === 0 && (
-                      <ThemedText type="caption" variant="secondary" style={styles.emptyMessage}>
-                        {t?.security?.users?.noBranches || 'No hay sucursales disponibles para esta empresa'}
-                      </ThemedText>
-                    )}
-                  </View>
-
-                  {/* Selector de Roles */}
-                  <View style={styles.inputGroup}>
-                    <Select
-                      label="Roles"
-                      placeholder="Selecciona uno o más roles"
-                      value={companyRolesList}
-                      options={
-                        availableRoles.length > 0
-                          ? availableRoles.map((role) => ({
-                              value: role.id,
-                              label: role.name,
-                            }))
-                          : []
-                      }
-                      onSelect={(value) => onRoleSelect(companyId, value as string[])}
-                      error={hasRoleError}
-                      errorMessage={hasRoleError ? roleErrors || '' : undefined}
-                      multiple={true}
-                      required
-                      disabled={isLoading || availableRoles.length === 0}
-                      searchable={true}
-                    />
-                    {availableRoles.length === 0 && (
-                      <ThemedText type="caption" variant="secondary" style={styles.emptyMessage}>
-                        {t?.security?.users?.noRole || 'No hay roles disponibles para esta empresa'}
-                      </ThemedText>
-                    )}
-                  </View>
+                    {/* Selector de Roles */}
+                    <View style={styles.inputGroup}>
+                      <Select
+                        label="Roles"
+                        placeholder="Selecciona uno o más roles"
+                        value={companyRolesList}
+                        options={
+                          availableRoles.length > 0
+                            ? availableRoles.map((role) => ({
+                                value: role.id,
+                                label: role.name,
+                              }))
+                            : []
+                        }
+                        onSelect={(value) =>
+                          onRoleSelect(companyId, value as string[])
+                        }
+                        error={hasRoleError}
+                        errorMessage={
+                          hasRoleError ? roleErrors || "" : undefined
+                        }
+                        multiple={true}
+                        required
+                        disabled={isLoading || availableRoles.length === 0}
+                        searchable={true}
+                      />
+                      {availableRoles.length === 0 && (
+                        <ThemedText
+                          type="caption"
+                          variant="secondary"
+                          style={styles.emptyMessage}
+                        >
+                          {t?.security?.users?.noRole ||
+                            "No hay roles disponibles para esta empresa"}
+                        </ThemedText>
+                      )}
+                    </View>
                   </View>
                 </Card>
               </View>
@@ -254,7 +299,10 @@ export function CompanyConfigCarousel({
               style={[
                 styles.paginationDot,
                 index === currentIndex && styles.paginationDotActive,
-                { backgroundColor: index === currentIndex ? colors.primary : colors.border },
+                {
+                  backgroundColor:
+                    index === currentIndex ? colors.primary : colors.border,
+                },
               ]}
               onPress={() => scrollToIndex(index)}
             />
@@ -264,4 +312,3 @@ export function CompanyConfigCarousel({
     </View>
   );
 }
-

@@ -50,12 +50,16 @@ export function VerticalMenu({
   const TOGGLE_BUTTON_HEIGHT = 40;
   const availableHeight = windowHeight - HEADER_HEIGHT - TOGGLE_BUTTON_HEIGHT;
 
-  // Obtener el color para items activos según la configuración
-  // Si es 'red', usar '#ff3366'; si es 'blue', usar colors.primary; si no, usar el valor directamente
+  // Obtener el color para items activos desde el tema cuando sea el azul primario
+  // Unifica: 'blue', '#0087FF', '#007AFF' → colors.primary (del tema Light/Dark)
   const getActiveItemColor = (): string => {
-    const configColor = AppConfig.navigation.activeItemColor;
+    const configColor = String(AppConfig.navigation.activeItemColor || "blue")
+      .trim()
+      .toLowerCase();
     if (configColor === "red") return "#ff3366";
     if (configColor === "blue") return colors.primary;
+    if (configColor === "#0087ff" || configColor === "#007aff")
+      return colors.primary;
     return configColor; // Cualquier otro color se usa directamente
   };
   const activeItemColor = getActiveItemColor();

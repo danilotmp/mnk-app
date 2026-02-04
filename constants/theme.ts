@@ -4,7 +4,6 @@
  */
 
 import { Platform } from "react-native";
-import { baseTheme } from "../src/styles/themes/base.theme";
 
 // Colores base de la paleta - Estilo Hapi Trade (Dark Finance UI)
 export const BrandColors = {
@@ -73,7 +72,7 @@ export const BrandColors = {
 // Cada color se define una vez; los colores semánticos (colors.xxx) referencian esta paleta.
 // Cambiar un color aquí lo actualiza en toda la app (sin hardcode ni segregación).
 const LightPalette = {
-  primary: baseTheme.brand.primary,
+  primary: "#00338D", // Azul marino (Light)
   primaryLight: BrandColors.blue[100],
   primaryDark: BrandColors.blue[800],
   secondary: BrandColors.green[600],

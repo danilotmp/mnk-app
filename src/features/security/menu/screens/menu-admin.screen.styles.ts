@@ -14,6 +14,7 @@ export interface MenuAdminScreenTheme {
     border: string;
     surface: string;
     surfaceVariant?: string;
+    filterInputBackground?: string;
     background: string;
     success: string;
     error: string;
@@ -379,7 +380,7 @@ export function createMenuAdminStyles(
     textInputContainerBase: {
       borderWidth: 1,
       borderRadius: r.md,
-      backgroundColor: c.surface,
+      backgroundColor: c.filterInputBackground ?? c.surface,
       paddingHorizontal: 16,
       paddingVertical: 12,
       minHeight: 48,
@@ -399,7 +400,7 @@ export function createMenuAdminStyles(
       alignItems: "center",
       justifyContent: "center",
       padding: s.sm,
-      backgroundColor: c.surface,
+      backgroundColor: c.filterInputBackground ?? c.surface,
       borderRadius: r.md,
       borderWidth: 1,
       borderColor: c.border,
@@ -420,7 +421,7 @@ export function createMenuAdminStyles(
       backgroundColor: c.primary + "20",
     } as ViewStyle,
     columnContainerNormal: {
-      backgroundColor: c.surfaceVariant || c.surface,
+      backgroundColor: c.filterInputBackground ?? c.surfaceVariant ?? c.surface,
     } as ViewStyle,
     columnContainerDragging: {
       opacity: 0.5,
@@ -447,7 +448,7 @@ export function createMenuAdminStyles(
     columnTitleInput: {
       flex: 1,
       padding: s.sm,
-      backgroundColor: c.background,
+      backgroundColor: c.filterInputBackground ?? c.background,
       borderRadius: r.sm,
       borderWidth: 1,
       borderColor: c.primary,
@@ -492,7 +493,7 @@ export function createMenuAdminStyles(
       borderWidth: 1,
       borderColor: c.border,
       borderRadius: r.md,
-      backgroundColor: c.surface,
+      backgroundColor: c.filterInputBackground ?? c.surface,
       paddingLeft: 40,
       paddingRight: isMobile ? s.sm : s.md,
       minHeight: isMobile ? 40 : 44,
