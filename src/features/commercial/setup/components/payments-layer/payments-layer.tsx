@@ -65,6 +65,7 @@ export function PaymentsLayer({
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
+  const P = t.wizard?.layers?.payments;
   const alert = useAlert();
   const { company } = useCompany();
 
@@ -165,7 +166,9 @@ export function PaymentsLayer({
         setSelectedMethod(data[0]);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al cargar métodos de pago";
+      const errorMessage =
+        error?.message ||
+        (P?.errorLoadingMethods ?? "Error al cargar métodos de pago");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -344,7 +347,10 @@ export function PaymentsLayer({
         isActive: newValue,
       });
       alert.showSuccess(
-        `Método de pago ${newValue ? "activado" : "desactivado"} correctamente`,
+        (P?.methodToggled ?? "Método de pago {status} correctamente").replace(
+          "{status}",
+          newValue ? "activado" : "desactivado",
+        ),
       );
       // Recargar métodos para obtener datos actualizados
       await loadPaymentMethods();
@@ -373,7 +379,9 @@ export function PaymentsLayer({
     methodType: PaymentMethodType,
   ): Promise<PaymentMethod> => {
     if (!company?.id) {
-      throw new Error("No se pudo obtener el ID de la empresa");
+      throw new Error(
+        P?.companyIdError ?? "No se pudo obtener el ID de la empresa",
+      );
     }
 
     // Verificar si ya existe
@@ -415,17 +423,21 @@ export function PaymentsLayer({
 
     // Validaciones obligatorias comunes
     if (!accountForm.name.trim()) {
-      alert.showError("El nombre de la cuenta es requerido");
+      alert.showError(
+        P?.accountNameRequired ?? "El nombre de la cuenta es requerido",
+      );
       return;
     }
 
     if (!accountForm.provider.trim()) {
-      alert.showError("El Proveedor/Banco es requerido");
+      alert.showError(P?.providerRequired ?? "El Proveedor/Banco es requerido");
       return;
     }
 
     if (!accountForm.accountHolder.trim()) {
-      alert.showError("El Titular de la cuenta es requerido");
+      alert.showError(
+        P?.accountHolderRequired ?? "El Titular de la cuenta es requerido",
+      );
       return;
     }
 
@@ -433,27 +445,36 @@ export function PaymentsLayer({
     if (selectedMethodType === "online") {
       // Para Pagos Online
       if (!accountForm.accountNumber.trim()) {
-        alert.showError("El Link de Pago es requerido");
+        alert.showError(
+          P?.paymentLinkRequired ?? "El Link de Pago es requerido",
+        );
         return;
       }
       if (!isValidUrl(accountForm.accountNumber.trim())) {
         alert.showError(
-          "El Link de Pago debe ser una URL válida (ej: https://ejemplo.com/pago)",
+          P?.paymentLinkInvalid ??
+            "El Link de Pago debe ser una URL válida (ej: https://ejemplo.com/pago)",
         );
         return;
       }
     } else if (selectedMethodType === "transfer") {
       // Para Transferencias
       if (!accountForm.accountType) {
-        alert.showError("El Tipo de cuenta es requerido");
+        alert.showError(
+          P?.accountTypeRequired ?? "El Tipo de cuenta es requerido",
+        );
         return;
       }
       if (!accountForm.accountNumber.trim()) {
-        alert.showError("El Número de cuenta es requerido");
+        alert.showError(
+          P?.accountNumberRequired ?? "El Número de cuenta es requerido",
+        );
         return;
       }
       if (!accountForm.identification.trim()) {
-        alert.showError("La Identificación es requerida");
+        alert.showError(
+          P?.identificationRequired ?? "La Identificación es requerida",
+        );
         return;
       }
     }
@@ -480,7 +501,7 @@ export function PaymentsLayer({
       };
 
       await CommercialService.createPaymentAccount(method.id, payload);
-      alert.showSuccess("Cuenta creada correctamente");
+      alert.showSuccess(P?.accountCreated ?? "Cuenta creada correctamente");
       setShowAccountForm(false);
       // Preseleccionar siempre la primera opción (índice 0) de tipo de cuenta al resetear
       const defaultAccountType =
@@ -507,7 +528,8 @@ export function PaymentsLayer({
         setSelectedMethod(updatedMethod);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al crear cuenta";
+      const errorMessage =
+        error?.message || (P?.errorCreatingAccount ?? "Error al crear cuenta");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -546,7 +568,9 @@ export function PaymentsLayer({
       };
 
       await CommercialService.createPaymentInstruction(method.id, payload);
-      alert.showSuccess("Instrucción creada correctamente");
+      alert.showSuccess(
+        P?.instructionCreated ?? "Instrucción creada correctamente",
+      );
       setShowInstructionForm(false);
       setInstructionForm({
         instructionType: "general",
@@ -577,7 +601,9 @@ export function PaymentsLayer({
         }
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al crear instrucción";
+      const errorMessage =
+        error?.message ||
+        (P?.errorCreatingInstruction ?? "Error al crear instrucción");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -621,7 +647,9 @@ export function PaymentsLayer({
   // Guardar cambios de una cuenta editada
   const handleSaveAccount = async (accountId: string) => {
     if (!company?.id || !selectedMethod?.id) {
-      alert.showError("No se pudo obtener la información necesaria");
+      alert.showError(
+        P?.infoRequired ?? "No se pudo obtener la información necesaria",
+      );
       return;
     }
 
@@ -630,17 +658,21 @@ export function PaymentsLayer({
 
     // Validaciones obligatorias comunes
     if (!formData.name?.trim()) {
-      alert.showError("El nombre de la cuenta es requerido");
+      alert.showError(
+        P?.accountNameRequired ?? "El nombre de la cuenta es requerido",
+      );
       return;
     }
 
     if (!formData.provider?.trim()) {
-      alert.showError("El Proveedor/Banco es requerido");
+      alert.showError(P?.providerRequired ?? "El Proveedor/Banco es requerido");
       return;
     }
 
     if (!formData.accountHolder?.trim()) {
-      alert.showError("El Titular de la cuenta es requerido");
+      alert.showError(
+        P?.accountHolderRequired ?? "El Titular de la cuenta es requerido",
+      );
       return;
     }
 
@@ -648,27 +680,36 @@ export function PaymentsLayer({
     if (selectedMethodType === "online") {
       // Para Pagos Online
       if (!formData.accountNumber?.trim()) {
-        alert.showError("El Link de Pago es requerido");
+        alert.showError(
+          P?.paymentLinkRequired ?? "El Link de Pago es requerido",
+        );
         return;
       }
       if (!isValidUrl(formData.accountNumber.trim())) {
         alert.showError(
-          "El Link de Pago debe ser una URL válida (ej: https://ejemplo.com/pago)",
+          P?.paymentLinkInvalid ??
+            "El Link de Pago debe ser una URL válida (ej: https://ejemplo.com/pago)",
         );
         return;
       }
     } else if (selectedMethodType === "transfer") {
       // Para Transferencias
       if (!formData.accountType) {
-        alert.showError("El Tipo de cuenta es requerido");
+        alert.showError(
+          P?.accountTypeRequired ?? "El Tipo de cuenta es requerido",
+        );
         return;
       }
       if (!formData.accountNumber?.trim()) {
-        alert.showError("El Número de cuenta es requerido");
+        alert.showError(
+          P?.accountNumberRequired ?? "El Número de cuenta es requerido",
+        );
         return;
       }
       if (!formData.identification?.trim()) {
-        alert.showError("La Identificación es requerida");
+        alert.showError(
+          P?.identificationRequired ?? "La Identificación es requerida",
+        );
         return;
       }
     }
@@ -693,7 +734,9 @@ export function PaymentsLayer({
         accountId,
         payload,
       );
-      alert.showSuccess("Cuenta actualizada correctamente");
+      alert.showSuccess(
+        P?.accountUpdated ?? "Cuenta actualizada correctamente",
+      );
       setEditingAccountId(null);
       setEditingAccountData({});
       // Recargar métodos para obtener datos actualizados
@@ -710,7 +753,9 @@ export function PaymentsLayer({
         setSelectedMethod(updatedMethod);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al actualizar cuenta";
+      const errorMessage =
+        error?.message ||
+        (P?.errorUpdatingAccount ?? "Error al actualizar cuenta");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -727,14 +772,16 @@ export function PaymentsLayer({
   // Eliminar una cuenta
   const handleDeleteAccount = async (accountId: string) => {
     if (!selectedMethod?.id || !company?.id) {
-      alert.showError("No se pudo obtener la información necesaria");
+      alert.showError(
+        P?.infoRequired ?? "No se pudo obtener la información necesaria",
+      );
       return;
     }
 
     // Buscar la cuenta para obtener sus datos actuales
     const account = accounts.find((acc) => acc.id === accountId);
     if (!account) {
-      alert.showError("No se pudo encontrar la cuenta");
+      alert.showError(P?.accountNotFound ?? "No se pudo encontrar la cuenta");
       return;
     }
 
@@ -759,7 +806,7 @@ export function PaymentsLayer({
         accountId,
         payload,
       );
-      alert.showSuccess("Cuenta eliminada correctamente");
+      alert.showSuccess(P?.accountDeleted ?? "Cuenta eliminada correctamente");
       // Recargar métodos para obtener datos actualizados
       await loadPaymentMethods();
       // Actualizar método seleccionado con datos frescos
@@ -774,7 +821,9 @@ export function PaymentsLayer({
         setSelectedMethod(updatedMethod);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al eliminar cuenta";
+      const errorMessage =
+        error?.message ||
+        (P?.errorDeletingAccount ?? "Error al eliminar cuenta");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -812,7 +861,9 @@ export function PaymentsLayer({
   // Guardar cambios de una instrucción editada
   const handleSaveInstruction = async (instructionId: string) => {
     if (!company?.id || !selectedMethod?.id) {
-      alert.showError("No se pudo obtener la información necesaria");
+      alert.showError(
+        P?.infoRequired ?? "No se pudo obtener la información necesaria",
+      );
       return;
     }
 
@@ -839,7 +890,9 @@ export function PaymentsLayer({
         instructionId,
         payload,
       );
-      alert.showSuccess("Instrucción actualizada correctamente");
+      alert.showSuccess(
+        P?.instructionUpdated ?? "Instrucción actualizada correctamente",
+      );
       setEditingInstructionId(null);
       setEditingInstructionData({});
       setEditingPreviousInstructionType((prev) => {
@@ -890,14 +943,18 @@ export function PaymentsLayer({
   // Eliminar una instrucción
   const handleDeleteInstruction = async (instructionId: string) => {
     if (!selectedMethod?.id || !company?.id) {
-      alert.showError("No se pudo obtener la información necesaria");
+      alert.showError(
+        P?.infoRequired ?? "No se pudo obtener la información necesaria",
+      );
       return;
     }
 
     // Buscar la instrucción para obtener sus datos actuales
     const instruction = instructions.find((inst) => inst.id === instructionId);
     if (!instruction) {
-      alert.showError("No se pudo encontrar la instrucción");
+      alert.showError(
+        P?.instructionNotFound ?? "No se pudo encontrar la instrucción",
+      );
       return;
     }
 
@@ -917,7 +974,9 @@ export function PaymentsLayer({
         instructionId,
         payload,
       );
-      alert.showSuccess("Instrucción eliminada correctamente");
+      alert.showSuccess(
+        P?.instructionDeleted ?? "Instrucción eliminada correctamente",
+      );
       // Recargar métodos para obtener datos actualizados
       await loadPaymentMethods();
       // Actualizar método seleccionado con datos frescos
@@ -932,7 +991,9 @@ export function PaymentsLayer({
         setSelectedMethod(updatedMethod);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al eliminar instrucción";
+      const errorMessage =
+        error?.message ||
+        (P?.errorDeletingInstruction ?? "Error al eliminar instrucción");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -965,7 +1026,7 @@ export function PaymentsLayer({
           type="body2"
           style={{ marginTop: 16, color: colors.textSecondary }}
         >
-          Cargando métodos de pago...
+          {P?.loadingPayments ?? "Cargando métodos de pago..."}
         </ThemedText>
       </View>
     );
@@ -979,7 +1040,7 @@ export function PaymentsLayer({
           <View style={styles.sectionHeader}>
             <Ionicons name="wallet-outline" size={24} color={colors.primary} />
             <ThemedText type="h4" style={styles.sectionTitle}>
-              Método de pago
+              {P?.sectionTitleMethods ?? "Métodos de Pago"}
             </ThemedText>
           </View>
           <View style={styles.optionsGrid}>
@@ -1132,7 +1193,8 @@ export function PaymentsLayer({
                                 containerStyle={[
                                   styles.titleInputContainer,
                                   {
-                                    backgroundColor: colors.filterInputBackground,
+                                    backgroundColor:
+                                      colors.filterInputBackground,
                                     borderColor: colors.border,
                                     flex: 1,
                                     width: isMobile ? "100%" : undefined,
@@ -1714,7 +1776,8 @@ export function PaymentsLayer({
                                   containerStyle={[
                                     styles.inputContainer,
                                     {
-                                      backgroundColor: colors.filterInputBackground,
+                                      backgroundColor:
+                                        colors.filterInputBackground,
                                       borderColor: colors.border,
                                     },
                                   ]}
@@ -1910,7 +1973,8 @@ export function PaymentsLayer({
                                   containerStyle={[
                                     styles.inputContainer,
                                     {
-                                      backgroundColor: colors.filterInputBackground,
+                                      backgroundColor:
+                                        colors.filterInputBackground,
                                       borderColor: colors.border,
                                     },
                                   ]}
@@ -2033,7 +2097,8 @@ export function PaymentsLayer({
                                     containerStyle={[
                                       styles.inputContainer,
                                       {
-                                        backgroundColor: colors.filterInputBackground,
+                                        backgroundColor:
+                                          colors.filterInputBackground,
                                         borderColor: colors.border,
                                       },
                                     ]}
@@ -2094,7 +2159,8 @@ export function PaymentsLayer({
                                     containerStyle={[
                                       styles.inputContainer,
                                       {
-                                        backgroundColor: colors.filterInputBackground,
+                                        backgroundColor:
+                                          colors.filterInputBackground,
                                         borderColor: colors.border,
                                       },
                                     ]}
@@ -2167,7 +2233,8 @@ export function PaymentsLayer({
                                     containerStyle={[
                                       styles.inputContainer,
                                       {
-                                        backgroundColor: colors.filterInputBackground,
+                                        backgroundColor:
+                                          colors.filterInputBackground,
                                         borderColor: colors.border,
                                       },
                                     ]}
@@ -4754,7 +4821,10 @@ export function PaymentsLayer({
         {!selectedMethodType && paymentMethods.length > 0 && (
           <Card
             variant="outlined"
-            style={[styles.infoCard, { backgroundColor: colors.filterInputBackground }]}
+            style={[
+              styles.infoCard,
+              { backgroundColor: colors.filterInputBackground },
+            ]}
           >
             <Ionicons
               name="information-circle-outline"
@@ -4774,7 +4844,10 @@ export function PaymentsLayer({
         {paymentMethods.length === 0 && (
           <Card
             variant="outlined"
-            style={[styles.infoCard, { backgroundColor: colors.filterInputBackground }]}
+            style={[
+              styles.infoCard,
+              { backgroundColor: colors.filterInputBackground },
+            ]}
           >
             <Ionicons name="bulb-outline" size={20} color={colors.primary} />
             <ThemedText

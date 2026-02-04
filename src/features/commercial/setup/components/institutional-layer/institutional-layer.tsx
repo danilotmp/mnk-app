@@ -61,6 +61,7 @@ export function InstitutionalLayer({
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
+  const L = t.wizard?.layers?.institutional;
   const { language: currentLanguage } = useLanguage();
   const alert = useAlert();
   const { company } = useCompany();
@@ -114,7 +115,10 @@ export function InstitutionalLayer({
         setTimezones(catalogDetailsToSelectOptions(timezonesResponse.details));
       } catch (error: any) {
         console.error("Error al cargar catálogos:", error);
-        alert.showError("Error al cargar catálogos", error.message);
+        alert.showError(
+          L?.errorLoadingCatalogs ?? "Error al cargar catálogos",
+          error.message,
+        );
         // En caso de error, mantener arrays vacíos
         setIndustries([]);
         setTimezones([]);
@@ -417,8 +421,8 @@ export function InstitutionalLayer({
       await CommercialService.upsertProfile(payload);
       alert.showSuccess(
         profile
-          ? "Información actualizada correctamente"
-          : "Información guardada correctamente",
+          ? (L?.infoUpdated ?? "Información actualizada correctamente")
+          : (L?.infoSaved ?? "Información guardada correctamente"),
       );
 
       // Recargar perfil después de guardar (solo si no hay error)
@@ -455,7 +459,8 @@ export function InstitutionalLayer({
         console.error("Error al recargar perfil después de guardar:", error);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al guardar información";
+      const errorMessage =
+        error?.message || (L?.errorSaving ?? "Error al guardar información");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -488,7 +493,7 @@ export function InstitutionalLayer({
           type="body2"
           style={{ marginTop: 16, color: colors.textSecondary }}
         >
-          Cargando información...
+          {L?.loadingInfo ?? "Cargando información..."}
         </ThemedText>
       </View>
     );
@@ -503,13 +508,13 @@ export function InstitutionalLayer({
             type="body2"
             style={[styles.label, { color: colors.text }]}
           >
-            ¿En qué industria está tu empresa?
+            {L?.industryQuestion ?? "¿En qué industria está tu empresa?"}
           </ThemedText>
           <Select
             value={formData.industry}
             options={industries}
             onSelect={(val) => handleChange("industry", val as string)}
-            placeholder="Selecciona una industria"
+            placeholder={L?.selectIndustry ?? "Selecciona una industria"}
             searchable={true}
             error={!!errors.industry}
             errorMessage={errors.industry}
@@ -523,7 +528,7 @@ export function InstitutionalLayer({
             type="body2"
             style={[styles.label, { color: colors.text }]}
           >
-            ¿A qué se dedica tu empresa?
+            {L?.businessQuestion ?? "¿A qué se dedica tu empresa?"}
           </ThemedText>
           <InputWithFocus
             containerStyle={[
@@ -540,7 +545,10 @@ export function InstitutionalLayer({
           >
             <TextInput
               style={[styles.textArea, { color: colors.text }]}
-              placeholder="Ej: Empresa de desarrollo de software especializada en soluciones empresariales"
+              placeholder={
+                L?.businessDescriptionPlaceholder ??
+                "Ej: Empresa de desarrollo de software especializada en soluciones empresariales"
+              }
               placeholderTextColor={colors.textSecondary}
               value={formData.businessDescription}
               onChangeText={(val) => handleChange("businessDescription", val)}
@@ -571,7 +579,10 @@ export function InstitutionalLayer({
               <CustomSwitch
                 value={formData.is24_7}
                 onValueChange={(val) => handleChange("is24_7", val)}
-                label="¿Atiendes 24 horas al día, 7 días a la semana?"
+                label={
+                  L?.is24_7Label ??
+                  "¿Atiendes 24 horas al día, 7 días a la semana?"
+                }
               />
             </View>
 
@@ -594,7 +605,7 @@ export function InstitutionalLayer({
             type="body2"
             style={[styles.label, { color: colors.text }]}
           >
-            ¿Los precios incluyen impuestos por defecto?
+            {L?.taxQuestion ?? "¿Los precios incluyen impuestos por defecto?"}
           </ThemedText>
           <View style={styles.radioGroup}>
             <TouchableOpacity
@@ -637,7 +648,7 @@ export function InstitutionalLayer({
                 type="body2"
                 style={{ color: colors.text, marginLeft: 12 }}
               >
-                Sí, los precios incluyen impuestos
+                {L?.taxIncludedLabel ?? "Sí, los precios incluyen impuestos"}
               </ThemedText>
             </TouchableOpacity>
 
@@ -681,7 +692,7 @@ export function InstitutionalLayer({
                 type="body2"
                 style={{ color: colors.text, marginLeft: 12 }}
               >
-                No, los impuestos se agregan aparte
+                {L?.taxExcludedLabel ?? "No, los impuestos se agregan aparte"}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -706,7 +717,7 @@ export function InstitutionalLayer({
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Idioma principal
+                {L?.primaryLanguageLabel ?? "Idioma principal"}
               </ThemedText>
               <Select
                 value={formData.language}
@@ -715,7 +726,7 @@ export function InstitutionalLayer({
                   { value: "en", label: "English" },
                 ]}
                 onSelect={(val) => handleChange("language", val as string)}
-                placeholder="Selecciona un idioma"
+                placeholder={L?.selectLanguage ?? "Selecciona un idioma"}
                 searchable={false}
                 triggerStyle={{ backgroundColor: colors.filterInputBackground }}
               />
@@ -723,7 +734,8 @@ export function InstitutionalLayer({
                 type="caption"
                 style={{ color: colors.textSecondary, marginTop: 4 }}
               >
-                Se toma automáticamente del idioma configurado en el sistema
+                {L?.languageAutoCaption ??
+                  "Se toma automáticamente del idioma configurado en el sistema"}
               </ThemedText>
             </View>
 
@@ -736,13 +748,13 @@ export function InstitutionalLayer({
                   { color: colors.text, marginTop: isMobile ? 16 : 0 },
                 ]}
               >
-                Zona horaria
+                {L?.timezoneLabel ?? "Zona horaria"}
               </ThemedText>
               <Select
                 value={formData.timezone}
                 options={timezones}
                 onSelect={(val) => handleChange("timezone", val as string)}
-                placeholder="Selecciona una zona horaria"
+                placeholder={L?.selectTimezone ?? "Selecciona una zona horaria"}
                 searchable={true}
                 triggerStyle={{ backgroundColor: colors.filterInputBackground }}
               />
@@ -750,7 +762,8 @@ export function InstitutionalLayer({
                 type="caption"
                 style={{ color: colors.textSecondary, marginTop: 4 }}
               >
-                Se toma automáticamente de la zona horaria del sistema/navegador
+                {L?.timezoneAutoCaption ??
+                  "Se toma automáticamente de la zona horaria del sistema/navegador"}{" "}
                 ({getSystemTimezone()})
               </ThemedText>
             </View>
@@ -761,10 +774,10 @@ export function InstitutionalLayer({
         <Button
           title={
             saving
-              ? "Guardando..."
+              ? (L?.saving ?? "Guardando...")
               : hasChanges()
-                ? "Guardar Información"
-                : "Continuar"
+                ? (L?.saveInfo ?? "Guardar Información")
+                : (L?.continue ?? "Continuar")
           }
           onPress={handleButtonPress}
           variant="primary"
@@ -799,8 +812,8 @@ export function InstitutionalLayer({
             type="body2"
             style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
           >
-            Con esta información, la IA podrá responder preguntas sobre tu
-            negocio, ubicación y operación básica.
+            {L?.infoBoxText ??
+              "Con esta información, la IA podrá responder preguntas sobre tu negocio, ubicación y operación básica."}
           </ThemedText>
         </View>
       </View>

@@ -286,57 +286,73 @@ export function CommercialSetupScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]); // Solo depender de company.id
 
+  // Paso labels desde traducciones (sin hardcode)
+  const stepLabels: Record<string, string> = useMemo(
+    () => ({
+      institutional: t.wizard.steps.institutional,
+      offerings: t.wizard.steps.offerings,
+      interactionGuidelines: t.wizard.steps.interactionGuidelines,
+      payments: t.wizard.steps.payments,
+      recommendations: t.wizard.steps.recommendations,
+      whatsappConnection: t.wizard.steps.whatsappConnection,
+    }),
+    [t.wizard.steps],
+  );
+
   // Definir pasos por defecto (sin capa 'operational' - se unificó con recomendaciones)
-  const defaultSteps: WizardStep[] = [
-    {
-      id: "institutional",
-      label: "Contexto Institucional",
-      layer: "institutional",
-      completed: false,
-      enabled: true,
-      completionPercentage: 0,
-    },
-    {
-      id: "offerings",
-      label: "Ofertas",
-      layer: "offerings",
-      completed: false,
-      enabled: true,
-      completionPercentage: 0,
-    },
-    {
-      id: "interactionGuidelines",
-      label: "Directrices de Interacción",
-      layer: "interactionGuidelines",
-      completed: false,
-      enabled: true,
-      completionPercentage: 0,
-    },
-    {
-      id: "payments",
-      label: "Pagos",
-      layer: "payments",
-      completed: false,
-      enabled: true,
-      completionPercentage: 0,
-    },
-    {
-      id: "recommendations",
-      label: "Recomendaciones",
-      layer: "recommendations",
-      completed: false,
-      enabled: true,
-      completionPercentage: 0,
-    },
-    {
-      id: "whatsappConnection",
-      label: "Conexión WhatsApp",
-      layer: "whatsappConnection",
-      completed: false,
-      enabled: true,
-      completionPercentage: 0,
-    },
-  ];
+  const defaultSteps: WizardStep[] = useMemo(
+    () => [
+      {
+        id: "institutional",
+        label: stepLabels.institutional,
+        layer: "institutional",
+        completed: false,
+        enabled: true,
+        completionPercentage: 0,
+      },
+      {
+        id: "offerings",
+        label: stepLabels.offerings,
+        layer: "offerings",
+        completed: false,
+        enabled: true,
+        completionPercentage: 0,
+      },
+      {
+        id: "interactionGuidelines",
+        label: stepLabels.interactionGuidelines,
+        layer: "interactionGuidelines",
+        completed: false,
+        enabled: true,
+        completionPercentage: 0,
+      },
+      {
+        id: "payments",
+        label: stepLabels.payments,
+        layer: "payments",
+        completed: false,
+        enabled: true,
+        completionPercentage: 0,
+      },
+      {
+        id: "recommendations",
+        label: stepLabels.recommendations,
+        layer: "recommendations",
+        completed: false,
+        enabled: true,
+        completionPercentage: 0,
+      },
+      {
+        id: "whatsappConnection",
+        label: stepLabels.whatsappConnection,
+        layer: "whatsappConnection",
+        completed: false,
+        enabled: true,
+        completionPercentage: 0,
+      },
+    ],
+    [stepLabels],
+  );
 
   // Convertir LayerProgress a WizardStep (sin capa 'operational')
   // Si layerProgress está vacío, usar pasos por defecto
@@ -346,20 +362,7 @@ export function CommercialSetupScreen() {
           .filter((layer) => layer.layer !== "operational") // Filtrar capa 'operational'
           .map((layer) => ({
             id: layer.layer,
-            label:
-              layer.layer === "institutional"
-                ? "Contexto Institucional"
-                : layer.layer === "offerings"
-                  ? "Ofertas"
-                  : layer.layer === "interactionGuidelines"
-                    ? "Directrices de Interacción"
-                    : layer.layer === "payments"
-                      ? "Pagos"
-                      : layer.layer === "recommendations"
-                        ? "Recomendaciones"
-                        : layer.layer === "whatsappConnection"
-                          ? "Conexión WhatsApp"
-                          : layer.layer, // Fallback al nombre de la capa
+            label: stepLabels[layer.layer] ?? t.wizard.layerFallback,
             layer: layer.layer,
             completed: layer.completed,
             enabled: true,
@@ -439,12 +442,11 @@ export function CommercialSetupScreen() {
                 type="h2"
                 style={isMobile ? styles.titleMobile : styles.title}
               >
-                Configuración de Chat IA
+                {t.wizard.title}
               </ThemedText>
             </View>
             <ThemedText type="body1" style={styles.subtitle}>
-              Completa la información para que la IA pueda interactuar mejor con
-              tus clientes
+              {t.wizard.subtitle}
             </ThemedText>
           </View>
         </View>
@@ -509,46 +511,36 @@ export function CommercialSetupScreen() {
                     }
                   >
                     {wizardSteps.find((s) => s.id === currentLayer)?.label ||
-                      "Capa"}
+                      t.wizard.layerFallback}
                   </ThemedText>
                   {currentLayer === "recommendations" && (
                     <ThemedText type="body2" style={styles.contentDescription}>
-                      Crea recomendaciones informativas, de orientación,
-                      sugerencias y upsell que la IA puede ofrecer durante las
-                      conversaciones.
+                      {t.wizard.descriptions.recommendations}
                     </ThemedText>
                   )}
                   {currentLayer === "interactionGuidelines" && (
                     <ThemedText type="body2" style={styles.contentDescription}>
-                      Configura la personalidad y el estilo de comunicación de
-                      tu asistente IA. Define cómo debe saludar, despedirse y el
-                      tono que debe usar en cada interacción.
+                      {t.wizard.descriptions.interactionGuidelines}
                     </ThemedText>
                   )}
                   {currentLayer === "institutional" && (
                     <ThemedText type="body2" style={styles.contentDescription}>
-                      Cuéntanos sobre tu empresa: a qué se dedica, en qué
-                      industria está, y cómo opera.
+                      {t.wizard.descriptions.institutional}
                     </ThemedText>
                   )}
                   {currentLayer === "offerings" && (
                     <ThemedText type="body2" style={styles.contentDescription}>
-                      Configura tus ofertas (productos, servicios y paquetes) y
-                      precios para que la IA pueda informar valores a los
-                      clientes.
+                      {t.wizard.descriptions.offerings}
                     </ThemedText>
                   )}
                   {currentLayer === "payments" && (
                     <ThemedText type="body2" style={styles.contentDescription}>
-                      Define los métodos de pago aceptados y cómo los clientes
-                      pueden realizar pagos.
+                      {t.wizard.descriptions.payments}
                     </ThemedText>
                   )}
                   {currentLayer === "whatsappConnection" && (
                     <ThemedText type="body2" style={styles.contentDescription}>
-                      Conecta tu cuenta de WhatsApp para que la IA pueda
-                      interactuar con tus clientes. Escanea el código QR con tu
-                      teléfono.
+                      {t.wizard.descriptions.whatsappConnection}
                     </ThemedText>
                   )}
                 </View>
@@ -563,8 +555,8 @@ export function CommercialSetupScreen() {
                       filterValue={offeringsFilter}
                       onFilterChange={setOfferingsFilter}
                       onSearchSubmit={(search) => setOfferingsFilter(search)}
-                      filterPlaceholder="Filtrar por nombre o código..."
-                      searchPlaceholder="Buscar ofertas..."
+                      filterPlaceholder={t.wizard.filters.filterByNameOrCode}
+                      searchPlaceholder={t.wizard.filters.searchOfferings}
                       filters={[]}
                       showClearButton={false}
                       showSearchHint={false}
@@ -579,7 +571,7 @@ export function CommercialSetupScreen() {
                     ]}
                   >
                     <Button
-                      title={isMobile ? "" : "Crear Conexión"}
+                      title={isMobile ? "" : t.wizard.createConnection}
                       onPress={() => {
                         whatsappConnectionRef.current?.handleCreate();
                       }}
@@ -611,8 +603,8 @@ export function CommercialSetupScreen() {
                       onSearchSubmit={(search) =>
                         setRecommendationsFilter(search)
                       }
-                      filterPlaceholder="Filtrar por mensaje..."
-                      searchPlaceholder="Buscar recomendaciones..."
+                      filterPlaceholder={t.wizard.filters.filterByMessage}
+                      searchPlaceholder={t.wizard.filters.searchRecommendations}
                       filters={[]}
                       showClearButton={false}
                       showSearchHint={false}
@@ -632,8 +624,10 @@ export function CommercialSetupScreen() {
                       onSearchSubmit={(search) =>
                         setInteractionGuidelinesFilter(search)
                       }
-                      filterPlaceholder="Filtrar por título o descripción..."
-                      searchPlaceholder="Buscar directrices..."
+                      filterPlaceholder={
+                        t.wizard.filters.filterByTitleOrDescription
+                      }
+                      searchPlaceholder={t.wizard.filters.searchGuidelines}
                       filters={[]}
                       showClearButton={false}
                       showSearchHint={false}
@@ -974,8 +968,9 @@ export function CommercialSetupScreen() {
                   <WhatsAppConnectionLayer
                     ref={whatsappConnectionRef}
                     isCompleted={
-                      layerProgress.find((l) => l.layer === "whatsappConnection")
-                        ?.completed || false
+                      layerProgress.find(
+                        (l) => l.layer === "whatsappConnection",
+                      )?.completed || false
                     }
                     onProgressUpdate={(progress) => {
                       setLayerProgress((prev) => {
@@ -1050,7 +1045,7 @@ export function CommercialSetupScreen() {
             />
             <View style={styles.infoText}>
               <ThemedText type="body2" style={styles.infoTitle}>
-                ¿Qué se activa con cada capa?
+                {t.wizard.infoTitle}
               </ThemedText>
               <ThemedText type="body2" style={{ color: colors.textSecondary }}>
                 {layerProgress
@@ -1058,19 +1053,20 @@ export function CommercialSetupScreen() {
                   ?.enabledCapabilities.map((cap) => {
                     const labels: Record<string, string> = {
                       canAnswerAboutBusiness:
-                        "La IA puede responder sobre tu negocio",
+                        t.wizard.capabilities.canAnswerAboutBusiness,
                       canAnswerAboutLocation:
-                        "La IA puede informar ubicaciones",
-                      canAnswerAboutPrices: "La IA puede informar precios",
+                        t.wizard.capabilities.canAnswerAboutLocation,
+                      canAnswerAboutPrices:
+                        t.wizard.capabilities.canAnswerAboutPrices,
                       canAnswerAboutPayment:
-                        "La IA puede explicar métodos de pago",
-                      canRecommend: "La IA puede hacer recomendaciones",
+                        t.wizard.capabilities.canAnswerAboutPayment,
+                      canRecommend: t.wizard.capabilities.canRecommend,
                       canSuggestProducts:
-                        "La IA puede sugerir productos/servicios",
+                        t.wizard.capabilities.canSuggestProducts,
                     };
                     return labels[cap] || cap;
                   })
-                  .join(", ") || "Completa esta capa para activar capacidades"}
+                  .join(", ") || t.wizard.completeLayerToActivate}
               </ThemedText>
             </View>
           </View>

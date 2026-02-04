@@ -52,6 +52,7 @@ export function InteractionGuidelinesLayer({
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
+  const L = t.wizard?.layers?.interactionGuidelines;
   const alert = useAlert();
   const { company } = useCompany();
 
@@ -133,7 +134,9 @@ export function InteractionGuidelinesLayer({
 
   const handleSave = async (guidelineId: string) => {
     if (!company?.id) {
-      alert.showError("No se pudo obtener el ID de la empresa");
+      alert.showError(
+        L?.companyIdError ?? "No se pudo obtener el ID de la empresa",
+      );
       return;
     }
 
@@ -141,12 +144,12 @@ export function InteractionGuidelinesLayer({
     if (!formData) return;
 
     if (!formData.title.trim()) {
-      alert.showError("El título es requerido");
+      alert.showError(L?.titleRequired ?? "El título es requerido");
       return;
     }
 
     if (!formData.description.trim()) {
-      alert.showError("La descripción es requerida");
+      alert.showError(L?.descriptionRequired ?? "La descripción es requerida");
       return;
     }
 
@@ -160,7 +163,9 @@ export function InteractionGuidelinesLayer({
         status: formData.status,
       };
       await CommercialService.updateInteractionGuideline(guidelineId, payload);
-      alert.showSuccess("Directriz actualizada correctamente");
+      alert.showSuccess(
+        L?.guidelineUpdated ?? "Directriz actualizada correctamente",
+      );
 
       // Recargar directrices después de guardar
       hasLoadedRef.current = false; // Reset flag para permitir recarga
@@ -174,9 +179,10 @@ export function InteractionGuidelinesLayer({
     } catch (error: any) {
       // Extraer mensaje de error de diferentes estructuras posibles
       const errorMessage =
-        error?.message ||
-        error?.result?.description ||
-        error?.description ||
+        (error?.message ||
+          error?.result?.description ||
+          error?.description ||
+          L?.errorSavingGuideline) ??
         "Error al guardar directriz";
 
       // Extraer detalles del error
@@ -205,17 +211,19 @@ export function InteractionGuidelinesLayer({
 
   const handleCreateNew = async () => {
     if (!company?.id) {
-      alert.showError("No se pudo obtener el ID de la empresa");
+      alert.showError(
+        L?.companyIdError ?? "No se pudo obtener el ID de la empresa",
+      );
       return;
     }
 
     if (!newFormData.title.trim()) {
-      alert.showError("El título es requerido");
+      alert.showError(L?.titleRequired ?? "El título es requerido");
       return;
     }
 
     if (!newFormData.description.trim()) {
-      alert.showError("La descripción es requerida");
+      alert.showError(L?.descriptionRequired ?? "La descripción es requerida");
       return;
     }
 
@@ -244,7 +252,9 @@ export function InteractionGuidelinesLayer({
       });
       setShowNewForm(false);
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al crear directriz";
+      const errorMessage =
+        error?.message ||
+        (L?.errorCreatingGuideline ?? "Error al crear directriz");
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -273,9 +283,12 @@ export function InteractionGuidelinesLayer({
    * Muestra confirmación y, si el usuario acepta, elimina la directriz.
    */
   const confirmDeleteGuideline = (guideline: InteractionGuideline) => {
-    const title = "Eliminar directriz";
+    const title = L?.deleteTitle ?? "Eliminar directriz";
     const name = guideline.title || "esta directriz";
-    const message = `¿Seguro que deseas eliminar la directriz "${name}"? Esta acción no se puede deshacer.`;
+    const message = (
+      L?.deleteConfirmMessage ??
+      '¿Seguro que deseas eliminar la directriz "{name}"? Esta acción no se puede deshacer.'
+    ).replace("{name}", name);
     alert.showConfirm(title, message, () => handleDelete(guideline.id));
   };
 
@@ -284,7 +297,9 @@ export function InteractionGuidelinesLayer({
 
     try {
       await CommercialService.deleteInteractionGuideline(guidelineId);
-      alert.showSuccess("Directriz eliminada correctamente");
+      alert.showSuccess(
+        L?.guidelineDeleted ?? "Directriz eliminada correctamente",
+      );
       // Recargar directrices después de eliminar
       hasLoadedRef.current = false; // Reset flag para permitir recarga
       setIsLoadingData(false); // Reset flag de carga
@@ -336,7 +351,7 @@ export function InteractionGuidelinesLayer({
           type="body2"
           style={{ marginTop: 16, color: colors.textSecondary }}
         >
-          Cargando directrices de interacción...
+          {L?.loadingGuidelines ?? "Cargando directrices de interacción..."}
         </ThemedText>
       </View>
     );
@@ -351,7 +366,7 @@ export function InteractionGuidelinesLayer({
             <View style={styles.sectionHeader}>
               <Ionicons name="list-outline" size={24} color={colors.primary} />
               <ThemedText type="h4" style={styles.sectionTitle}>
-                Directrices Configuradas (
+                {L?.sectionTitleConfigured ?? "Directrices Configuradas"} (
                 {(() => {
                   const filteredGuidelines = searchFilter.trim()
                     ? guidelines.filter((g) => {
@@ -685,7 +700,10 @@ export function InteractionGuidelinesLayer({
                                   size="small"
                                 />
                                 <View style={styles.actionIconsContainer}>
-                                  <Tooltip text="Editar" position="top">
+                                  <Tooltip
+                                    text={L?.accept ? "Editar" : "Editar"}
+                                    position="top"
+                                  >
                                     <TouchableOpacity
                                       style={styles.actionIconButton}
                                       onPress={() =>
@@ -700,7 +718,10 @@ export function InteractionGuidelinesLayer({
                                       />
                                     </TouchableOpacity>
                                   </Tooltip>
-                                  <Tooltip text="Eliminar" position="top">
+                                  <Tooltip
+                                    text={t.common?.delete ?? "Eliminar"}
+                                    position="top"
+                                  >
                                     <TouchableOpacity
                                       style={styles.actionIconButton}
                                       onPress={() =>
@@ -736,7 +757,10 @@ export function InteractionGuidelinesLayer({
                           >
                             <TextInput
                               style={[styles.textArea, { color: colors.text }]}
-                              placeholder="Describe la regla o comportamiento que la IA debe seguir..."
+                              placeholder={
+                                L?.descriptionPlaceholder ??
+                                "Describe la regla o comportamiento que la IA debe seguir..."
+                              }
                               placeholderTextColor={colors.textSecondary}
                               value={formData?.description || ""}
                               onChangeText={(text) =>
@@ -761,14 +785,14 @@ export function InteractionGuidelinesLayer({
                           <View style={styles.formActions}>
                             <View style={{ flex: 1 }} />
                             <Button
-                              title="Cancelar"
+                              title={L?.cancel ?? "Cancelar"}
                               onPress={() => handleCancel(guideline.id)}
                               variant="outlined"
                               size="md"
                               disabled={saving}
                             />
                             <Button
-                              title="Aceptar"
+                              title={L?.accept ?? "Aceptar"}
                               onPress={() => handleSave(guideline.id)}
                               variant="primary"
                               size="md"
@@ -826,7 +850,9 @@ export function InteractionGuidelinesLayer({
                 >
                   <TextInput
                     style={[styles.titleInput, { color: colors.text }]}
-                    placeholder="Nueva Directriz"
+                    placeholder={
+                      L?.newGuidelinePlaceholder ?? "Nueva Directriz"
+                    }
                     placeholderTextColor={colors.textSecondary}
                     value={newFormData.title}
                     onChangeText={(text) =>
@@ -998,7 +1024,10 @@ export function InteractionGuidelinesLayer({
             >
               <TextInput
                 style={[styles.textArea, { color: colors.text }]}
-                placeholder="Describe la regla o comportamiento que la IA debe seguir..."
+                placeholder={
+                  L?.descriptionPlaceholder ??
+                  "Describe la regla o comportamiento que la IA debe seguir..."
+                }
                 placeholderTextColor={colors.textSecondary}
                 value={newFormData.description}
                 onChangeText={(text) =>
@@ -1014,7 +1043,7 @@ export function InteractionGuidelinesLayer({
             <View style={styles.formActions}>
               <View style={{ flex: 1 }} />
               <Button
-                title="Cancelar"
+                title={L?.cancel ?? "Cancelar"}
                 onPress={() => {
                   setShowNewForm(false);
                   setNewFormData({
@@ -1028,7 +1057,7 @@ export function InteractionGuidelinesLayer({
                 disabled={saving}
               />
               <Button
-                title="Aceptar"
+                title={L?.accept ?? "Aceptar"}
                 onPress={handleCreateNew}
                 variant="primary"
                 size="md"
@@ -1039,7 +1068,7 @@ export function InteractionGuidelinesLayer({
         ) : (
           <Card variant="elevated" style={styles.addCard}>
             <Button
-              title="Agregar Directriz"
+              title={L?.addGuideline ?? "Agregar Directriz"}
               onPress={() => setShowNewForm(true)}
               variant="primary"
               size="lg"
@@ -1061,8 +1090,8 @@ export function InteractionGuidelinesLayer({
                 textAlign: "center",
               }}
             >
-              Agrega directrices para definir cómo debe comportarse la IA al
-              interactuar con los clientes
+              {L?.addGuidelineDescription ??
+                "Agrega directrices para definir cómo debe comportarse la IA al interactuar con los clientes"}
             </ThemedText>
           </Card>
         )}
@@ -1071,7 +1100,9 @@ export function InteractionGuidelinesLayer({
         <View style={styles.continueButtons}>
           <Button
             title={
-              guidelines.length > 0 || isCompleted ? "Continuar" : "Omitir"
+              guidelines.length > 0 || isCompleted
+                ? (L?.continue ?? "Continuar")
+                : (L?.skip ?? "Omitir")
             }
             onPress={() => {
               if (guidelines.length > 0 || isCompleted) {
@@ -1103,7 +1134,7 @@ export function InteractionGuidelinesLayer({
           </Button>
           {guidelines.length > 0 && onSkip && !isCompleted && (
             <Button
-              title="Omitir"
+              title={L?.skip ?? "Omitir"}
               onPress={() => {
                 onSkip?.();
               }}

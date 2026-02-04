@@ -33,6 +33,7 @@ interface CompanySetupLayerProps {
 export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const L = t.wizard?.layers?.companySetup;
   const alert = useAlert();
   const router = useRouter();
   const { user, setUserContext } = useCompany();
@@ -78,13 +79,13 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
       !companyData.name.trim() ||
       !companyData.email.trim()
     ) {
-      setGeneralError({ message: "Código, nombre y email son requeridos" });
+      setGeneralError({ message: L?.codeNameEmailRequired ?? "" });
       return;
     }
 
     if (!companyData.phone.trim()) {
       setGeneralError({
-        message: "El número de WhatsApp es requerido para Chat IA",
+        message: L?.whatsappRequired ?? "",
       });
       return;
     }
@@ -102,7 +103,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
         status: 1,
       });
 
-      alert.showSuccess("Empresa creada correctamente");
+      alert.showSuccess(L?.companyCreated ?? "");
 
       // Guardar ID de empresa creada
       setCreatedCompanyId(company.id);
@@ -110,7 +111,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
       // Avanzar a crear sucursal
       setStep("branch");
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al crear empresa";
+      const errorMessage = (error?.message || L?.errorCreatingCompany) ?? "";
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -125,7 +126,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
   const handleCreateBranch = async () => {
     if (!branchData.code.trim() || !branchData.name.trim()) {
       setGeneralError({
-        message: "Código y nombre de sucursal son requeridos",
+        message: L?.branchCodeNameRequired ?? "",
       });
       return;
     }
@@ -136,7 +137,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
 
     if (!createdCompanyId) {
       setGeneralError({
-        message: "Error: No se encontró el ID de la empresa creada",
+        message: L?.companyNotFound ?? "",
       });
       return;
     }
@@ -155,10 +156,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
         status: 1, // Activo
       });
 
-      alert.showSuccess("Sucursal creada correctamente");
-      alert.showSuccess(
-        "Empresa y sucursal configuradas. Ahora puedes continuar con la configuración de Chat IA.",
-      );
+      alert.showSuccess(L?.companyAndBranchReady ?? "");
 
       // Recargar contexto del usuario para obtener la nueva empresa y sucursal
       if (user && setUserContext) {
@@ -168,7 +166,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
       // Completar Capa 0
       onComplete?.();
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al crear sucursal";
+      const errorMessage = (error?.message || L?.errorCreatingBranch) ?? "";
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -202,14 +200,13 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 color={colors.primary}
               />
               <ThemedText type="h3" style={styles.title}>
-                Crear tu Empresa
+                {L?.stepCompany ?? ""}
               </ThemedText>
               <ThemedText
                 type="body2"
                 style={[styles.subtitle, { color: colors.textSecondary }]}
               >
-                Para usar Chat IA necesitas configurar tu empresa y al menos una
-                sucursal
+                {L?.subtitleCompany ?? ""}
               </ThemedText>
             </View>
 
@@ -218,7 +215,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Código de la Empresa *
+                {L?.companyCodeLabel ?? ""}
               </ThemedText>
               <InputWithFocus
                 containerStyle={[
@@ -237,7 +234,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Ej: MIEMPRESA"
+                  placeholder={L?.codePlaceholder ?? ""}
                   placeholderTextColor={colors.textSecondary}
                   value={companyData.code}
                   onChangeText={(val) =>
@@ -253,7 +250,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Nombre de la Empresa *
+                {L?.companyNameLabel ?? ""}
               </ThemedText>
               <InputWithFocus
                 containerStyle={[
@@ -272,7 +269,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Nombre de tu empresa"
+                  placeholder={L?.companyNamePlaceholder ?? ""}
                   placeholderTextColor={colors.textSecondary}
                   value={companyData.name}
                   onChangeText={(val) =>
@@ -287,14 +284,14 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Email *
+                {L?.emailLabel ?? ""}
               </ThemedText>
               <EmailInput
                 value={companyData.email}
                 onChangeText={(val) =>
                   setCompanyData((prev) => ({ ...prev, email: val }))
                 }
-                placeholder="correo@empresa.com"
+                placeholder={L?.emailPlaceholder ?? ""}
                 required
               />
             </View>
@@ -304,21 +301,21 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Número de WhatsApp *
+                {L?.whatsappLabel ?? ""}
               </ThemedText>
               <PhoneInput
                 value={companyData.phone}
                 onChangeText={(val) =>
                   setCompanyData((prev) => ({ ...prev, phone: val }))
                 }
-                placeholder="+593 99 999 9999"
+                placeholder={L?.phonePlaceholder ?? ""}
                 required
               />
               <ThemedText
                 type="caption"
                 style={{ color: colors.textSecondary, marginTop: 4 }}
               >
-                Este número se usará para conectar Chat IA con tus clientes
+                {L?.whatsappCaption ?? ""}
               </ThemedText>
             </View>
 
@@ -327,7 +324,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Descripción (opcional)
+                {L?.descriptionLabel ?? ""}
               </ThemedText>
               <InputWithFocus
                 containerStyle={[
@@ -341,7 +338,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
               >
                 <TextInput
                   style={[styles.textArea, { color: colors.text }]}
-                  placeholder="Describe brevemente tu empresa"
+                  placeholder={L?.descriptionPlaceholder ?? ""}
                   placeholderTextColor={colors.textSecondary}
                   value={companyData.description}
                   onChangeText={(val) =>
@@ -354,7 +351,11 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
             </View>
 
             <Button
-              title={saving ? "Creando..." : "Crear Empresa y Continuar"}
+              title={
+                saving
+                  ? (L?.creating ?? "")
+                  : (L?.createCompanyAndContinue ?? "")
+              }
               onPress={handleCreateCompany}
               variant="primary"
               size="lg"
@@ -379,13 +380,13 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 color={colors.primary}
               />
               <ThemedText type="h3" style={styles.title}>
-                Crear Sucursal Principal
+                {L?.stepBranch ?? ""}
               </ThemedText>
               <ThemedText
                 type="body2"
                 style={[styles.subtitle, { color: colors.textSecondary }]}
               >
-                Necesitas al menos una sucursal para continuar
+                {L?.subtitleBranch ?? ""}
               </ThemedText>
             </View>
 
@@ -394,7 +395,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Código de la Sucursal *
+                {L?.branchCodeLabel ?? ""}
               </ThemedText>
               <InputWithFocus
                 containerStyle={[
@@ -413,7 +414,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Ej: SUC-001"
+                  placeholder={L?.branchCodePlaceholder ?? ""}
                   placeholderTextColor={colors.textSecondary}
                   value={branchData.code}
                   onChangeText={(val) =>
@@ -429,7 +430,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 type="body2"
                 style={[styles.label, { color: colors.text }]}
               >
-                Nombre de la Sucursal *
+                {L?.branchNameLabel ?? ""}
               </ThemedText>
               <InputWithFocus
                 containerStyle={[
@@ -448,7 +449,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
                 />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Ej: Sucursal Principal"
+                  placeholder={L?.branchNamePlaceholder ?? ""}
                   placeholderTextColor={colors.textSecondary}
                   value={branchData.name}
                   onChangeText={(val) =>
@@ -459,7 +460,11 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
             </View>
 
             <Button
-              title={saving ? "Creando..." : "Crear Sucursal y Continuar"}
+              title={
+                saving
+                  ? (L?.creating ?? "")
+                  : (L?.createBranchAndContinue ?? "")
+              }
               onPress={handleCreateBranch}
               variant="primary"
               size="lg"

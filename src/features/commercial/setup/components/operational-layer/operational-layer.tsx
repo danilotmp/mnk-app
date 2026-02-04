@@ -58,6 +58,7 @@ export function OperationalLayer({
   const { colors } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
+  const O = t.wizard?.layers?.offerings;
   const alert = useAlert();
   const { company } = useCompany();
 
@@ -424,13 +425,14 @@ export function OperationalLayer({
     if (!expandedOfferingId) return;
 
     if (!offeringForm.name.trim()) {
-      alert.showError("El nombre de la oferta es requerido");
+      alert.showError(O?.nameRequired ?? "El nombre de la oferta es requerido");
       return;
     }
 
     if (!priceForm.basePrice || isNaN(parseFloat(priceForm.basePrice))) {
       alert.showError(
-        "El precio base es requerido y debe ser un número válido",
+        O?.basePriceRequired ??
+          "El precio base es requerido y debe ser un número válido",
       );
       return;
     }
@@ -624,7 +626,7 @@ export function OperationalLayer({
     const newOffering: Offering = {
       id: tempId,
       companyId: company?.id || "",
-      name: "Nueva Oferta",
+      name: O?.newOffering ?? "Nueva Oferta",
       description: null,
       code: null,
       type: "product",
@@ -773,13 +775,13 @@ export function OperationalLayer({
           .map((err) => err.message)
           .join(", ");
         alert.showError(
-          `Errores al guardar: ${errorMessages}${bulkResult.errors.length > 3 ? ` y ${bulkResult.errors.length - 3} más` : ""}`,
+          `${O?.errorsSaving ?? "Errores al guardar"}: ${errorMessages}${bulkResult.errors.length > 3 ? ` y ${bulkResult.errors.length - 3} más` : ""}`,
         );
         return;
       }
 
       alert.showSuccess(
-        `${bulkResult.created || bulkPayloads.length} oferta(s) guardada(s) correctamente`,
+        `${bulkResult.created || bulkPayloads.length} ${O?.offeringsSaved ?? "oferta(s) guardada(s) correctamente"}`,
       );
 
       // Limpiar cambios pendientes
@@ -799,7 +801,9 @@ export function OperationalLayer({
     } catch (error: any) {
       console.error("Error al guardar cambios:", error);
       alert.showError(
-        "Error al guardar cambios: " + (error?.message || "Error desconocido"),
+        (O?.errorSaving ?? "Error al guardar cambios") +
+          ": " +
+          (error?.message || "Error desconocido"),
       );
     } finally {
       setSaving(false);
@@ -870,10 +874,13 @@ export function OperationalLayer({
   const handleDownloadTemplate = async () => {
     try {
       await TemplateService.downloadTemplate("offerings");
-      alert.showSuccess("Plantilla descargada correctamente");
+      alert.showSuccess(
+        O?.templateDownloaded ?? "Plantilla descargada correctamente",
+      );
     } catch (error: any) {
       alert.showError(
-        "Error al descargar plantilla: " +
+        (O?.errorDownloadTemplate ?? "Error al descargar plantilla") +
+          ": " +
           (error.message || "Error desconocido"),
       );
     }
@@ -891,7 +898,9 @@ export function OperationalLayer({
       const data = await TemplateService.parseFile(file);
 
       if (data.length === 0) {
-        alert.showError("El archivo no contiene datos válidos");
+        alert.showError(
+          O?.noValidData ?? "El archivo no contiene datos válidos",
+        );
         setUploadingBulk(false);
         return;
       }
@@ -971,7 +980,10 @@ export function OperationalLayer({
       }
 
       if (offeringsPayload.length === 0) {
-        alert.showError("No se pudo procesar ninguna oferta del archivo");
+        alert.showError(
+          O?.noOfferingsProcessed ??
+            "No se pudo procesar ninguna oferta del archivo",
+        );
         setUploadingBulk(false);
         return;
       }
@@ -1005,7 +1017,9 @@ export function OperationalLayer({
           `Se procesaron ${successCount} de ${bulkResult.total} ofertas. Errores: ${errorMessages}${bulkResult.errors && bulkResult.errors.length > 3 ? ` y ${bulkResult.errors.length - 3} más` : ""}`,
         );
       } else {
-        alert.showSuccess(`${successCount} ofertas cargadas correctamente`);
+        alert.showSuccess(
+          `${successCount} ${O?.offeringsLoaded ?? "ofertas cargadas correctamente"}`,
+        );
       }
     } catch (error: any) {
       alert.showError(
@@ -1025,7 +1039,9 @@ export function OperationalLayer({
     if (!company?.id || !selectedOffering) return;
 
     if (!priceForm.basePrice || parseFloat(priceForm.basePrice) <= 0) {
-      alert.showError("El precio base debe ser mayor a 0");
+      alert.showError(
+        O?.basePriceGreaterZero ?? "El precio base debe ser mayor a 0",
+      );
       return;
     }
 
@@ -1045,7 +1061,7 @@ export function OperationalLayer({
       };
 
       await CommercialService.createOfferingPrice(selectedOffering.id, payload);
-      alert.showSuccess("Precio creado correctamente");
+      alert.showSuccess(O?.priceCreated ?? "Precio creado correctamente");
       setShowPriceForm(false);
       setPriceForm({
         basePrice: "",
@@ -1081,7 +1097,7 @@ export function OperationalLayer({
           type="body2"
           style={{ marginTop: 16, color: colors.textSecondary }}
         >
-          Cargando ofertas...
+          {O?.loadingOfferings ?? "Cargando ofertas..."}
         </ThemedText>
       </View>
     );
@@ -1095,7 +1111,7 @@ export function OperationalLayer({
           <View style={styles.sectionHeader}>
             <Ionicons name="cube-outline" size={24} color={colors.primary} />
             <ThemedText type="h4" style={styles.sectionTitle}>
-              Ofertas
+              {O?.sectionTitle ?? "Ofertas"}
             </ThemedText>
           </View>
           <View
@@ -1116,7 +1132,8 @@ export function OperationalLayer({
                 { color: colors.textSecondary },
               ]}
             >
-              Define los productos, servicios o paquetes que ofreces
+              {O?.sectionDescription ??
+                "Define los productos, servicios o paquetes que ofreces"}
             </ThemedText>
             {filteredOfferings.length > 0 && (
               <ThemedText
@@ -1124,7 +1141,9 @@ export function OperationalLayer({
                 style={{ color: colors.textSecondary, fontWeight: "600" }}
               >
                 {filteredOfferings.length}{" "}
-                {filteredOfferings.length === 1 ? "registro" : "registros"}
+                {filteredOfferings.length === 1
+                  ? (O?.record ?? "registro")
+                  : (O?.records ?? "registros")}
               </ThemedText>
             )}
           </View>
@@ -1154,7 +1173,9 @@ export function OperationalLayer({
                             ? "construct-outline"
                             : "cube-outline";
                         const typeLabel =
-                          offering.type === "service" ? "Servicio" : "Producto";
+                          offering.type === "service"
+                            ? (O?.service ?? "Servicio")
+                            : (O?.product ?? "Producto");
 
                         const isExpanded = expandedOfferingId === offering.id;
 
@@ -1242,10 +1263,9 @@ export function OperationalLayer({
                                           fontSize: 12,
                                         }}
                                       >
-                                        Impuestos:{" "}
                                         {mainPrice.taxMode === "included"
-                                          ? "Incluidos"
-                                          : "Excluidos"}
+                                          ? (O?.taxesIncluded ?? "Incluidos")
+                                          : (O?.taxesExcluded ?? "Excluidos")}
                                       </ThemedText>
                                     </>
                                   ) : (
@@ -1256,7 +1276,7 @@ export function OperationalLayer({
                                         fontStyle: "italic",
                                       }}
                                     >
-                                      Sin precio
+                                      {O?.noPrice ?? "Sin precio"}
                                     </ThemedText>
                                   )}
                                 </View>
@@ -1359,7 +1379,7 @@ export function OperationalLayer({
                                         { color: colors.text, marginTop: 16 },
                                       ]}
                                     >
-                                      Nombre *
+                                      {O?.nameLabel ?? "Nombre *"}
                                     </ThemedText>
                                     <InputWithFocus
                                       containerStyle={[
@@ -1377,7 +1397,10 @@ export function OperationalLayer({
                                           styles.input,
                                           { color: colors.text },
                                         ]}
-                                        placeholder="Ej: Habitación estándar"
+                                        placeholder={
+                                          O?.namePlaceholder ??
+                                          "Ej: Habitación estándar"
+                                        }
                                         placeholderTextColor={
                                           colors.textSecondary
                                         }
@@ -1404,7 +1427,7 @@ export function OperationalLayer({
                                         { color: colors.text, marginTop: 16 },
                                       ]}
                                     >
-                                      Precio Base *
+                                      {O?.basePriceLabel ?? "Precio Base *"}
                                     </ThemedText>
                                     <CurrencyInput
                                       value={priceForm.basePrice}
@@ -1430,7 +1453,8 @@ export function OperationalLayer({
                                     { color: colors.text, marginTop: 16 },
                                   ]}
                                 >
-                                  Descripción (opcional)
+                                  {O?.descriptionOptional ??
+                                    "Descripción (opcional)"}
                                 </ThemedText>
                                 <InputWithFocus
                                   containerStyle={[
@@ -1448,7 +1472,10 @@ export function OperationalLayer({
                                       styles.textArea,
                                       { color: colors.text },
                                     ]}
-                                    placeholder="Describe brevemente la oferta"
+                                    placeholder={
+                                      O?.descriptionPlaceholder ??
+                                      "Describe brevemente la oferta"
+                                    }
                                     placeholderTextColor={colors.textSecondary}
                                     value={offeringForm.description}
                                     onChangeText={(val) =>
@@ -1466,14 +1493,14 @@ export function OperationalLayer({
                                 <View style={styles.formActions}>
                                   <View style={{ flex: 1 }} />
                                   <Button
-                                    title="Cancelar"
+                                    title={O?.cancel ?? "Cancelar"}
                                     onPress={handleCancelEdit}
                                     variant="outlined"
                                     size="md"
                                     disabled={saving}
                                   />
                                   <Button
-                                    title="Aceptar"
+                                    title={O?.accept ?? "Aceptar"}
                                     onPress={handleAcceptChanges}
                                     variant="primary"
                                     size="md"
@@ -1648,10 +1675,10 @@ export function OperationalLayer({
               <Button
                 title={
                   saving
-                    ? "Guardando..."
+                    ? (O?.processing ?? "Guardando...")
                     : hasPendingChanges
-                      ? `Guardar Cambios (${newOfferings.length + Object.keys(modifiedOfferings).length + deletedOfferings.length})`
-                      : "Continuar"
+                      ? `${O?.saveChanges ?? "Guardar Cambios"} (${newOfferings.length + Object.keys(modifiedOfferings).length + deletedOfferings.length})`
+                      : (O?.continue ?? "Continuar")
                 }
                 onPress={async () => {
                   if (hasPendingChanges) {
@@ -1691,7 +1718,7 @@ export function OperationalLayer({
             {expandedOfferingId === null && (
               <>
                 <Button
-                  title="Agregar Oferta"
+                  title={O?.addOffering ?? "Agregar Oferta"}
                   onPress={handleAddNewOffering}
                   variant="outlined"
                   size="md"
@@ -1706,7 +1733,11 @@ export function OperationalLayer({
                 </Button>
                 {Platform.OS === "web" ? (
                   <Button
-                    title={uploadingBulk ? "Procesando..." : "Carga Masiva"}
+                    title={
+                      uploadingBulk
+                        ? (O?.processing ?? "Procesando...")
+                        : (O?.bulkUpload ?? "Carga Masiva")
+                    }
                     onPress={() => {
                       // Abrir directamente el selector de archivos
                       if (fileInputRef.current && !uploadingBulk) {
@@ -1735,10 +1766,11 @@ export function OperationalLayer({
                   </Button>
                 ) : (
                   <Button
-                    title="Carga Masiva"
+                    title={O?.bulkUpload ?? "Carga Masiva"}
                     onPress={() => {
                       alert.showInfo(
-                        "La carga masiva está disponible solo en la versión web por ahora.",
+                        O?.bulkOnlyWeb ??
+                          "La carga masiva está disponible solo en la versión web por ahora.",
                       );
                     }}
                     variant="outlined"
@@ -1754,7 +1786,7 @@ export function OperationalLayer({
                   </Button>
                 )}
                 <Button
-                  title="Descargar Plantilla"
+                  title={O?.downloadTemplate ?? "Descargar Plantilla"}
                   onPress={handleDownloadTemplate}
                   variant="outlined"
                   size="md"
@@ -1782,7 +1814,7 @@ export function OperationalLayer({
                 color={colors.primary}
               />
               <ThemedText type="h4" style={styles.sectionTitle}>
-                Precios de {selectedOffering.name}
+                {O?.pricesFor ?? "Precios de"} {selectedOffering.name}
               </ThemedText>
             </View>
             <ThemedText
@@ -1792,7 +1824,7 @@ export function OperationalLayer({
                 { color: colors.textSecondary },
               ]}
             >
-              Define los precios para esta oferta
+              {O?.definePricesFor ?? "Define los precios para esta oferta"}
             </ThemedText>
 
             {/* Lista de precios */}
@@ -1818,16 +1850,15 @@ export function OperationalLayer({
                         type="body2"
                         style={{ color: colors.textSecondary, marginTop: 4 }}
                       >
-                        Impuestos:{" "}
                         {price.taxMode === "included"
-                          ? "Incluidos"
-                          : "Excluidos"}
+                          ? (O?.taxesIncluded ?? "Incluidos")
+                          : (O?.taxesExcluded ?? "Excluidos")}
                       </ThemedText>
                       <ThemedText
                         type="caption"
                         style={{ color: colors.textSecondary, marginTop: 4 }}
                       >
-                        Válido desde:{" "}
+                        {O?.validFrom?.replace(" *", "") ?? "Válido desde"}:{" "}
                         {new Date(price.validFrom).toLocaleDateString()}
                         {price.validTo &&
                           ` hasta ${new Date(price.validTo).toLocaleDateString()}`}
@@ -1836,7 +1867,9 @@ export function OperationalLayer({
                     <StatusBadge
                       status={price.status === "active" ? 1 : 0}
                       statusDescription={
-                        price.status === "active" ? "Activo" : "Inactivo"
+                        price.status === "active"
+                          ? (O?.active ?? "Activo")
+                          : (O?.inactive ?? "Inactivo")
                       }
                       size="small"
                     />
@@ -1852,7 +1885,7 @@ export function OperationalLayer({
                   type="body2"
                   style={[styles.label, { color: colors.text }]}
                 >
-                  Precio Base *
+                  {O?.basePriceLabel ?? "Precio Base *"}
                 </ThemedText>
                 <CurrencyInput
                   value={priceForm.basePrice}
@@ -1867,7 +1900,7 @@ export function OperationalLayer({
                   type="body2"
                   style={[styles.label, { color: colors.text, marginTop: 16 }]}
                 >
-                  Válido desde *
+                  {O?.validFrom ?? "Válido desde *"}
                 </ThemedText>
                 <DatePicker
                   value={priceForm.validFrom}
@@ -1882,7 +1915,7 @@ export function OperationalLayer({
                   type="body2"
                   style={[styles.label, { color: colors.text, marginTop: 16 }]}
                 >
-                  Válido hasta (opcional)
+                  {O?.validToOptional ?? "Válido hasta (opcional)"}
                 </ThemedText>
                 <DatePicker
                   value={priceForm.validTo}
@@ -1894,7 +1927,7 @@ export function OperationalLayer({
 
                 <View style={styles.formActions}>
                   <Button
-                    title="Cancelar"
+                    title={O?.cancel ?? "Cancelar"}
                     onPress={() => {
                       setShowPriceForm(false);
                       // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
@@ -1912,7 +1945,11 @@ export function OperationalLayer({
                     disabled={saving}
                   />
                   <Button
-                    title={saving ? "Guardando..." : "Crear Precio"}
+                    title={
+                      saving
+                        ? (O?.processing ?? "Guardando...")
+                        : (O?.createPrice ?? "Crear Precio")
+                    }
                     onPress={handleCreatePrice}
                     variant="primary"
                     size="md"
@@ -1922,7 +1959,7 @@ export function OperationalLayer({
               </Card>
             ) : (
               <Button
-                title="Agregar Precio"
+                title={O?.addPrice ?? "Agregar Precio"}
                 onPress={() => setShowPriceForm(true)}
                 variant="outlined"
                 size="md"
@@ -1950,8 +1987,8 @@ export function OperationalLayer({
               type="body2"
               style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
             >
-              Si deseas generar Paquetes, promociones o descuentos, puedes
-              realizarlos desde la pantalla de administración de Chat IA
+              {O?.infoPackages ??
+                "Si deseas generar Paquetes, promociones o descuentos, puedes realizarlos desde la pantalla de administración de Chat IA"}
             </ThemedText>
           </Card>
         )}
@@ -1963,8 +2000,8 @@ export function OperationalLayer({
               type="body2"
               style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
             >
-              Comienza creando tu primera oferta. Puede ser un producto,
-              servicio o paquete.
+              {O?.startWithFirstOffering ??
+                "Comienza creando tu primera oferta. Puede ser un producto, servicio o paquete."}
             </ThemedText>
           </Card>
         )}
@@ -1981,8 +2018,9 @@ export function OperationalLayer({
                 type="body2"
                 style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
               >
-                No se encontraron ofertas que coincidan con el filtro "
-                {searchFilter}".
+                {O?.noResultsFilter ??
+                  "No se encontraron ofertas que coincidan con el filtro"}{" "}
+                "{searchFilter}".
               </ThemedText>
             </Card>
           )}

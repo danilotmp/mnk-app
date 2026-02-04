@@ -13,10 +13,11 @@ import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import type { WhatsAppInstance } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
-import { DynamicIcon, PhoneInput } from "@/src/domains/shared/components";
+import { PhoneInput } from "@/src/domains/shared/components";
 import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
 import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
+import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { formatCode } from "@/src/infrastructure/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,6 +59,8 @@ export const WhatsAppConnectionLayer = forwardRef<
 >(({ onProgressUpdate, onDataChange }, ref) => {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
+  const { t } = useTranslation();
+  const L = t.wizard?.layers?.whatsappConnection;
   const alert = useAlert();
   const { company } = useCompany();
   const actionIconColor = isDark ? colors.primaryDark : colors.primary;
@@ -147,7 +150,8 @@ export const WhatsAppConnectionLayer = forwardRef<
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!formData.whatsapp.trim()) {
-      errors.whatsapp = "El número de WhatsApp es requerido";
+      errors.whatsapp =
+        L?.whatsappRequired ?? "El número de WhatsApp es requerido";
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -173,9 +177,13 @@ export const WhatsAppConnectionLayer = forwardRef<
       // Actualizar instancia seleccionada para mostrar nuevo QR
       setSelectedInstance(updatedInstance);
 
-      alert.showSuccess("Código QR regenerado correctamente");
+      alert.showSuccess(
+        L?.qrRegenerated ?? "Código QR regenerado correctamente",
+      );
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al regenerar el código QR";
+      const errorMessage =
+        error?.message ||
+        (L?.errorRegeneratingQR ?? "Error al regenerar el código QR");
       alert.showError(errorMessage);
     } finally {
       setGeneratingQR(false);
@@ -186,7 +194,9 @@ export const WhatsAppConnectionLayer = forwardRef<
     if (!company?.id) return;
 
     if (!formData.whatsapp.trim()) {
-      setFormErrors({ whatsapp: "El número de WhatsApp es requerido" });
+      setFormErrors({
+        whatsapp: L?.whatsappRequired ?? "El número de WhatsApp es requerido",
+      });
       return;
     }
 
@@ -199,7 +209,9 @@ export const WhatsAppConnectionLayer = forwardRef<
         await CommercialService.createWhatsAppInstance(whatsappValue);
 
       if (!createResponse.success) {
-        alert.showError("Error al crear la instancia de WhatsApp");
+        alert.showError(
+          L?.errorCreatingInstance ?? "Error al crear la instancia de WhatsApp",
+        );
         return;
       }
 
@@ -208,16 +220,18 @@ export const WhatsAppConnectionLayer = forwardRef<
         await CommercialService.getWhatsAppQRCode(whatsappValue);
 
       if (!qrResponse.qrcode) {
-        alert.showError("Error al obtener el código QR");
+        alert.showError(L?.errorGettingQR ?? "Error al obtener el código QR");
         return;
       }
 
       // Guardar el QR generado en el estado
       setGeneratedQR(qrResponse.qrcode);
 
-      alert.showSuccess("Código QR generado correctamente");
+      alert.showSuccess(L?.qrGenerated ?? "Código QR generado correctamente");
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al generar el código QR";
+      const errorMessage =
+        error?.message ||
+        (L?.errorGettingQR ?? "Error al generar el código QR");
       alert.showError(errorMessage);
     } finally {
       setGeneratingQR(false);
@@ -295,7 +309,10 @@ export const WhatsAppConnectionLayer = forwardRef<
         onProgressUpdate?.(hasActiveInstances ? 100 : 0);
         onDataChange?.(hasActiveInstances);
 
-        alert.showSuccess("Instancia de WhatsApp actualizada correctamente");
+        alert.showSuccess(
+          L?.instanceUpdated ??
+            "Instancia de WhatsApp actualizada correctamente",
+        );
         handleCloseModal();
       }
     } catch (error: any) {
@@ -330,10 +347,13 @@ export const WhatsAppConnectionLayer = forwardRef<
           onProgressUpdate?.(hasActiveInstances ? 100 : 0);
           onDataChange?.(hasActiveInstances);
 
-          alert.showSuccess("Instancia eliminada correctamente");
+          alert.showSuccess(
+            L?.instanceDeleted ?? "Instancia eliminada correctamente",
+          );
         } catch (error: any) {
           const errorMessage =
-            error?.message || "Error al eliminar la instancia";
+            error?.message ||
+            (L?.errorDeletingInstance ?? "Error al eliminar la instancia");
           alert.showError(errorMessage);
         }
       },
@@ -363,12 +383,14 @@ export const WhatsAppConnectionLayer = forwardRef<
 
       alert.showSuccess(
         updatedInstance.isActive
-          ? "Instancia activada correctamente"
-          : "Instancia desactivada correctamente",
+          ? (L?.instanceActivated ?? "Instancia activada correctamente")
+          : (L?.instanceDeactivated ?? "Instancia desactivada correctamente"),
       );
     } catch (error: any) {
       const errorMessage =
-        error?.message || "Error al cambiar el estado de la instancia";
+        error?.message ||
+        (L?.errorTogglingStatus ??
+          "Error al cambiar el estado de la instancia");
       alert.showError(errorMessage);
     }
   };
@@ -442,7 +464,11 @@ export const WhatsAppConnectionLayer = forwardRef<
             </Tooltip>
           )}
           <Tooltip
-            text={instance.isActive ? "Desactivar" : "Activar"}
+            text={
+              instance.isActive
+                ? (L?.deactivate ?? "Desactivar")
+                : (L?.activate ?? "Activar")
+            }
             position="left"
           >
             <TouchableOpacity
@@ -486,7 +512,10 @@ export const WhatsAppConnectionLayer = forwardRef<
             data={instances}
             columns={columns}
             loading={loading}
-            emptyMessage="No hay instancias de WhatsApp. Crea una para comenzar."
+            emptyMessage={
+              L?.emptyMessage ??
+              "No hay instancias de WhatsApp. Crea una para comenzar."
+            }
             keyExtractor={(instance) => instance.id}
             showPagination={false}
           />
@@ -498,24 +527,31 @@ export const WhatsAppConnectionLayer = forwardRef<
             visible={isModalVisible}
             onClose={handleCloseModal}
             title={
-              modalMode === "edit" ? "Editar Instancia" : "Crear Instancia"
+              modalMode === "edit"
+                ? (L?.editInstance ?? "Editar Instancia")
+                : (L?.createInstance ?? "Crear Instancia")
             }
             subtitle={
               modalMode === "edit"
-                ? "Modifica los datos de la instancia"
-                : "Completa los datos para crear una nueva instancia"
+                ? (L?.editSubtitle ?? "Modifica los datos de la instancia")
+                : (L?.createSubtitle ??
+                  "Completa los datos para crear una nueva instancia")
             }
             footer={
               <>
                 <Button
-                  title="Cancelar"
+                  title={L?.cancel ?? "Cancelar"}
                   onPress={handleCloseModal}
                   variant="outline"
                   size="md"
                   disabled={saving || generatingQR}
                 />
                 <Button
-                  title={saving ? "Guardando..." : "Guardar"}
+                  title={
+                    saving
+                      ? (L?.saving ?? "Guardando...")
+                      : (L?.save ?? "Guardar")
+                  }
                   onPress={handleSave}
                   variant="primary"
                   size="md"
@@ -538,7 +574,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                   type="body2"
                   style={[styles.label, { color: colors.text }]}
                 >
-                  Número de WhatsApp
+                  {L?.whatsappNumberLabel ?? "Número de WhatsApp"}
                 </ThemedText>
                 <PhoneInput
                   value={formData.whatsapp}
@@ -553,7 +589,9 @@ export const WhatsAppConnectionLayer = forwardRef<
                       });
                     }
                   }}
-                  placeholder="Ej: 593996294267 o MI_CODIGO"
+                  placeholder={
+                    L?.whatsappPlaceholder ?? "Ej: 593996294267 o MI_CODIGO"
+                  }
                   error={!!formErrors.whatsapp}
                   errorMessage={formErrors.whatsapp}
                   maxLength={15}
@@ -562,7 +600,8 @@ export const WhatsAppConnectionLayer = forwardRef<
                   type="caption"
                   style={{ color: colors.textSecondary, marginTop: 4 }}
                 >
-                  Número de WhatsApp o identificador IA
+                  {L?.whatsappCaption ??
+                    "Número de WhatsApp o identificador IA"}
                 </ThemedText>
 
                 {/* Switch de estado activo/inactivo - Solo en modo edición */}
@@ -573,15 +612,17 @@ export const WhatsAppConnectionLayer = forwardRef<
                       onValueChange={(value) => {
                         setFormData((prev) => ({ ...prev, isActive: value }));
                       }}
-                      label="Estado de la instancia"
+                      label={L?.instanceStatusLabel ?? "Estado de la instancia"}
                     />
                     <ThemedText
                       type="caption"
                       style={{ color: colors.textSecondary, marginTop: 4 }}
                     >
                       {formData.isActive
-                        ? "La instancia está activa y disponible para uso"
-                        : "La instancia está inactiva y no estará disponible"}
+                        ? (L?.instanceActiveCaption ??
+                          "La instancia está activa y disponible para uso")
+                        : (L?.instanceInactiveCaption ??
+                          "La instancia está inactiva y no estará disponible")}
                     </ThemedText>
                   </View>
                 )}
@@ -590,7 +631,11 @@ export const WhatsAppConnectionLayer = forwardRef<
                 {modalMode === "create" && !generatedQR && (
                   <View style={{ marginTop: 12 }}>
                     <Button
-                      title={generatingQR ? "Generando..." : "Generar"}
+                      title={
+                        generatingQR
+                          ? (L?.generating ?? "Generando...")
+                          : (L?.generateQR ?? "Generar")
+                      }
                       onPress={handleGenerateFromInput}
                       variant="outline"
                       size="md"
@@ -621,7 +666,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                       type="body2"
                       style={[styles.label, { color: colors.text }]}
                     >
-                      Código QR Generado
+                      {L?.qrGeneratedLabel ?? "Código QR Generado"}
                     </ThemedText>
                     <View
                       style={[
@@ -680,7 +725,11 @@ export const WhatsAppConnectionLayer = forwardRef<
                   )}
                   <View style={{ marginTop: 12 }}>
                     <Button
-                      title={generatingQR ? "Regenerando..." : "Regenerar QR"}
+                      title={
+                        generatingQR
+                          ? (L?.regenerating ?? "Regenerando...")
+                          : (L?.regenerateQR ?? "Regenerar QR")
+                      }
                       onPress={handleGenerateQR}
                       variant="outline"
                       size="md"
@@ -713,18 +762,25 @@ export const WhatsAppConnectionLayer = forwardRef<
           <SideModal
             visible={isModalVisible}
             onClose={handleCloseModal}
-            title="Código QR de WhatsApp"
-            subtitle="Escanea este código con WhatsApp para conectar"
+            title={L?.qrModalTitle ?? "Código QR de WhatsApp"}
+            subtitle={
+              L?.qrModalSubtitle ??
+              "Escanea este código con WhatsApp para conectar"
+            }
             footer={
               <>
                 <Button
-                  title="Cerrar"
+                  title={L?.close ?? "Cerrar"}
                   onPress={handleCloseModal}
                   variant="outline"
                   size="md"
                 />
                 <Button
-                  title={generatingQR ? "Regenerando..." : "Regenerar QR"}
+                  title={
+                    generatingQR
+                      ? (L?.regenerating ?? "Regenerando...")
+                      : (L?.regenerateQR ?? "Regenerar QR")
+                  }
                   onPress={handleGenerateQR}
                   variant="primary"
                   size="md"
@@ -756,10 +812,8 @@ export const WhatsAppConnectionLayer = forwardRef<
                   { color: colors.textSecondary, marginBottom: 16 },
                 ]}
               >
-                1. Abre WhatsApp en tu teléfono{"\n"}
-                2. Ve a Configuración → Dispositivos vinculados{"\n"}
-                3. Toca "Vincular un dispositivo"{"\n"}
-                4. Escanea este código QR
+                {L?.qrInstructions ??
+                  '1. Abre WhatsApp en tu teléfono\n2. Ve a Configuración → Dispositivos vinculados\n3. Toca "Vincular un dispositivo"\n4. Escanea este código QR'}
               </ThemedText>
 
               <View
