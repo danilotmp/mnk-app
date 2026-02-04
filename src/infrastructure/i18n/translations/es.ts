@@ -88,22 +88,48 @@ export const es: Translations = {
 
   pages: {
     home: {
-      title: "Inicio",
-      welcomeMessage: "¡Bienvenido!",
-      description:
-        "Descubre una experiencia única con nuestra aplicación diseñada especialmente para ti.",
-      features: "Características",
-      step1: "Paso 1: Pruébalo",
-      step1Description:
-        "Edita app/index.tsx para ver los cambios. Presiona {platform} para abrir las herramientas de desarrollador.",
-      step2: "Paso 2: Explora",
-      step2Description:
-        "Toca la pestaña Explorar para aprender más sobre lo que incluye esta aplicación.",
-      step3: "Paso 3: Comienza de nuevo",
-      step3Description:
-        "Cuando estés listo, ejecuta npm run reset-project para obtener un directorio app fresco.",
-      exploreMore: "Explorar más",
-      configuration: "Configuración",
+      mainTitle: "Soluciones empresariales con Inteligencia Artificial",
+      mainDescription:
+        "AIBox es una plataforma multi-empresa diseñada para crecer según tus necesidades. Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable.",
+      feature1Title: "WhatsApp con ChatIA",
+      feature1Description:
+        "Conecta tu WhatsApp con inteligencia artificial para automatizar conversaciones y mejorar la atención al cliente con respuestas inteligentes y contextuales.",
+      feature2Title: "Módulo de Facturación",
+      feature2Description:
+        "Sistema completo de facturación electrónica con gestión de clientes, productos y reportes financieros integrados.",
+      feature3Title: "Módulo ERP",
+      feature3Description:
+        "Planificación de recursos empresariales para gestionar inventarios, compras, ventas y procesos operativos de tu negocio.",
+      keyPoint1: "✓ Arquitectura multi-empresa",
+      keyPoint2: "✓ Escalable y modular",
+      keyPoint3: "✓ Integración con WhatsApp",
+      strengths: {
+        scale: {
+          title: "Escalable",
+          description:
+            "Crece con tu negocio. Desde una sucursal hasta múltiples empresas y ubicaciones.",
+        },
+        multi: {
+          title: "Multi-empresa",
+          description:
+            "Gestiona varias empresas y sucursales desde una sola plataforma.",
+        },
+        ai: {
+          title: "IA integrada",
+          description:
+            "Inteligencia artificial en ChatIA para respuestas automáticas e inteligentes.",
+        },
+        security: {
+          title: "Seguro",
+          description:
+            "Arquitectura segura, datos protegidos y control de acceso por roles.",
+        },
+        integrated: {
+          title: "Integrado",
+          description:
+            "WhatsApp, facturación y ERP conectados en un solo ecosistema.",
+        },
+      },
     },
     contact: {
       title: "Contáctanos",

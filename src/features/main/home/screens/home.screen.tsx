@@ -9,53 +9,37 @@ import { VideoPlayer } from "@/components/video-player";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { DynamicIcon } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
 import React, { useMemo } from "react";
 import { Platform, ScrollView, View } from "react-native";
 import { createHomeScreenStyles } from "./home.screen.styles";
 
 const videoSource = require("@/assets/videos/grammarly-189393-docs_module_animation-624x480-2X-WHITEBG_V1__2_.mp4");
 
-const strengths = [
-  {
-    id: "scale",
-    icon: "MaterialCommunityIcons:chart-line",
-    title: "Escalable",
-    description:
-      "Crece con tu negocio. Desde una sucursal hasta múltiples empresas y ubicaciones.",
-  },
-  {
-    id: "multi",
-    icon: "Entypo:network",
-    title: "Multi-empresa",
-    description:
-      "Gestiona varias empresas y sucursales desde una sola plataforma.",
-  },
-  {
-    id: "ai",
-    icon: "Ionicons:sparkles",
-    title: "IA integrada",
-    description:
-      "Inteligencia artificial en ChatIA para respuestas automáticas e inteligentes.",
-  },
-  {
-    id: "security",
-    icon: "Ionicons:shield-checkmark",
-    title: "Seguro",
-    description:
-      "Arquitectura segura, datos protegidos y control de acceso por roles.",
-  },
-  {
-    id: "integrated",
-    icon: "MaterialCommunityIcons:connection",
-    title: "Integrado",
-    description:
-      "WhatsApp, facturación y ERP conectados en un solo ecosistema.",
-  },
-];
+const STRENGTH_IDS = [
+  { id: "scale", icon: "MaterialCommunityIcons:chart-line" },
+  { id: "multi", icon: "Entypo:network" },
+  { id: "ai", icon: "Ionicons:sparkles" },
+  { id: "security", icon: "Ionicons:shield-checkmark" },
+  { id: "integrated", icon: "MaterialCommunityIcons:connection" },
+] as const;
 
 export function HomeScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, typography, pageLayout, borderRadius } = useTheme();
   const { isMobile, isDesktop } = useResponsive();
+
+  const home = t.pages?.home;
+  const strengths = useMemo(() => {
+    if (!home?.strengths) return [];
+    const s = home.strengths;
+    return STRENGTH_IDS.map(({ id, icon }) => ({
+      id,
+      icon,
+      title: s[id as keyof typeof s]?.title ?? "",
+      description: s[id as keyof typeof s]?.description ?? "",
+    }));
+  }, [home?.strengths]);
 
   const styles = useMemo(
     () =>
@@ -111,7 +95,8 @@ export function HomeScreen() {
                   { color: colors.pageTitleColor ?? colors.text },
                 ]}
               >
-                Soluciones empresariales con Inteligencia Artificial
+                {home?.mainTitle ??
+                  "Soluciones empresariales con Inteligencia Artificial"}
               </ThemedText>
             </View>
 
@@ -123,9 +108,8 @@ export function HomeScreen() {
                 { color: colors.textSecondary },
               ]}
             >
-              AIBox es una plataforma multi-empresa diseñada para crecer según
-              tus necesidades. Integra diferentes módulos y funcionalidades
-              empresariales en una sola solución escalable.
+              {home?.mainDescription ??
+                "AIBox es una plataforma multi-empresa diseñada para crecer según tus necesidades. Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable."}
             </ThemedText>
 
             {isMobile && (
@@ -155,7 +139,7 @@ export function HomeScreen() {
                     { color: colors.text, marginBottom: spacing.xs },
                   ]}
                 >
-                  WhatsApp con ChatIA
+                  {home?.feature1Title ?? "WhatsApp con ChatIA"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -165,9 +149,8 @@ export function HomeScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Conecta tu WhatsApp con inteligencia artificial para
-                  automatizar conversaciones y mejorar la atención al cliente
-                  con respuestas inteligentes y contextuales.
+                  {home?.feature1Description ??
+                    "Conecta tu WhatsApp con inteligencia artificial para automatizar conversaciones y mejorar la atención al cliente con respuestas inteligentes y contextuales."}
                 </ThemedText>
               </View>
 
@@ -179,7 +162,7 @@ export function HomeScreen() {
                     { color: colors.text, marginBottom: spacing.xs },
                   ]}
                 >
-                  Módulo de Facturación
+                  {home?.feature2Title ?? "Módulo de Facturación"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -189,8 +172,8 @@ export function HomeScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Sistema completo de facturación electrónica con gestión de
-                  clientes, productos y reportes financieros integrados.
+                  {home?.feature2Description ??
+                    "Sistema completo de facturación electrónica con gestión de clientes, productos y reportes financieros integrados."}
                 </ThemedText>
               </View>
 
@@ -202,7 +185,7 @@ export function HomeScreen() {
                     { color: colors.text, marginBottom: spacing.xs },
                   ]}
                 >
-                  Módulo ERP
+                  {home?.feature3Title ?? "Módulo ERP"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -212,9 +195,8 @@ export function HomeScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Planificación de recursos empresariales para gestionar
-                  inventarios, compras, ventas y procesos operativos de tu
-                  negocio.
+                  {home?.feature3Description ??
+                    "Planificación de recursos empresariales para gestionar inventarios, compras, ventas y procesos operativos de tu negocio."}
                 </ThemedText>
               </View>
             </View>
@@ -228,7 +210,7 @@ export function HomeScreen() {
                   { color: colors.textSecondary },
                 ]}
               >
-                ✓ Arquitectura multi-empresa
+                {home?.keyPoint1 ?? "✓ Arquitectura multi-empresa"}
               </ThemedText>
               <ThemedText
                 type="body2"
@@ -238,7 +220,7 @@ export function HomeScreen() {
                   { color: colors.textSecondary },
                 ]}
               >
-                ✓ Escalable y modular
+                {home?.keyPoint2 ?? "✓ Escalable y modular"}
               </ThemedText>
               <ThemedText
                 type="body2"
@@ -248,7 +230,7 @@ export function HomeScreen() {
                   { color: colors.textSecondary },
                 ]}
               >
-                ✓ Integración con WhatsApp
+                {home?.keyPoint3 ?? "✓ Integración con WhatsApp"}
               </ThemedText>
             </View>
           </View>

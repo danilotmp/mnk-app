@@ -87,18 +87,24 @@ export interface Translations {
 
   pages: {
     home: {
-      title: string;
-      welcomeMessage: string;
-      description: string;
-      features: string;
-      step1: string;
-      step1Description: string;
-      step2: string;
-      step2Description: string;
-      step3: string;
-      step3Description: string;
-      exploreMore: string;
-      configuration: string;
+      mainTitle: string;
+      mainDescription: string;
+      feature1Title: string;
+      feature1Description: string;
+      feature2Title: string;
+      feature2Description: string;
+      feature3Title: string;
+      feature3Description: string;
+      keyPoint1: string;
+      keyPoint2: string;
+      keyPoint3: string;
+      strengths: {
+        scale: { title: string; description: string };
+        multi: { title: string; description: string };
+        ai: { title: string; description: string };
+        security: { title: string; description: string };
+        integrated: { title: string; description: string };
+      };
     };
     contact: {
       title: string;

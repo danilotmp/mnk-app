@@ -88,22 +88,48 @@ export const en: Translations = {
 
   pages: {
     home: {
-      title: "Home",
-      welcomeMessage: "Welcome!",
-      description:
-        "Discover a unique experience with our application designed especially for you.",
-      features: "Features",
-      step1: "Step 1: Try it",
-      step1Description:
-        "Edit app/index.tsx to see the changes. Press {platform} to open developer tools.",
-      step2: "Step 2: Explore",
-      step2Description:
-        "Tap the Explore tab to learn more about what this app includes.",
-      step3: "Step 3: Start fresh",
-      step3Description:
-        "When you're ready, run npm run reset-project to get a fresh app directory.",
-      exploreMore: "Explore more",
-      configuration: "Settings",
+      mainTitle: "Business solutions with Artificial Intelligence",
+      mainDescription:
+        "AIBox is a multi-company platform designed to grow with your needs. It integrates different business modules and functionalities into a single scalable solution.",
+      feature1Title: "WhatsApp with ChatIA",
+      feature1Description:
+        "Connect your WhatsApp with artificial intelligence to automate conversations and improve customer service with smart, contextual responses.",
+      feature2Title: "Billing Module",
+      feature2Description:
+        "Complete electronic billing system with customer management, products and integrated financial reports.",
+      feature3Title: "ERP Module",
+      feature3Description:
+        "Enterprise resource planning to manage inventory, purchases, sales and operational processes for your business.",
+      keyPoint1: "✓ Multi-company architecture",
+      keyPoint2: "✓ Scalable and modular",
+      keyPoint3: "✓ WhatsApp integration",
+      strengths: {
+        scale: {
+          title: "Scalable",
+          description:
+            "Grow with your business. From one branch to multiple companies and locations.",
+        },
+        multi: {
+          title: "Multi-company",
+          description:
+            "Manage multiple companies and branches from a single platform.",
+        },
+        ai: {
+          title: "Integrated AI",
+          description:
+            "Artificial intelligence in ChatIA for automatic and smart responses.",
+        },
+        security: {
+          title: "Secure",
+          description:
+            "Secure architecture, protected data and role-based access control.",
+        },
+        integrated: {
+          title: "Integrated",
+          description:
+            "WhatsApp, billing and ERP connected in a single ecosystem.",
+        },
+      },
     },
     contact: {
       title: "Contact Us",
