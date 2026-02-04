@@ -106,6 +106,21 @@ export interface Translations {
         integrated: { title: string; description: string };
       };
     };
+    capabilities: {
+      title: string;
+      subtitle: string;
+      products: {
+        chatIa: { title: string; description: string };
+      };
+      badgeAvailable: string;
+      badgeComingSoon: string;
+      conceptFlexibilityTitle: string;
+      conceptFlexibilityDescription: string;
+      conceptCouplingTitle: string;
+      conceptCouplingDescription: string;
+      conceptProcessesTitle: string;
+      conceptProcessesDescription: string;
+    };
     contact: {
       title: string;
       subtitle: string;
@@ -345,6 +360,42 @@ export interface Translations {
         errorDeletingInstruction: string;
         sectionTitleMethods: string;
         sectionTitleAccounts: string;
+        selectMethodSubtitle: string;
+        startByAddingMethods: string;
+        continue: string;
+        skip: string;
+        instructionsTitle: string;
+        instructionsDescription: string;
+        addInstruction: string;
+        addAccount: string;
+        createAccount: string;
+        createInstruction: string;
+        saving: string;
+        cancel: string;
+        accept: string;
+        accountNameLabel: string;
+        providerLabel: string;
+        paymentLinkLabel: string;
+        paymentLinkPlaceholder: string;
+        accountHolderLabel: string;
+        accountTypeLabel: string;
+        accountNumberLabel: string;
+        identificationLabel: string;
+        accountNamePlaceholder: string;
+        accountNumberPlaceholder: string;
+        providerPlaceholder: string;
+        accountHolderPlaceholder: string;
+        identificationPlaceholder: string;
+        instructionTypeLabel: string;
+        instructionLabel: string;
+        instructionMessagePlaceholder: string;
+        associatedAccountLabel: string;
+        accountsDescription: string;
+        accountsOfPrefix: string;
+        methodCash: string;
+        methodCard: string;
+        methodOnline: string;
+        methodTransfer: string;
       };
       recommendations?: {
         loadingRecommendations: string;
@@ -365,6 +416,9 @@ export interface Translations {
         errorDeletingRecommendation: string;
         sectionTitle: string;
         generalRecommendation: string;
+        addRecommendation: string;
+        continue: string;
+        skip: string;
       };
       whatsappConnection?: {
         errorLoadingInstances: string;

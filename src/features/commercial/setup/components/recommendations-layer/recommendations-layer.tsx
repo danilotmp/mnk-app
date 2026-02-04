@@ -63,6 +63,7 @@ export function RecommendationsLayer({
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
+  const R = t.wizard?.layers?.recommendations;
   const alert = useAlert();
   const { company } = useCompany();
 
@@ -2504,7 +2505,7 @@ export function RecommendationsLayer({
           </Card>
         ) : (
           <Button
-            title="Agregar Recomendación"
+            title={R?.addRecommendation ?? "Agregar Recomendación"}
             onPress={() => setShowForm(true)}
             variant="primary"
             size="lg"
@@ -2540,7 +2541,7 @@ export function RecommendationsLayer({
         <View style={styles.continueButtonContainer}>
           <Button
             title={
-              recommendations.length > 0 || isCompleted ? "Continuar" : "Omitir"
+              recommendations.length > 0 || isCompleted ? (R?.continue ?? "Continuar") : (R?.skip ?? "Omitir")
             }
             onPress={async () => {
               const hasData = recommendations.length > 0;
@@ -2575,7 +2576,7 @@ export function RecommendationsLayer({
           </Button>
           {recommendations.length > 0 && onSkip && !isCompleted && (
             <Button
-              title="Omitir"
+              title={R?.skip ?? "Omitir"}
               onPress={() => {
                 onSkip?.();
               }}

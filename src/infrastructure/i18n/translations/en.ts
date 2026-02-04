@@ -156,6 +156,27 @@ export const en: Translations = {
       goBack: "Go back",
       contactUs: "Contact us",
     },
+    capabilities: {
+      title: "System Products",
+      subtitle:
+        "Activate and configure the features available for your business",
+      products: {
+        chatIa: {
+          title: "Chat IA",
+          description:
+            "Smart assistant that interacts with your customers via WhatsApp. Answers questions, provides information about your business, prices, payment methods and helps with personalized recommendations.",
+        },
+      },
+      badgeAvailable: "Available",
+      badgeComingSoon: "Coming soon",
+      conceptFlexibilityTitle: "Flexibility",
+      conceptFlexibilityDescription: "Adapts to your business without rigidity",
+      conceptCouplingTitle: "Integration",
+      conceptCouplingDescription: "Integrated modules that work together",
+      conceptProcessesTitle: "Processes",
+      conceptProcessesDescription:
+        "Clear, continuous processes that guide every interaction",
+    },
   },
 
   wizard: {
@@ -391,6 +412,45 @@ export const en: Translations = {
         errorDeletingInstruction: "Error deleting instruction",
         sectionTitleMethods: "Payment Methods",
         sectionTitleAccounts: "Accounts & Instructions",
+        selectMethodSubtitle:
+          "Select a payment method to configure accounts and instructions",
+        startByAddingMethods: "Start by adding the payment methods you accept",
+        continue: "Continue",
+        skip: "Skip",
+        instructionsTitle: "Payment Instructions",
+        instructionsDescription:
+          "Define messages that the AI will share with customers on how to make payments",
+        addInstruction: "Add Instruction",
+        addAccount: "Add Account",
+        createAccount: "Create Account",
+        createInstruction: "Create Instruction",
+        saving: "Saving...",
+        cancel: "Cancel",
+        accept: "Accept",
+        accountNameLabel: "Account name *",
+        providerLabel: "Provider/Bank *",
+        paymentLinkLabel: "Payment link *",
+        paymentLinkPlaceholder: "https://example.com/payment",
+        accountHolderLabel: "Account holder *",
+        accountTypeLabel: "Account type *",
+        accountNumberLabel: "Account number *",
+        identificationLabel: "Identification *",
+        accountNamePlaceholder: "E.g.: Main account",
+        accountNumberPlaceholder: "Account number",
+        providerPlaceholder: "E.g.: Bank name",
+        accountHolderPlaceholder: "Holder name",
+        identificationPlaceholder: "Holder identification",
+        instructionTypeLabel: "Instruction type",
+        instructionLabel: "Instruction *",
+        instructionMessagePlaceholder: "E.g.: We accept cash payments at reception",
+        associatedAccountLabel: "Associated account",
+        accountsDescription:
+          "Add the bank or payment accounts associated with this method",
+        accountsOfPrefix: "Accounts for",
+        methodCash: "Cash",
+        methodCard: "Card",
+        methodOnline: "Online payment",
+        methodTransfer: "Transfer",
       },
       recommendations: {
         loadingRecommendations: "Loading recommendations...",
@@ -411,6 +471,9 @@ export const en: Translations = {
         errorDeletingRecommendation: "Error deleting recommendation",
         sectionTitle: "Recommendations",
         generalRecommendation: "General Recommendation",
+        addRecommendation: "Add Recommendation",
+        continue: "Continue",
+        skip: "Skip",
       },
       whatsappConnection: {
         errorLoadingInstances: "Error loading WhatsApp instances",

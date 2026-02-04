@@ -593,7 +593,7 @@ export function InstitutionalLayer({
                 onValueChange={(val) =>
                   handleChange("allowsBranchPricing", val)
                 }
-                label="¿Tus ofertas tienen precios diferentes por sucursal?"
+                label={L?.branchPricingLabel ?? "¿Tus ofertas tienen precios diferentes por sucursal?"}
               />
             </View>
           </View>

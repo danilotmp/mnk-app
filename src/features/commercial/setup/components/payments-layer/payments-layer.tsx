@@ -69,6 +69,21 @@ export function PaymentsLayer({
   const alert = useAlert();
   const { company } = useCompany();
 
+  const getMethodLabel = (value: string) => {
+    switch (value) {
+      case "cash":
+        return P?.methodCash ?? "Efectivo";
+      case "card":
+        return P?.methodCard ?? "Tarjeta";
+      case "online":
+        return P?.methodOnline ?? "Pago Online";
+      case "transfer":
+        return P?.methodTransfer ?? "Transferencia";
+      default:
+        return value;
+    }
+  };
+
   const [loading, setLoading] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethodType, setSelectedMethodType] =
@@ -1113,7 +1128,7 @@ export function PaymentsLayer({
                       color: isSelected ? colors.primary : colors.text,
                     }}
                   >
-                    {option.label}
+                    {getMethodLabel(option.value)}
                   </ThemedText>
                 </TouchableOpacity>
               );
@@ -1133,12 +1148,12 @@ export function PaymentsLayer({
                   color={colors.primary}
                 />
                 <ThemedText type="h4" style={styles.sectionTitle}>
-                  Cuentas de{" "}
-                  {
-                    paymentMethodOptions.find(
-                      (opt) => opt.value === selectedMethodType,
-                    )?.label
-                  }
+                  {P?.accountsOfPrefix ?? "Cuentas de"}{" "}
+                  {selectedMethodType
+                    ? getMethodLabel(selectedMethodType)
+                    : paymentMethodOptions.find(
+                        (opt) => opt.value === selectedMethodType,
+                      )?.label ?? ""}
                 </ThemedText>
               </View>
               <View
@@ -1156,7 +1171,7 @@ export function PaymentsLayer({
                   type="body2"
                   style={{ color: colors.textSecondary, flex: 1 }}
                 >
-                  Agrega las cuentas bancarias o de pago asociadas a este método
+                  {P?.accountsDescription ?? "Agrega las cuentas bancarias o de pago asociadas a este método"}
                 </ThemedText>
               </View>
 
@@ -1207,7 +1222,7 @@ export function PaymentsLayer({
                                     styles.titleInput,
                                     { color: colors.text },
                                   ]}
-                                  placeholder="Nombre de la cuenta"
+                                  placeholder={P?.accountNamePlaceholder ?? "Nombre de la cuenta"}
                                   placeholderTextColor={colors.textSecondary}
                                   value={formData?.name || ""}
                                   onChangeText={(text) =>
@@ -1788,7 +1803,7 @@ export function PaymentsLayer({
                                       styles.input,
                                       { color: colors.text },
                                     ]}
-                                    placeholder="Ej: Banco Pichincha"
+                                    placeholder={P?.providerPlaceholder ?? "Ej: Banco Pichincha"}
                                     placeholderTextColor={colors.textSecondary}
                                     value={formData?.provider || ""}
                                     onChangeText={(text) =>
@@ -1840,7 +1855,7 @@ export function PaymentsLayer({
                                       { color: colors.text, marginTop: 16 },
                                     ]}
                                   >
-                                    Tipo de cuenta *
+                                    {P?.accountTypeLabel ?? "Tipo de cuenta *"}
                                   </ThemedText>
                                   <View style={styles.accountTypeSelector}>
                                     {accountTypeOptions.map((option, index) => {
@@ -1966,8 +1981,8 @@ export function PaymentsLayer({
                                   ]}
                                 >
                                   {selectedMethodType === "online"
-                                    ? "Link de Pago *"
-                                    : "Número de cuenta *"}
+                                    ? (P?.paymentLinkLabel ?? "Link de Pago *")
+                                    : (P?.accountNumberLabel ?? "Número de cuenta *")}
                                 </ThemedText>
                                 <InputWithFocus
                                   containerStyle={[
@@ -1987,8 +2002,8 @@ export function PaymentsLayer({
                                     ]}
                                     placeholder={
                                       selectedMethodType === "online"
-                                        ? "https://ejemplo.com/pago"
-                                        : "Número de cuenta"
+                                        ? (P?.paymentLinkPlaceholder ?? "https://ejemplo.com/pago")
+                                        : (P?.accountNumberPlaceholder ?? "Número de cuenta")
                                     }
                                     placeholderTextColor={colors.textSecondary}
                                     value={formData?.accountNumber || ""}
@@ -2091,7 +2106,7 @@ export function PaymentsLayer({
                                       { color: colors.text, marginTop: 16 },
                                     ]}
                                   >
-                                    Identificación *
+                                    {P?.identificationLabel ?? "Identificación *"}
                                   </ThemedText>
                                   <InputWithFocus
                                     containerStyle={[
@@ -2109,7 +2124,7 @@ export function PaymentsLayer({
                                         styles.input,
                                         { color: colors.text },
                                       ]}
-                                      placeholder="Identificación del titular"
+                                      placeholder={P?.identificationPlaceholder ?? "Identificación del titular"}
                                       placeholderTextColor={
                                         colors.textSecondary
                                       }
@@ -2153,7 +2168,7 @@ export function PaymentsLayer({
                                       { color: colors.text, marginTop: 16 },
                                     ]}
                                   >
-                                    Titular de la cuenta *
+                                    {P?.accountHolderLabel ?? "Titular de la cuenta *"}
                                   </ThemedText>
                                   <InputWithFocus
                                     containerStyle={[
@@ -2171,7 +2186,7 @@ export function PaymentsLayer({
                                         styles.input,
                                         { color: colors.text },
                                       ]}
-                                      placeholder="Nombre del titular"
+                                      placeholder={P?.accountHolderPlaceholder ?? "Nombre del titular"}
                                       placeholderTextColor={
                                         colors.textSecondary
                                       }
@@ -2227,7 +2242,7 @@ export function PaymentsLayer({
                                       { color: colors.text, marginTop: 16 },
                                     ]}
                                   >
-                                    Titular de la cuenta
+                                    {P?.accountHolderLabel ?? "Titular de la cuenta *"}
                                   </ThemedText>
                                   <InputWithFocus
                                     containerStyle={[
@@ -2245,7 +2260,7 @@ export function PaymentsLayer({
                                         styles.input,
                                         { color: colors.text },
                                       ]}
-                                      placeholder="Nombre del titular"
+                                      placeholder={P?.accountHolderPlaceholder ?? "Nombre del titular"}
                                       placeholderTextColor={
                                         colors.textSecondary
                                       }
@@ -2282,14 +2297,14 @@ export function PaymentsLayer({
                             <View style={styles.formActions}>
                               <View style={{ flex: 1 }} />
                               <Button
-                                title="Cancelar"
+                                title={P?.cancel ?? "Cancelar"}
                                 onPress={() => handleCancelAccount(account.id)}
                                 variant="outlined"
                                 size="md"
                                 disabled={saving}
                               />
                               <Button
-                                title="Aceptar"
+                                title={P?.accept ?? "Aceptar"}
                                 onPress={() => handleSaveAccount(account.id)}
                                 variant="primary"
                                 size="md"
@@ -2319,7 +2334,7 @@ export function PaymentsLayer({
                                           color: colors.text,
                                         }}
                                       >
-                                        Tipo de cuenta:{" "}
+                                        {(P?.accountTypeLabel ?? "Tipo de cuenta *").replace(/\s*\*$/, "")}:{" "}
                                       </ThemedText>
                                       {(account.additionalData as any)
                                         .accountType === "ahorros"
@@ -2348,7 +2363,7 @@ export function PaymentsLayer({
                                         color: colors.text,
                                       }}
                                     >
-                                      Titular:{" "}
+                                      {(P?.accountHolderLabel ?? "Titular de la cuenta *").replace(/\s*\*$/, "").replace(/ de la cuenta$/, "")}:{" "}
                                     </ThemedText>
                                     {account.accountHolder}
                                   </ThemedText>
@@ -2396,7 +2411,7 @@ export function PaymentsLayer({
                                           color: colors.text,
                                         }}
                                       >
-                                        Identificación:{" "}
+                                        {(P?.identificationLabel ?? "Identificación *").replace(/\s*\*$/, "")}:{" "}
                                       </ThemedText>
                                       {account.identification}
                                     </ThemedText>
@@ -3132,7 +3147,7 @@ export function PaymentsLayer({
                                                 styles.textArea,
                                                 { color: colors.text },
                                               ]}
-                                              placeholder="Describe el mensaje de instrucción..."
+                                              placeholder={P?.instructionMessagePlaceholder ?? "Describe el mensaje de instrucción..."}
                                               placeholderTextColor={
                                                 colors.textSecondary
                                               }
@@ -3169,7 +3184,7 @@ export function PaymentsLayer({
                                           <View style={styles.formActions}>
                                             <View style={{ flex: 1 }} />
                                             <Button
-                                              title="Cancelar"
+                                              title={P?.cancel ?? "Cancelar"}
                                               onPress={() =>
                                                 handleCancelInstruction(
                                                   instruction.id,
@@ -3180,7 +3195,7 @@ export function PaymentsLayer({
                                               disabled={saving}
                                             />
                                             <Button
-                                              title="Aceptar"
+                                              title={P?.accept ?? "Aceptar"}
                                               onPress={() =>
                                                 handleSaveInstruction(
                                                   instruction.id,
@@ -3313,7 +3328,7 @@ export function PaymentsLayer({
                         type="body2"
                         style={[styles.label, { color: colors.text }]}
                       >
-                        Nombre de la cuenta *
+                        {P?.accountNameLabel ?? "Nombre de la cuenta *"}
                       </ThemedText>
                       <InputWithFocus
                         containerStyle={[
@@ -3327,7 +3342,7 @@ export function PaymentsLayer({
                       >
                         <TextInput
                           style={[styles.input, { color: colors.text }]}
-                          placeholder="Ej: Cuenta Principal"
+                          placeholder={P?.accountNamePlaceholder ?? "Ej: Cuenta Principal"}
                           placeholderTextColor={colors.textSecondary}
                           value={accountForm.name}
                           onChangeText={(val) =>
@@ -3349,7 +3364,7 @@ export function PaymentsLayer({
                           { color: colors.text, marginTop: isMobile ? 16 : 0 },
                         ]}
                       >
-                        Proveedor/Banco *
+                        {P?.providerLabel ?? "Proveedor/Banco *"}
                       </ThemedText>
                       <InputWithFocus
                         containerStyle={[
@@ -3363,7 +3378,7 @@ export function PaymentsLayer({
                       >
                         <TextInput
                           style={[styles.input, { color: colors.text }]}
-                          placeholder="Ej: Banco Pichincha"
+                          placeholder={P?.providerPlaceholder ?? "Ej: Banco Pichincha"}
                           placeholderTextColor={colors.textSecondary}
                           value={accountForm.provider}
                           onChangeText={(val) =>
@@ -3398,7 +3413,7 @@ export function PaymentsLayer({
                             { color: colors.text, marginTop: 16 },
                           ]}
                         >
-                          Tipo de cuenta
+                          {P?.accountTypeLabel ?? "Tipo de cuenta *"}
                         </ThemedText>
                         <View style={styles.accountTypeSelector}>
                           {accountTypeOptions.map((option, index) => {
@@ -3499,8 +3514,8 @@ export function PaymentsLayer({
                         ]}
                       >
                         {selectedMethodType === "online"
-                          ? "Link de Pago *"
-                          : "Número de cuenta *"}
+                          ? (P?.paymentLinkLabel ?? "Link de Pago *")
+                          : (P?.accountNumberLabel ?? "Número de cuenta *")}
                       </ThemedText>
                       <InputWithFocus
                         containerStyle={[
@@ -3516,8 +3531,8 @@ export function PaymentsLayer({
                           style={[styles.input, { color: colors.text }]}
                           placeholder={
                             selectedMethodType === "online"
-                              ? "https://ejemplo.com/pago"
-                              : "Número de cuenta"
+                              ? (P?.paymentLinkPlaceholder ?? "https://ejemplo.com/pago")
+                              : (P?.accountNumberPlaceholder ?? "Número de cuenta")
                           }
                           placeholderTextColor={colors.textSecondary}
                           value={accountForm.accountNumber}
@@ -3579,7 +3594,7 @@ export function PaymentsLayer({
                             { color: colors.text, marginTop: 16 },
                           ]}
                         >
-                          Identificación *
+                          {P?.identificationLabel ?? "Identificación *"}
                         </ThemedText>
                         <InputWithFocus
                           containerStyle={[
@@ -3593,7 +3608,7 @@ export function PaymentsLayer({
                         >
                           <TextInput
                             style={[styles.input, { color: colors.text }]}
-                            placeholder="Identificación del titular"
+                            placeholder={P?.identificationPlaceholder ?? "Identificación del titular"}
                             placeholderTextColor={colors.textSecondary}
                             value={accountForm.identification}
                             onChangeText={(val) =>
@@ -3618,7 +3633,7 @@ export function PaymentsLayer({
                             { color: colors.text, marginTop: 16 },
                           ]}
                         >
-                          Titular de la cuenta *
+                          {P?.accountHolderLabel ?? "Titular de la cuenta *"}
                         </ThemedText>
                         <InputWithFocus
                           containerStyle={[
@@ -3632,7 +3647,7 @@ export function PaymentsLayer({
                         >
                           <TextInput
                             style={[styles.input, { color: colors.text }]}
-                            placeholder="Nombre del titular"
+                            placeholder={P?.accountHolderPlaceholder ?? "Nombre del titular"}
                             placeholderTextColor={colors.textSecondary}
                             value={accountForm.accountHolder}
                             onChangeText={(val) =>
@@ -3666,7 +3681,7 @@ export function PaymentsLayer({
                             { color: colors.text, marginTop: 16 },
                           ]}
                         >
-                          Titular de la cuenta *
+                          {P?.accountHolderLabel ?? "Titular de la cuenta *"}
                         </ThemedText>
                         <InputWithFocus
                           containerStyle={[
@@ -3680,7 +3695,7 @@ export function PaymentsLayer({
                         >
                           <TextInput
                             style={[styles.input, { color: colors.text }]}
-                            placeholder="Nombre del titular"
+                            placeholder={P?.accountHolderPlaceholder ?? "Nombre del titular"}
                             placeholderTextColor={colors.textSecondary}
                             value={accountForm.accountHolder}
                             onChangeText={(val) =>
@@ -3697,7 +3712,7 @@ export function PaymentsLayer({
 
                   <View style={styles.formActions}>
                     <Button
-                      title="Cancelar"
+                      title={P?.cancel ?? "Cancelar"}
                       onPress={() => {
                         setShowAccountForm(false);
                         setAccountForm({
@@ -3714,7 +3729,7 @@ export function PaymentsLayer({
                       disabled={saving}
                     />
                     <Button
-                      title={saving ? "Guardando..." : "Crear Cuenta"}
+                      title={saving ? (P?.saving ?? "Guardando...") : (P?.createAccount ?? "Crear Cuenta")}
                       onPress={handleCreateAccount}
                       variant="primary"
                       size="md"
@@ -3724,7 +3739,7 @@ export function PaymentsLayer({
                 </Card>
               ) : (
                 <Button
-                  title="Agregar Cuenta"
+                  title={P?.addAccount ?? "Agregar Cuenta"}
                   onPress={() => setShowAccountForm(true)}
                   variant="outlined"
                   size="md"
@@ -3751,7 +3766,7 @@ export function PaymentsLayer({
                 color={colors.primary}
               />
               <ThemedText type="h4" style={styles.sectionTitle}>
-                Instrucciones de Pago
+                {P?.instructionsTitle ?? "Instrucciones de Pago"}
               </ThemedText>
             </View>
             <View
@@ -3769,8 +3784,7 @@ export function PaymentsLayer({
                 type="body2"
                 style={{ color: colors.textSecondary, flex: 1 }}
               >
-                Define mensajes que la IA compartirá con los clientes sobre cómo
-                realizar pagos
+                {P?.instructionsDescription ?? "Define mensajes que la IA compartirá con los clientes sobre cómo realizar pagos"}
               </ThemedText>
             </View>
 
@@ -4459,7 +4473,7 @@ export function PaymentsLayer({
                           >
                             <TextInput
                               style={[styles.textArea, { color: colors.text }]}
-                              placeholder="Describe el mensaje de instrucción..."
+                              placeholder={P?.instructionMessagePlaceholder ?? "Describe el mensaje de instrucción..."}
                               placeholderTextColor={colors.textSecondary}
                               value={formData?.message || ""}
                               onChangeText={(text) =>
@@ -4487,7 +4501,7 @@ export function PaymentsLayer({
                           <View style={styles.formActions}>
                             <View style={{ flex: 1 }} />
                             <Button
-                              title="Cancelar"
+                              title={P?.cancel ?? "Cancelar"}
                               onPress={() =>
                                 handleCancelInstruction(instruction.id)
                               }
@@ -4496,7 +4510,7 @@ export function PaymentsLayer({
                               disabled={saving}
                             />
                             <Button
-                              title="Aceptar"
+                              title={P?.accept ?? "Aceptar"}
                               onPress={() =>
                                 handleSaveInstruction(instruction.id)
                               }
@@ -4527,7 +4541,7 @@ export function PaymentsLayer({
                   type="body2"
                   style={[styles.label, { color: colors.text }]}
                 >
-                  Tipo de instrucción
+                  {P?.instructionTypeLabel ?? "Tipo de instrucción"}
                 </ThemedText>
                 <View style={styles.radioGroupContainer}>
                   <View
@@ -4639,7 +4653,7 @@ export function PaymentsLayer({
                         { color: colors.text, marginTop: 16, marginBottom: 0 },
                       ]}
                     >
-                      Cuenta asociada
+                      {P?.associatedAccountLabel ?? "Cuenta asociada"}
                     </ThemedText>
                     <ThemedText
                       type="caption"
@@ -4749,7 +4763,7 @@ export function PaymentsLayer({
                   type="body2"
                   style={[styles.label, { color: colors.text, marginTop: 16 }]}
                 >
-                  Instrucción *
+                  {P?.instructionLabel ?? "Instrucción *"}
                 </ThemedText>
                 <InputWithFocus
                   containerStyle={[
@@ -4763,7 +4777,7 @@ export function PaymentsLayer({
                 >
                   <TextInput
                     style={[styles.textArea, { color: colors.text }]}
-                    placeholder="Ej: Aceptamos pagos en efectivo en recepción"
+                    placeholder={P?.instructionMessagePlaceholder ?? "Ej: Aceptamos pagos en efectivo en recepción"}
                     placeholderTextColor={colors.textSecondary}
                     value={instructionForm.message}
                     onChangeText={(val) =>
@@ -4776,7 +4790,7 @@ export function PaymentsLayer({
 
                 <View style={styles.formActions}>
                   <Button
-                    title="Cancelar"
+                    title={P?.cancel ?? "Cancelar"}
                     onPress={() => {
                       setShowInstructionForm(false);
                       setInstructionForm({
@@ -4791,7 +4805,7 @@ export function PaymentsLayer({
                     disabled={saving}
                   />
                   <Button
-                    title={saving ? "Guardando..." : "Crear Instrucción"}
+                    title={saving ? (P?.saving ?? "Guardando...") : (P?.createInstruction ?? "Crear Instrucción")}
                     onPress={handleCreateInstruction}
                     variant="primary"
                     size="md"
@@ -4801,7 +4815,7 @@ export function PaymentsLayer({
               </Card>
             ) : (
               <Button
-                title="Agregar Instrucción"
+                title={P?.addInstruction ?? "Agregar Instrucción"}
                 onPress={() => setShowInstructionForm(true)}
                 variant="outlined"
                 size="md"
@@ -4835,8 +4849,7 @@ export function PaymentsLayer({
               type="body2"
               style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
             >
-              Selecciona un método de pago para configurar cuentas e
-              instrucciones
+              {P?.selectMethodSubtitle ?? "Selecciona un método de pago para configurar cuentas e instrucciones"}
             </ThemedText>
           </Card>
         )}
@@ -4854,7 +4867,7 @@ export function PaymentsLayer({
               type="body2"
               style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
             >
-              Comienza agregando los métodos de pago que aceptas
+              {P?.startByAddingMethods ?? "Comienza agregando los métodos de pago que aceptas"}
             </ThemedText>
           </Card>
         )}
@@ -4863,7 +4876,7 @@ export function PaymentsLayer({
         <View style={styles.continueButtonContainer}>
           <Button
             title={
-              paymentMethods.length > 0 || isCompleted ? "Continuar" : "Omitir"
+              paymentMethods.length > 0 || isCompleted ? (P?.continue ?? "Continuar") : (P?.skip ?? "Omitir")
             }
             onPress={async () => {
               const hasData = paymentMethods.length > 0;
@@ -4898,7 +4911,7 @@ export function PaymentsLayer({
           </Button>
           {paymentMethods.length > 0 && onSkip && !isCompleted && (
             <Button
-              title="Omitir"
+              title={P?.skip ?? "Omitir"}
               onPress={() => {
                 onSkip?.();
               }}

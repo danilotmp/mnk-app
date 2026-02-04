@@ -17,12 +17,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
 import {
-  Animated,
-  Image,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  View,
+    Animated,
+    Image,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { createCapabilitiesScreenStyles } from "./capabilities.screen.styles";
 
@@ -59,27 +59,24 @@ export function CapabilitiesScreen() {
   const alert = useAlert();
   const { company, user, branch } = useCompany();
 
-  // Productos/Funcionalidades disponibles del sistema
-  const products: ProductCard[] = [
-    {
-      id: "chat-ia",
-      title: "Chat IA",
-      description:
-        "Asistente inteligente que interactúa con tus clientes por WhatsApp. Responde preguntas, brinda información sobre tu negocio, precios, métodos de pago y ayuda con recomendaciones personalizadas.",
-      icon: "chatbubbles-outline",
-      enabled: true,
-      image:
-        "https://img.freepik.com/vector-premium/inteligencia-artificial-telefono-inteligente-bot-chat-linea-movil-robot-asistente-correspondencia_178863-2199.jpg?w=360",
-    },
-    // Futuros productos se agregarán aquí
-    // {
-    //   id: 'inventory',
-    //   title: 'Inventario',
-    //   description: 'Gestiona productos, stock y proveedores',
-    //   icon: 'cube-outline',
-    //   enabled: false,
-    // },
-  ];
+  const cap = t.pages?.capabilities;
+  // Productos/Funcionalidades disponibles del sistema (textos desde i18n)
+  const products: ProductCard[] = useMemo(() => {
+    const chatIa = cap?.products?.chatIa;
+    return [
+      {
+        id: "chat-ia",
+        title: chatIa?.title ?? "Chat IA",
+        description:
+          chatIa?.description ??
+          "Asistente inteligente que interactúa con tus clientes por WhatsApp. Responde preguntas, brinda información sobre tu negocio, precios, métodos de pago y ayuda con recomendaciones personalizadas.",
+        icon: "chatbubbles-outline",
+        enabled: true,
+        image:
+          "https://img.freepik.com/vector-premium/inteligencia-artificial-telefono-inteligente-bot-chat-linea-movil-robot-asistente-correspondencia_178863-2199.jpg?w=360",
+      },
+    ];
+  }, [cap?.products?.chatIa]);
 
   /**
    * Detecta si la empresa actual es "Perfil de Invitado" o una empresa real
@@ -294,7 +291,9 @@ export function CapabilitiesScreen() {
                   <DynamicIcon
                     name="AntDesign:product"
                     size={
-                      isMobile ? pageLayout.iconTitleMobile : pageLayout.iconTitle
+                      isMobile
+                        ? pageLayout.iconTitleMobile
+                        : pageLayout.iconTitle
                     }
                     color={colors.primary}
                     style={styles.headerIcon}
@@ -304,12 +303,12 @@ export function CapabilitiesScreen() {
                   type="h2"
                   style={[isMobile ? styles.titleMobile : styles.title]}
                 >
-                  Productos del Sistema
+                  {cap?.title ?? "Productos del Sistema"}
                 </ThemedText>
               </View>
               <ThemedText type="body1" style={styles.subtitle}>
-                Activa y configura las funcionalidades disponibles para tu
-                negocio
+                {cap?.subtitle ??
+                  "Activa y configura las funcionalidades disponibles para tu negocio"}
               </ThemedText>
             </View>
           </View>
@@ -443,7 +442,7 @@ export function CapabilitiesScreen() {
                               fontWeight: "600",
                             }}
                           >
-                            Próximamente
+                            {cap?.badgeComingSoon ?? "Próximamente"}
                           </ThemedText>
                         </View>
                       )}
@@ -520,7 +519,7 @@ export function CapabilitiesScreen() {
                   type="h5"
                   style={[styles.conceptTitle, { color: colors.text }]}
                 >
-                  Flexibilidad
+                  {cap?.conceptFlexibilityTitle ?? "Flexibilidad"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -530,7 +529,8 @@ export function CapabilitiesScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Se adapta a tu negocio sin rigideces
+                  {cap?.conceptFlexibilityDescription ??
+                    "Se adapta a tu negocio sin rigideces"}
                 </ThemedText>
               </View>
 
@@ -573,7 +573,7 @@ export function CapabilitiesScreen() {
                   type="h5"
                   style={[styles.conceptTitle, { color: colors.text }]}
                 >
-                  Acoplamiento
+                  {cap?.conceptCouplingTitle ?? "Acoplamiento"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -583,7 +583,8 @@ export function CapabilitiesScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Módulos integrados que trabajan en conjunto
+                  {cap?.conceptCouplingDescription ??
+                    "Módulos integrados que trabajan en conjunto"}
                 </ThemedText>
               </View>
 
@@ -648,7 +649,7 @@ export function CapabilitiesScreen() {
                   type="h5"
                   style={[styles.conceptTitle, { color: colors.text }]}
                 >
-                  Procesos
+                  {cap?.conceptProcessesTitle ?? "Procesos"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -658,7 +659,8 @@ export function CapabilitiesScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Procesos claros y continuos que guían cada interacción
+                  {cap?.conceptProcessesDescription ??
+                    "Procesos claros y continuos que guían cada interacción"}
                 </ThemedText>
               </View>
             </View>
