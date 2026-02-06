@@ -37,7 +37,10 @@ import React, {
 import { ActivityIndicator, ScrollView, TextInput, View } from "react-native";
 import { UsersService } from "../../services";
 import { UserUpdatePayload } from "../../types/domain";
-import { CompanyConfigCarousel } from "../company-config-carousel/company-config-carousel";
+import {
+    CompanyConfigCarousel,
+    CompanyConfigCarouselRef,
+} from "../company-config-carousel/company-config-carousel";
 import { createUserFormStyles } from "../user-create-form/user-create-form.styles";
 import { UserEditFormProps, UserFormData } from "./user-edit-form.types";
 
@@ -85,6 +88,9 @@ export function UserEditForm({
   const statusRef = useRef<number>(1); // Ref para mantener el status actualizado
   const formDataRef = useRef(formData); // Ref para mantener el formData actualizado y evitar stale closure
   const selectedCompanyIdsRef = useRef<string[]>([]); // Ref para mantener selectedCompanyIds actualizado
+  const companyConfigCarouselRef = useRef<CompanyConfigCarouselRef | null>(
+    null,
+  );
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]); // Empresas seleccionadas
   const [branchesByCompany, setBranchesByCompany] = useState<
     Record<string, any[]>
@@ -671,6 +677,17 @@ export function UserEditForm({
    */
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
+      const ids = selectedCompanyIdsRef.current;
+      const firstInvalidIndex = ids.findIndex((companyId) => {
+        const branches = companyBranchesRef.current[companyId] || [];
+        const roles = companyRolesRef.current[companyId] || [];
+        return branches.length === 0 || roles.length === 0;
+      });
+      if (firstInvalidIndex >= 0) {
+        setTimeout(() => {
+          companyConfigCarouselRef.current?.scrollToIndex(firstInvalidIndex);
+        }, 150);
+      }
       return;
     }
 
@@ -987,6 +1004,7 @@ export function UserEditForm({
         {/* Carrusel de configuración por empresa */}
         {selectedCompanyIds.length > 0 && (
           <CompanyConfigCarousel
+            ref={companyConfigCarouselRef}
             selectedCompanyIds={selectedCompanyIds}
             companies={companies}
             branchesByCompany={branchesByCompany}

@@ -8,7 +8,12 @@ import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useRef, useState } from "react";
+import React, {
+    forwardRef,
+    useImperativeHandle,
+    useRef,
+    useState,
+} from "react";
 import {
     LayoutChangeEvent,
     NativeScrollEvent,
@@ -18,6 +23,10 @@ import {
     View,
 } from "react-native";
 import { createCompanyConfigCarouselStyles } from "./company-config-carousel.styles";
+
+export interface CompanyConfigCarouselRef {
+  scrollToIndex: (index: number) => void;
+}
 
 interface CompanyConfigCarouselProps {
   selectedCompanyIds: string[];
@@ -34,26 +43,54 @@ interface CompanyConfigCarouselProps {
   t?: any;
 }
 
-export function CompanyConfigCarousel({
-  selectedCompanyIds,
-  companies,
-  branchesByCompany,
-  rolesByCompany,
-  companyBranches,
-  companyRoles,
-  onBranchSelect,
-  onRoleSelect,
-  branchErrors,
-  roleErrors,
-  isLoading = false,
-  t,
-}: CompanyConfigCarouselProps) {
+export const CompanyConfigCarousel = forwardRef<
+  CompanyConfigCarouselRef,
+  CompanyConfigCarouselProps
+>(function CompanyConfigCarousel(
+  {
+    selectedCompanyIds,
+    companies,
+    branchesByCompany,
+    rolesByCompany,
+    companyBranches,
+    companyRoles,
+    onBranchSelect,
+    onRoleSelect,
+    branchErrors,
+    roleErrors,
+    isLoading = false,
+    t,
+  },
+  ref,
+) {
   const { colors } = useTheme();
   const styles = createCompanyConfigCarouselStyles();
   const scrollViewRef = useRef<ScrollView>(null);
+  const pendingScrollIndexRef = useRef<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const cardWidth = containerWidth;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToIndex(index: number) {
+        const len = selectedCompanyIds.length;
+        if (len === 0) return;
+        const safeIndex = Math.max(0, Math.min(index, len - 1));
+        if (scrollViewRef.current && cardWidth > 0) {
+          scrollViewRef.current.scrollTo({
+            x: safeIndex * cardWidth,
+            animated: true,
+          });
+          setCurrentIndex(safeIndex);
+        } else {
+          pendingScrollIndexRef.current = safeIndex;
+        }
+      },
+    }),
+    [selectedCompanyIds.length, cardWidth],
+  );
 
   // Si no hay empresas seleccionadas, no mostrar nada
   if (selectedCompanyIds.length === 0) {
@@ -92,6 +129,15 @@ export function CompanyConfigCarousel({
     const { width } = event.nativeEvent.layout;
     if (width > 0 && width !== containerWidth) {
       setContainerWidth(width);
+      const pending = pendingScrollIndexRef.current;
+      if (pending !== null && scrollViewRef.current) {
+        pendingScrollIndexRef.current = null;
+        scrollViewRef.current.scrollTo({
+          x: pending * width,
+          animated: true,
+        });
+        setCurrentIndex(pending);
+      }
     }
   };
 
@@ -311,4 +357,4 @@ export function CompanyConfigCarousel({
       )}
     </View>
   );
-}
+});
