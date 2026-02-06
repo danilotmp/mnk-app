@@ -15,6 +15,7 @@ import { VerifyEmailForm } from "@/src/features/auth/components/verify-email-for
 import { SUCCESS_STATUS_CODE } from "@/src/infrastructure/api/constants";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { extractErrorDetail } from "@/src/infrastructure/messages/error-utils";
 import { authService } from "@/src/infrastructure/services/auth.service";
 import { mapApiUserToMultiCompanyUser } from "@/src/infrastructure/services/user-mapper.service";
 import { useSession } from "@/src/infrastructure/session";
@@ -188,22 +189,14 @@ export function LoginModal({
       } else {
         const errorMessage =
           response.result?.description || t.auth.invalidCredentials;
-        alert.showError(
-          errorMessage,
-          false,
-          undefined,
-          (response as any)?.result?.details || "",
-        );
+        const errorDetail = extractErrorDetail(response) ?? "";
+        alert.showError(errorMessage, false, undefined, errorDetail);
         setErrors({ general: errorMessage });
       }
     } catch (error: any) {
       const errorMessage = error?.message || t.api.loginFailed;
-      alert.showError(
-        errorMessage,
-        false,
-        undefined,
-        error?.details || error?.result?.details || "",
-      );
+      const errorDetail = extractErrorDetail(error) ?? "";
+      alert.showError(errorMessage, false, undefined, errorDetail);
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);

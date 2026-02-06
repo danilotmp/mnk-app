@@ -146,33 +146,40 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
         <View style={styles.content}>
           {toast.title && (
             <ThemedText style={[styles.title, { color: toastColors.text }]}>
-              {toast.title}
+              {typeof toast.title === "string" ? toast.title : String(toast.title)}
             </ThemedText>
           )}
           <View style={styles.messageContainer}>
-            {toast.message.includes("\n") || toast.message.includes("\r\n") ? (
-              // Si hay saltos de línea, dividir y mostrar cada línea
-              toast.message
-                .split(/\r?\n/) // Manejar tanto \n como \r\n
-                .map((line, index) => (
+            {(() => {
+              let msg: string;
+              if (typeof toast.message === "string") {
+                msg = toast.message;
+              } else if (typeof toast.message === "object" && toast.message !== null) {
+                msg = JSON.stringify(toast.message);
+              } else {
+                msg = String(toast.message ?? "");
+              }
+              const hasNewlines = msg.includes("\n") || msg.includes("\r\n");
+              if (hasNewlines) {
+                return msg.split(/\r?\n/).map((line, index) => (
                   <ThemedText
-                    key={`line-${index}`}
+                    key={`line-${index}-${line.slice(0, 20)}`}
                     style={[
                       styles.message,
                       { color: toastColors.text },
-                      index > 0 && styles.messageLine, // Agregar margen superior solo a partir de la segunda línea
+                      index > 0 && styles.messageLine,
                     ]}
                   >
-                    {line || " "}{" "}
-                    {/* Si la línea está vacía, mostrar un espacio para mantener el salto */}
+                    {line || " "}
                   </ThemedText>
-                ))
-            ) : (
-              // Si no hay saltos de línea, mostrar el mensaje completo
-              <ThemedText style={[styles.message, { color: toastColors.text }]}>
-                {toast.message}
-              </ThemedText>
-            )}
+                ));
+              }
+              return (
+                <ThemedText style={[styles.message, { color: toastColors.text }]}>
+                  {msg}
+                </ThemedText>
+              );
+            })()}
           </View>
 
           {/* Detalle error */}
@@ -203,7 +210,9 @@ function ToastItem({ toast, onDismiss, index }: ToastItemProps) {
               <ThemedText
                 style={[styles.detailText, { color: toastColors.text }]}
               >
-                {toast.detail}
+                {typeof toast.detail === "string"
+                  ? toast.detail
+                  : String(toast.detail ?? "")}
               </ThemedText>
             </View>
           )}
