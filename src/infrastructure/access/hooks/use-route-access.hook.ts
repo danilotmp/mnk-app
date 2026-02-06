@@ -1,14 +1,20 @@
-import { useIsFocused } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useIsFocused } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ApiError } from '@/src/infrastructure/api';
-import { HTTP_STATUS } from '@/src/infrastructure/api/constants';
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
+import { ApiError } from "@/src/infrastructure/api";
+import { HTTP_STATUS } from "@/src/infrastructure/api/constants";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
 
-import { AccessService } from '../access.service';
+import { AccessService } from "../access.service";
 
-const PUBLIC_ROUTES = new Set<string>(['/', '/main/contact', '/capabilities']);
+const PUBLIC_ROUTES = new Set<string>(["/", "/main/contact", "/capabilities"]);
+
+/** Mensajes ante los cuales no se muestra toast ni alert (solo redirección si aplica). */
+const SILENT_ACCESS_MESSAGES = new Set([
+  "No tienes permisos suficientes para acceder a este recurso",
+  "Token de autenticación no disponible",
+]);
 
 interface UseRouteAccessOptions {
   redirectTo?: string;
@@ -24,12 +30,15 @@ interface UseRouteAccessResult {
   isScreenFocused: boolean;
 }
 
-export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptions): UseRouteAccessResult {
+export function useRouteAccessGuard(
+  route: string,
+  options?: UseRouteAccessOptions,
+): UseRouteAccessResult {
   const router = useRouter();
   const alert = useAlert();
   const isFocused = useIsFocused();
 
-  const redirectTo = options?.redirectTo ?? '/';
+  const redirectTo = options?.redirectTo ?? "/";
   const autoRedirect = options?.autoRedirect ?? true;
 
   const [loading, setLoading] = useState(true);
@@ -49,31 +58,40 @@ export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptio
     routerRef.current = router;
   }, [router]);
 
-  const handleDenied = useCallback(() => {
-    if (hasHandledRef.current) {
-      return;
-    }
+  const handleDenied = useCallback(
+    (serverMessage?: string) => {
+      if (hasHandledRef.current) {
+        return;
+      }
 
-    hasHandledRef.current = true;
-    alertRef.current.showError('errors.forbidden');
+      hasHandledRef.current = true;
+      const trimmed = serverMessage?.trim();
+      const isSilentMessage = trimmed
+        ? SILENT_ACCESS_MESSAGES.has(trimmed)
+        : false;
+      if (!isSilentMessage) {
+        alertRef.current.showError(trimmed ? trimmed : "errors.forbidden");
+      }
 
-    if (autoRedirect) {
-      routerRef.current.replace(redirectTo as any);
-    }
-  }, [autoRedirect, redirectTo]);
+      if (autoRedirect) {
+        routerRef.current.replace(redirectTo as any);
+      }
+    },
+    [autoRedirect, redirectTo],
+  );
 
   const evaluateResponse = useCallback(
-    (isAllowed: boolean) => {
+    (isAllowed: boolean, serverMessage?: string) => {
       setAllowed(isAllowed);
 
       if (isAllowed) {
         hasHandledRef.current = false;
         setError(null);
       } else {
-        handleDenied();
+        handleDenied(serverMessage);
       }
     },
-    [handleDenied]
+    [handleDenied],
   );
 
   const checkAccess = useCallback(
@@ -85,7 +103,7 @@ export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptio
         return;
       }
 
-      const normalizedRoute = targetRoute.replace(/\/+$/, '') || '/';
+      const normalizedRoute = targetRoute.replace(/\/+$/, "") || "/";
       if (PUBLIC_ROUTES.has(normalizedRoute)) {
         setAllowed(true);
         setLoading(false);
@@ -96,34 +114,34 @@ export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptio
       setLoading(true);
 
       try {
-        const isAllowed = await AccessService.checkRouteAccess(normalizedRoute);
-        evaluateResponse(isAllowed);
+        const { allowed: isAllowed, message: serverMessage } =
+          await AccessService.checkRouteAccess(normalizedRoute);
+        evaluateResponse(isAllowed, serverMessage);
       } catch (err: unknown) {
         const apiError = err instanceof ApiError ? err : null;
 
         if (apiError) {
           if (apiError.statusCode === HTTP_STATUS.FORBIDDEN) {
-            evaluateResponse(false);
+            evaluateResponse(false, apiError.message);
           } else if (apiError.statusCode === HTTP_STATUS.UNAUTHORIZED) {
             hasHandledRef.current = true;
-            alertRef.current.showError('errors.unauthorized');
             routerRef.current.replace(redirectTo as any);
           } else {
             setAllowed(false);
-            setError(err instanceof Error ? err : new Error('Unknown error'));
-            alertRef.current.showError('errors.generic');
+            setError(err instanceof Error ? err : new Error("Unknown error"));
+            alertRef.current.showError("errors.generic");
           }
         } else {
           setAllowed(false);
-          setError(err instanceof Error ? err : new Error('Unknown error'));
-          alertRef.current.showError('errors.generic');
+          setError(err instanceof Error ? err : new Error("Unknown error"));
+          alertRef.current.showError("errors.generic");
         }
       } finally {
         setLoading(false);
         setInitialized(true);
       }
     },
-    [evaluateResponse, redirectTo]
+    [evaluateResponse, redirectTo],
   );
 
   useEffect(() => {
@@ -151,14 +169,13 @@ export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptio
 
       if (apiError) {
         if (apiError.statusCode === HTTP_STATUS.FORBIDDEN) {
-          evaluateResponse(false);
+          evaluateResponse(false, apiError.message);
           setInitialized(true);
           return true;
         }
 
         if (apiError.statusCode === HTTP_STATUS.UNAUTHORIZED) {
           hasHandledRef.current = true;
-          alertRef.current.showError('errors.unauthorized');
           routerRef.current.replace(redirectTo as any);
           setInitialized(true);
           return true;
@@ -167,7 +184,7 @@ export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptio
 
       return false;
     },
-    [evaluateResponse, redirectTo]
+    [evaluateResponse, redirectTo],
   );
 
   const refresh = useCallback(async () => {
@@ -184,8 +201,6 @@ export function useRouteAccessGuard(route: string, options?: UseRouteAccessOptio
       handleApiError,
       isScreenFocused: isFocused,
     }),
-    [allowed, error, handleApiError, isFocused, loading, refresh]
+    [allowed, error, handleApiError, isFocused, loading, refresh],
   );
 }
-
-
