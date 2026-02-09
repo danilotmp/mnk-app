@@ -1,11 +1,11 @@
+import { useTheme } from '@/hooks/use-theme';
 import { StyleSheet, Text, type TextProps } from 'react-native';
-
-import { useThemeColor } from '@/hooks/use-theme-color';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body1' | 'body2' | 'caption' | 'button';
+  variant?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'error' | 'info';
 };
 
 export function ThemedText({
@@ -13,9 +13,54 @@ export function ThemedText({
   lightColor,
   darkColor,
   type = 'default',
+  variant,
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const { colors, typography, isDark } = useTheme();
+  
+  // Determinar el color basado en la variante
+  const getColor = () => {
+    if (lightColor || darkColor) {
+      return lightColor || darkColor;
+    }
+    
+    // Si el tipo es 'subtitle', siempre usar el color de subtítulo (gris)
+    if (type === 'subtitle') {
+      return colors.subtitle || colors.textSecondary;
+    }
+    
+    if (variant) {
+      switch (variant) {
+        case 'primary':
+          return colors.primary;
+        case 'secondary':
+          // Para subtítulos, usar color gris en lugar de verde
+          // Si el tipo es body2 o caption (comúnmente usados para subtítulos), usar textSecondary
+          if (type === 'body2' || type === 'caption') {
+            return colors.textSecondary;
+          }
+          return colors.secondary;
+        case 'accent':
+          return colors.accent;
+        case 'success':
+          return colors.success;
+        case 'warning':
+          return colors.warning;
+        case 'error':
+          return colors.error;
+        case 'info':
+          return colors.info;
+        default:
+          // En modo claro dentro de cards, usar rgb(30, 41, 59)
+          return colors.text;
+      }
+    }
+    
+    // Color por defecto
+    return colors.text;
+  };
+
+  const color = getColor();
 
   return (
     <Text
@@ -26,6 +71,16 @@ export function ThemedText({
         type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
         type === 'subtitle' ? styles.subtitle : undefined,
         type === 'link' ? styles.link : undefined,
+        type === 'h1' ? typography.h1 : undefined,
+        type === 'h2' ? typography.h2 : undefined,
+        type === 'h3' ? typography.h3 : undefined,
+        type === 'h4' ? typography.h4 : undefined,
+        type === 'h5' ? typography.h5 : undefined,
+        type === 'h6' ? typography.h6 : undefined,
+        type === 'body1' ? typography.body1 : undefined,
+        type === 'body2' ? typography.body2 : undefined,
+        type === 'caption' ? typography.caption : undefined,
+        type === 'button' ? typography.button : undefined,
         style,
       ]}
       {...rest}
@@ -55,6 +110,6 @@ const styles = StyleSheet.create({
   link: {
     lineHeight: 30,
     fontSize: 16,
-    color: '#0a7ea4',
+    textDecorationLine: 'underline',
   },
 });

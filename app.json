@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "mnk-app",
-    "slug": "mnk-app",
+    "name": "AIBox",
+    "slug": "aibox-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mnkapp",
+    "scheme": "aibox",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -23,7 +23,8 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router",
@@ -41,8 +42,18 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+      // "reactCompiler": true  // Deshabilitado temporalmente - causa lentitud en compilación
+    },
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000/api",
+      "apiTimeout": 30000,
+      "accessTokenDuration": 900000,
+      "refreshTokenDuration": 604800000,
+      "tokenRefreshThreshold": 300000,
+      "userDataCacheDuration": 1800000,
+      "configCacheDuration": 86400000,
+      "catalogCacheDuration": 3600000
     }
   }
 }

@@ -1,0 +1,277 @@
+import { Platform, StyleSheet } from "react-native";
+
+/** Tema para estilos del menú: mismos tokens que light/dark (background, surface, border, overlay, shadows) */
+type MenuTheme = {
+  colors: {
+    overlay: string;
+    background?: string;
+    surface?: string;
+    border?: string;
+    borderLight?: string;
+    primary?: string;
+  };
+  shadows?: {
+    sm?: {
+      shadowColor: string;
+      shadowOffset?: { width: number; height: number };
+      shadowOpacity?: number;
+      shadowRadius?: number;
+      elevation?: number;
+    };
+    md?: {
+      shadowColor: string;
+      shadowOffset?: { width: number; height: number };
+      shadowOpacity?: number;
+      shadowRadius?: number;
+      elevation?: number;
+    };
+  };
+};
+
+export const createHorizontalMenuStyles = (
+  theme: MenuTheme,
+  activeItemColor: string,
+) => {
+  const overlayBg = theme.colors.overlay;
+  const bg = theme.colors.background;
+  const surface = theme.colors.surface;
+  const border = theme.colors.border;
+  const borderLight = theme.colors.borderLight ?? theme.colors.border;
+  const shadowColor =
+    theme.shadows?.md?.shadowColor ?? theme.shadows?.sm?.shadowColor;
+  const shadowMd = theme.shadows?.md;
+  return StyleSheet.create({
+    desktopContainer: {
+      position: "relative",
+      flex: 1,
+    },
+    overlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 999,
+    },
+    hamburgerButton: {
+      padding: 8,
+      borderRadius: 8,
+      marginRight: 8,
+    },
+    hamburgerIcon: { fontSize: 24 },
+    mobileMenuOverlay: {
+      flex: 1,
+      backgroundColor: overlayBg,
+      flexDirection: "row",
+    },
+    mobileMenuContainer: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: bg,
+      ...Platform.select({
+        web: {
+          boxShadow: `2px 0px 8px ${shadowColor}40`,
+        },
+        default: {
+          shadowColor,
+          shadowOffset: { width: 2, height: 0 },
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          elevation: 5,
+        },
+      }),
+    },
+    mobileMenuHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      backgroundColor: bg,
+      gap: 12,
+    },
+    mobileHeaderIcon: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    mobileHeaderAvatarContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      minWidth: 0,
+      ...Platform.select({
+        web: {
+          outline: "none",
+          outlineStyle: "none",
+          outlineWidth: 0,
+          outlineColor: "transparent",
+          borderWidth: 0,
+          borderColor: "transparent",
+        },
+      }),
+    },
+    mobileAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      flexShrink: 0,
+    },
+    mobileAvatarText: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    mobileMenuContent: { flex: 1 },
+    mobileMenuFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 20,
+      paddingHorizontal: 16,
+      borderTopWidth: 1,
+      borderTopColor: border,
+      backgroundColor: bg,
+      gap: 8,
+    },
+    mobileMenuFooterLogo: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+    },
+    mobileMenuFooterText: {
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    mobileMenuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: borderLight,
+      borderLeftWidth: 3,
+      borderLeftColor: "transparent",
+    },
+    submenuContainer: { paddingLeft: 16 },
+    submenuItem: { padding: 12, paddingLeft: 24 },
+    submenuText: { opacity: 0.8 },
+    mobileColumn: { marginBottom: 16 },
+    mobileColumnTitle: { marginBottom: 8, marginTop: 8, opacity: 0.9 },
+    horizontalMenuScroll: { flexGrow: 0 },
+    horizontalMenuContent: {
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+      gap: 4,
+      alignItems: "center",
+    },
+    horizontalMenuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      gap: 4,
+      borderBottomWidth: 2,
+      borderBottomColor: "transparent",
+    },
+    activeMenuItem: { borderBottomColor: activeItemColor },
+    menuItemText: { fontSize: 14 },
+    dropdownIndicator: { fontSize: 10, opacity: 0.6, marginLeft: 4 },
+    megaMenu: {
+      position: "absolute",
+      top: "100%",
+      left: 0,
+      width: "100%",
+      maxWidth: 1200,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 8,
+      backgroundColor: surface,
+      ...Platform.select({
+        web: {
+          boxShadow: shadowMd
+            ? `0px ${shadowMd.shadowOffset?.height ?? 4}px ${shadowMd.shadowRadius ?? 12}px ${shadowColor}4d`
+            : `0px 4px 12px ${shadowColor}4d`,
+        },
+        default: {
+          shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+          elevation: 8,
+        },
+      }),
+      zIndex: 10000,
+      padding: 24,
+    },
+    megaMenuContent: {
+      flexDirection: "row",
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
+      gap: 48,
+    },
+    megaMenuColumn: { flex: 1, minWidth: 200 },
+    megaMenuColumnTitle: {
+      marginBottom: 8,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    megaMenuColumnLine: {
+      height: 1,
+      width: "100%",
+      marginBottom: 12,
+      backgroundColor: borderLight,
+    },
+    megaMenuItem: {
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: borderLight,
+    },
+    activeMegaMenuItem: {
+      borderLeftWidth: 3,
+      borderLeftColor: activeItemColor,
+      paddingLeft: 7,
+    },
+    megaMenuItemText: { opacity: 0.8 },
+    desktopSubmenu: {
+      position: "absolute",
+      top: "100%",
+      left: 0,
+      minWidth: 280,
+      maxWidth: 320,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 12,
+      backgroundColor: surface,
+      ...Platform.select({
+        web: {
+          boxShadow: shadowMd
+            ? `0px ${shadowMd.shadowOffset?.height ?? 4}px ${shadowMd.shadowRadius ?? 8}px ${shadowColor}1a`
+            : `0px 4px 8px ${shadowColor}1a`,
+        },
+        default: {
+          shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 5,
+        },
+      }),
+      zIndex: 10000,
+      padding: 12,
+    },
+    desktopSubmenuItem: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: borderLight,
+    },
+    activeSubmenuItem: {
+      borderLeftWidth: 3,
+      borderLeftColor: activeItemColor,
+      paddingLeft: 13,
+    },
+    submenuItemTitle: { marginBottom: 4 },
+    submenuItemDescription: { opacity: 0.7, lineHeight: 16 },
+  });
+};
