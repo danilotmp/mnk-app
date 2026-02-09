@@ -133,7 +133,6 @@ export function Tooltip({
             type="caption"
             style={[styles.tooltipText, { color: colors.text }]}
             numberOfLines={2}
-            ellipsizeMode="tail"
           >
             {text}
           </ThemedText>

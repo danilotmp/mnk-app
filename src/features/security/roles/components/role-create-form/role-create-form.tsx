@@ -41,7 +41,7 @@ export function RoleCreateForm({
   const { colors, spacing, modalLayout, borderRadius } = useTheme();
   const { t } = useTranslation();
   const alert = useAlert();
-  const { user } = useCompany();
+  const { user, company: currentCompany } = useCompany();
   const { hasPermission } = usePermissions();
   const isSuperAdmin = (() => {
     if (hasPermission("superadmin.view")) return true;
@@ -123,6 +123,22 @@ export function RoleCreateForm({
     loadCompanies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Cargar empresas solo una vez, sin depender de currentCompany
+
+  // Preseleccionar la empresa actual del selector cuando hay empresas cargadas y ninguna seleccionada
+  useEffect(() => {
+    if (
+      loadingOptions ||
+      companies.length === 0 ||
+      (formData.companyId && formData.companyId.trim() !== "") ||
+      !currentCompany?.id
+    ) {
+      return;
+    }
+    const isCurrentInList = companies.some((c) => c.id === currentCompany.id);
+    if (!isCurrentInList) return;
+    companyIdRef.current = currentCompany.id;
+    setFormData((prev) => ({ ...prev, companyId: currentCompany.id }));
+  }, [loadingOptions, companies, formData.companyId, currentCompany?.id]);
 
   const resetError = useCallback(
     (field: string) => {

@@ -651,6 +651,7 @@ export interface Translations {
       searchPlaceholder: string;
       loadError: string;
       preview: string;
+      showOptions: string;
       selectCompany: string;
       selectRole: string;
       systemPermissions: string;

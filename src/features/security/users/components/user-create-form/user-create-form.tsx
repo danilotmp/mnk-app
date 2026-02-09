@@ -16,6 +16,7 @@ import {
     PhoneInput,
     StatusSelector,
 } from "@/src/domains/shared/components";
+import { useCompany } from "@/src/domains/shared/hooks";
 import { BranchesService } from "@/src/features/security/branches";
 import { RolesService } from "@/src/features/security/roles";
 import { useTranslation } from "@/src/infrastructure/i18n";
@@ -94,12 +95,16 @@ export function UserCreateForm({
     formDataRef.current = formData;
   }, [formData]);
 
+  const { company: currentCompany } = useCompany();
   const { companies, loading: companiesLoading } = useCompanyOptions();
+  const hasPreselectedCompanyRef = useRef(false);
 
   // Sincronizar el ref cuando cambia selectedCompanyIds
   useEffect(() => {
     selectedCompanyIdsRef.current = selectedCompanyIds;
   }, [selectedCompanyIds]);
+
+  // Preselección de empresa se hace en efecto después de handleCompanySelect
 
   /**
    * Validar formulario
@@ -298,6 +303,29 @@ export function UserCreateForm({
     },
     [branchesByCompany, rolesByCompany, errors],
   );
+
+  // Preseleccionar la empresa actual del selector cuando hay empresas cargadas y ninguna seleccionada
+  useEffect(() => {
+    if (
+      hasPreselectedCompanyRef.current ||
+      companiesLoading ||
+      companies.length === 0 ||
+      selectedCompanyIds.length > 0 ||
+      !currentCompany?.id
+    ) {
+      return;
+    }
+    const isCurrentInList = companies.some((c) => c.id === currentCompany.id);
+    if (!isCurrentInList) return;
+    hasPreselectedCompanyRef.current = true;
+    handleCompanySelect([currentCompany.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo preselección inicial
+  }, [
+    companies.length,
+    companiesLoading,
+    currentCompany?.id,
+    selectedCompanyIds.length,
+  ]);
 
   // Manejar selección de sucursales para una empresa específica
   const handleBranchSelect = useCallback(

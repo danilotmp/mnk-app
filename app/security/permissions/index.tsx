@@ -26,6 +26,7 @@ import type {
     SecurityRole,
 } from "@/src/domains/security/types";
 import { DynamicIcon } from "@/src/domains/shared/components";
+import { useCompany, usePermissions } from "@/src/domains/shared/hooks";
 import { createPermissionsListScreenStyles } from "@/src/features/security/permissions/screens/permissions-list.screen.styles";
 import type {
     PermissionOperation,
@@ -134,8 +135,36 @@ export default function PermissionsListPage() {
   >([]);
   const customPermissionsRef = useRef<SecurityPermission[]>([]); // Ref para comparar cambios // Permisos personalizados (isSystem = false)
 
-  // Obtener empresas
+  const { company: currentCompany, user } = useCompany();
+  const { hasPermission } = usePermissions();
   const { companies } = useCompanyOptions();
+  const hasPreselectedCompanyRef = useRef(false);
+
+  const isSuperAdmin = (() => {
+    if (hasPermission("superadmin.view")) return true;
+    const roles = user?.roles ?? [];
+    return roles.some(
+      (r) =>
+        /super.?admin|SUPER.?ADMIN|SuperAdministrator/i.test(r.code || "") ||
+        /super\s*administrador/i.test(r.name || ""),
+    );
+  })();
+
+  // Preseleccionar la empresa actual del selector cuando no viene en la URL
+  useEffect(() => {
+    if (
+      hasPreselectedCompanyRef.current ||
+      searchParams.companyId != null ||
+      !currentCompany?.id ||
+      companies.length === 0
+    ) {
+      return;
+    }
+    const isCurrentInList = companies.some((c) => c.id === currentCompany.id);
+    if (!isCurrentInList) return;
+    hasPreselectedCompanyRef.current = true;
+    setSelectedCompanyId(currentCompany.id);
+  }, [searchParams.companyId, currentCompany?.id, companies]);
 
   /**
    * Cargar permisos personalizados (isSystem = false) para los filtros
@@ -833,23 +862,25 @@ export default function PermissionsListPage() {
                 "Gestiona los permisos del sistema"}
             </ThemedText>
           </View>
-          <Button
-            title={
-              isMobile
-                ? ""
-                : t.security?.permissions?.createOrEdit || "Permisos"
-            }
-            onPress={handleOpenCarousel}
-            variant="primary"
-            size="md"
-          >
-            <Ionicons
-              name="add"
-              size={pageLayout.iconSubtitle}
-              color="#FFFFFF"
-              style={!isMobile ? { marginRight: spacing.sm } : undefined}
-            />
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              title={
+                isMobile
+                  ? ""
+                  : t.security?.permissions?.createOrEdit || "Permisos"
+              }
+              onPress={handleOpenCarousel}
+              variant="primary"
+              size="md"
+            >
+              <Ionicons
+                name="add"
+                size={pageLayout.iconSubtitle}
+                color="#FFFFFF"
+                style={!isMobile ? { marginRight: spacing.sm } : undefined}
+              />
+            </Button>
+          )}
         </View>
 
         {/* Selectores dependientes: Empresa y Rol */}
@@ -901,6 +932,7 @@ export default function PermissionsListPage() {
           onShowDefaultOptionsChange={setShowDefaultOptions}
           showAll={showAll}
           onShowAllChange={setShowAll}
+          showSuperAdminControls={isSuperAdmin}
           customPermissions={customPermissions}
           onClearFilters={() => {
             setSearchValue("");

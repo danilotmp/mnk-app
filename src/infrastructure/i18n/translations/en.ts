@@ -442,7 +442,8 @@ export const en: Translations = {
         identificationPlaceholder: "Holder identification",
         instructionTypeLabel: "Instruction type",
         instructionLabel: "Instruction *",
-        instructionMessagePlaceholder: "E.g.: We accept cash payments at reception",
+        instructionMessagePlaceholder:
+          "E.g.: We accept cash payments at reception",
         associatedAccountLabel: "Associated account",
         accountsDescription:
           "Add the bank or payment accounts associated with this method",
@@ -712,7 +713,8 @@ export const en: Translations = {
       filterPlaceholder: "Filter by name, code, module or action...",
       searchPlaceholder: "Search by name, code, module or action...",
       loadError: "Error loading permissions",
-      preview: "Preview",
+      preview: "Show preview",
+      showOptions: "Show more options",
       selectCompany: "Select a company to begin",
       selectRole: "Select a role to view and manage its permissions",
       systemPermissions: "System Permissions",

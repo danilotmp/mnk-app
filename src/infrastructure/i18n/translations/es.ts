@@ -417,7 +417,8 @@ export const es: Translations = {
         sectionTitleAccounts: "Cuentas e Instrucciones",
         selectMethodSubtitle:
           "Selecciona un método de pago para configurar cuentas e instrucciones",
-        startByAddingMethods: "Comienza agregando los métodos de pago que aceptas",
+        startByAddingMethods:
+          "Comienza agregando los métodos de pago que aceptas",
         continue: "Continuar",
         skip: "Omitir",
         instructionsTitle: "Instrucciones de Pago",
@@ -445,7 +446,8 @@ export const es: Translations = {
         identificationPlaceholder: "Identificación del titular",
         instructionTypeLabel: "Tipo de instrucción",
         instructionLabel: "Instrucción *",
-        instructionMessagePlaceholder: "Ej: Aceptamos pagos en efectivo en recepción",
+        instructionMessagePlaceholder:
+          "Ej: Aceptamos pagos en efectivo en recepción",
         associatedAccountLabel: "Cuenta asociada",
         accountsDescription:
           "Agrega las cuentas bancarias o de pago asociadas a este método",
@@ -718,7 +720,8 @@ export const es: Translations = {
       filterPlaceholder: "Filtrar por nombre, código, módulo o acción...",
       searchPlaceholder: "Buscar por nombre, código, módulo o acción...",
       loadError: "Error al cargar permisos",
-      preview: "Vista previa",
+      preview: "Mostrar vista previa",
+      showOptions: "Mostrar más opciones",
       selectCompany: "Selecciona una empresa para comenzar",
       selectRole: "Selecciona un rol para ver y gestionar sus permisos",
       systemPermissions: "Permisos del sistema",

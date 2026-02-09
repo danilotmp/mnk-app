@@ -2,8 +2,8 @@
  * Tipos para el componente PermissionsFlowFilters
  */
 
-import { MenuItem } from '@/src/infrastructure/menu/types';
-import { SecurityPermission } from '@/src/domains/security/types';
+import { SecurityPermission } from "@/src/domains/security/types";
+import { MenuItem } from "@/src/infrastructure/menu/types";
 
 export interface PermissionsFlowFiltersProps {
   menuItems: MenuItem[];
@@ -17,6 +17,8 @@ export interface PermissionsFlowFiltersProps {
   onShowDefaultOptionsChange: (show: boolean) => void;
   showAll?: boolean;
   onShowAllChange?: (show: boolean) => void;
+  /** Si false, se oculta el botón del ojo (Mostrar más opciones / Vista previa). Solo super admin. */
+  showSuperAdminControls?: boolean;
   customPermissions?: SecurityPermission[]; // Permisos personalizados (isSystem = false)
   onClearFilters: () => void;
 }

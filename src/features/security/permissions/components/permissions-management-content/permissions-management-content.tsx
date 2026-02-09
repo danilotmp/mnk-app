@@ -18,6 +18,7 @@ import type {
     SecurityPermission,
     SecurityRole,
 } from "@/src/domains/security/types";
+import { useCompany, usePermissions } from "@/src/domains/shared/hooks";
 import type { PermissionOperation } from "@/src/features/security/roles";
 import { RolesService } from "@/src/features/security/roles";
 import { useTranslation } from "@/src/infrastructure/i18n";
@@ -76,7 +77,20 @@ export function PermissionsManagementContent({
   const [showAll, setShowAll] = useState(true);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
+  const { company: currentCompany, user } = useCompany();
+  const { hasPermission } = usePermissions();
   const { companies } = useCompanyOptions();
+  const hasPreselectedCompanyRef = React.useRef(false);
+
+  const isSuperAdmin = (() => {
+    if (hasPermission("superadmin.view")) return true;
+    const roles = user?.roles ?? [];
+    return roles.some(
+      (r) =>
+        /super.?admin|SUPER.?ADMIN|SuperAdministrator/i.test(r.code || "") ||
+        /super\s*administrador/i.test(r.name || ""),
+    );
+  })();
 
   /**
    * Validar si un string es un UUID válido
@@ -320,6 +334,22 @@ export function PermissionsManagementContent({
     }
   }, [initialCompanyId]);
 
+  // Preseleccionar la empresa actual del selector cuando no hay initialCompanyId
+  useEffect(() => {
+    if (
+      hasPreselectedCompanyRef.current ||
+      initialCompanyId != null ||
+      !currentCompany?.id ||
+      companies.length === 0
+    ) {
+      return;
+    }
+    const isCurrentInList = companies.some((c) => c.id === currentCompany.id);
+    if (!isCurrentInList) return;
+    hasPreselectedCompanyRef.current = true;
+    setSelectedCompanyId(currentCompany.id);
+  }, [initialCompanyId, currentCompany?.id, companies]);
+
   const handleCompanyChange = (companyId: string | undefined) => {
     setSelectedCompanyId(companyId);
     setSelectedRoleId(undefined);
@@ -500,6 +530,7 @@ export function PermissionsManagementContent({
         onShowDefaultOptionsChange={setShowDefaultOptions}
         showAll={showAll}
         onShowAllChange={setShowAll}
+        showSuperAdminControls={isSuperAdmin}
         onClearFilters={() => {
           setSearchValue("");
           setSelectedModule("");
