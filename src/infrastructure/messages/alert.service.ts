@@ -77,6 +77,11 @@ export const alertService = new AlertService();
 const SILENT_ERROR_MESSAGES = new Set([
   "Credenciales inválidas",
   "Invalid credentials",
+  "Error de conexión",
+  "Failed to fetch",
+  "Connection error",
+  "No internet connection",
+  "No hay conexión a internet",
 ]);
 
 /**
