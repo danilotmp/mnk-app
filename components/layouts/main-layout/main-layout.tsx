@@ -77,10 +77,14 @@ export function MainLayout({
         await import("@/src/domains/shared/services/user-session.service");
       const userSessionService = UserSessionService.getInstance();
       const storedCompanyId = await userSessionService.getCurrentCompany();
-      setCurrentCompanyId(storedCompanyId || user?.companyIdDefault || null);
+      // Si el usuario tiene una sola empresa, usar esa siempre (evita mostrar selector)
+      const singleCompanyId = companies.length === 1 ? companies[0].id : null;
+      setCurrentCompanyId(
+        storedCompanyId || user?.companyIdDefault || singleCompanyId || null,
+      );
     };
     loadCurrentCompanyId();
-  }, [user?.companyIdDefault]);
+  }, [user?.companyIdDefault, companies]);
 
   const displayTitle =
     companies.find((c) => c.id === currentCompanyId)?.name ||
@@ -92,7 +96,8 @@ export function MainLayout({
       ""
     : "Artificial Intelligence Box";
   const availableCompanies = companies.filter((c) => c.id !== currentCompanyId);
-  const canSwitchCompany = availableCompanies.length > 0;
+  // No mostrar selector de empresa si el usuario tiene acceso a una sola empresa
+  const showCompanySelector = companies.length > 1;
 
   const handleCompanySelect = async (companyInfo: (typeof companies)[0]) => {
     if (companyInfo.id === currentCompanyId) {
@@ -346,9 +351,9 @@ export function MainLayout({
     }
   };
 
-  // Renderizar dropdown de empresas (reutilizable)
+  // Renderizar dropdown de empresas (reutilizable); solo si hay más de una empresa
   const renderCompanyDropdown = (isDesktop: boolean = false) => {
-    if (!showCompanyDropdown || !canSwitchCompany || titleWidth === 0) {
+    if (!showCompanyDropdown || !showCompanySelector || titleWidth === 0) {
       return null;
     }
 
@@ -535,9 +540,9 @@ export function MainLayout({
                     subtitle={displaySubtitle}
                     inline={true}
                     logoSize="small"
-                    titleClickable={canSwitchCompany}
+                    titleClickable={showCompanySelector}
                     onTitlePress={() =>
-                      canSwitchCompany &&
+                      showCompanySelector &&
                       setShowCompanyDropdown(!showCompanyDropdown)
                     }
                     onTitleLayout={(width) => setTitleWidth(width)}
@@ -586,9 +591,9 @@ export function MainLayout({
                         subtitle={displaySubtitle}
                         inline={true}
                         logoSize="small"
-                        titleClickable={canSwitchCompany}
+                        titleClickable={showCompanySelector}
                         onTitlePress={() =>
-                          canSwitchCompany &&
+                          showCompanySelector &&
                           setShowCompanyDropdown(!showCompanyDropdown)
                         }
                         onTitleLayout={(width) => setTitleWidth(width)}
@@ -637,9 +642,9 @@ export function MainLayout({
                         <Header
                           title={displayTitle}
                           inline={true}
-                          titleClickable={canSwitchCompany}
+                          titleClickable={showCompanySelector}
                           onTitlePress={() =>
-                            canSwitchCompany &&
+                            showCompanySelector &&
                             setShowCompanyDropdown(!showCompanyDropdown)
                           }
                           onTitleLayout={(width) => setTitleWidth(width)}
