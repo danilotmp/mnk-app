@@ -12,32 +12,6 @@ export function createPermissionFlowStyles(colors: any, isMobile: boolean) {
       padding: isMobile ? 16 : 20,
       paddingBottom: isMobile ? 24 : 32,
     },
-    roleHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: isMobile ? 20 : 24,
-      paddingBottom: isMobile ? 16 : 20,
-      borderBottomWidth: 2,
-      borderBottomColor: colors.border,
-    },
-    roleTitle: {
-      marginLeft: 12,
-      fontWeight: "600",
-    },
-    companySelector: {
-      marginLeft: 12,
-      alignSelf: "flex-start", // Solo ocupa el ancho del contenido
-    },
-    companySelectorContent: {
-      gap: isMobile ? 8 : 12,
-    },
-    companyOption: {
-      paddingHorizontal: isMobile ? 12 : 16,
-      paddingVertical: isMobile ? 8 : 10,
-      borderRadius: 8,
-      borderWidth: 1,
-      marginRight: isMobile ? 8 : 12,
-    },
     permissionsContainer: {
       gap: isMobile ? 8 : 2,
     },

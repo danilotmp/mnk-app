@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
 import { StatusSelector } from "@/src/domains/shared/components";
 import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
-import { useMultiCompany } from "@/src/domains/shared/hooks";
+import { useMultiCompany, usePermissions } from "@/src/domains/shared/hooks";
 import { CompaniesService } from "@/src/features/security/companies";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
@@ -42,7 +42,17 @@ export function RoleEditForm({
   const { colors, spacing, modalLayout, borderRadius } = useTheme();
   const { t } = useTranslation();
   const alert = useAlert();
-  const { company } = useMultiCompany();
+  const { company, user } = useMultiCompany();
+  const { hasPermission } = usePermissions();
+  const isSuperAdmin = (() => {
+    if (hasPermission("superadmin.view")) return true;
+    const roles = user?.roles ?? [];
+    return roles.some(
+      (r) =>
+        /super.?admin|SUPER.?ADMIN|SuperAdministrator/i.test(r.code || "") ||
+        /super\s*administrador/i.test(r.name || ""),
+    );
+  })();
   const styles = useMemo(
     () =>
       createRoleFormStyles({
@@ -472,27 +482,28 @@ export function RoleEditForm({
           />
         </View>
 
-        {/* Is System */}
-        <View style={styles.switchGroup}>
-          <View style={styles.switchLabel}>
-            <ThemedText type="body2" style={{ color: colors.text }}>
-              {t.security?.roles?.systemRole || "Rol del sistema"}
-            </ThemedText>
-            <ThemedText
-              type="caption"
-              variant="secondary"
-              style={styles.helpText}
-            >
-              {t.security?.roles?.systemRoleDescription ||
-                "Los roles del sistema están protegidos contra eliminación"}
-            </ThemedText>
+        {isSuperAdmin && (
+          <View style={styles.switchGroup}>
+            <View style={styles.switchLabel}>
+              <ThemedText type="body2" style={{ color: colors.text }}>
+                {t.security?.roles?.systemRole || "Rol del sistema"}
+              </ThemedText>
+              <ThemedText
+                type="caption"
+                variant="secondary"
+                style={styles.helpText}
+              >
+                {t.security?.roles?.systemRoleDescription ||
+                  "Los roles del sistema están protegidos contra eliminación"}
+              </ThemedText>
+            </View>
+            <CustomSwitch
+              value={formData.isSystem}
+              onValueChange={(value) => handleChange("isSystem", value)}
+              disabled={isLoading}
+            />
           </View>
-          <CustomSwitch
-            value={formData.isSystem}
-            onValueChange={(value) => handleChange("isSystem", value)}
-            disabled={isLoading}
-          />
-        </View>
+        )}
 
         {/* Botones (solo si showFooter es true) */}
         {showFooter && (

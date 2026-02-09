@@ -75,6 +75,12 @@ export function RolesListScreen() {
     isScreenFocused,
   } = useRouteAccessGuard(pathname);
 
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,11 +124,32 @@ export function RolesListScreen() {
     search: "",
     status: undefined, // Filtro de estado: -1, 0, 1, 2, 3
     isSystem: undefined,
+    companyId:
+      currentCompany?.id && isValidUUID(currentCompany.id)
+        ? currentCompany.id
+        : undefined,
   });
 
   // Flag para prevenir llamadas infinitas cuando hay un error activo
   const [hasError, setHasError] = useState(false);
   const filtersSignatureRef = useRef<string>("");
+
+  /**
+   * Efecto para actualizar companyId cuando cambia la empresa seleccionada
+   */
+  useEffect(() => {
+    if (currentCompany?.id && isValidUUID(currentCompany.id)) {
+      setFilters((prev) => ({
+        ...prev,
+        companyId: currentCompany.id,
+      }));
+    } else {
+      setFilters((prev) => {
+        const { companyId, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [currentCompany?.id]);
 
   /**
    * Cargar roles
@@ -428,14 +455,6 @@ export function RolesListScreen() {
   };
 
   const columns: TableColumn<Role>[] = [
-    {
-      key: "company",
-      label: t.security?.roles?.company || "Empresa",
-      width: "18%",
-      render: (role) => (
-        <ThemedText type="body2">{getCompanyName(role.companyId)}</ThemedText>
-      ),
-    },
     {
       key: "code",
       label: t.security?.roles?.code || "Código",

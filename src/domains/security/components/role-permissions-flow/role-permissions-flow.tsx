@@ -17,7 +17,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useCompanyOptions } from "../../hooks";
 import { PermissionMenuItem } from "../shared/permission-menu-item";
 import { createPermissionFlowStyles } from "./role-permissions-flow.styles";
 import { PermissionFlowProps } from "./role-permissions-flow.types";
@@ -33,14 +32,6 @@ export function PermissionFlow({
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const styles = createPermissionFlowStyles(colors, isMobile);
-  const { companies } = useCompanyOptions();
-
-  // Filtrar empresas para mostrar solo la empresa del rol
-  const roleCompany = companies.find((c) => c.id === companyId);
-  const availableCompanies = roleCompany ? [roleCompany] : [];
-
-  // Siempre usar la empresa del rol, no permitir cambio
-  const selectedCompanyId = companyId;
 
   // Estado para el menú del rol
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -137,38 +128,6 @@ export function PermissionFlow({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={true}
     >
-      {roleName && (
-        <View style={styles.roleHeader}>
-          <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
-
-          {/* Selector de empresa alineado a la izquierda - Solo lectura, muestra solo la empresa del rol */}
-          {roleCompany && (
-            <View style={styles.companySelector}>
-              <View
-                style={[
-                  styles.companyOption,
-                  {
-                    backgroundColor: colors.primary,
-                    borderColor: colors.border,
-                    opacity: 0.8, // Indicar que no es interactivo
-                  },
-                ]}
-              >
-                <ThemedText
-                  type="body2"
-                  style={{
-                    color: colors.contrastText,
-                    fontWeight: "600",
-                  }}
-                >
-                  {roleCompany.name}
-                </ThemedText>
-              </View>
-            </View>
-          )}
-        </View>
-      )}
-
       {(() => {
         if (loadingMenu) {
           return (
