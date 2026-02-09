@@ -85,11 +85,7 @@ export function RoleCreateForm({
 
         // Intentar cargar empresas del backend
         try {
-          const response = await CompaniesService.getCompanies({
-            page: 1,
-            limit: 100,
-            status: 1,
-          });
+          const response = await CompaniesService.getCompanies({ status: 1 });
           const backendCompanies = response.data || [];
 
           if (backendCompanies.length > 0) {

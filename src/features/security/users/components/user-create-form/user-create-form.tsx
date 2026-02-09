@@ -268,10 +268,8 @@ export function UserCreateForm({
             try {
               // Asegurar que se pase el companyId correcto para cada empresa
               const rolesResponse = await RolesService.getRoles({
-                page: 1,
-                limit: 100,
-                status: 1, // Solo roles activos
-                companyId: companyId, // Filtrar por empresa específica
+                status: 1,
+                companyId: companyId,
               });
               const rolesData = Array.isArray(rolesResponse.data)
                 ? rolesResponse.data

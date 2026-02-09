@@ -18,10 +18,7 @@ import type {
     SecurityPermission,
     SecurityRole,
 } from "@/src/domains/security/types";
-import type {
-    PermissionOperation,
-    RoleFilters,
-} from "@/src/features/security/roles";
+import type { PermissionOperation } from "@/src/features/security/roles";
 import { RolesService } from "@/src/features/security/roles";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { MenuItem } from "@/src/infrastructure/menu/types";
@@ -258,11 +255,7 @@ export function PermissionsManagementContent({
 
       try {
         setLoadingRoles(true);
-        const roleFilters: RoleFilters = {
-          page: 1,
-          limit: 100,
-        };
-        const response = await RolesService.getRoles(roleFilters);
+        const response = await RolesService.getRoles({ companyId });
 
         const companyRoles = (response.data || []).filter(
           (role) => role.companyId === companyId,

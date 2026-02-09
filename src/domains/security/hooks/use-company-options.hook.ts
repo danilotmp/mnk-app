@@ -1,15 +1,16 @@
-import { useAlert } from '@/src/infrastructure/messages/alert.service';
-import { ApiError } from '@/src/infrastructure/api';
-import { HTTP_STATUS } from '@/src/infrastructure/api/constants';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ApiError } from "@/src/infrastructure/api";
+import { HTTP_STATUS } from "@/src/infrastructure/api/constants";
+import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { CompaniesService } from '@/src/features/security/companies';
-import type { Company, CompanyFilters } from '@/src/features/security/companies/types/domain';
-
-const DEFAULT_LIMIT = 100;
+import { CompaniesService } from "@/src/features/security/companies";
+import type {
+    Company,
+    CompanyFilters,
+} from "@/src/features/security/companies/types/domain";
 
 export interface UseCompanyOptionsParams {
-  filters?: Partial<CompanyFilters>;
+  filters?: Partial<Omit<CompanyFilters, "page" | "limit">>;
   autoFetch?: boolean;
   includeInactive?: boolean;
   immediate?: boolean;
@@ -45,18 +46,14 @@ export function useCompanyOptions({
     };
   }, []);
 
-  const buildFilters = useCallback((): CompanyFilters => {
-    const baseFilters: CompanyFilters = {
-      page: 1,
-      limit: DEFAULT_LIMIT,
+  const buildFilters = useCallback((): Partial<CompanyFilters> => {
+    return {
       search: filters?.search,
       code: filters?.code,
       name: filters?.name,
       email: filters?.email,
-      status: includeInactive ? filters?.status : 1, // ✅ CAMBIADO: status=1 (Activo) en lugar de isActive=true
+      status: includeInactive ? filters?.status : 1,
     };
-
-    return baseFilters;
   }, [filters, includeInactive]);
 
   const fetchCompanies = useCallback(async () => {
@@ -93,16 +90,20 @@ export function useCompanyOptions({
       const apiError = err as ApiError | Error;
 
       // Verificar si es un error de autenticación (401 Unauthorized o 403 Forbidden)
-      const isAuthError = apiError instanceof ApiError && 
-        (apiError.statusCode === HTTP_STATUS.UNAUTHORIZED || 
-         apiError.statusCode === HTTP_STATUS.FORBIDDEN);
+      const isAuthError =
+        apiError instanceof ApiError &&
+        (apiError.statusCode === HTTP_STATUS.UNAUTHORIZED ||
+          apiError.statusCode === HTTP_STATUS.FORBIDDEN);
 
       if (isAuthError) {
         // Marcar que hay un error de autenticación para evitar reintentos
         hasAuthErrorRef.current = true;
         hasErrorRef.current = true; // También marcar error general
         if (isMountedRef.current) {
-          const authError = apiError instanceof Error ? apiError : new Error('Token inválido o ausente');
+          const authError =
+            apiError instanceof Error
+              ? apiError
+              : new Error("Token inválido o ausente");
           setError(authError);
           // No mostrar error en toast si es de autenticación (el logout ya lo maneja)
           // alert.showError(authError.message);
@@ -116,7 +117,10 @@ export function useCompanyOptions({
 
       // Otros errores (no de autenticación)
       hasErrorRef.current = true; // Marcar que hay un error para evitar reintentos
-      const finalError = apiError instanceof Error ? apiError : new Error('Error al obtener empresas');
+      const finalError =
+        apiError instanceof Error
+          ? apiError
+          : new Error("Error al obtener empresas");
       if (isMountedRef.current) {
         setError(finalError);
         // Mostrar error solo una vez
@@ -160,8 +164,6 @@ export function useCompanyOptions({
       error,
       refresh,
     }),
-    [companies, loading, error, refresh]
+    [companies, loading, error, refresh],
   );
 }
-
-

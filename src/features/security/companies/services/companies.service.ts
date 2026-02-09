@@ -3,13 +3,13 @@
  * Incluye endpoints administrativos y de contexto (auth/me)
  */
 
-import { apiClient, ApiError } from '@/src/infrastructure/api/api.client';
-import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
+import { apiClient, ApiError } from "@/src/infrastructure/api/api.client";
+import { SUCCESS_STATUS_CODE } from "@/src/infrastructure/api/constants";
 
-import { PaginatedResponse } from '@/src/domains/shared/types';
-import { companyAdapter, companiesAdapter } from '../adapters';
-import { Company, CompanyFilters, CompanyPayload } from '../types/domain';
-import { CompanyApi } from '../types/api';
+import { PaginatedResponse } from "@/src/domains/shared/types";
+import { companiesAdapter, companyAdapter } from "../adapters";
+import { CompanyApi } from "../types/api";
+import { Company, CompanyFilters, CompanyPayload } from "../types/domain";
 
 type BackendPagination = {
   currentPage?: number;
@@ -33,44 +33,60 @@ interface BackendPaginatedCompanies {
 }
 
 export class CompaniesService {
-  private static readonly BASE_ENDPOINT = '/security/admin/companies';
-  private static readonly CONTEXT_ENDPOINT = '/auth/me/companies';
+  private static readonly BASE_ENDPOINT = "/security/admin/companies";
+  private static readonly CONTEXT_ENDPOINT = "/auth/me/companies";
 
+  /**
+   * Obtiene empresas. Solo incluye page/limit en la URL cuando se pasan (uso en tablas).
+   * Para dropdowns/formularios invocar sin page/limit: getCompanies({ status: 1 }).
+   */
   static async getCompanies(
-    filters: CompanyFilters = { page: 1, limit: 10 }
+    filters: Partial<CompanyFilters> = {},
   ): Promise<PaginatedResponse<Company>> {
     const queryParams = this.buildQueryParams(filters);
 
-    const endpoint = queryParams ? `${this.BASE_ENDPOINT}?${queryParams}` : this.BASE_ENDPOINT;
+    const endpoint = queryParams
+      ? `${this.BASE_ENDPOINT}?${queryParams}`
+      : this.BASE_ENDPOINT;
 
     const response = await apiClient.request<BackendPaginatedCompanies>({
       endpoint,
-      method: 'GET',
+      method: "GET",
     });
 
     if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-      const normalized = this.normalizePaginatedResponse(response.data, filters);
+      const normalized = this.normalizePaginatedResponse(
+        response.data,
+        filters as CompanyFilters,
+      );
       return {
         data: companiesAdapter(normalized.data),
         meta: normalized.meta,
       };
     }
 
-    throw new Error(response.result?.description || 'Error al obtener empresas');
+    throw new Error(
+      response.result?.description || "Error al obtener empresas",
+    );
   }
 
   static async getCompanyById(id: string): Promise<Company> {
     try {
       const response = await apiClient.request<CompanyApi>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
-        method: 'GET',
+        method: "GET",
       });
 
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+      if (
+        response.result?.statusCode === SUCCESS_STATUS_CODE &&
+        response.data
+      ) {
         return companyAdapter(response.data);
       }
 
-      throw new Error(response.result?.description || 'Error al obtener la empresa');
+      throw new Error(
+        response.result?.description || "Error al obtener la empresa",
+      );
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -78,7 +94,9 @@ export class CompaniesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al obtener la empresa');
+      const genericError = new Error(
+        error?.message || "Error al obtener la empresa",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
@@ -89,15 +107,20 @@ export class CompaniesService {
     try {
       const response = await apiClient.request<CompanyApi>({
         endpoint: this.BASE_ENDPOINT,
-        method: 'POST',
+        method: "POST",
         body: payload,
       });
 
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+      if (
+        response.result?.statusCode === SUCCESS_STATUS_CODE &&
+        response.data
+      ) {
         return companyAdapter(response.data);
       }
 
-      throw new Error(response.result?.description || 'Error al crear la empresa');
+      throw new Error(
+        response.result?.description || "Error al crear la empresa",
+      );
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -105,26 +128,36 @@ export class CompaniesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al crear la empresa');
+      const genericError = new Error(
+        error?.message || "Error al crear la empresa",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
     }
   }
 
-  static async updateCompany(id: string, payload: CompanyPayload): Promise<Company> {
+  static async updateCompany(
+    id: string,
+    payload: CompanyPayload,
+  ): Promise<Company> {
     try {
       const response = await apiClient.request<CompanyApi>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
-        method: 'PUT',
+        method: "PUT",
         body: payload,
       });
 
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+      if (
+        response.result?.statusCode === SUCCESS_STATUS_CODE &&
+        response.data
+      ) {
         return companyAdapter(response.data);
       }
 
-      throw new Error(response.result?.description || 'Error al actualizar la empresa');
+      throw new Error(
+        response.result?.description || "Error al actualizar la empresa",
+      );
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -132,7 +165,9 @@ export class CompaniesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al actualizar la empresa');
+      const genericError = new Error(
+        error?.message || "Error al actualizar la empresa",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
@@ -143,11 +178,13 @@ export class CompaniesService {
     try {
       const response = await apiClient.request<void>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.result?.statusCode !== SUCCESS_STATUS_CODE) {
-        throw new Error(response.result?.description || 'Error al eliminar la empresa');
+        throw new Error(
+          response.result?.description || "Error al eliminar la empresa",
+        );
       }
     } catch (error: any) {
       if (error instanceof ApiError) {
@@ -156,7 +193,9 @@ export class CompaniesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al eliminar la empresa');
+      const genericError = new Error(
+        error?.message || "Error al eliminar la empresa",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
@@ -164,9 +203,11 @@ export class CompaniesService {
   }
 
   static async getMyCompanies(): Promise<Company[]> {
-    const response = await apiClient.request<CompanyApi[] | BackendPaginatedCompanies>({
+    const response = await apiClient.request<
+      CompanyApi[] | BackendPaginatedCompanies
+    >({
       endpoint: this.CONTEXT_ENDPOINT,
-      method: 'GET',
+      method: "GET",
     });
 
     if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
@@ -183,32 +224,41 @@ export class CompaniesService {
       return [];
     }
 
-    throw new Error(response.result?.description || 'Error al obtener las empresas del usuario');
+    throw new Error(
+      response.result?.description ||
+        "Error al obtener las empresas del usuario",
+    );
   }
 
-  private static buildQueryParams(filters: CompanyFilters): string {
+  /**
+   * Construye query string. Solo añade page/limit cuando están presentes (paginado para tablas).
+   */
+  private static buildQueryParams(filters: Partial<CompanyFilters>): string {
     const params = new URLSearchParams();
 
-    const page = Math.max(1, filters.page ?? 1);
-    const limit = Math.max(1, Math.min(100, filters.limit ?? 10));
-
-    params.append('page', page.toString());
-    params.append('limit', limit.toString());
+    const hasPagination =
+      filters.page !== undefined && filters.limit !== undefined;
+    if (hasPagination) {
+      const page = Math.max(1, filters.page ?? 1);
+      const limit = Math.max(1, Math.min(100, filters.limit ?? 10));
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+    }
 
     if (filters.search?.trim()) {
-      params.append('search', filters.search.trim());
+      params.append("search", filters.search.trim());
     }
     if (filters.code?.trim()) {
-      params.append('code', filters.code.trim());
+      params.append("code", filters.code.trim());
     }
     if (filters.name?.trim()) {
-      params.append('name', filters.name.trim());
+      params.append("name", filters.name.trim());
     }
     if (filters.email?.trim()) {
-      params.append('email', filters.email.trim());
+      params.append("email", filters.email.trim());
     }
-    if (typeof filters.status === 'number') {
-      params.append('status', filters.status.toString());
+    if (typeof filters.status === "number") {
+      params.append("status", filters.status.toString());
     }
 
     return params.toString();
@@ -216,9 +266,12 @@ export class CompaniesService {
 
   private static normalizePaginatedResponse(
     raw: BackendPaginatedCompanies,
-    filters: CompanyFilters
+    filters: CompanyFilters,
   ): PaginatedResponse<CompanyApi> {
-    if ((raw as PaginatedResponse<CompanyApi>).data && (raw as PaginatedResponse<CompanyApi>).meta) {
+    if (
+      (raw as PaginatedResponse<CompanyApi>).data &&
+      (raw as PaginatedResponse<CompanyApi>).meta
+    ) {
       return raw as PaginatedResponse<CompanyApi>;
     }
 
@@ -235,19 +288,21 @@ export class CompaniesService {
       return this.buildFromItems(list, undefined, filters);
     }
 
-    throw new Error('Estructura de paginación de empresas no reconocida');
+    throw new Error("Estructura de paginación de empresas no reconocida");
   }
 
   private static buildFromItems(
     items: CompanyApi[],
     pagination: BackendPagination | undefined,
-    filters: CompanyFilters
+    filters: CompanyFilters,
   ): PaginatedResponse<CompanyApi> {
     const page = pagination?.currentPage ?? filters.page ?? 1;
-    const limit = (pagination?.itemsPerPage ?? filters.limit ?? items.length) || 10;
+    const limit =
+      (pagination?.itemsPerPage ?? filters.limit ?? items.length) || 10;
     const total = pagination?.totalItems ?? items.length;
     const totalPages =
-      pagination?.totalPages ?? (limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1);
+      pagination?.totalPages ??
+      (limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1);
 
     return {
       data: items,
@@ -262,5 +317,3 @@ export class CompaniesService {
     };
   }
 }
-
-

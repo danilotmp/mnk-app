@@ -123,11 +123,7 @@ export function UserEditForm({
     const loadRoles = async () => {
       try {
         setRolesLoading(true);
-        const rolesResponse = await RolesService.getRoles({
-          page: 1,
-          limit: 100,
-          status: 1, // ✅ Solo roles activos
-        });
+        const rolesResponse = await RolesService.getRoles({ status: 1 });
         setRoles(Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
       } catch (error) {
         setRoles([]);
@@ -277,10 +273,8 @@ export function UserEditForm({
           if (uuidRegex.test(companyId)) {
             try {
               const rolesResponse = await RolesService.getRoles({
-                page: 1,
-                limit: 100,
-                status: 1, // Solo roles activos
-                companyId: companyId, // Filtrar por empresa
+                status: 1,
+                companyId: companyId,
               });
               rolesMap[companyId] = Array.isArray(rolesResponse.data)
                 ? rolesResponse.data
@@ -553,10 +547,8 @@ export function UserEditForm({
             try {
               // Asegurar que se pase el companyId correcto para cada empresa
               const rolesResponse = await RolesService.getRoles({
-                page: 1,
-                limit: 100,
-                status: 1, // Solo roles activos
-                companyId: companyId, // Filtrar por empresa específica
+                status: 1,
+                companyId: companyId,
               });
               const rolesData = Array.isArray(rolesResponse.data)
                 ? rolesResponse.data
