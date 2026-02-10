@@ -932,7 +932,6 @@ export default function PermissionsListPage() {
           onShowDefaultOptionsChange={setShowDefaultOptions}
           showAll={showAll}
           onShowAllChange={setShowAll}
-          showSuperAdminControls={isSuperAdmin}
           customPermissions={customPermissions}
           onClearFilters={() => {
             setSearchValue("");

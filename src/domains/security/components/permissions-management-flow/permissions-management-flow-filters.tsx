@@ -27,7 +27,6 @@ export function PermissionsFlowFilters({
   onShowDefaultOptionsChange,
   showAll = false,
   onShowAllChange,
-  showSuperAdminControls = false,
   customPermissions = [],
   onClearFilters,
 }: PermissionsFlowFiltersProps) {
@@ -165,8 +164,8 @@ export function PermissionsFlowFilters({
             </TouchableOpacity>
           </Tooltip>
 
-          {/* Botón Vista previa / Mostrar Opciones: solo para super administrador */}
-          {showSuperAdminControls && onShowAllChange && (
+          {/* Botón Vista previa / Mostrar Opciones */}
+          {onShowAllChange && (
             <Tooltip
               text={
                 showAll
