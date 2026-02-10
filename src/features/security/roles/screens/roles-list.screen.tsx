@@ -118,6 +118,7 @@ export function RolesListScreen() {
     hasPrev: false,
   });
   const [localFilter, setLocalFilter] = useState(""); // Filtro local para la tabla
+  // companyId opcional: si hay empresa en contexto la enviamos (super admin filtra; usuario normal ve la seleccionada)
   const [filters, setFilters] = useState<RoleFilters>({
     page: 1,
     limit: 10,
@@ -135,7 +136,9 @@ export function RolesListScreen() {
   const filtersSignatureRef = useRef<string>("");
 
   /**
-   * Efecto para actualizar companyId cuando cambia la empresa seleccionada
+   * Sincronizar companyId con la empresa actual del contexto.
+   * Opcional: si hay empresa la enviamos (super admin navega; usuario normal ve la seleccionada).
+   * Si no hay empresa, no enviamos companyId y el backend usa la del usuario autenticado.
    */
   useEffect(() => {
     if (currentCompany?.id && isValidUUID(currentCompany.id)) {
@@ -231,9 +234,9 @@ export function RolesListScreen() {
   );
 
   /**
-   * Efecto para cargar roles cuando cambian los filtros
-   * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
-   * IMPORTANTE: No incluir loadRoles en las dependencias para evitar loops infinitos
+   * Cargar roles cuando cambian los filtros.
+   * Se puede llamar con o sin companyId; si no va, el backend usa la empresa del usuario autenticado.
+   * No incluir loadRoles en dependencias para evitar loops.
    */
   useEffect(() => {
     // No recargar si hay un error activo (evita loops infinitos)
@@ -322,6 +325,10 @@ export function RolesListScreen() {
       search: "",
       status: undefined,
       isSystem: undefined,
+      companyId:
+        currentCompany?.id && isValidUUID(currentCompany.id)
+          ? currentCompany.id
+          : undefined,
     });
     setLocalFilter(""); // Limpiar también el filtro local
     setHasError(false);

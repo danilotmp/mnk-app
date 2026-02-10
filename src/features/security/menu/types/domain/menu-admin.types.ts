@@ -19,6 +19,7 @@ export interface MenuAdminItem {
 
 export interface MenuAdminColumn {
   id: string;
+  menuId?: string; // Identificador del nodo (ej. "system-root"); se envía en sync
   title: string;
   order: number;
   items: MenuAdminItem[];
@@ -41,10 +42,3 @@ export interface MenuAdminFormData {
   status: number;
   order: number;
 }
-
-
-
-
-
-
-

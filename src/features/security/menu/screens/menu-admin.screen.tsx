@@ -193,13 +193,29 @@ export function MenuAdminScreen() {
                       Array.isArray(col.items) &&
                       col.items.length > 0,
                   )
-                  .map((col, colIndex) => ({
-                    id: `col-${item.id}-${colIndex}`,
-                    title: col.title || "",
-                    order: colIndex,
-                    parentId: item.id,
-                    items: convertToAdminItems(col.items, level + 1, item.id),
-                  }))
+                  .map((col, colIndex) => {
+                    const colId =
+                      typeof (col as any).id === "string" &&
+                      isValidUUID((col as any).id)
+                        ? (col as any).id
+                        : undefined;
+                    const colMenuId =
+                      typeof (col as any).menuId === "string"
+                        ? (col as any).menuId
+                        : undefined;
+                    return {
+                      id: colId ?? `col-${item.id}-${colIndex}`,
+                      menuId: colMenuId,
+                      title: col.title || "",
+                      order: colIndex,
+                      parentId: item.id,
+                      items: convertToAdminItems(
+                        col.items,
+                        level + 1,
+                        colId ?? item.id,
+                      ),
+                    };
+                  })
               : undefined,
         };
       })
@@ -834,46 +850,59 @@ export function MenuAdminScreen() {
           if (isItemModified || processedSubmenu || processedColumns) {
             const result: MenuAdminItem = { ...item };
 
-            // Si el padre está modificado, incluir TODA su estructura actual
-            // Copiar directamente sin filtrar (queremos TODOS los items)
+            // Si el padre está modificado, incluir su estructura actual
             if (isItemModified) {
-              // Función auxiliar recursiva para copiar items completos
               const copyItemRecursive = (
                 sourceItem: MenuAdminItem,
               ): MenuAdminItem => {
                 const copied: MenuAdminItem = { ...sourceItem };
-
                 if (sourceItem.submenu && sourceItem.submenu.length > 0) {
                   copied.submenu = sourceItem.submenu.map(copyItemRecursive);
                 }
-
                 if (sourceItem.columns && sourceItem.columns.length > 0) {
                   copied.columns = sourceItem.columns.map((col) => ({
                     ...col,
                     items: col.items.map(copyItemRecursive),
                   }));
                 }
-
                 return copied;
               };
 
-              // Incluir submenu completo (copiar todos los items)
+              const hasModifiedDescendant = (node: MenuAdminItem): boolean => {
+                if (modifiedIds.has(node.id)) return true;
+                if (node.submenu?.some((s) => hasModifiedDescendant(s)))
+                  return true;
+                if (
+                  node.columns?.some((c) =>
+                    c.items?.some((ci) => hasModifiedDescendant(ci)),
+                  )
+                )
+                  return true;
+                return false;
+              };
+
+              const columnHasModifiedItems = (col: MenuAdminColumn): boolean =>
+                col.items?.some(
+                  (ci) => modifiedIds.has(ci.id) || hasModifiedDescendant(ci),
+                ) ?? false;
+
               if (item.submenu && item.submenu.length > 0) {
                 result.submenu = item.submenu.map(copyItemRecursive);
               } else {
                 delete result.submenu;
               }
 
-              // Incluir columns completo (copiar todos los items)
+              // Solo incluir columnas que tengan al menos un ítem modificado (no enviar Notificaciones si no cambió)
               if (item.columns && item.columns.length > 0) {
-                result.columns = item.columns
-                  .map((col) => ({
+                const columnsToInclude = item.columns.filter(
+                  columnHasModifiedItems,
+                );
+                if (columnsToInclude.length > 0) {
+                  result.columns = columnsToInclude.map((col) => ({
                     ...col,
                     items: col.items.map(copyItemRecursive),
-                  }))
-                  .filter((col) => col.items && col.items.length > 0);
-
-                if (result.columns.length === 0) {
+                  }));
+                } else {
                   delete result.columns;
                 }
               } else {
@@ -985,13 +1014,15 @@ export function MenuAdminScreen() {
           }
 
           // Procesar columns recursivamente
-          // Un item puede tener columns Y submenu simultáneamente
+          // Si la columna tiene id (UUID del ítem grupo en BD), enviarlo para que el backend no cree
+          // duplicados (Notificaciones/Sistema) y los hijos usen parentId correcto.
           if (
             item.columns &&
             Array.isArray(item.columns) &&
             item.columns.length > 0
           ) {
             const processedColumns: Array<{
+              id?: string;
               title: string;
               items: MenuItem[];
             }> = [];
@@ -1008,19 +1039,46 @@ export function MenuAdminScreen() {
                 return;
               }
 
+              const columnUUID =
+                typeof (col as any).id === "string" &&
+                isValidUUID((col as any).id)
+                  ? (col as any).id
+                  : undefined;
+
               // Convertir los items de la columna recursivamente
               const convertedColItems = convertToMenuItems(col.items);
 
+              // Asignar parentId a cada hijo cuando tenemos UUID de la columna (backend lo requiere)
+              const itemsWithParent =
+                columnUUID && convertedColItems?.length
+                  ? convertedColItems.map((child: any) => ({
+                      ...child,
+                      parentId: columnUUID,
+                    }))
+                  : convertedColItems;
+
               // Validar que la conversión devolvió un array válido con items
               if (
-                convertedColItems &&
-                Array.isArray(convertedColItems) &&
-                convertedColItems.length > 0
+                itemsWithParent &&
+                Array.isArray(itemsWithParent) &&
+                itemsWithParent.length > 0
               ) {
-                processedColumns.push({
+                const columnPayload: {
+                  id?: string;
+                  menuId?: string;
+                  title: string;
+                  items: MenuItem[];
+                } = {
                   title: col.title,
-                  items: convertedColItems,
-                });
+                  items: itemsWithParent,
+                };
+                if (columnUUID) {
+                  columnPayload.id = columnUUID;
+                }
+                if (col.menuId) {
+                  columnPayload.menuId = col.menuId;
+                }
+                processedColumns.push(columnPayload);
               }
             });
 
@@ -1759,7 +1817,7 @@ export function MenuAdminScreen() {
         };
       }
 
-      // Si el target está en una columna de este item
+      // Si el target está en una columna de este item: parentId debe ser el GUID de la columna
       if (item.columns) {
         for (let colIndex = 0; colIndex < item.columns.length; colIndex++) {
           const column = item.columns[colIndex];
@@ -1767,9 +1825,11 @@ export function MenuAdminScreen() {
             const targetIndex = column.items.findIndex(
               (ci) => ci.id === targetId,
             );
+            const columnParentId =
+              column.id && isValidUUID(column.id) ? column.id : item.id;
             const newItem = {
               ...draggedItem,
-              parentId: item.id,
+              parentId: columnParentId,
               level: item.level + 1,
               order: insertIndex !== undefined ? insertIndex : targetIndex,
             };
@@ -1834,9 +1894,11 @@ export function MenuAdminScreen() {
       if (item.id === parentId && item.columns) {
         const updatedColumns = item.columns.map((col) => {
           if (col.id === columnId) {
+            const columnParentId =
+              col.id && isValidUUID(col.id) ? col.id : parentId;
             const newItem = {
               ...draggedItem,
-              parentId: parentId,
+              parentId: columnParentId,
               level: item.level + 1,
               order: insertIndex !== undefined ? insertIndex : col.items.length,
             };

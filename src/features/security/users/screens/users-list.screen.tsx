@@ -109,6 +109,7 @@ export function UsersListScreen() {
     hasPrev: false,
   });
   const [localFilter, setLocalFilter] = useState(""); // Filtro local para la tabla
+  // companyId opcional: si hay empresa en contexto la enviamos (super admin filtra; usuario normal ve la seleccionada)
   const [filters, setFilters] = useState<UserFilters>({
     page: 1,
     limit: 10,
@@ -202,7 +203,9 @@ export function UsersListScreen() {
   );
 
   /**
-   * Efecto para actualizar companyId cuando cambia la empresa
+   * Sincronizar companyId con la empresa actual del contexto.
+   * Opcional: si hay empresa la enviamos (super admin navega; usuario normal ve la seleccionada).
+   * Si no hay empresa, no enviamos companyId y el backend usa la del usuario autenticado.
    */
   useEffect(() => {
     if (company?.id && isValidUUID(company.id)) {
@@ -211,7 +214,6 @@ export function UsersListScreen() {
         companyId: company.id,
       }));
     } else {
-      // Si no hay empresa válida, remover el filtro companyId
       setFilters((prev) => {
         const { companyId, ...rest } = prev;
         return rest;
@@ -221,9 +223,9 @@ export function UsersListScreen() {
   }, [company?.id]);
 
   /**
-   * Efecto para cargar usuarios cuando cambian los filtros
-   * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
-   * IMPORTANTE: No incluir loadUsers en las dependencias para evitar loops infinitos
+   * Cargar usuarios cuando cambian los filtros.
+   * Se puede llamar con o sin companyId; si no va, el backend usa la empresa del usuario autenticado.
+   * No incluir loadUsers en dependencias para evitar loops.
    */
   useEffect(() => {
     // No recargar si acabamos de editar exitosamente (actualización local)

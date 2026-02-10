@@ -2,7 +2,7 @@
  * Tipos de dominio para Empresas
  */
 
-import { BaseEntity, PaginationParams } from '@/src/domains/shared/types';
+import { BaseEntity, PaginationParams } from "@/src/domains/shared/types";
 
 export interface Company extends BaseEntity {
   code: string;
@@ -51,6 +51,8 @@ export interface CompanyFilters extends PaginationParams {
   name?: string;
   email?: string;
   status?: number;
+  /** Opcional. No se envía si el usuario es super administrador (ve todas). Si no, backend usa la del usuario. */
+  companyId?: string;
 }
 
 export interface CompanyPayload {
@@ -64,4 +66,3 @@ export interface CompanyPayload {
   subscriptionPlan?: CompanySubscriptionPlan;
   isActive?: boolean;
 }
-

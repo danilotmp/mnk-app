@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { Select } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
 import { useCompanyOptions } from "@/src/domains/security/hooks";
 import { useTranslation } from "@/src/infrastructure/i18n";
@@ -330,50 +331,28 @@ export function BranchEditForm({
       {header}
       <Card variant="flat" style={styles.formCard}>
         <View style={styles.inputGroup}>
-          <ThemedText
-            type="body2"
-            style={[styles.label, { color: colors.text }]}
-          >
-            Empresa *
-          </ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.selectOptions}>
-              {companyOptions.map((company) => {
-                const isSelected = formData.companyId === company.id;
-                return (
-                  <TouchableOpacity
-                    key={company.id}
-                    style={[
-                      styles.selectOption,
-                      isSelected && { backgroundColor: colors.primary },
-                      { borderColor: colors.border },
-                    ]}
-                    onPress={() => handleChange("companyId", company.id)}
-                    disabled={isSubmitting}
-                  >
-                    <ThemedText
-                      type="body2"
-                      style={
-                        isSelected
-                          ? { color: colors.contrastText }
-                          : { color: colors.text }
-                      }
-                    >
-                      {company.name}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-          {errors.companyId ? (
-            <ThemedText
-              type="caption"
-              style={[styles.errorText, { color: colors.error }]}
-            >
-              {errors.companyId}
-            </ThemedText>
-          ) : null}
+          <Select
+            label={t.security?.branches?.company || "Empresa"}
+            placeholder={
+              companiesLoading
+                ? t.common?.loading || "Cargando..."
+                : t.security?.branches?.selectCompany ||
+                  "Selecciona una empresa"
+            }
+            value={formData.companyId || undefined}
+            options={companyOptions.map((company) => ({
+              value: company.id,
+              label: company.name,
+            }))}
+            onSelect={(value) => handleChange("companyId", value as string)}
+            error={!!errors.companyId}
+            errorMessage={errors.companyId}
+            required
+            disabled={
+              isSubmitting || companiesLoading || companyOptions.length === 0
+            }
+            searchable
+          />
         </View>
 
         <View style={styles.inputGroup}>

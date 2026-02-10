@@ -17,6 +17,7 @@ import { DataTable } from "@/src/domains/shared/components/data-table/data-table
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
 import { SearchFilterBar } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar";
 import { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
+import { useMultiCompany } from "@/src/domains/shared/hooks";
 import {
     BranchCreateForm,
     BranchEditForm,
@@ -70,7 +71,12 @@ export function BranchesListScreen() {
     isScreenFocused,
   } = useRouteAccessGuard(pathname);
 
+  const { currentCompany } = useMultiCompany();
   const { companies } = useCompanyOptions({ includeInactive: true });
+  const isValidUUID = (uuid: string): boolean =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      uuid,
+    );
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [localFilter, setLocalFilter] = useState("");
@@ -85,11 +91,15 @@ export function BranchesListScreen() {
     hasNext: false,
     hasPrev: false,
   });
+  // companyId siempre de la empresa seleccionada en el selector (obligatorio para este servicio)
   const [filters, setFilters] = useState<BranchFilters>({
     page: 1,
     limit: 10,
     search: "",
-    companyId: undefined,
+    companyId:
+      currentCompany?.id && isValidUUID(currentCompany.id)
+        ? currentCompany.id
+        : undefined,
     type: undefined,
     status: undefined,
   });
@@ -108,6 +118,17 @@ export function BranchesListScreen() {
   const loadBranches = useCallback(
     async (currentFilters: BranchFilters) => {
       if (loadingRef.current) {
+        return;
+      }
+      if (!currentFilters.companyId?.trim()) {
+        setBranches([]);
+        setPagination((prev) => ({
+          ...prev,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        }));
         return;
       }
 
@@ -159,8 +180,35 @@ export function BranchesListScreen() {
     [alert, handleApiError, t.security?.branches?.loadError],
   );
 
+  /**
+   * Sincronizar companyId con la empresa seleccionada en el selector.
+   * Para sucursales siempre se debe enviar el companyId de la empresa seleccionada.
+   */
+  useEffect(() => {
+    if (currentCompany?.id && isValidUUID(currentCompany.id)) {
+      setFilters((prev) => ({ ...prev, companyId: currentCompany.id }));
+    } else {
+      setFilters((prev) => {
+        const { companyId, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [currentCompany?.id]);
+
   useEffect(() => {
     if (!isScreenFocused || !hasAccess || accessLoading || hasError) {
+      return;
+    }
+    // No llamar al API sin companyId: siempre se debe enviar la empresa seleccionada
+    if (!filters.companyId?.trim()) {
+      setBranches([]);
+      setPagination((prev) => ({
+        ...prev,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      }));
       return;
     }
 
@@ -190,49 +238,65 @@ export function BranchesListScreen() {
     setHasError(false);
   }, []);
 
-  const handleAdvancedFilterChange = useCallback((key: string, value: any) => {
-    setHasError(false);
+  const handleAdvancedFilterChange = useCallback(
+    (key: string, value: any) => {
+      setHasError(false);
 
-    if (key === "deleted") {
+      if (key === "deleted") {
+        setFilters((prev) => ({
+          ...prev,
+          status: value === "deleted" ? -1 : undefined,
+          page: 1,
+        }));
+        return;
+      }
+
+      if (key === "status") {
+        setFilters((prev) => ({
+          ...prev,
+          status: value === "" ? undefined : Number.parseInt(value, 10),
+          page: 1,
+        }));
+        return;
+      }
+
+      // companyId siempre viene de la empresa seleccionada en el selector; no permitir "Todas"
+      if (key === "companyId") {
+        const companyId =
+          currentCompany?.id && isValidUUID(currentCompany.id)
+            ? currentCompany.id
+            : undefined;
+        setFilters((prev) => ({ ...prev, companyId, page: 1 }));
+        return;
+      }
+
+      const processedValue =
+        key === "status" && value !== "" ? Number.parseInt(value, 10) : value;
+
       setFilters((prev) => ({
         ...prev,
-        status: value === "deleted" ? -1 : undefined,
+        [key]: value === "" ? undefined : processedValue,
         page: 1,
       }));
-      return;
-    }
-
-    if (key === "status") {
-      setFilters((prev) => ({
-        ...prev,
-        status: value === "" ? undefined : Number.parseInt(value, 10),
-        page: 1,
-      }));
-      return;
-    }
-
-    const processedValue =
-      key === "status" && value !== "" ? Number.parseInt(value, 10) : value;
-
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value === "" ? undefined : processedValue,
-      page: 1,
-    }));
-  }, []);
+    },
+    [currentCompany?.id],
+  );
 
   const handleClearFilters = useCallback(() => {
     setFilters({
       page: 1,
       limit: 10,
       search: "",
-      companyId: undefined,
+      companyId:
+        currentCompany?.id && isValidUUID(currentCompany.id)
+          ? currentCompany.id
+          : undefined,
       type: undefined,
       status: undefined,
     });
     setLocalFilter("");
     setHasError(false);
-  }, []);
+  }, [currentCompany?.id]);
 
   const handlePageChange = useCallback((page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -259,18 +323,6 @@ export function BranchesListScreen() {
 
   const columns = useMemo<TableColumn<Branch>[]>(() => {
     return [
-      {
-        key: "company",
-        label: "Empresa",
-        minWidth: 200,
-        render: (item) => (
-          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-            {item.company?.name ||
-              t.security?.branches?.unknownCompany ||
-              "Sin empresa"}
-          </ThemedText>
-        ),
-      },
       {
         key: "code",
         label: "Código",
@@ -348,7 +400,6 @@ export function BranchesListScreen() {
     t.common?.actions,
     t.security?.branches?.editShort,
     t.security?.branches?.types,
-    t.security?.branches?.unknownCompany,
     t.security?.users?.status,
   ]);
 
@@ -384,7 +435,7 @@ export function BranchesListScreen() {
             value: "",
             label: t.security?.branches?.filters?.allTypes || "Todos",
           },
-          { key: "headquarters", value: "headquarters", label: "Casa matriz" },
+          { key: "headquarters", value: "headquarters", label: "Matriz" },
           { key: "branch", value: "branch", label: "Sucursal" },
           { key: "warehouse", value: "warehouse", label: "Bodega" },
           { key: "store", value: "store", label: "Tienda" },

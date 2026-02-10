@@ -17,6 +17,11 @@ import type { TableColumn } from "@/src/domains/shared/components/data-table/dat
 import { SearchFilterBar } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar";
 import { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
 import {
+    useCompany,
+    useMultiCompany,
+    usePermissions,
+} from "@/src/domains/shared/hooks";
+import {
     CompaniesService,
     CompanyCreateForm,
     CompanyEditForm,
@@ -47,6 +52,24 @@ export function CompaniesListScreen() {
   const pathname = usePathname();
   const alert = useAlert();
   const { isMobile } = useResponsive();
+  const { currentCompany } = useMultiCompany();
+  const { user } = useCompany();
+  const { hasPermission } = usePermissions();
+  const isSuperAdmin = (() => {
+    if (hasPermission("superadmin.view")) return true;
+    const roles = user?.roles ?? [];
+    return roles.some(
+      (r) =>
+        /super.?admin|SUPER.?ADMIN|SuperAdministrator/i.test(r.code || "") ||
+        /super\s*administrador/i.test(r.name || ""),
+    );
+  })();
+  /** Empresa principal del usuario (por defecto). Super admin: si está seleccionada, no se envía companyId. */
+  const mainCompanyId = user?.companyIdDefault?.trim() || undefined;
+  const isValidUUID = (uuid: string): boolean =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      uuid,
+    );
   const styles = useMemo(
     () =>
       createCompaniesListScreenStyles(
@@ -95,6 +118,7 @@ export function CompaniesListScreen() {
     hasPrev: false,
   });
   const [localFilter, setLocalFilter] = useState(""); // Filtro local para la tabla
+  // companyId: no super admin → siempre que haya empresa. Super admin → solo si la seleccionada NO es la empresa principal
   const [filters, setFilters] = useState<CompanyFilters>({
     page: 1,
     limit: 10,
@@ -103,6 +127,14 @@ export function CompaniesListScreen() {
     code: undefined,
     name: undefined,
     email: undefined,
+    companyId: (() => {
+      if (!currentCompany?.id || !isValidUUID(currentCompany.id))
+        return undefined;
+      if (!isSuperAdmin) return currentCompany.id;
+      return currentCompany.id !== mainCompanyId
+        ? currentCompany.id
+        : undefined;
+    })(),
   });
 
   // Flag para prevenir llamadas infinitas cuando hay un error activo
@@ -193,6 +225,33 @@ export function CompaniesListScreen() {
   loadCompaniesRef.current = loadCompanies;
 
   /**
+   * Sincronizar companyId con la empresa seleccionada.
+   * - No super admin: siempre enviar companyId cuando hay empresa.
+   * - Super admin: solo enviar companyId cuando la empresa seleccionada NO es la empresa principal (mainCompanyId).
+   */
+  useEffect(() => {
+    if (!currentCompany?.id || !isValidUUID(currentCompany.id)) {
+      setFilters((prev) => {
+        const { companyId, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+    if (!isSuperAdmin) {
+      setFilters((prev) => ({ ...prev, companyId: currentCompany.id }));
+      return;
+    }
+    if (currentCompany.id === mainCompanyId) {
+      setFilters((prev) => {
+        const { companyId, ...rest } = prev;
+        return rest;
+      });
+    } else {
+      setFilters((prev) => ({ ...prev, companyId: currentCompany.id }));
+    }
+  }, [isSuperAdmin, mainCompanyId, currentCompany?.id]);
+
+  /**
    * Memoizar la signature de los filtros para evitar llamadas duplicadas
    * Usar valores específicos en lugar del objeto completo para estabilizar la dependencia
    */
@@ -205,6 +264,7 @@ export function CompaniesListScreen() {
       code: filters.code || "",
       name: filters.name || "",
       email: filters.email || "",
+      companyId: filters.companyId || "",
     });
   }, [
     filters.page,
@@ -214,12 +274,13 @@ export function CompaniesListScreen() {
     filters.code || "",
     filters.name || "",
     filters.email || "",
+    filters.companyId || "",
   ]);
 
   /**
-   * Efecto para cargar empresas cuando cambian los filtros
-   * Solo se ejecuta cuando los filtros cambian, evitando llamadas infinitas
-   * IMPORTANTE: No incluir loadCompanies en las dependencias para evitar loops infinitos
+   * Cargar empresas cuando cambian los filtros.
+   * Super admin no envía companyId; si no va, el backend usa la empresa del usuario.
+   * No incluir loadCompanies en dependencias para evitar loops.
    */
   useEffect(() => {
     // No recargar si hay un error activo (evita loops infinitos)
@@ -296,6 +357,14 @@ export function CompaniesListScreen() {
   };
 
   const handleClearFilters = () => {
+    const companyIdValue =
+      currentCompany?.id && isValidUUID(currentCompany.id)
+        ? !isSuperAdmin
+          ? currentCompany.id
+          : currentCompany.id !== mainCompanyId
+            ? currentCompany.id
+            : undefined
+        : undefined;
     setFilters({
       page: 1,
       limit: 10,
@@ -304,6 +373,7 @@ export function CompaniesListScreen() {
       code: undefined,
       name: undefined,
       email: undefined,
+      companyId: companyIdValue,
     });
     setLocalFilter(""); // Limpiar también el filtro local
     setHasError(false);
@@ -533,21 +603,25 @@ export function CompaniesListScreen() {
             </ThemedText>
           </View>
           <View style={styles.actionsContainer}>
-            <Button
-              title={
-                isMobile ? "" : t.security?.companies?.create || "Crear Empresa"
-              }
-              onPress={handleCreateCompany}
-              variant="primary"
-              size="md"
-            >
-              <Ionicons
-                name="add"
-                size={20}
-                color={colors.contrastText}
-                style={!isMobile ? { marginRight: spacing.sm } : undefined}
-              />
-            </Button>
+            {isSuperAdmin && (
+              <Button
+                title={
+                  isMobile
+                    ? ""
+                    : t.security?.companies?.create || "Crear Empresa"
+                }
+                onPress={handleCreateCompany}
+                variant="primary"
+                size="md"
+              >
+                <Ionicons
+                  name="add"
+                  size={20}
+                  color={colors.contrastText}
+                  style={!isMobile ? { marginRight: spacing.sm } : undefined}
+                />
+              </Button>
+            )}
           </View>
         </View>
 

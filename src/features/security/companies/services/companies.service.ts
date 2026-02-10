@@ -39,6 +39,10 @@ export class CompaniesService {
   /**
    * Obtiene empresas. Solo incluye page/limit en la URL cuando se pasan (uso en tablas).
    * Para dropdowns/formularios invocar sin page/limit: getCompanies({ status: 1 }).
+   *
+   * companyId es opcional:
+   * - Super admin: no enviar cuando la empresa seleccionada es la empresa principal; enviar cuando es otra (filtrar por esa).
+   * - No super admin: enviar companyId cuando haya empresa en contexto; si no se envía, backend usa la del usuario.
    */
   static async getCompanies(
     filters: Partial<CompanyFilters> = {},
@@ -259,6 +263,10 @@ export class CompaniesService {
     }
     if (typeof filters.status === "number") {
       params.append("status", filters.status.toString());
+    }
+    // companyId opcional; la pantalla no lo envía cuando el usuario es super administrador
+    if (filters.companyId?.trim()) {
+      params.append("companyId", filters.companyId.trim());
     }
 
     return params.toString();

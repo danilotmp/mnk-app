@@ -20,9 +20,13 @@ export interface MenuItem {
 }
 
 /**
- * Columna del menú (para mega menus)
+ * Columna del menú (para mega menus).
+ * id = GUID del ítem grupo; menuId = identificador del nodo (ej. "system-root", "notifications-root").
+ * Ambos se envían en el sync para que el backend reconozca el ítem existente.
  */
 export interface MenuColumn {
+  id?: string;
+  menuId?: string;
   title: string;
   items: MenuSubItem[];
 }
@@ -52,4 +56,3 @@ export interface MenuResponse {
     details: any;
   };
 }
-

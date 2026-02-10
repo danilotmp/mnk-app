@@ -2,8 +2,8 @@
  * Tipos de dominio para Roles
  */
 
-import { BaseEntity, PaginationParams } from '@/src/domains/shared/types';
-import { SecurityPermission } from '@/src/domains/security/types';
+import { SecurityPermission } from "@/src/domains/security/types";
+import { BaseEntity, PaginationParams } from "@/src/domains/shared/types";
 
 /**
  * Rol del sistema (Modelo de Dominio)
@@ -26,6 +26,6 @@ export interface RoleFilters extends PaginationParams {
   search?: string;
   status?: number;
   isSystem?: boolean;
-  companyId?: string; // Filtrar roles por empresa
+  /** Opcional. Si no se envía, el backend usa la empresa del usuario autenticado (super admin sin filtro). */
+  companyId?: string;
 }
-

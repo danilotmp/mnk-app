@@ -3,7 +3,7 @@
  * Modelos de negocio puros, independientes de la API
  */
 
-import { BaseEntity, PaginationParams } from '@/src/domains/shared/types';
+import { BaseEntity, PaginationParams } from "@/src/domains/shared/types";
 
 /**
  * Usuario del sistema (Modelo de Dominio)
@@ -15,11 +15,11 @@ export interface User extends BaseEntity {
   phone?: string;
   avatar?: string;
   isEmailVerified?: boolean;
-  
+
   // Sistema de estados
   status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
   statusDescription: string; // Descripción traducida del estado (viene del backend)
-  
+
   lastLoginAt?: Date;
   lastLogin?: string;
   companyId: string;
@@ -101,8 +101,8 @@ export interface UserUpdatePayload {
 export interface UserFilters extends PaginationParams {
   search?: string;
   status?: number; // Filtrar por estado: -1, 0, 1, 2, 3
+  /** Opcional. Si no se envía, el backend usa la empresa del usuario autenticado (super admin sin filtro). */
   companyId?: string;
   roleId?: string;
   branchId?: string;
 }
-

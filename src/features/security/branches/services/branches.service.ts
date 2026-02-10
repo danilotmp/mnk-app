@@ -3,13 +3,13 @@
  * Incluye endpoints administrativos y utilidades de contexto
  */
 
-import { apiClient, ApiError } from '@/src/infrastructure/api/api.client';
-import { SUCCESS_STATUS_CODE } from '@/src/infrastructure/api/constants';
+import { apiClient, ApiError } from "@/src/infrastructure/api/api.client";
+import { SUCCESS_STATUS_CODE } from "@/src/infrastructure/api/constants";
 
-import { PaginatedResponse } from '@/src/domains/shared/types';
-import { branchAdapter, branchesAdapter } from '../adapters';
-import { Branch, BranchFilters, BranchPayload } from '../types/domain';
-import { BranchApi } from '../types/api';
+import { PaginatedResponse } from "@/src/domains/shared/types";
+import { branchAdapter, branchesAdapter } from "../adapters";
+import { BranchApi } from "../types/api";
+import { Branch, BranchFilters, BranchPayload } from "../types/domain";
 
 type BackendPagination = {
   currentPage?: number;
@@ -33,49 +33,66 @@ interface BackendPaginatedBranches {
 }
 
 export class BranchesService {
-  private static readonly BASE_ENDPOINT = '/security/admin/branches';
-  private static readonly CONTEXT_ENDPOINT = '/auth/me/branches';
-  private static readonly BY_COMPANY_ENDPOINT = '/security/admin/branches/company';
+  private static readonly BASE_ENDPOINT = "/security/admin/branches";
+  private static readonly CONTEXT_ENDPOINT = "/auth/me/branches";
+  private static readonly BY_COMPANY_ENDPOINT =
+    "/security/admin/branches/company";
 
   /**
    * Validar si un string es un UUID válido
    */
   private static isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   }
 
+  /**
+   * Lista de sucursales con paginación.
+   * Siempre se debe enviar companyId (empresa seleccionada en el selector de contexto).
+   */
   static async getBranches(
-    filters: BranchFilters = { page: 1, limit: 10 }
+    filters: BranchFilters = { page: 1, limit: 10 },
   ): Promise<PaginatedResponse<Branch>> {
     const queryParams = this.buildQueryParams(filters);
-    const endpoint = queryParams ? `${this.BASE_ENDPOINT}?${queryParams}` : this.BASE_ENDPOINT;
+    const endpoint = queryParams
+      ? `${this.BASE_ENDPOINT}?${queryParams}`
+      : this.BASE_ENDPOINT;
 
     const response = await apiClient.request<BackendPaginatedBranches>({
       endpoint,
-      method: 'GET',
+      method: "GET",
     });
 
     if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
-      const normalized = this.normalizePaginatedResponse(response.data, filters);
+      const normalized = this.normalizePaginatedResponse(
+        response.data,
+        filters,
+      );
       return {
         data: branchesAdapter(normalized.data),
         meta: normalized.meta,
       };
     }
 
-    throw new Error(response.result?.description || 'Error al obtener sucursales');
+    throw new Error(
+      response.result?.description || "Error al obtener sucursales",
+    );
   }
 
   static async getBranchesByCompany(companyId: string): Promise<Branch[]> {
     // Validar que companyId sea un UUID válido antes de hacer la llamada
     if (!this.isValidUUID(companyId)) {
-      throw new Error(`ID de empresa inválido: ${companyId}. Se requiere un UUID válido.`);
+      throw new Error(
+        `ID de empresa inválido: ${companyId}. Se requiere un UUID válido.`,
+      );
     }
 
-    const response = await apiClient.request<BranchApi[] | BackendPaginatedBranches>({
+    const response = await apiClient.request<
+      BranchApi[] | BackendPaginatedBranches
+    >({
       endpoint: `${this.BY_COMPANY_ENDPOINT}/${companyId}`,
-      method: 'GET',
+      method: "GET",
     });
 
     if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
@@ -92,21 +109,29 @@ export class BranchesService {
       return [];
     }
 
-    throw new Error(response.result?.description || 'Error al obtener sucursales de la empresa');
+    throw new Error(
+      response.result?.description ||
+        "Error al obtener sucursales de la empresa",
+    );
   }
 
   static async getBranchById(id: string): Promise<Branch> {
     try {
       const response = await apiClient.request<BranchApi>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
-        method: 'GET',
+        method: "GET",
       });
 
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+      if (
+        response.result?.statusCode === SUCCESS_STATUS_CODE &&
+        response.data
+      ) {
         return branchAdapter(response.data);
       }
 
-      throw new Error(response.result?.description || 'Error al obtener la sucursal');
+      throw new Error(
+        response.result?.description || "Error al obtener la sucursal",
+      );
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -114,7 +139,9 @@ export class BranchesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al obtener la sucursal');
+      const genericError = new Error(
+        error?.message || "Error al obtener la sucursal",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
@@ -125,15 +152,20 @@ export class BranchesService {
     try {
       const response = await apiClient.request<BranchApi>({
         endpoint: this.BASE_ENDPOINT,
-        method: 'POST',
+        method: "POST",
         body: payload,
       });
 
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+      if (
+        response.result?.statusCode === SUCCESS_STATUS_CODE &&
+        response.data
+      ) {
         return branchAdapter(response.data);
       }
 
-      throw new Error(response.result?.description || 'Error al crear la sucursal');
+      throw new Error(
+        response.result?.description || "Error al crear la sucursal",
+      );
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -141,26 +173,36 @@ export class BranchesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al crear la sucursal');
+      const genericError = new Error(
+        error?.message || "Error al crear la sucursal",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
     }
   }
 
-  static async updateBranch(id: string, payload: BranchPayload): Promise<Branch> {
+  static async updateBranch(
+    id: string,
+    payload: BranchPayload,
+  ): Promise<Branch> {
     try {
       const response = await apiClient.request<BranchApi>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
-        method: 'PUT',
+        method: "PUT",
         body: payload,
       });
 
-      if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
+      if (
+        response.result?.statusCode === SUCCESS_STATUS_CODE &&
+        response.data
+      ) {
         return branchAdapter(response.data);
       }
 
-      throw new Error(response.result?.description || 'Error al actualizar la sucursal');
+      throw new Error(
+        response.result?.description || "Error al actualizar la sucursal",
+      );
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -168,7 +210,9 @@ export class BranchesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al actualizar la sucursal');
+      const genericError = new Error(
+        error?.message || "Error al actualizar la sucursal",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
@@ -179,11 +223,13 @@ export class BranchesService {
     try {
       const response = await apiClient.request<void>({
         endpoint: `${this.BASE_ENDPOINT}/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.result?.statusCode !== SUCCESS_STATUS_CODE) {
-        throw new Error(response.result?.description || 'Error al eliminar la sucursal');
+        throw new Error(
+          response.result?.description || "Error al eliminar la sucursal",
+        );
       }
     } catch (error: any) {
       if (error instanceof ApiError) {
@@ -192,7 +238,9 @@ export class BranchesService {
       if (error?.result || error?.details) {
         throw error;
       }
-      const genericError = new Error(error?.message || 'Error al eliminar la sucursal');
+      const genericError = new Error(
+        error?.message || "Error al eliminar la sucursal",
+      );
       (genericError as any).result = error?.result;
       (genericError as any).details = error?.details;
       throw genericError;
@@ -200,9 +248,11 @@ export class BranchesService {
   }
 
   static async getMyBranches(): Promise<Branch[]> {
-    const response = await apiClient.request<BranchApi[] | BackendPaginatedBranches>({
+    const response = await apiClient.request<
+      BranchApi[] | BackendPaginatedBranches
+    >({
       endpoint: this.CONTEXT_ENDPOINT,
-      method: 'GET',
+      method: "GET",
     });
 
     if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) {
@@ -219,7 +269,10 @@ export class BranchesService {
       return [];
     }
 
-    throw new Error(response.result?.description || 'Error al obtener las sucursales del usuario');
+    throw new Error(
+      response.result?.description ||
+        "Error al obtener las sucursales del usuario",
+    );
   }
 
   private static buildQueryParams(filters: BranchFilters): string {
@@ -228,26 +281,27 @@ export class BranchesService {
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.max(1, Math.min(100, filters.limit ?? 10));
 
-    params.append('page', page.toString());
-    params.append('limit', limit.toString());
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
 
     if (filters.search?.trim()) {
-      params.append('search', filters.search.trim());
+      params.append("search", filters.search.trim());
     }
+    // companyId obligatorio: siempre la empresa seleccionada en el selector
     if (filters.companyId?.trim()) {
-      params.append('companyId', filters.companyId.trim());
+      params.append("companyId", filters.companyId.trim());
     }
     if (filters.code?.trim()) {
-      params.append('code', filters.code.trim());
+      params.append("code", filters.code.trim());
     }
     if (filters.name?.trim()) {
-      params.append('name', filters.name.trim());
+      params.append("name", filters.name.trim());
     }
     if (filters.type) {
-      params.append('type', filters.type);
+      params.append("type", filters.type);
     }
-    if (typeof filters.status === 'number') {
-      params.append('status', String(filters.status));
+    if (typeof filters.status === "number") {
+      params.append("status", String(filters.status));
     }
 
     return params.toString();
@@ -255,9 +309,12 @@ export class BranchesService {
 
   private static normalizePaginatedResponse(
     raw: BackendPaginatedBranches,
-    filters: BranchFilters
+    filters: BranchFilters,
   ): PaginatedResponse<BranchApi> {
-    if ((raw as PaginatedResponse<BranchApi>).data && (raw as PaginatedResponse<BranchApi>).meta) {
+    if (
+      (raw as PaginatedResponse<BranchApi>).data &&
+      (raw as PaginatedResponse<BranchApi>).meta
+    ) {
       return raw as PaginatedResponse<BranchApi>;
     }
 
@@ -274,19 +331,21 @@ export class BranchesService {
       return this.buildFromItems(list, undefined, filters);
     }
 
-    throw new Error('Estructura de paginación de sucursales no reconocida');
+    throw new Error("Estructura de paginación de sucursales no reconocida");
   }
 
   private static buildFromItems(
     items: BranchApi[],
     pagination: BackendPagination | undefined,
-    filters: BranchFilters
+    filters: BranchFilters,
   ): PaginatedResponse<BranchApi> {
     const page = pagination?.currentPage ?? filters.page ?? 1;
-    const limit = (pagination?.itemsPerPage ?? filters.limit ?? items.length) || 10;
+    const limit =
+      (pagination?.itemsPerPage ?? filters.limit ?? items.length) || 10;
     const total = pagination?.totalItems ?? items.length;
     const totalPages =
-      pagination?.totalPages ?? (limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1);
+      pagination?.totalPages ??
+      (limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1);
 
     return {
       data: items,
@@ -301,5 +360,3 @@ export class BranchesService {
     };
   }
 }
-
-

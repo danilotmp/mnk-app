@@ -2,10 +2,10 @@
  * Tipos de dominio para Sucursales
  */
 
-import { BaseEntity, PaginationParams } from '@/src/domains/shared/types';
-import { CompanyAddress } from '@/src/features/security/companies/types/domain/company.types';
+import { BaseEntity, PaginationParams } from "@/src/domains/shared/types";
+import { CompanyAddress } from "@/src/features/security/companies/types/domain/company.types";
 
-export type BranchType = 'headquarters' | 'branch' | 'warehouse' | 'store';
+export type BranchType = "headquarters" | "branch" | "warehouse" | "store";
 
 export interface Branch extends BaseEntity {
   companyId: string;
@@ -50,6 +50,7 @@ export interface BranchDaySchedule {
 
 export interface BranchFilters extends PaginationParams {
   search?: string;
+  /** Obligatorio para el listado: siempre la empresa seleccionada en el selector. */
   companyId?: string;
   code?: string;
   name?: string;
@@ -68,4 +69,3 @@ export interface BranchPayload {
   settings?: BranchSettings;
   status?: number;
 }
-

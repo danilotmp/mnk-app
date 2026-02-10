@@ -17,6 +17,11 @@ export class RolesService {
    * Obtener lista de roles.
    * Solo incluye page/limit en la URL cuando se pasan (uso en tablas).
    * Para dropdowns/formularios invocar sin page/limit: getRoles({ status: 1 }) o getRoles({ companyId, status: 1 }).
+   *
+   * companyId es opcional:
+   * - Si no se envía, el backend usa la empresa del usuario autenticado (token/BD).
+   *   Usuario no super admin: siempre filtra por su empresa. Super admin: sin filtro (ve todo).
+   * - Si se envía, el backend valida acceso y filtra por esa empresa (super admin puede navegar entre empresas).
    */
   static async getRoles(
     filters: Partial<RoleFilters> = {},
@@ -48,6 +53,7 @@ export class RolesService {
       if (filters.isSystem !== undefined) {
         queryParams.append("isSystem", filters.isSystem ? "true" : "false");
       }
+      // companyId opcional: si viene en filtros (ej. empresa actual del contexto) se envía para filtrar/navegar
       if (filters.companyId) {
         queryParams.append("companyId", filters.companyId);
       }
