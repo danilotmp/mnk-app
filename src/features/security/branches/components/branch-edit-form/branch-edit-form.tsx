@@ -28,13 +28,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useBranchTypeOptions } from "../../hooks";
 import { BranchesService } from "../../services";
 import { createBranchFormStyles } from "./branch-edit-form.styles";
-import {
-    BRANCH_TYPES,
-    BranchEditFormProps,
-    BranchFormData,
-} from "./branch-edit-form.types";
+import { BranchEditFormProps, BranchFormData } from "./branch-edit-form.types";
 
 export function BranchEditForm({
   branchId,
@@ -58,6 +55,7 @@ export function BranchEditForm({
   );
 
   const { companies, loading: companiesLoading } = useCompanyOptions();
+  const { options: branchTypeOptions } = useBranchTypeOptions();
 
   const [formData, setFormData] = useState<BranchFormData>({
     companyId: "",
@@ -451,7 +449,7 @@ export function BranchEditForm({
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.selectOptions}>
-              {BRANCH_TYPES.map((option) => {
+              {branchTypeOptions.map((option) => {
                 const isSelected = formData.type === option.value;
                 return (
                   <TouchableOpacity

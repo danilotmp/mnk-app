@@ -8,11 +8,12 @@ import { useThemeMode } from "@/hooks/use-theme-mode";
 import { AppConfig } from "@/src/config";
 import { DynamicIcon } from "@/src/domains/shared/components";
 import {
-    useBranches,
-    useCompany,
-    useMultiCompany,
+  useBranches,
+  useCompany,
+  useMultiCompany,
 } from "@/src/domains/shared/hooks/use-multi-company.hook";
 import { Branch, BranchAccess } from "@/src/domains/shared/types";
+import { inferBranchType } from "@/src/features/security/branches/utils/branch-type.utils";
 import { LanguageSelector, useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { useSession } from "@/src/infrastructure/session";
@@ -21,21 +22,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Animated,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import type {
-    HorizontalMenuProps,
-    MenuColumn,
-    MenuItem,
+  HorizontalMenuProps,
+  MenuColumn,
+  MenuItem,
 } from "./horizontal-menu.types";
 
 /**
@@ -65,35 +66,6 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     typeof setTimeout
   > | null>(null);
   const [isMenuHovered, setIsMenuHovered] = useState(false); // Estado para hover del menú (solo Web)
-
-  // Función helper para inferir tipo de sucursal
-  const inferBranchType = (
-    code: string,
-  ): "headquarters" | "branch" | "warehouse" | "store" => {
-    const upperCode = code.toUpperCase();
-    if (
-      upperCode.includes("HQ") ||
-      upperCode.includes("HEADQUARTERS") ||
-      upperCode.includes("CASA MATRIZ")
-    ) {
-      return "headquarters";
-    }
-    if (
-      upperCode.includes("WAREHOUSE") ||
-      upperCode.includes("ALMACEN") ||
-      upperCode.includes("BODEGA")
-    ) {
-      return "warehouse";
-    }
-    if (
-      upperCode.includes("STORE") ||
-      upperCode.includes("TIENDA") ||
-      upperCode.includes("LOCAL")
-    ) {
-      return "store";
-    }
-    return "branch";
-  };
 
   // Cargar branches cuando cambia la empresa o usuario
   React.useEffect(() => {

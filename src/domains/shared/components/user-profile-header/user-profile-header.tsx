@@ -8,59 +8,29 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { isDesktopDevice, isMobileDevice } from "@/constants/breakpoints";
 import { useTheme } from "@/hooks/use-theme";
+import { inferBranchType } from "@/src/features/security/branches/utils/branch-type.utils";
 import { LanguageSelector, useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { useSession } from "@/src/infrastructure/session";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Modal,
-    Platform,
-    ScrollView,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Modal,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import {
-    useBranches,
-    useCompany,
-    useMultiCompany,
+  useBranches,
+  useCompany,
+  useMultiCompany,
 } from "../../hooks/use-multi-company.hook";
 import { Branch, BranchAccess } from "../../types";
 import { DynamicIcon } from "../dynamic-icon/dynamic-icon";
 import { createUserProfileHeaderStyles } from "./user-profile-header.styles";
 import { UserProfileHeaderProps } from "./user-profile-header.types";
-
-/**
- * Infiere el tipo de sucursal desde el código
- */
-function inferBranchType(
-  code: string,
-): "headquarters" | "branch" | "warehouse" | "store" {
-  const upperCode = code.toUpperCase();
-  if (
-    upperCode.includes("HQ") ||
-    upperCode.includes("HEADQUARTERS") ||
-    upperCode.includes("CASA MATRIZ")
-  ) {
-    return "headquarters";
-  }
-  if (
-    upperCode.includes("WAREHOUSE") ||
-    upperCode.includes("ALMACEN") ||
-    upperCode.includes("BODEGA")
-  ) {
-    return "warehouse";
-  }
-  if (
-    upperCode.includes("STORE") ||
-    upperCode.includes("TIENDA") ||
-    upperCode.includes("LOCAL")
-  ) {
-    return "store";
-  }
-  return "branch";
-}
 
 export function UserProfileHeader({
   onLogout,

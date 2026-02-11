@@ -22,10 +22,10 @@ import React, {
     useState,
 } from "react";
 import { ScrollView, TextInput, TouchableOpacity, View } from "react-native";
+import { useBranchTypeOptions } from "../../hooks";
 import { BranchesService } from "../../services";
 import { createBranchFormStyles } from "./branch-create-form.styles";
 import {
-    BRANCH_TYPES,
     BranchCreateFormProps,
     BranchFormData,
 } from "./branch-create-form.types";
@@ -51,6 +51,7 @@ export function BranchCreateForm({
   );
 
   const { companies, loading: companiesLoading } = useCompanyOptions();
+  const { options: branchTypeOptions } = useBranchTypeOptions();
 
   const [formData, setFormData] = useState<BranchFormData>({
     companyId: "",
@@ -392,7 +393,7 @@ export function BranchCreateForm({
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.selectOptions}>
-              {BRANCH_TYPES.map((option) => {
+              {branchTypeOptions.map((option) => {
                 const isSelected = formData.type === option.value;
                 return (
                   <TouchableOpacity
