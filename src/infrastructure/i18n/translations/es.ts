@@ -125,9 +125,9 @@ export const es: Translations = {
             "Arquitectura segura, datos protegidos y control de acceso por roles.",
         },
         integrated: {
-          title: "Integrado",
+          title: "Personalizable",
           description:
-            "WhatsApp, facturación y ERP conectados en un solo ecosistema.",
+            "Adapta la plataforma a tu negocio: módulos, flujos e integraciones a tu medida.",
         },
       },
     },

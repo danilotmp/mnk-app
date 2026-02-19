@@ -125,9 +125,9 @@ export const en: Translations = {
             "Secure architecture, protected data and role-based access control.",
         },
         integrated: {
-          title: "Integrated",
+          title: "Customizable",
           description:
-            "WhatsApp, billing and ERP connected in a single ecosystem.",
+            "Adapt the platform to your business: modules, workflows and integrations tailored to you.",
         },
       },
     },

@@ -143,12 +143,10 @@ export function UserProfileHeader({
     return (
       <>
         <View style={styles.profileContainer}>
-          {/* Toggle de tema - Solo en desktop/tablet */}
-          {!isMobile && (
-            <View style={styles.themeToggleWrapper}>
-              <ThemeToggle />
-            </View>
-          )}
+          {/* Toggle de tema - visible siempre (móvil y desktop) */}
+          <View style={styles.themeToggleWrapper}>
+            <ThemeToggle />
+          </View>
 
           {/* Selector de idioma - Solo en desktop/tablet */}
           {!isMobile && (
