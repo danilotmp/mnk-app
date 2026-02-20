@@ -14,12 +14,11 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/icon.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "aibox.app"
     },
     "web": {
       "output": "static",
@@ -43,7 +42,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-      // "reactCompiler": true  // Deshabilitado temporalmente - causa lentitud en compilación
     },
     "extra": {
       "apiBaseUrl": "http://localhost:3000/api",
@@ -53,7 +51,12 @@
       "tokenRefreshThreshold": 300000,
       "userDataCacheDuration": 1800000,
       "configCacheDuration": 86400000,
-      "catalogCacheDuration": 3600000
+      "catalogCacheDuration": 3600000,
+      "router": {},
+      "eas": {
+        "projectId": "7631c7d3-d89a-47ce-9286-fbe39562baf1"
+      },
+      "androidApkUrl": "https://expo.dev/accounts/daniloupsq/projects/aibox-app/builds/c53646cb-878f-4502-86e1-89a4652b72ea"
     }
   }
 }

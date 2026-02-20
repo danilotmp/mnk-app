@@ -108,9 +108,20 @@ export const AppConfig = {
   // URLs externas
   externalUrls: {
     // URL de la documentación de iconos de Expo
-    iconsDocumentation: process.env.EXPO_PUBLIC_ICONS_DOCUMENTATION_URL || 
-                       Constants.expoConfig?.extra?.iconsDocumentationUrl || 
+    iconsDocumentation: process.env.EXPO_PUBLIC_ICONS_DOCUMENTATION_URL ||
+                       Constants.expoConfig?.extra?.iconsDocumentationUrl ||
                        'https://icons.expo.fyi/Index',
+  },
+
+  // URLs de descarga de la app (página Descargas). Por defecto usa la URL de EAS (extra.androidApkUrl en app.json).
+  downloads: {
+    androidApkUrl: process.env.EXPO_PUBLIC_ANDROID_APK_URL ||
+                    Constants.expoConfig?.extra?.androidApkUrl ||
+                    '',
+    // URL para iOS (App Store o TestFlight)
+    iosUrl: process.env.EXPO_PUBLIC_IOS_APP_URL ||
+            Constants.expoConfig?.extra?.iosAppUrl ||
+            '',
   },
 };
 

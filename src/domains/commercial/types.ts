@@ -9,6 +9,10 @@ export interface WhatsAppInstance {
   whatsapp: string;
   whatsappQR: string | null; // Base64 del QR code
   isActive: boolean;
+  /** Flujo ChatIA (JSON). Solo para super admin, lo controla el back. */
+  chatIAFlow?: string | null;
+  /** Nombre del archivo del flujo para descarga. Solo para super admin. */
+  chatIAFlowFilename?: string | null;
 }
 
 export interface WhatsAppInstancePayload {

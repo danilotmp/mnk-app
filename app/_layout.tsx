@@ -186,6 +186,13 @@ function LayoutContent() {
   // Aplicar estilos de scrollbar adaptados al tema
   useScrollbarStyles();
 
+  // Título de la pestaña del navegador en web
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      document.title = "AIBox";
+    }
+  }, []);
+
   // Determinar si estamos en una ruta de autenticación
   const isAuthRoute = pathname?.startsWith("/auth") || segments[0] === "auth";
 

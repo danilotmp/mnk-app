@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
+import { AppConfig } from "@/src/config";
 import { DynamicIcon } from "@/src/domains/shared/components";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import React, { useMemo } from "react";
@@ -18,11 +19,8 @@ import {
 } from "react-native";
 import { createDownloadsScreenStyles } from "./downloads.screen.styles";
 
-// URLs de descarga: configurar cuando tengas los instaladores publicados
-const DOWNLOAD_URLS = {
-  android: "", // ej: "https://tu-dominio.com/builds/app-release.apk"
-  ios: "", // ej: "https://apps.apple.com/app/tu-app/idXXXXX" o TestFlight
-};
+const androidApkUrl = AppConfig.downloads?.androidApkUrl ?? "";
+const iosUrl = AppConfig.downloads?.iosUrl ?? "";
 
 export function DownloadsScreen() {
   const { colors, typography, pageLayout, spacing, borderRadius } = useTheme();
@@ -47,8 +45,18 @@ export function DownloadsScreen() {
 
   const handleDownload = (url: string) => {
     if (!url) return;
-    Linking.openURL(url).catch(() => {});
+    // En web, si la URL es relativa (ej. /downloads/AIBox.apk), usar la misma origen para que la descarga funcione
+    const resolvedUrl =
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      url.startsWith("/")
+        ? `${window.location.origin}${url}`
+        : url;
+    Linking.openURL(resolvedUrl).catch(() => {});
   };
+
+  const hasAndroidUrl = Boolean(androidApkUrl);
+  const hasIosUrl = Boolean(iosUrl);
 
   return (
     <ThemedView style={styles.container}>
@@ -117,14 +125,14 @@ export function DownloadsScreen() {
               <TouchableOpacity
                 style={[
                   styles.downloadButton,
-                  !DOWNLOAD_URLS.android && styles.downloadButtonDisabled,
+                  !hasAndroidUrl && styles.downloadButtonDisabled,
                 ]}
-                onPress={() => handleDownload(DOWNLOAD_URLS.android)}
-                disabled={!DOWNLOAD_URLS.android}
+                onPress={() => handleDownload(androidApkUrl)}
+                disabled={!hasAndroidUrl}
                 activeOpacity={0.7}
               >
                 <ThemedText style={styles.downloadButtonText}>
-                  {DOWNLOAD_URLS.android
+                  {hasAndroidUrl
                     ? (d?.downloadButton ?? "Descargar")
                     : (d?.comingSoon ?? "Próximamente")}
                 </ThemedText>
@@ -163,14 +171,14 @@ export function DownloadsScreen() {
               <TouchableOpacity
                 style={[
                   styles.downloadButton,
-                  !DOWNLOAD_URLS.ios && styles.downloadButtonDisabled,
+                  !hasIosUrl && styles.downloadButtonDisabled,
                 ]}
-                onPress={() => handleDownload(DOWNLOAD_URLS.ios)}
-                disabled={!DOWNLOAD_URLS.ios}
+                onPress={() => handleDownload(iosUrl)}
+                disabled={!hasIosUrl}
                 activeOpacity={0.7}
               >
                 <ThemedText style={styles.downloadButtonText}>
-                  {DOWNLOAD_URLS.ios
+                  {hasIosUrl
                     ? (d?.downloadButton ?? "Descargar")
                     : (d?.comingSoon ?? "Próximamente")}
                 </ThemedText>
