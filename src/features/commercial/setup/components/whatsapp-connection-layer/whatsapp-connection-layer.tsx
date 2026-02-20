@@ -30,7 +30,9 @@ import React, {
 import {
     ActivityIndicator,
     Image,
+    Platform,
     ScrollView,
+    Share,
     StyleSheet,
     TouchableOpacity,
     View,
@@ -108,6 +110,45 @@ export const WhatsAppConnectionLayer = forwardRef<
       alert.showError("Error al cargar instancias de WhatsApp");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Decodifica base64 a string UTF-8 (web y native). */
+  const base64ToUtf8 = (base64: string): string => {
+    if (typeof globalThis !== "undefined" && "Buffer" in globalThis) {
+      return (globalThis as any).Buffer.from(base64, "base64").toString(
+        "utf-8",
+      );
+    }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  };
+
+  /** Descargar o compartir el archivo de flujo ChatIA (super admin). chatIAFlow viene en base64. */
+  const handleDownloadFlow = async (instance: WhatsAppInstance) => {
+    const base64 = instance.chatIAFlow;
+    const filename = instance.chatIAFlowFilename || "chat-ia-flow.json";
+    if (!base64) return;
+    try {
+      const content = base64ToUtf8(base64);
+      if (Platform.OS === "web") {
+        const blob = new Blob([content], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        await Share.share({
+          message: content,
+          title: filename,
+        });
+      }
+    } catch (e) {
+      alert.showError("Error al descargar el flujo");
     }
   };
 
@@ -433,6 +474,49 @@ export const WhatsAppConnectionLayer = forwardRef<
           </ThemedText>
         ),
     },
+    ...(instances.some(
+      (i) => i.chatIAFlow && i.chatIAFlowFilename,
+    )
+      ? [
+          {
+            key: "chatIAFlow",
+            label: "Flujo ChatIA",
+            width: "18%",
+            render: (instance: WhatsAppInstance) =>
+              instance.chatIAFlow && instance.chatIAFlowFilename ? (
+                <TouchableOpacity
+                  onPress={() => handleDownloadFlow(instance)}
+                  style={[
+                    styles.qrBadge,
+                    {
+                      backgroundColor: colors.primary + "20",
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="download-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <ThemedText
+                    type="caption"
+                    style={{ color: colors.primary, marginLeft: 4 }}
+                  >
+                    Descargar
+                  </ThemedText>
+                </TouchableOpacity>
+              ) : (
+                <ThemedText
+                  type="caption"
+                  style={{ color: colors.textSecondary }}
+                >
+                  —
+                </ThemedText>
+              ),
+          } as TableColumn<WhatsAppInstance>,
+        ]
+      : []),
     {
       key: "isActive",
       label: "Estado",
@@ -751,6 +835,26 @@ export const WhatsAppConnectionLayer = forwardRef<
                       )}
                     </Button>
                   </View>
+                {selectedInstance?.chatIAFlow &&
+                  selectedInstance?.chatIAFlowFilename && (
+                  <View style={{ marginTop: 12 }}>
+                    <Button
+                      title="Descargar flujo ChatIA"
+                      onPress={() =>
+                        handleDownloadFlow(selectedInstance)
+                      }
+                      variant="outline"
+                      size="md"
+                    >
+                      <Ionicons
+                        name="download-outline"
+                        size={18}
+                        color={colors.primary}
+                        style={{ marginRight: 8 }}
+                      />
+                    </Button>
+                  </View>
+                )}
                 </View>
               )}
             </View>
@@ -775,6 +879,24 @@ export const WhatsAppConnectionLayer = forwardRef<
                   variant="outline"
                   size="md"
                 />
+                {selectedInstance?.chatIAFlow &&
+                  selectedInstance?.chatIAFlowFilename && (
+                  <Button
+                    title="Descargar flujo"
+                    onPress={() =>
+                      handleDownloadFlow(selectedInstance)
+                    }
+                    variant="outline"
+                    size="md"
+                  >
+                    <Ionicons
+                      name="download-outline"
+                      size={18}
+                      color={colors.contrastText}
+                      style={{ marginRight: 8 }}
+                    />
+                  </Button>
+                )}
                 <Button
                   title={
                     generatingQR
