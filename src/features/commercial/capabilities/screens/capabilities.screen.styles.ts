@@ -204,9 +204,10 @@ export function createCapabilitiesScreenStyles(
     },
     cardImageContainer: {
       width: "100%",
-      height: 160,
+      height: 180,
       borderRadius: t.borderRadius.md,
       marginBottom: t.spacing.sm,
+      alignSelf: "stretch",
     },
     cardImageContainerInner: {
       width: "100%",
@@ -218,7 +219,7 @@ export function createCapabilitiesScreenStyles(
       borderRadius: t.borderRadius.sm,
     },
     cardImageContainerMobile: {
-      height: 140,
+      height: 180,
       borderRadius: t.borderRadius.sm,
       marginBottom: t.spacing.xs,
     },

@@ -156,6 +156,15 @@ export const es: Translations = {
       goBack: "Volver",
       contactUs: "Contáctanos",
     },
+    downloads: {
+      title: "Descargas",
+      subtitle: "Descarga la aplicación AIBox para tu dispositivo. Aquí encontrarás todos los instaladores disponibles.",
+      android: "Android",
+      ios: "iOS",
+      installers: "Instaladores",
+      downloadButton: "Descargar",
+      comingSoon: "Próximamente",
+    },
     capabilities: {
       title: "Productos del Sistema",
       subtitle:
@@ -165,6 +174,11 @@ export const es: Translations = {
           title: "Chat IA",
           description:
             "Asistente inteligente que interactúa con tus clientes por WhatsApp. Responde preguntas, brinda información sobre tu negocio, precios, métodos de pago y ayuda con recomendaciones personalizadas.",
+        },
+        download: {
+          title: "Descargas",
+          description:
+            "Descarga la aplicación AIBox para iOS o Android e instálala en tu dispositivo. Accede a todos los instaladores en un solo lugar.",
         },
       },
       badgeAvailable: "Disponible",

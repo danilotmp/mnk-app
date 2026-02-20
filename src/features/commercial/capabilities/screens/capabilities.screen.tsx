@@ -33,6 +33,7 @@ interface ProductCard {
   icon: keyof typeof Ionicons.glyphMap;
   enabled: boolean;
   image?: string; // URL o path de imagen
+  route?: string; // Si está definido, navega a esta ruta en lugar del wizard
 }
 
 export function CapabilitiesScreen() {
@@ -63,6 +64,7 @@ export function CapabilitiesScreen() {
   // Productos/Funcionalidades disponibles del sistema (textos desde i18n)
   const products: ProductCard[] = useMemo(() => {
     const chatIa = cap?.products?.chatIa;
+    const download = cap?.products?.download;
     return [
       {
         id: "chat-ia",
@@ -75,8 +77,20 @@ export function CapabilitiesScreen() {
         image:
           "https://img.freepik.com/vector-premium/inteligencia-artificial-telefono-inteligente-bot-chat-linea-movil-robot-asistente-correspondencia_178863-2199.jpg?w=360",
       },
+      {
+        id: "downloads",
+        title: download?.title ?? "Descargas",
+        description:
+          download?.description ??
+          "Descarga la aplicación AIBox para iOS o Android e instálala en tu dispositivo. Accede a todos los instaladores en un solo lugar.",
+        icon: "cloud-download-outline",
+        enabled: true,
+        route: "/downloads",
+        image:
+          "https://img.freepik.com/vector-gratis/concepto-tecnologia-estructura-metalica-poligonal-computacion-nube_1017-29594.jpg?t=st=1771536982~exp=1771540582~hmac=75fba8edc6942d7cbb2c6d63897cef576e19d3237f2d85fe05f3003413643ad4",
+      },
     ];
-  }, [cap?.products?.chatIa]);
+  }, [cap?.products?.chatIa, cap?.products?.download]);
 
   /**
    * Detecta si la empresa actual es "Perfil de Invitado" o una empresa real
@@ -119,10 +133,15 @@ export function CapabilitiesScreen() {
 
   /**
    * Maneja el click en un producto
-   * Redirige inteligentemente según el estado del usuario
+   * Si tiene route (ej. Descargas), navega ahí. Si no, redirige según estado del usuario al wizard.
    */
   const handleProductPress = (product: ProductCard) => {
     if (!product.enabled) return;
+
+    if (product.route) {
+      router.push(product.route);
+      return;
+    }
 
     // Si no está logueado → Login primero, luego redirigir al wizard
     if (!user) {
@@ -135,12 +154,10 @@ export function CapabilitiesScreen() {
 
     // Si necesita setup de empresa (Capa 0) → Wizard con Capa 0
     if (needsCompanySetup()) {
-      // Redirigir al wizard que iniciará en Capa 0
       router.push(`/commercial/setup?product=${product.id}&layer=0`);
       return;
     }
 
-    // Si tiene empresa real y sucursal → Directo a Capa 1 del wizard
     router.push(`/commercial/setup?product=${product.id}&layer=institutional`);
   };
 
@@ -149,11 +166,8 @@ export function CapabilitiesScreen() {
    * Ajusta el número de columnas según el ancho de la pantalla
    */
   /**
-   * Calcula el ancho dinámico de cada tarjeta de producto
-   * Mobile: Ancho fijo 360px
-   * Tablet: 60% del ancho
-   * Desktop pequeño: 40% del ancho
-   * Desktop grande: 30% del ancho
+   * Ancho de cada tarjeta: en desktop/tablet dos cards en la misma fila (lado a lado);
+   * en móvil una columna centrada.
    */
   const createProductCardStyle = (
     screenWidth: number,
@@ -161,13 +175,9 @@ export function CapabilitiesScreen() {
   ) => {
     if (isMobileDevice || screenWidth < 600) {
       return { width: 360, maxWidth: 360 };
-    } else if (screenWidth < 900) {
-      return { width: "60%" };
-    } else if (screenWidth < 1200) {
-      return { width: "40%" };
-    } else {
-      return { width: "30%" };
     }
+    // Dos cards en una fila: flex 1 y mismo ancho máximo para que queden al lado
+    return { flex: 1, minWidth: 280, maxWidth: 520 };
   };
 
   // Animaciones para la sección inferior: Flujos, Flexibilidad, Acoplamiento
@@ -330,6 +340,8 @@ export function CapabilitiesScreen() {
                     [
                       styles.productCard,
                       createProductCardStyle(width, isMobile),
+                      // En web (no smartphone): cards un poco más estrechas
+                      Platform.OS === "web" && !isMobile && { maxWidth: 416 },
                       isMobile && styles.productCardMobile,
                       product.enabled ? undefined : styles.productCardDisabled,
                     ] as unknown as React.ComponentProps<typeof Card>["style"]
@@ -363,7 +375,10 @@ export function CapabilitiesScreen() {
                       >
                         <Image
                           source={{ uri: product.image }}
-                          style={styles.cardImage}
+                          style={[
+                            styles.cardImage,
+                            Platform.OS === "web" && { objectFit: "cover" as const },
+                          ]}
                           resizeMode="cover"
                         />
                       </View>

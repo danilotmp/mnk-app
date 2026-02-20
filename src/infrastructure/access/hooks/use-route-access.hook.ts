@@ -8,7 +8,7 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 
 import { AccessService } from "../access.service";
 
-const PUBLIC_ROUTES = new Set<string>(["/", "/main/contact", "/capabilities"]);
+const PUBLIC_ROUTES = new Set<string>(["/", "/main/contact", "/capabilities", "/downloads"]);
 
 /** Mensajes ante los cuales no se muestra toast ni alert (solo redirección si aplica). */
 const SILENT_ACCESS_MESSAGES = new Set([

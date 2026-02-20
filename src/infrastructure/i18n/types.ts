@@ -111,6 +111,7 @@ export interface Translations {
       subtitle: string;
       products: {
         chatIa: { title: string; description: string };
+        download: { title: string; description: string };
       };
       badgeAvailable: string;
       badgeComingSoon: string;
@@ -144,6 +145,15 @@ export interface Translations {
       goHome: string;
       goBack: string;
       contactUs: string;
+    };
+    downloads: {
+      title: string;
+      subtitle: string;
+      android: string;
+      ios: string;
+      installers: string;
+      downloadButton: string;
+      comingSoon: string;
     };
   };
 
