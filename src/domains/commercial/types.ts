@@ -21,6 +21,16 @@ export interface WhatsAppInstancePayload {
   isActive?: boolean;
 }
 
+/** Respuesta unificada de create/conexión WhatsApp (POST create o POST whatsapp-connection). */
+export interface WhatsAppCreateResponse {
+  success: boolean;
+  data?: {
+    instance?: { instanceName: string };
+    qrcode?: { base64: string; code: string };
+  };
+  result?: { statusCode: number; description?: string; details?: unknown };
+}
+
 // ===== Commercial Profile =====
 export interface CommercialProfile {
   companyId: string;
@@ -142,6 +152,8 @@ export interface Offering {
   metadata?: Record<string, any> | null;
   // Precios incluidos en la respuesta del endpoint
   prices?: OfferingPrice[];
+  /** Imagen de la oferta (base64). Opcional en escritura, presente en lectura. */
+  image?: string | null;
 }
 
 export interface OfferingPayload {
@@ -153,6 +165,8 @@ export interface OfferingPayload {
   requiresConditions?: boolean; // Opcional: solo para servicios
   // Metadata opcional para category y tags (puede que el backend lo acepte temporalmente)
   metadata?: Record<string, any>;
+  /** Imagen de la oferta (base64). Opcional. */
+  image?: string | null;
 }
 
 // ===== Offering Prices =====
@@ -312,6 +326,8 @@ export interface Recommendation {
   order: number; // Menor = más importante (reemplaza a priority)
   status: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
   statusDescription?: string; // Descripción traducida del estado
+  /** Imagen (base64). Opcional en escritura, presente en lectura. */
+  image?: string | null;
   createdAt?: string;
   createdBy?: string;
   updatedAt?: string;
@@ -325,6 +341,8 @@ export interface RecommendationPayload {
   message: string;
   order?: number; // Menor = más importante (default: 0)
   status?: number; // -1: Deleted, 0: Inactive, 1: Active, 2: Pending, 3: Suspended
+  /** Imagen (base64). Opcional. */
+  image?: string | null;
 }
 
 // ===== Context & Capabilities =====

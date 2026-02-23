@@ -5,6 +5,7 @@
 
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
+import { InlineAlert } from "@/components/ui/inline-alert";
 import { SideModal } from "@/components/ui/side-modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -25,6 +26,7 @@ import React, {
     forwardRef,
     useEffect,
     useImperativeHandle,
+    useRef,
     useState,
 } from "react";
 import {
@@ -83,6 +85,8 @@ export const WhatsAppConnectionLayer = forwardRef<
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [generatedQR, setGeneratedQR] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const createModalScrollRef = useRef<ScrollView | null>(null);
 
   // Cargar instancias al montar
   useEffect(() => {
@@ -111,6 +115,19 @@ export const WhatsAppConnectionLayer = forwardRef<
     } finally {
       setLoading(false);
     }
+  };
+
+  /** URI válida para mostrar imagen QR (data URL); normaliza base64 sin newlines. */
+  const toQRImageUri = (value: string | null | undefined): string | null => {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith("data:")) {
+      const base64Part = trimmed.split(",", 2)[1];
+      if (!base64Part) return trimmed;
+      return `data:image/png;base64,${base64Part.replace(/\s/g, "")}`;
+    }
+    return `data:image/png;base64,${trimmed.replace(/\s/g, "")}`;
   };
 
   /** Decodifica base64 a string UTF-8 (web y native). */
@@ -186,6 +203,7 @@ export const WhatsAppConnectionLayer = forwardRef<
     setFormData({ whatsapp: "" });
     setFormErrors({});
     setGeneratedQR(null);
+    setModalError(null);
   };
 
   const validateForm = (): boolean => {
@@ -242,38 +260,45 @@ export const WhatsAppConnectionLayer = forwardRef<
     }
 
     setGeneratingQR(true);
+    setModalError(null);
     try {
       const whatsappValue = formatCode(formData.whatsapp.trim());
 
-      // Paso 1: Crear instancia de WhatsApp
+      // Crear instancia de WhatsApp (la respuesta puede incluir data.qrcode.base64 y así evitamos 2ª llamada)
       const createResponse =
         await CommercialService.createWhatsAppInstance(whatsappValue);
 
       if (!createResponse.success) {
-        alert.showError(
+        setModalError(
           L?.errorCreatingInstance ?? "Error al crear la instancia de WhatsApp",
         );
         return;
       }
 
-      // Paso 2: Obtener QR code
-      const qrResponse =
-        await CommercialService.getWhatsAppQRCode(whatsappValue);
+      let qrImage: string | null =
+        createResponse.data?.qrcode?.base64 ?? null;
+      if (!qrImage) {
+        const qrResponse =
+          await CommercialService.getWhatsAppQRCode(whatsappValue);
+        qrImage = qrResponse.qrcode || null;
+      }
 
-      if (!qrResponse.qrcode) {
-        alert.showError(L?.errorGettingQR ?? "Error al obtener el código QR");
+      if (!qrImage) {
+        setModalError(L?.errorGettingQR ?? "Error al obtener el código QR");
         return;
       }
 
-      // Guardar el QR generado en el estado
-      setGeneratedQR(qrResponse.qrcode);
-
+      setGeneratedQR(qrImage);
+      // Hacer scroll al final del modal para que el QR sea visible
+      setTimeout(() => {
+        createModalScrollRef.current?.scrollToEnd({ animated: true });
+      }, 150);
       alert.showSuccess(L?.qrGenerated ?? "Código QR generado correctamente");
     } catch (error: any) {
       const errorMessage =
         error?.message ||
         (L?.errorGettingQR ?? "Error al generar el código QR");
-      alert.showError(errorMessage);
+      setModalError(errorMessage);
     } finally {
       setGeneratingQR(false);
     }
@@ -358,7 +383,7 @@ export const WhatsAppConnectionLayer = forwardRef<
       }
     } catch (error: any) {
       const errorMessage = error?.message || "Error al guardar la instancia";
-      alert.showError(errorMessage);
+      setModalError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -608,8 +633,19 @@ export const WhatsAppConnectionLayer = forwardRef<
         {/* Modal de crear/editar */}
         {(modalMode === "create" || modalMode === "edit") && (
           <SideModal
+            contentScrollRef={createModalScrollRef}
             visible={isModalVisible}
             onClose={handleCloseModal}
+            topAlert={
+              modalError ? (
+                <InlineAlert
+                  type="error"
+                  message={modalError}
+                  onDismiss={() => setModalError(null)}
+                  autoClose={false}
+                />
+              ) : undefined
+            }
             title={
               modalMode === "edit"
                 ? (L?.editInstance ?? "Editar Instancia")
@@ -744,7 +780,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                 )}
 
                 {/* Mostrar QR generado si existe (solo en creación) */}
-                {modalMode === "create" && generatedQR && (
+                {modalMode === "create" && generatedQR && toQRImageUri(generatedQR) && (
                   <View style={styles.inputGroup}>
                     <ThemedText
                       type="body2"
@@ -762,11 +798,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                       ]}
                     >
                       <Image
-                        source={{
-                          uri: generatedQR.startsWith("data:")
-                            ? generatedQR
-                            : `data:image/png;base64,${generatedQR}`,
-                        }}
+                        source={{ uri: toQRImageUri(generatedQR)! }}
                         style={styles.qrImage}
                         resizeMode="contain"
                       />
@@ -778,7 +810,7 @@ export const WhatsAppConnectionLayer = forwardRef<
               {/* En modo edición, mostrar QR existente y botón regenerar */}
               {modalMode === "edit" && selectedInstance && (
                 <View style={styles.inputGroup}>
-                  {selectedInstance.whatsappQR && (
+                  {selectedInstance.whatsappQR && toQRImageUri(selectedInstance.whatsappQR) && (
                     <>
                       <ThemedText
                         type="body2"
@@ -796,11 +828,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                         ]}
                       >
                         <Image
-                          source={{
-                            uri: selectedInstance.whatsappQR.startsWith("data:")
-                              ? selectedInstance.whatsappQR
-                              : `data:image/png;base64,${selectedInstance.whatsappQR}`,
-                          }}
+                          source={{ uri: toQRImageUri(selectedInstance.whatsappQR)! }}
                           style={styles.qrImage}
                           resizeMode="contain"
                         />
@@ -949,9 +977,7 @@ export const WhatsAppConnectionLayer = forwardRef<
               >
                 <Image
                   source={{
-                    uri: selectedInstance.whatsappQR.startsWith("data:")
-                      ? selectedInstance.whatsappQR
-                      : `data:image/png;base64,${selectedInstance.whatsappQR}`,
+                    uri: toQRImageUri(selectedInstance.whatsappQR) ?? "",
                   }}
                   style={styles.qrImage}
                   resizeMode="contain"

@@ -54,18 +54,11 @@ if (typeof window !== "undefined") {
   const originalOnError = window.onerror;
   window.onerror = (message, source, lineno, colno, error) => {
     const errorString = message?.toString() || "";
+    const errorMsg = error?.message?.toString() || "";
     const errorStack = error?.stack?.toString() || "";
-    if (
-      errorString.includes("fontfaceobserver") ||
-      errorString.includes("FontFaceObserver") ||
-      errorString.includes("6000ms timeout exceeded") ||
-      errorString.includes("timeout exceeded") ||
-      errorStack.includes("fontfaceobserver") ||
-      errorStack.includes("FontFaceObserver") ||
-      errorStack.includes("6000ms timeout exceeded")
-    ) {
-      // Suprimir este error específico
-      return true; // Prevenir que se muestre en consola
+    const combined = `${errorString} ${errorMsg} ${errorStack} ${source ?? ""}`;
+    if (/fontfaceobserver|6000ms timeout exceeded|timeout exceeded/i.test(combined)) {
+      return true; // Suprimir: no mostrar en consola ni en overlay
     }
     if (originalOnError) {
       return originalOnError(message, source, lineno, colno, error);
@@ -74,6 +67,7 @@ if (typeof window !== "undefined") {
   };
 
   // Capturar errores no manejados con addEventListener (capture phase)
+  // stopImmediatePropagation evita que el overlay de Expo/React muestre el error
   window.addEventListener(
     "error",
     (event) => {
@@ -93,6 +87,7 @@ if (typeof window !== "undefined") {
       ) {
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
         return true;
       }
     },
@@ -115,7 +110,7 @@ if (typeof window !== "undefined") {
       ) {
         event.preventDefault();
         event.stopPropagation();
-        return false;
+        event.stopImmediatePropagation();
       }
     },
     true,

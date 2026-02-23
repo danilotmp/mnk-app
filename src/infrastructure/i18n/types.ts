@@ -409,6 +409,9 @@ export interface Translations {
       };
       recommendations?: {
         loadingRecommendations: string;
+        errorLoadingRecommendations: string;
+        photoPermissionRequired: string;
+        errorSelectingImage: string;
         typeGeneral: string;
         typeGeneralDescription: string;
         typeOfferSpecific: string;
@@ -425,10 +428,29 @@ export interface Translations {
         recommendationDeleted: string;
         errorDeletingRecommendation: string;
         sectionTitle: string;
+        sectionTitleConfigured: string;
+        recommendationTypeLabel: string;
+        offersLabel: string;
+        selectOfferPlaceholder: string;
+        offerSelectorCaption: string;
+        messageLabel: string;
+        messagePlaceholder: string;
+        orderLabel: string;
+        orderHint: string;
+        removeImage: string;
+        enlarge: string;
+        newRecommendation: string;
+        confirmDeleteTitle: string;
         generalRecommendation: string;
         addRecommendation: string;
         continue: string;
         skip: string;
+        accept: string;
+        warningGeneral: string;
+        statusActive: string;
+        statusInactive: string;
+        statusPending: string;
+        statusSuspended: string;
       };
       whatsappConnection?: {
         errorLoadingInstances: string;

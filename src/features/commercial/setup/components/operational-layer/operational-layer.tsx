@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CatalogService } from "@/src/domains/catalog";
@@ -34,13 +35,17 @@ import React, {
 } from "react";
 import {
     ActivityIndicator,
+    Image,
+    Modal,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 interface OperationalLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -100,6 +105,7 @@ export function OperationalLayer({
     useState<CommercialProfile | null>(null); // Perfil comercial para obtener defaultTaxMode, currency, timezone, language
   const [currentPage, setCurrentPage] = useState(1); // Página actual de la paginación
   const itemsPerPage = 5; // Registros por página
+  const [imageViewerUri, setImageViewerUri] = useState<string | null>(null); // URI para ver imagen ampliada
 
   const [offeringType, setOfferingType] = useState<"product" | "service">(
     "product",
@@ -113,6 +119,7 @@ export function OperationalLayer({
     name: "",
     description: "",
     code: "",
+    image: null as string | null,
   });
   const [uploadingBulk, setUploadingBulk] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -339,6 +346,7 @@ export function OperationalLayer({
           name: offering.name,
           description: offering.description || "",
           code: offering.code || "",
+          image: offering.image ?? null,
         });
 
         // Cargar precio principal (usar precio modificado si existe, sino el original)
@@ -373,7 +381,7 @@ export function OperationalLayer({
       }
     } else {
       // Resetear formulario cuando se cierra el acordeón
-      setOfferingForm({ name: "", description: "", code: "" });
+      setOfferingForm({ name: "", description: "", code: "", image: null });
       // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
       const defaultTaxMode = commercialProfile?.defaultTaxMode || "included";
       setPriceForm({
@@ -420,6 +428,32 @@ export function OperationalLayer({
     }
   };
 
+  // Elegir imagen para la oferta (crear/editar)
+  const pickOfferingImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        alert.showError("Se necesita permiso para acceder a las fotos.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64 = asset.base64;
+        const dataUri = base64 ? `data:image/jpeg;base64,${base64}` : (asset.uri || null);
+        setOfferingForm((prev) => ({ ...prev, image: dataUri }));
+      }
+    } catch (e) {
+      alert.showError("Error al seleccionar la imagen");
+    }
+  };
+
   // Aceptar cambios (actualizar en memoria)
   const handleAcceptChanges = () => {
     if (!expandedOfferingId) return;
@@ -448,6 +482,7 @@ export function OperationalLayer({
       description: offeringForm.description.trim() || undefined,
       type: offeringType,
       requiresConditions: false, // Siempre false por ahora
+      image: offeringForm.image ?? undefined,
     };
 
     // Usar defaultTaxMode del perfil comercial para todas las ofertas
@@ -474,10 +509,12 @@ export function OperationalLayer({
       }));
     }
 
-    // Actualizar lista de ofertas en memoria
+    // Actualizar lista de ofertas en memoria (incluir image)
     setOfferings((prev) =>
       prev.map((o) =>
-        o.id === offering.id ? { ...o, ...updatedOffering } : o,
+        o.id === offering.id
+          ? { ...o, ...updatedOffering, image: updatedOffering.image !== undefined ? updatedOffering.image ?? null : o.image }
+          : o,
       ),
     );
 
@@ -532,6 +569,7 @@ export function OperationalLayer({
           name: originalOffering.name,
           description: originalOffering.description || "",
           code: originalOffering.code || "",
+          image: originalOffering.image ?? null,
         });
       }
 
@@ -632,6 +670,7 @@ export function OperationalLayer({
       type: "product",
       requiresConditions: false,
       status: "active",
+      image: null,
     };
 
     // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
@@ -656,7 +695,7 @@ export function OperationalLayer({
 
     // Expandir automáticamente para editar
     setExpandedOfferingId(tempId);
-    setOfferingForm({ name: "", description: "", code: "" });
+    setOfferingForm({ name: "", description: "", code: "", image: null });
     setPriceForm({
       basePrice: "",
       taxMode: defaultTaxMode,
@@ -686,6 +725,7 @@ export function OperationalLayer({
           description: newOffering.offering.description,
           type: newOffering.offering.type || "product",
           requiresConditions: false, // Siempre false por ahora
+          image: newOffering.offering.image ?? null,
           price: {
             basePrice: newOffering.price.basePrice,
             taxMode: newOffering.price.taxMode,
@@ -717,6 +757,7 @@ export function OperationalLayer({
               : originalOffering.description,
           type: modified.offering.type || originalOffering.type,
           requiresConditions: false, // Siempre false por ahora
+          image: modified.offering.image !== undefined ? modified.offering.image : originalOffering.image ?? null,
           price: {
             id: originalPrice?.id,
             basePrice:
@@ -746,6 +787,7 @@ export function OperationalLayer({
           type: originalOffering.type,
           requiresConditions: false,
           status: "inactive", // Cambiar estado a inactive
+          image: originalOffering.image ?? null,
           price: {
             id: originalPrice?.id,
             basePrice: originalPrice?.basePrice || 0,
@@ -1184,6 +1226,7 @@ export function OperationalLayer({
                             <TouchableOpacity
                               style={[
                                 styles.listItem,
+                                isMobile && styles.listItemMobile,
                                 {
                                   backgroundColor: isExpanded
                                     ? colors.primary + "20"
@@ -1195,26 +1238,29 @@ export function OperationalLayer({
                               ]}
                               onPress={() => handleOfferingClick(offering)}
                             >
-                              <View style={styles.listItemLeft}>
-                                <Ionicons
-                                  name={typeIcon}
-                                  size={24}
-                                  color={colors.textSecondary}
-                                  style={{ marginRight: 12 }}
-                                />
-                                <View
-                                  style={[styles.listItemContent, { flex: 1 }]}
-                                >
-                                  <View
-                                    style={{
-                                      flexDirection: "row",
-                                      alignItems: "center",
-                                      gap: 8,
-                                    }}
-                                  >
+                              {isMobile ? (
+                                <>
+                                  {offering.image ? (
+                                    <Image
+                                      source={{
+                                        uri: offering.image.startsWith("data:")
+                                          ? offering.image
+                                          : `data:image/jpeg;base64,${offering.image}`,
+                                      }}
+                                      style={{
+                                        width: 80,
+                                        height: 80,
+                                        borderRadius: 8,
+                                        marginRight: 12,
+                                        backgroundColor: colors.border,
+                                      }}
+                                      resizeMode="cover"
+                                    />
+                                  ) : null}
+                                  <View style={styles.listItemContentMobile}>
                                     <ThemedText
                                       type="body1"
-                                      style={{ fontWeight: "600" }}
+                                      style={{ fontWeight: "600", width: "100%" }}
                                     >
                                       {offering.name}
                                     </ThemedText>
@@ -1222,75 +1268,203 @@ export function OperationalLayer({
                                       type="caption"
                                       style={{
                                         color: colors.textSecondary,
-                                        fontSize: 11,
-                                      }}
-                                    >
-                                      ({typeLabel})
-                                    </ThemedText>
-                                  </View>
-                                  {offering.description && (
-                                    <ThemedText
-                                      type="body2"
-                                      style={{
-                                        color: colors.textSecondary,
                                         marginTop: 4,
                                       }}
                                     >
-                                      {offering.description}
+                                      {typeLabel}
                                     </ThemedText>
-                                  )}
-                                </View>
-                              </View>
-                              <View style={styles.listItemRight}>
-                                <View style={{ alignItems: "flex-end" }}>
-                                  {mainPrice && mainPrice.basePrice > 0 ? (
-                                    <>
-                                      <ThemedText
-                                        type="h4"
-                                        style={{
-                                          fontWeight: "700",
-                                          color: colors.primary,
-                                        }}
-                                      >
-                                        {commercialProfile?.currency || "USD"}{" "}
-                                        {Number(mainPrice.basePrice).toFixed(2)}
-                                      </ThemedText>
+                                    {offering.description ? (
                                       <ThemedText
                                         type="body2"
+                                        numberOfLines={3}
                                         style={{
                                           color: colors.textSecondary,
                                           marginTop: 4,
-                                          fontSize: 12,
+                                          fontSize: 13,
                                         }}
                                       >
-                                        {mainPrice.taxMode === "included"
-                                          ? (O?.taxesIncluded ?? "Incluidos")
-                                          : (O?.taxesExcluded ?? "Excluidos")}
+                                        {offering.description}
                                       </ThemedText>
-                                    </>
-                                  ) : (
-                                    <ThemedText
-                                      type="body2"
+                                    ) : null}
+                                    <View
                                       style={{
-                                        color: colors.textSecondary,
-                                        fontStyle: "italic",
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        justifyContent: "flex-end",
+                                        marginTop: 8,
+                                        gap: 8,
                                       }}
                                     >
-                                      {O?.noPrice ?? "Sin precio"}
-                                    </ThemedText>
-                                  )}
-                                </View>
-                                <Ionicons
-                                  name={
-                                    isExpanded
-                                      ? "chevron-down"
-                                      : "chevron-forward"
-                                  }
-                                  size={20}
-                                  color={colors.textSecondary}
-                                  style={{ marginLeft: 8 }}
-                                />
-                              </View>
+                                      <View style={{ alignItems: "flex-end" }}>
+                                        {mainPrice && mainPrice.basePrice > 0 ? (
+                                          <>
+                                            <ThemedText
+                                              type="h4"
+                                              style={{
+                                                fontWeight: "700",
+                                                color: colors.primary,
+                                              }}
+                                            >
+                                              {commercialProfile?.currency || "USD"}{" "}
+                                              {Number(mainPrice.basePrice).toFixed(2)}
+                                            </ThemedText>
+                                            <ThemedText
+                                              type="body2"
+                                              style={{
+                                                color: colors.textSecondary,
+                                                fontSize: 12,
+                                              }}
+                                            >
+                                              Impuestos{" "}
+                                              {mainPrice.taxMode === "included"
+                                                ? (O?.taxesIncluded ?? "Incluidos")
+                                                : (O?.taxesExcluded ?? "Excluidos")}
+                                            </ThemedText>
+                                          </>
+                                        ) : (
+                                          <ThemedText
+                                            type="body2"
+                                            style={{
+                                              color: colors.textSecondary,
+                                              fontStyle: "italic",
+                                            }}
+                                          >
+                                            {O?.noPrice ?? "Sin precio"}
+                                          </ThemedText>
+                                        )}
+                                      </View>
+                                      <Ionicons
+                                        name={
+                                          isExpanded
+                                            ? "chevron-down"
+                                            : "chevron-forward"
+                                        }
+                                        size={20}
+                                        color={colors.textSecondary}
+                                      />
+                                    </View>
+                                  </View>
+                                </>
+                              ) : (
+                                <>
+                                  <View style={styles.listItemLeft}>
+                                    {offering.image ? (
+                                      <Image
+                                        source={{
+                                          uri: offering.image.startsWith("data:")
+                                            ? offering.image
+                                            : `data:image/jpeg;base64,${offering.image}`,
+                                        }}
+                                        style={{
+                                          width: 100,
+                                          height: 100,
+                                          borderRadius: 8,
+                                          marginRight: 12,
+                                          backgroundColor: colors.border,
+                                        }}
+                                        resizeMode="cover"
+                                      />
+                                    ) : null}
+                                    <Ionicons
+                                      name={typeIcon}
+                                      size={24}
+                                      color={colors.textSecondary}
+                                      style={{ marginRight: 12 }}
+                                    />
+                                    <View
+                                      style={[styles.listItemContent, { flex: 1 }]}
+                                    >
+                                      <View
+                                        style={{
+                                          flexDirection: "row",
+                                          alignItems: "center",
+                                          gap: 8,
+                                        }}
+                                      >
+                                        <ThemedText
+                                          type="body1"
+                                          style={{ fontWeight: "600" }}
+                                        >
+                                          {offering.name}
+                                        </ThemedText>
+                                        <ThemedText
+                                          type="caption"
+                                          style={{
+                                            color: colors.textSecondary,
+                                            fontSize: 11,
+                                          }}
+                                        >
+                                          ({typeLabel})
+                                        </ThemedText>
+                                      </View>
+                                      {offering.description && (
+                                        <ThemedText
+                                          type="body2"
+                                          numberOfLines={3}
+                                          style={{
+                                            color: colors.textSecondary,
+                                            marginTop: 4,
+                                            fontSize: 13,
+                                          }}
+                                        >
+                                          {offering.description}
+                                        </ThemedText>
+                                      )}
+                                    </View>
+                                  </View>
+                                  <View style={styles.listItemRight}>
+                                    <View style={{ alignItems: "flex-end" }}>
+                                      {mainPrice && mainPrice.basePrice > 0 ? (
+                                        <>
+                                          <ThemedText
+                                            type="h4"
+                                            style={{
+                                              fontWeight: "700",
+                                              color: colors.primary,
+                                            }}
+                                          >
+                                            {commercialProfile?.currency || "USD"}{" "}
+                                            {Number(mainPrice.basePrice).toFixed(2)}
+                                          </ThemedText>
+                                          <ThemedText
+                                            type="body2"
+                                            style={{
+                                              color: colors.textSecondary,
+                                              marginTop: 4,
+                                              fontSize: 12,
+                                            }}
+                                          >
+                                            Impuestos{" "}
+                                            {mainPrice.taxMode === "included"
+                                              ? (O?.taxesIncluded ?? "Incluidos")
+                                              : (O?.taxesExcluded ?? "Excluidos")}
+                                          </ThemedText>
+                                        </>
+                                      ) : (
+                                        <ThemedText
+                                          type="body2"
+                                          style={{
+                                            color: colors.textSecondary,
+                                            fontStyle: "italic",
+                                          }}
+                                        >
+                                          {O?.noPrice ?? "Sin precio"}
+                                        </ThemedText>
+                                      )}
+                                    </View>
+                                    <Ionicons
+                                      name={
+                                        isExpanded
+                                          ? "chevron-down"
+                                          : "chevron-forward"
+                                      }
+                                      size={20}
+                                      color={colors.textSecondary}
+                                      style={{ marginLeft: 8 }}
+                                    />
+                                  </View>
+                                </>
+                              )}
                             </TouchableOpacity>
 
                             {/* Acordeón: Formulario de edición debajo de la oferta */}
@@ -1299,9 +1473,82 @@ export function OperationalLayer({
                                 variant="outlined"
                                 style={styles.accordionCard}
                               >
-                                {/* Fila 1: Tipo de oferta (selector tipo estados) */}
-                                <View>
-                                  <View style={styles.typeSelector}>
+                                {/* Fila 1: Imagen pequeña + selector Producto/Servicio, desplazados a la derecha */}
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginLeft: 20, marginRight: 20, marginBottom: 4 }}>
+                                  <View style={{ position: "relative", width: 56, height: 56 }}>
+                                    {offeringForm.image ? (
+                                      <>
+                                        <Image
+                                          source={{
+                                            uri: offeringForm.image.startsWith("data:")
+                                              ? offeringForm.image
+                                              : `data:image/jpeg;base64,${offeringForm.image}`,
+                                          }}
+                                          style={{
+                                            position: "absolute",
+                                            top: 0,
+                                            left: 0,
+                                            width: 56,
+                                            height: 56,
+                                            borderRadius: 8,
+                                            backgroundColor: colors.border,
+                                          }}
+                                          resizeMode="cover"
+                                        />
+                                        <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                                          <Tooltip text={O?.removeImage ?? "Quitar imagen"} position="top">
+                                            <TouchableOpacity
+                                              onPress={() => setOfferingForm((p) => ({ ...p, image: null }))}
+                                              style={{
+                                                width: 24,
+                                                height: 24,
+                                                borderRadius: 12,
+                                                backgroundColor: "rgba(0,0,0,0.5)",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                              }}
+                                            >
+                                              <Ionicons name="trash-outline" size={14} color="#fff" />
+                                            </TouchableOpacity>
+                                          </Tooltip>
+                                          <Tooltip text={O?.viewImage ?? "Ver imagen"} position="top">
+                                            <TouchableOpacity
+                                              onPress={() => setImageViewerUri(offeringForm.image!.startsWith("data:") ? offeringForm.image! : `data:image/jpeg;base64,${offeringForm.image}`)}
+                                              style={{
+                                                width: 24,
+                                                height: 24,
+                                                borderRadius: 12,
+                                                backgroundColor: "rgba(0,0,0,0.5)",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                              }}
+                                            >
+                                              <Ionicons name="expand-outline" size={14} color="#fff" />
+                                            </TouchableOpacity>
+                                          </Tooltip>
+                                        </View>
+                                      </>
+                                    ) : (
+                                      <TouchableOpacity
+                                        onPress={pickOfferingImage}
+                                        style={{
+                                          width: 56,
+                                          height: 56,
+                                          borderRadius: 8,
+                                          backgroundColor: colors.border + "60",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          borderWidth: 1,
+                                          borderStyle: "dashed",
+                                          borderColor: colors.textSecondary + "60",
+                                        }}
+                                      >
+                                        <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                                      </TouchableOpacity>
+                                    )}
+                                  </View>
+                                  <View style={{ flex: 1, minWidth: 0 }}>
+                                    <View style={styles.typeSelector}>
                                     {productTypeOptions.map((option) => {
                                       const isSelected =
                                         offeringType === option.value;
@@ -1356,9 +1603,12 @@ export function OperationalLayer({
                                         </TouchableOpacity>
                                       );
                                     })}
+                                    </View>
                                   </View>
                                 </View>
 
+                                {/* Resto del formulario alineado con la fila de imagen (mismo margen) */}
+                                <View style={{ marginLeft: 20, marginRight: 20 }}>
                                 {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea (desktop) o apilados (móvil) */}
                                 <View
                                   style={[
@@ -1506,6 +1756,7 @@ export function OperationalLayer({
                                     size="md"
                                     disabled={saving}
                                   />
+                                </View>
                                 </View>
                               </Card>
                             )}
@@ -1850,6 +2101,7 @@ export function OperationalLayer({
                         type="body2"
                         style={{ color: colors.textSecondary, marginTop: 4 }}
                       >
+                        Impuestos{" "}
                         {price.taxMode === "included"
                           ? (O?.taxesIncluded ?? "Incluidos")
                           : (O?.taxesExcluded ?? "Excluidos")}
@@ -2024,6 +2276,51 @@ export function OperationalLayer({
               </ThemedText>
             </Card>
           )}
+
+        {/* Modal ver imagen ampliada */}
+        <Modal
+          visible={!!imageViewerUri}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setImageViewerUri(null)}
+        >
+          <Pressable
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.85)",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 24,
+            }}
+            onPress={() => setImageViewerUri(null)}
+          >
+            <Pressable style={{ maxWidth: "100%", maxHeight: "100%" }} onPress={(e) => e.stopPropagation()}>
+              {imageViewerUri ? (
+                <Image
+                  source={{ uri: imageViewerUri }}
+                  style={{ width: 320, height: 320, borderRadius: 12 }}
+                  resizeMode="contain"
+                />
+              ) : null}
+            </Pressable>
+            <TouchableOpacity
+              onPress={() => setImageViewerUri(null)}
+              style={{
+                position: "absolute",
+                top: Platform.OS === "web" ? 48 : 56,
+                right: 24,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(255,255,255,0.2)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </Pressable>
+        </Modal>
       </View>
     </ScrollView>
   );
@@ -2081,8 +2378,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
   },
+  listItemMobile: {
+    alignItems: "flex-start",
+  },
   listItemContent: {
     flex: 1,
+  },
+  listItemContentMobile: {
+    flex: 1,
+    flexDirection: "column",
+    minWidth: 0,
   },
   listItemLeft: {
     flexDirection: "row",
@@ -2141,11 +2446,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    minHeight: 80,
+    minHeight: 160,
   },
   textArea: {
     fontSize: 16,
-    minHeight: 60,
+    minHeight: 120,
     textAlignVertical: "top",
   },
   rowContainer: {

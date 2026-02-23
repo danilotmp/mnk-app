@@ -33,6 +33,7 @@ import type {
     RecommendationPayload,
     ServiceCondition,
     ServiceConditionPayload,
+    WhatsAppCreateResponse,
     WhatsAppInstance,
     WhatsAppInstancePayload,
 } from './types';
@@ -322,6 +323,7 @@ export const CommercialService = {
           updatedBy: item.updated_by || item.updatedBy,
           metadata: item.metadata || null, // Mantener metadata para category y tags
           prices: prices.length > 0 ? prices : undefined, // Incluir precios si existen
+          image: item.image ?? null,
         };
       });
       return offerings;
@@ -358,6 +360,7 @@ export const CommercialService = {
       createdBy: item.created_by || item.createdBy,
       updatedBy: item.updated_by || item.updatedBy,
       metadata: item.metadata || null,
+      image: item.image ?? null,
     };
   },
 
@@ -380,12 +383,30 @@ export const CommercialService = {
       createdBy: item.created_by || item.createdBy,
       updatedBy: item.updated_by || item.updatedBy,
       metadata: item.metadata || payload.metadata || null,
+      image: item.image ?? payload.image ?? null,
     };
   },
 
   async updateOffering(offeringId: string, payload: Partial<OfferingPayload>): Promise<Offering> {
-    const res = await apiClient.put<Offering>(`${BASE_COMMERCIAL}/offerings/${offeringId}`, payload);
-    return res.data;
+    const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/offerings/${offeringId}`, payload);
+    const item = res.data;
+    return {
+      id: item.id,
+      companyId: item.company_id || item.companyId,
+      name: item.name,
+      description: item.description ?? null,
+      code: item.code ?? null,
+      type: (item.type || 'product') as 'product' | 'service' | 'package',
+      requiresConditions: item.requires_conditions ?? item.requiresConditions ?? false,
+      status: item.status === 'active' ? 'active' : item.status === 'inactive' ? 'inactive' : item.status,
+      statusDescription: item.status_description || item.statusDescription,
+      createdAt: item.created_at || item.createdAt,
+      updatedAt: item.updated_at || item.updatedAt,
+      createdBy: item.created_by || item.createdBy,
+      updatedBy: item.updated_by || item.updatedBy,
+      metadata: item.metadata ?? null,
+      image: item.image ?? null,
+    };
   },
 
   async deleteOffering(offeringId: string): Promise<void> {
@@ -403,6 +424,7 @@ export const CommercialService = {
     description?: string;
     type: 'product' | 'service' | 'package';
     requiresConditions?: boolean;
+    image?: string | null;
     price: {
       id?: string; // Opcional: si está presente, indica actualización del precio
       basePrice: number;
@@ -452,6 +474,7 @@ export const CommercialService = {
         requiresConditions: item.offering?.requires_conditions ?? item.offering?.requiresConditions ?? false,
         status: item.offering?.status === 'active' ? 'active' : item.offering?.status === 'inactive' ? 'inactive' : item.offering?.status || 'active',
         metadata: item.offering?.metadata || null,
+        image: item.offering?.image ?? null,
       } as Offering,
       price: {
         id: item.price?.id,
@@ -712,6 +735,7 @@ export const CommercialService = {
       order: item.order ?? item.priority ?? 0, // Mapear priority legacy a order si es necesario
       status: item.status ?? (item.is_active !== undefined ? (item.is_active ? 1 : 0) : 1), // Fallback para compatibilidad legacy
       statusDescription: item.status_description || item.statusDescription,
+      image: item.image ?? null,
       createdAt: item.created_at || item.createdAt,
       createdBy: item.created_by || item.createdBy,
       updatedAt: item.updated_at || item.updatedAt,
@@ -736,6 +760,7 @@ export const CommercialService = {
     } else {
       cleanPayload.offeringId = null;
     }
+    if (payload.image !== undefined) cleanPayload.image = payload.image;
     const res = await apiClient.post<any>(`${BASE_COMMERCIAL}/recommendations`, cleanPayload);
     // La respuesta puede venir como res.data directamente o como res.data.data
     const item = res.data?.data || res.data;
@@ -749,6 +774,7 @@ export const CommercialService = {
       order: item.order ?? item.priority ?? 0, // Mapear priority legacy a order si es necesario
       status: item.status ?? (item.is_active !== undefined ? (item.is_active ? 1 : 0) : 1), // Fallback para compatibilidad legacy
       statusDescription: item.status_description || item.statusDescription,
+      image: item.image ?? null,
       createdAt: item.created_at || item.createdAt,
       createdBy: item.created_by || item.createdBy,
       updatedAt: item.updated_at || item.updatedAt,
@@ -765,6 +791,7 @@ export const CommercialService = {
     if (payload.order !== undefined) cleanPayload.order = payload.order;
     if (payload.offeringId !== undefined) cleanPayload.offeringId = payload.offeringId || null;
     if (payload.status !== undefined) cleanPayload.status = payload.status;
+    if (payload.image !== undefined) cleanPayload.image = payload.image;
     
     const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/recommendations/${recommendationId}`, cleanPayload);
     // La respuesta puede venir como res.data directamente o como res.data.data
@@ -779,6 +806,7 @@ export const CommercialService = {
       order: item.order ?? item.priority ?? 0, // Mapear priority legacy a order si es necesario
       status: item.status ?? (item.is_active !== undefined ? (item.is_active ? 1 : 0) : 1), // Fallback para compatibilidad legacy
       statusDescription: item.status_description || item.statusDescription,
+      image: item.image ?? null,
       createdAt: item.created_at || item.createdAt,
       createdBy: item.created_by || item.createdBy,
       updatedAt: item.updated_at || item.updatedAt,
@@ -1080,13 +1108,19 @@ export const CommercialService = {
   },
 
   // ===== WhatsApp Connection =====
-  async createWhatsAppInstance(name: string): Promise<{ success: boolean; [key: string]: any }> {
+  /** POST /whatsapp/instance/create — Respuesta según doc: success, data.instance, data.qrcode (base64, code). */
+  async createWhatsAppInstance(name: string): Promise<WhatsAppCreateResponse> {
     try {
-      const res = await apiClient.post<{ success: boolean; [key: string]: any }>(
+      const res = await apiClient.post<WhatsAppCreateResponse['data']>(
         `/whatsapp/instance/create`,
         { name, data: {} }
-      );
-      return res.data;
+      ) as unknown as { success?: boolean; data?: WhatsAppCreateResponse['data']; result?: WhatsAppCreateResponse['result'] };
+      // El backend devuelve { success, data, result }; el cliente devuelve el body completo
+      return {
+        success: res.success ?? res.result?.statusCode === 200,
+        data: res.data,
+        result: res.result,
+      } as WhatsAppCreateResponse;
     } catch (error: any) {
       // 409 = instancia ya creada anteriormente → continuar con el flujo (obtener QR, etc.)
       if (error?.statusCode === 409) {
@@ -1104,18 +1138,31 @@ export const CommercialService = {
     }
   },
 
-  async getWhatsAppQRCode(whatsapp: string): Promise<{ qrcode: string; [key: string]: any }> {
-    const res = await apiClient.get<{ qrcode: string; [key: string]: any }>(
+  /** GET /whatsapp/instance/:whatsapp/qrcode — Acepta forma legacy (qrcode string) o unificada (data.qrcode.base64). */
+  async getWhatsAppQRCode(whatsapp: string): Promise<{ qrcode: string }> {
+    const res = await apiClient.get<{ data?: { qrcode?: { base64: string } }; qrcode?: string }>(
       `/whatsapp/instance/${whatsapp}/qrcode`
     );
-    return res.data;
+    const data = res.data;
+    const base64 = data?.data?.qrcode?.base64 ?? (typeof data?.qrcode === 'string' ? data.qrcode : '');
+    return { qrcode: base64 };
   },
 
-  async connectWhatsApp(commercialProfileId: string): Promise<{ whatsappQR: { qr: string; expiresAt?: string } }> {
-    const res = await apiClient.post<{ whatsappQR: { qr: string; expiresAt?: string } }>(
-      `${BASE_INTERACCIONES}/context/whatsapp-connection/${commercialProfileId}`
-    );
-    return res.data;
+  async connectWhatsApp(commercialProfileId: string): Promise<{
+    instance?: { instanceName: string; instanceId: string; integration: string; status: string };
+    qrcode: { base64: string; code: string };
+  }> {
+    const res = await apiClient.post<{
+      data?: {
+        instance?: { instanceName: string; instanceId: string; integration: string; status: string };
+        qrcode: { base64: string; code: string };
+      };
+    }>(`${BASE_INTERACCIONES}/context/whatsapp-connection/${commercialProfileId}`);
+    const data = res.data?.data ?? res.data;
+    return {
+      instance: data?.instance,
+      qrcode: data?.qrcode ?? { base64: '', code: '' },
+    };
   },
 
   // ===== WhatsApp Instances Management =====
@@ -1125,19 +1172,20 @@ export const CommercialService = {
     
     // Si no hay QR code proporcionado, crear la instancia y obtener el QR
     if (!qrCode) {
-      // Primero crear la instancia en WhatsApp
       const createResponse = await this.createWhatsAppInstance(payload.whatsapp);
       if (!createResponse.success) {
         throw new Error('Error al crear la instancia de WhatsApp');
       }
-
-      // Obtener QR code si se creó exitosamente
-      try {
-        const qrResponse = await this.getWhatsAppQRCode(payload.whatsapp);
-        qrCode = qrResponse.qrcode || null;
-      } catch (error: any) {
-        // Si falla obtener QR, continuar sin QR
-        console.error('Error al obtener QR code:', error);
+      // Usar QR de la respuesta del create si viene (evita llamada extra a getWhatsAppQRCode)
+      if (createResponse.data?.qrcode?.base64) {
+        qrCode = createResponse.data.qrcode.base64;
+      } else {
+        try {
+          const qrResponse = await this.getWhatsAppQRCode(payload.whatsapp);
+          qrCode = qrResponse.qrcode || null;
+        } catch (error: any) {
+          console.error('Error al obtener QR code:', error);
+        }
       }
     } else {
       // Si ya hay QR proporcionado, solo crear la instancia en WhatsApp (puede que ya exista)

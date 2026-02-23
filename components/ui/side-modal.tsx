@@ -29,6 +29,8 @@ interface SideModalProps {
   footer?: React.ReactNode; // Footer fijo con botones de acción
   width?: number | string; // Porcentaje o número absoluto (default: 33.33% para web, 100% para móvil)
   topAlert?: React.ReactNode; // Alerta que aparece encima del título del modal
+  /** Ref del ScrollView del contenido; permite al padre hacer scroll (ej. scrollToEnd al mostrar QR). */
+  contentScrollRef?: React.RefObject<ScrollView | null>;
 }
 
 export function SideModal({
@@ -40,6 +42,7 @@ export function SideModal({
   footer,
   width,
   topAlert,
+  contentScrollRef,
 }: SideModalProps) {
   const { colors, isDark, modalLayout } = useTheme();
   const { isMobile } = useResponsive();
@@ -138,6 +141,7 @@ export function SideModal({
 
             {/* Content scrollable */}
             <ScrollView
+              ref={contentScrollRef}
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={true}

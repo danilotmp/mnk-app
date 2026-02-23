@@ -10,6 +10,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
@@ -28,12 +29,17 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 interface RecommendationsLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -69,12 +75,15 @@ export function RecommendationsLayer({
 
   // Color para iconos de acción: primaryDark en dark theme, primary en light theme
   const actionIconColor = isDark ? colors.primaryDark : colors.primary;
+  // Tamaño del thumbnail de imagen: más grande en smartphone para mejor usabilidad
+  const recommendationImageSize = isMobile ? 96 : 72;
 
   const [loading, setLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [imageViewerUri, setImageViewerUri] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<{
     message: string;
     detail?: string;
@@ -90,18 +99,18 @@ export function RecommendationsLayer({
   }> = [
     {
       value: "general",
-      label: "General",
-      description: "Recomendaciones generales para todos los clientes",
+      label: R?.typeGeneral ?? "General",
+      description: R?.typeGeneralDescription ?? "",
     },
     {
       value: "offer_specific",
-      label: "Por Oferta",
-      description: "Recomendaciones específicas para una oferta",
+      label: R?.typeOfferSpecific ?? "Por Oferta",
+      description: R?.typeOfferSpecificDescription ?? "",
     },
     {
       value: "warning",
-      label: "Advertencia",
-      description: "Aclaraciones o advertencias importantes",
+      label: R?.typeWarning ?? "Advertencia",
+      description: R?.typeWarningDescription ?? "",
     },
   ];
 
@@ -124,6 +133,7 @@ export function RecommendationsLayer({
     message: "",
     offeringId: "",
     order: 0, // Cambiado de priority a order, default: 0
+    image: null as string | null,
   });
   const [previousRecommendationType, setPreviousRecommendationType] =
     useState<RecommendationType | null>(null); // Guarda el tipo anterior antes de seleccionar una oferta
@@ -139,6 +149,7 @@ export function RecommendationsLayer({
         order: number;
         status: number;
         offeringId?: string | null;
+        image?: string | null;
       }
     >
   >({}); // Datos de edición
@@ -167,7 +178,7 @@ export function RecommendationsLayer({
       setRecommendations(filteredData);
       setGeneralError(null); // Limpiar errores si se carga correctamente
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al cargar recomendaciones";
+      const errorMessage = error?.message || R?.errorLoadingRecommendations || "Error al cargar recomendaciones";
       setGeneralError({ message: errorMessage });
       // No mostrar toast - solo InlineAlert en la pantalla
     } finally {
@@ -238,7 +249,7 @@ export function RecommendationsLayer({
     if (!company?.id) return;
 
     if (!formData.message.trim()) {
-      setGeneralError({ message: "El mensaje de recomendación es requerido" });
+      setGeneralError({ message: R?.messageRequired ?? "El mensaje de recomendación es requerido" });
       return;
     }
 
@@ -258,11 +269,12 @@ export function RecommendationsLayer({
         type: backendType,
         message: formData.message.trim(),
         order: formData.order ?? 0, // Cambiado de priority a order
+        image: formData.image ?? null,
         // status no se envía - se asigna automáticamente como ACTIVE en el backend
       };
 
       await CommercialService.createRecommendation(payload);
-      alert.showSuccess("Recomendación creada correctamente");
+      alert.showSuccess(R?.recommendationCreated ?? "Recomendación creada correctamente");
       setShowForm(false);
       setFormData({
         type: (allowedTypes && allowedTypes.length > 0
@@ -271,6 +283,7 @@ export function RecommendationsLayer({
         message: "",
         offeringId: "",
         order: 0, // Cambiado de priority a order
+        image: null,
       });
       setLocalRecommendationType("general"); // Resetear al tipo por defecto
       setPreviousRecommendationType(null); // Limpiar el tipo guardado
@@ -282,7 +295,7 @@ export function RecommendationsLayer({
         console.error("Error al recargar recomendaciones:", error);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al crear recomendación";
+      const errorMessage = error?.message || R?.errorCreatingRecommendation || "Error al crear recomendación";
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -294,10 +307,46 @@ export function RecommendationsLayer({
     }
   };
 
+  // Elegir imagen para recomendación (crear/editar)
+  const pickRecommendationImage = async (forEditingId: string | null) => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        alert.showError(R?.photoPermissionRequired ?? "Se necesita permiso para acceder a las fotos.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64 = asset.base64;
+        const dataUri = base64 ? `data:image/jpeg;base64,${base64}` : (asset.uri || null);
+        if (forEditingId) {
+          setEditingRecommendationData((prev) => ({
+            ...prev,
+            [forEditingId]: {
+              ...(prev[forEditingId] || {}),
+              image: dataUri,
+            } as any,
+          }));
+        } else {
+          setFormData((prev) => ({ ...prev, image: dataUri }));
+        }
+      }
+    } catch (e) {
+      alert.showError(R?.errorSelectingImage ?? "Error al seleccionar la imagen");
+    }
+  };
+
   // Guardar una recomendación editada
   const handleSaveRecommendation = async (recommendationId: string) => {
     if (!company?.id) {
-      alert.showError("No se pudo obtener la información necesaria");
+      alert.showError(R?.infoRequired ?? "No se pudo obtener la información necesaria");
       return;
     }
 
@@ -305,7 +354,7 @@ export function RecommendationsLayer({
     if (!formData) return;
 
     if (!formData.message.trim()) {
-      alert.showError("El mensaje de recomendación es requerido");
+      alert.showError(R?.messageRequired ?? "El mensaje de recomendación es requerido");
       return;
     }
 
@@ -323,10 +372,11 @@ export function RecommendationsLayer({
         order: formData.order ?? 0, // Cambiado de priority a order
         status: formData.status,
         offeringId: formData.offeringId || null,
+        image: formData.image !== undefined ? formData.image : undefined,
       };
 
       await CommercialService.updateRecommendation(recommendationId, payload);
-      alert.showSuccess("Recomendación actualizada correctamente");
+      alert.showSuccess(R?.recommendationUpdated ?? "Recomendación actualizada correctamente");
       setEditingRecommendationId(null);
       setEditingRecommendationData({});
       setEditingLocalRecommendationType({});
@@ -335,7 +385,7 @@ export function RecommendationsLayer({
       await loadRecommendations();
     } catch (error: any) {
       const errorMessage =
-        error?.message || "Error al actualizar recomendación";
+        error?.message || R?.errorUpdatingRecommendation || "Error al actualizar recomendación";
       const errorDetail =
         typeof error?.details === "object"
           ? JSON.stringify(error.details)
@@ -349,26 +399,30 @@ export function RecommendationsLayer({
     }
   };
 
-  // Eliminar una recomendación
-  const handleDeleteRecommendation = async (recommendationId: string) => {
+  // Eliminar una recomendación (onSuccess opcional: p. ej. cerrar edición)
+  const handleDeleteRecommendation = async (
+    recommendationId: string,
+    onSuccess?: () => void,
+  ) => {
     if (!company?.id) {
-      alert.showError("No se pudo obtener la información necesaria");
+      alert.showError(R?.infoRequired ?? "No se pudo obtener la información necesaria");
       return;
     }
 
     // Confirmar eliminación
     alert.showConfirm(
-      "¿Estás seguro?",
-      "Esta acción no se puede deshacer",
+      R?.confirmDeleteTitle ?? "¿Estás seguro?",
+      R?.deleteConfirmMessage ?? "Esta acción no se puede deshacer",
       async () => {
         setSaving(true);
         try {
           await CommercialService.deleteRecommendation(recommendationId);
-          alert.showSuccess("Recomendación eliminada correctamente");
+          onSuccess?.();
+          alert.showSuccess(R?.recommendationDeleted ?? "Recomendación eliminada correctamente");
           await loadRecommendations();
         } catch (error: any) {
           const errorMessage =
-            error?.message || "Error al eliminar recomendación";
+            error?.message || R?.errorDeletingRecommendation || "Error al eliminar recomendación";
           const errorDetail =
             typeof error?.details === "object"
               ? JSON.stringify(error.details)
@@ -392,7 +446,7 @@ export function RecommendationsLayer({
           type="body2"
           style={{ marginTop: 16, color: colors.textSecondary }}
         >
-          Cargando recomendaciones...
+          {R?.loadingRecommendations ?? "Cargando recomendaciones..."}
         </ThemedText>
       </View>
     );
@@ -421,7 +475,7 @@ export function RecommendationsLayer({
                 color={colors.primary}
               />
               <ThemedText type="h4" style={styles.sectionTitle}>
-                Recomendaciones Configuradas
+                {R?.sectionTitleConfigured ?? "Recomendaciones Configuradas"}
               </ThemedText>
             </View>
 
@@ -480,7 +534,7 @@ export function RecommendationsLayer({
                         (recommendation as any).status ??
                         RecordStatus.ACTIVE;
                       const currentStatusDescription =
-                        recommendation.statusDescription || "Activo"; // Fallback si no viene del backend
+                        recommendation.statusDescription || (R?.statusActive ?? "Activo"); // Fallback si no viene del backend
 
                       // Mapear el tipo del backend a tipo local para mostrar
                       const getLocalTypeFromBackend = (
@@ -608,8 +662,7 @@ export function RecommendationsLayer({
                                               : { color: colors.text }
                                           }
                                         >
-                                          {t.security?.users?.active ||
-                                            "Activo"}
+                                          {t.security?.users?.active || (R?.statusActive ?? "Activo")}
                                         </ThemedText>
                                       </TouchableOpacity>
 
@@ -656,8 +709,7 @@ export function RecommendationsLayer({
                                               : { color: colors.text }
                                           }
                                         >
-                                          {t.security?.users?.inactive ||
-                                            "Inactivo"}
+                                          {t.security?.users?.inactive || (R?.statusInactive ?? "Inactivo")}
                                         </ThemedText>
                                       </TouchableOpacity>
 
@@ -704,8 +756,7 @@ export function RecommendationsLayer({
                                               : { color: colors.text }
                                           }
                                         >
-                                          {t.security?.users?.pending ||
-                                            "Pendiente"}
+                                          {t.security?.users?.pending || (R?.statusPending ?? "Pendiente")}
                                         </ThemedText>
                                       </TouchableOpacity>
 
@@ -752,8 +803,7 @@ export function RecommendationsLayer({
                                               : { color: colors.text }
                                           }
                                         >
-                                          {t.security?.users?.suspended ||
-                                            "Suspendido"}
+                                          {t.security?.users?.suspended || (R?.statusSuspended ?? "Suspendido")}
                                         </ThemedText>
                                       </TouchableOpacity>
                                     </View>
@@ -811,7 +861,7 @@ export function RecommendationsLayer({
                                             }
                                           >
                                             {t.security?.users?.active ||
-                                              "Activo"}
+                                              (R?.statusActive ?? "Activo")}
                                           </ThemedText>
                                         </TouchableOpacity>
 
@@ -861,7 +911,7 @@ export function RecommendationsLayer({
                                             }
                                           >
                                             {t.security?.users?.inactive ||
-                                              "Inactivo"}
+                                              (R?.statusInactive ?? "Inactivo")}
                                           </ThemedText>
                                         </TouchableOpacity>
 
@@ -911,7 +961,7 @@ export function RecommendationsLayer({
                                             }
                                           >
                                             {t.security?.users?.pending ||
-                                              "Pendiente"}
+                                              (R?.statusPending ?? "Pendiente")}
                                           </ThemedText>
                                         </TouchableOpacity>
 
@@ -962,7 +1012,7 @@ export function RecommendationsLayer({
                                             }
                                           >
                                             {t.security?.users?.suspended ||
-                                              "Suspendido"}
+                                              (R?.statusSuspended ?? "Suspendido")}
                                           </ThemedText>
                                         </TouchableOpacity>
                                       </View>
@@ -1021,28 +1071,14 @@ export function RecommendationsLayer({
                                           status: currentStatus,
                                           offeringId:
                                             recommendation.offeringId || null,
+                                          image: recommendation.image ?? null,
                                         },
                                       }));
                                     }}
                                     style={{ marginLeft: 8 }}
                                   >
                                     <Ionicons
-                                      name="pencil"
-                                      size={20}
-                                      color={actionIconColor}
-                                    />
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    onPress={() =>
-                                      handleDeleteRecommendation(
-                                        recommendation.id,
-                                      )
-                                    }
-                                    style={{ marginLeft: 8 }}
-                                    disabled={saving}
-                                  >
-                                    <Ionicons
-                                      name="trash-outline"
+                                      name="chevron-down"
                                       size={20}
                                       color={actionIconColor}
                                     />
@@ -1053,8 +1089,8 @@ export function RecommendationsLayer({
                           </View>
 
                           {isEditing ? (
-                            <>
-                              {/* Tipo de recomendación en edición */}
+                            <View style={{ flex: 1 }}>
+                              {/* {R?.recommendationTypeLabel ?? "Tipo de recomendación"} en edición + imagen pequeña */}
                               <ThemedText
                                 type="body2"
                                 style={[
@@ -1062,9 +1098,9 @@ export function RecommendationsLayer({
                                   { color: colors.text, marginTop: 12 },
                                 ]}
                               >
-                                Tipo de recomendación
+                                {R?.recommendationTypeLabel ?? "Tipo de recomendación"}
                               </ThemedText>
-                              <View style={styles.radioGroupContainer}>
+                              <View style={[styles.radioGroupContainer, { flex: 1, minWidth: 0, marginTop: 8 }]}>
                                 <View
                                   style={[
                                     styles.radioGroupRow,
@@ -1202,34 +1238,158 @@ export function RecommendationsLayer({
                                 </View>
                               </View>
 
-                              {/* Selector de oferta en edición */}
-                              {offerings.length > 0 && (
-                                <>
-                                  <ThemedText
-                                    type="body2"
-                                    style={[
-                                      styles.label,
-                                      {
-                                        color: colors.text,
-                                        marginTop: 16,
+                              {/* Imagen y Order siempre en la misma fila (sobre todo en móvil); Offerings puede bajar de fila */}
+                              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, ...(isMobile ? { flexShrink: 0 } : { flex: 1, minWidth: 200 }) }}>
+                                <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
+                                    {formData?.image ? (
+                                    <>
+                                      <Image
+                                        source={{
+                                          uri: (formData.image || "").startsWith("data:")
+                                            ? formData.image!
+                                            : `data:image/jpeg;base64,${formData.image}`,
+                                        }}
+                                        style={{
+                                          position: "absolute",
+                                          top: 0,
+                                          left: 0,
+                                          width: recommendationImageSize,
+                                          height: recommendationImageSize,
+                                          borderRadius: 8,
+                                          backgroundColor: colors.border,
+                                        }}
+                                        resizeMode="cover"
+                                      />
+                                      <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                                        <Tooltip text={R?.removeImage ?? "Quitar imagen"} position="top">
+                                          <TouchableOpacity
+                                            onPress={() => setEditingRecommendationData((prev) => ({ ...prev, [recommendation.id]: { ...(prev[recommendation.id] || {}), image: null } as any }))}
+                                            style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                          >
+                                            <Ionicons name="trash-outline" size={14} color="#fff" />
+                                          </TouchableOpacity>
+                                        </Tooltip>
+                                        <Tooltip text={R?.enlarge ?? "Ampliar"} position="top">
+                                          <TouchableOpacity
+                                            onPress={() => setImageViewerUri((formData.image || "").startsWith("data:") ? formData.image! : `data:image/jpeg;base64,${formData.image}`)}
+                                            style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                          >
+                                            <Ionicons name="expand-outline" size={14} color="#fff" />
+                                          </TouchableOpacity>
+                                        </Tooltip>
+                                      </View>
+                                    </>
+                                  ) : (
+                                    <TouchableOpacity
+                                      onPress={() => pickRecommendationImage(recommendation.id)}
+                                      style={{ width: recommendationImageSize, height: recommendationImageSize, borderRadius: 8, backgroundColor: colors.border + "60", alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.textSecondary + "60" }}
+                                    >
+                                      <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                  )}
+                                </View>
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                    <ThemedText
+                                      type="body2"
+                                      style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}
+                                    >
+                                      {R?.orderLabel ?? "Orden"}
+                                    </ThemedText>
+                                    <ThemedText
+                                      type="caption"
+                                      style={{
+                                        color: colors.textSecondary,
                                         marginBottom: 0,
-                                      },
-                                    ]}
-                                  >
-                                    Ofertas
-                                  </ThemedText>
-                                  <ThemedText
-                                    type="caption"
-                                    style={{
-                                      color: colors.textSecondary,
-                                      marginBottom: 8,
-                                    }}
-                                  >
-                                    Deja vacío para recomendación general, o
-                                    selecciona una oferta para recomendación
-                                    específica
-                                  </ThemedText>
-                                  <Select
+                                        flex: 1,
+                                        minWidth: 0,
+                                        ...(isMobile && { fontSize: 11 }),
+                                      }}
+                                    >
+                                      {R?.orderHint ?? "Menor número = más importante (default: 0)"}
+                                    </ThemedText>
+                                  </View>
+                                  <NumericInput
+                                  value={formData?.order?.toString() || "0"}
+                                  onChangeText={(val) => {
+                                    const num = parseInt(val, 10);
+                                    if (!isNaN(num) && num >= 0) {
+                                      setEditingRecommendationData((prev) => ({
+                                        ...prev,
+                                        [recommendation.id]: {
+                                          ...(prev[recommendation.id] || {
+                                            type: recommendation.type,
+                                            message: recommendation.message,
+                                            order: recommendation.order ?? 0,
+                                            status: currentStatus,
+                                            offeringId:
+                                              recommendation.offeringId || null,
+                                          }),
+                                          order: num,
+                                        },
+                                      }));
+                                    } else if (val === "") {
+                                      setEditingRecommendationData((prev) => ({
+                                        ...prev,
+                                        [recommendation.id]: {
+                                          ...(prev[recommendation.id] || {
+                                            type: recommendation.type,
+                                            message: recommendation.message,
+                                            order: recommendation.order ?? 0,
+                                            status: currentStatus,
+                                            offeringId:
+                                              recommendation.offeringId || null,
+                                          }),
+                                          order: 0,
+                                        },
+                                      }));
+                                    }
+                                  }}
+                                  placeholder="0"
+                                  disabled={saving}
+                                  containerStyle={[
+                                    styles.inputContainer,
+                                    {
+                                      backgroundColor: colors.filterInputBackground,
+                                      borderColor: colors.border,
+                                    },
+                                  ]}
+                                  inputStyle={styles.input}
+                                  min={0}
+                                />
+                                </View>
+                                </View>
+                                {offerings.length > 0 && (
+                                  <View style={{ flex: 1, minWidth: 220 }}>
+                                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                      <ThemedText
+                                        type="body2"
+                                        style={[
+                                          styles.label,
+                                          {
+                                            color: colors.text,
+                                            marginTop: 0,
+                                            marginBottom: 0,
+                                          },
+                                        ]}
+                                      >
+                                        {R?.offersLabel ?? "Ofertas"}
+                                      </ThemedText>
+                                      <ThemedText
+                                        type="caption"
+                                        style={{
+                                          color: colors.textSecondary,
+                                          marginBottom: 0,
+                                          flex: 1,
+                                          minWidth: 0,
+                                          ...(isMobile && { fontSize: 11 }),
+                                        }}
+                                      >
+                                        {R?.offerSelectorCaption ?? "Selecciona una oferta para una recomendación específica."}
+                                      </ThemedText>
+                                    </View>
+                                    <Select
                                     value={formData?.offeringId || ""}
                                     options={[
                                       {
@@ -1240,10 +1400,10 @@ export function RecommendationsLayer({
                                               recommendation.id
                                             ] || editingLocalType;
                                           if (currentType === "general")
-                                            return "Recomendación General";
+                                            return R?.generalRecommendation ?? "Recomendación General";
                                           if (currentType === "warning")
-                                            return "Advertencia General";
-                                          return "Recomendación General";
+                                            return R?.warningGeneral ?? "Advertencia General";
+                                          return R?.generalRecommendation ?? "Recomendación General";
                                         })(),
                                       },
                                       ...offerings.map((offering) => ({
@@ -1330,11 +1490,12 @@ export function RecommendationsLayer({
                                         );
                                       }
                                     }}
-                                    placeholder="Selecciona una oferta"
+                                    placeholder={R?.selectOfferPlaceholder ?? "Selecciona una oferta"}
                                     searchable={true}
                                   />
-                                </>
+                                </View>
                               )}
+                              </View>
 
                               <ThemedText
                                 type="body2"
@@ -1343,7 +1504,7 @@ export function RecommendationsLayer({
                                   { color: colors.text, marginTop: 16 },
                                 ]}
                               >
-                                Mensaje de recomendación *
+                                {R?.messageLabel ?? "Mensaje de recomendación *"}
                               </ThemedText>
                               <InputWithFocus
                                 containerStyle={[
@@ -1360,7 +1521,7 @@ export function RecommendationsLayer({
                                     styles.textArea,
                                     { color: colors.text },
                                   ]}
-                                  placeholder="Describe el mensaje de recomendación..."
+                                  placeholder={R?.messagePlaceholder ?? "Describe el mensaje de recomendación..."}
                                   placeholderTextColor={colors.textSecondary}
                                   value={formData?.message || ""}
                                   onChangeText={(text) => {
@@ -1385,85 +1546,66 @@ export function RecommendationsLayer({
                                   editable={!saving}
                                 />
                               </InputWithFocus>
-                              <View style={{ marginTop: 12 }}>
-                                <ThemedText
-                                  type="body2"
-                                  style={[styles.label, { color: colors.text }]}
-                                >
-                                  Orden
-                                </ThemedText>
-                                <ThemedText
-                                  type="caption"
-                                  style={{
-                                    color: colors.textSecondary,
-                                    marginBottom: 8,
-                                  }}
-                                >
-                                  Menor número = más importante (default: 0)
-                                </ThemedText>
-                                <NumericInput
-                                  value={formData?.order?.toString() || "0"}
-                                  onChangeText={(val) => {
-                                    const num = parseInt(val, 10);
-                                    if (!isNaN(num) && num >= 0) {
-                                      setEditingRecommendationData((prev) => ({
-                                        ...prev,
-                                        [recommendation.id]: {
-                                          ...(prev[recommendation.id] || {
-                                            type: recommendation.type,
-                                            message: recommendation.message,
-                                            order: recommendation.order ?? 0,
-                                            status: currentStatus,
-                                            offeringId:
-                                              recommendation.offeringId || null,
-                                          }),
-                                          order: num,
-                                        },
-                                      }));
-                                    } else if (val === "") {
-                                      setEditingRecommendationData((prev) => ({
-                                        ...prev,
-                                        [recommendation.id]: {
-                                          ...(prev[recommendation.id] || {
-                                            type: recommendation.type,
-                                            message: recommendation.message,
-                                            order: recommendation.order ?? 0,
-                                            status: currentStatus,
-                                            offeringId:
-                                              recommendation.offeringId || null,
-                                          }),
-                                          order: 0,
-                                        },
-                                      }));
-                                    }
-                                  }}
-                                  placeholder="0"
-                                  disabled={saving}
-                                  containerStyle={[
-                                    styles.inputContainer,
-                                    {
-                                      backgroundColor: colors.filterInputBackground,
-                                      borderColor: colors.border,
-                                    },
-                                  ]}
-                                  inputStyle={styles.input}
-                                  min={0}
-                                />
-                              </View>
-                            </>
+
+                            </View>
                           ) : (
-                            <ThemedText
-                              type="body2"
-                              style={{ color: colors.text, marginTop: 12 }}
-                            >
-                              {recommendation.message}
-                            </ThemedText>
+                            <View style={{ flexDirection: "row", alignItems: "flex-start", marginTop: 12, gap: 12 }}>
+                              {recommendation.image ? (
+                                <Image
+                                  source={{
+                                    uri: recommendation.image.startsWith("data:")
+                                      ? recommendation.image
+                                      : `data:image/jpeg;base64,${recommendation.image}`,
+                                  }}
+                                  style={{
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: 8,
+                                    backgroundColor: colors.border,
+                                  }}
+                                  resizeMode="cover"
+                                />
+                              ) : null}
+                              <ThemedText
+                                type="body2"
+                                numberOfLines={3}
+                                style={{ color: colors.textSecondary, flex: 1, fontSize: 13 }}
+                              >
+                                {recommendation.message}
+                              </ThemedText>
+                            </View>
                           )}
 
                           {isEditing && (
                             <View style={styles.formActions}>
                               <Button
-                                title="Cancelar"
+                                title={t.common.delete}
+                                onPress={() =>
+                                  handleDeleteRecommendation(recommendation.id, () => {
+                                    setEditingRecommendationId(null);
+                                    setEditingRecommendationData((prev) => {
+                                      const next = { ...prev };
+                                      delete next[recommendation.id];
+                                      return next;
+                                    });
+                                    setEditingLocalRecommendationType((prev) => {
+                                      const next = { ...prev };
+                                      delete next[recommendation.id];
+                                      return next;
+                                    });
+                                    setEditingPreviousRecommendationType((prev) => {
+                                      const next = { ...prev };
+                                      delete next[recommendation.id];
+                                      return next;
+                                    });
+                                  })
+                                }
+                                variant="ghost"
+                                size="md"
+                                disabled={saving}
+                              />
+                              <Button
+                                title={t.common.cancel}
                                 onPress={() => {
                                   setEditingRecommendationId(null);
                                   setEditingRecommendationData((prev) => {
@@ -1484,12 +1626,12 @@ export function RecommendationsLayer({
                                     },
                                   );
                                 }}
-                                variant="outline"
+                                variant="outlined"
                                 size="md"
                                 disabled={saving}
                               />
                               <Button
-                                title="Aceptar"
+                                title={R?.accept ?? t.common.save}
                                 onPress={() =>
                                   handleSaveRecommendation(recommendation.id)
                                 }
@@ -1576,7 +1718,7 @@ export function RecommendationsLayer({
                                   (recommendation as any).status ??
                                   RecordStatus.ACTIVE;
                                 const currentStatusDescription =
-                                  recommendation.statusDescription || "Activo";
+                                  recommendation.statusDescription || (R?.statusActive ?? "Activo");
 
                                 const getLocalTypeFromBackend = (
                                   backendType: RecommendationType,
@@ -1598,7 +1740,7 @@ export function RecommendationsLayer({
                                     style={{ marginTop: index > 0 ? 16 : 12 }}
                                   >
                                     {!isEditing ? (
-                                      /* Vista colapsada: mensaje con estado e iconos al mismo nivel */
+                                      /* Vista colapsada: imagen (opcional) + mensaje con estado e iconos */
                                       <View
                                         style={{
                                           flexDirection: "row",
@@ -1606,12 +1748,30 @@ export function RecommendationsLayer({
                                           justifyContent: "space-between",
                                         }}
                                       >
+                                        {recommendation.image ? (
+                                          <Image
+                                            source={{
+                                              uri: recommendation.image.startsWith("data:")
+                                                ? recommendation.image
+                                                : `data:image/jpeg;base64,${recommendation.image}`,
+                                            }}
+                                            style={{
+                                              width: 56,
+                                              height: 56,
+                                              borderRadius: 8,
+                                              marginRight: 12,
+                                              backgroundColor: colors.border,
+                                            }}
+                                            resizeMode="cover"
+                                          />
+                                        ) : null}
                                         <View
-                                          style={{ flex: 1, marginRight: 8 }}
+                                          style={{ flex: 1, marginRight: 8, minWidth: 0 }}
                                         >
                                           <ThemedText
                                             type="body2"
-                                            style={{ color: colors.text }}
+                                            numberOfLines={3}
+                                            style={{ color: colors.textSecondary, fontSize: 13 }}
                                           >
                                             {recommendation.message}
                                           </ThemedText>
@@ -1656,27 +1816,14 @@ export function RecommendationsLayer({
                                                     offeringId:
                                                       recommendation.offeringId ||
                                                       null,
+                                                    image: recommendation.image ?? null,
                                                   },
                                                 }),
                                               );
                                             }}
                                           >
                                             <Ionicons
-                                              name="pencil"
-                                              size={20}
-                                              color={actionIconColor}
-                                            />
-                                          </TouchableOpacity>
-                                          <TouchableOpacity
-                                            onPress={() =>
-                                              handleDeleteRecommendation(
-                                                recommendation.id,
-                                              )
-                                            }
-                                            disabled={saving}
-                                          >
-                                            <Ionicons
-                                              name="trash-outline"
+                                              name="chevron-down"
                                               size={20}
                                               color={actionIconColor}
                                             />
@@ -1685,8 +1832,8 @@ export function RecommendationsLayer({
                                       </View>
                                     ) : (
                                       /* Vista de edición completa */
-                                      <>
-                                        {/* Tipo de recomendación en edición */}
+                                      <View style={{ flex: 1 }}>
+                                        {/* {R?.recommendationTypeLabel ?? "Tipo de recomendación"} en edición + imagen pequeña */}
                                         <ThemedText
                                           type="body2"
                                           style={[
@@ -1697,11 +1844,9 @@ export function RecommendationsLayer({
                                             },
                                           ]}
                                         >
-                                          Tipo de recomendación
+                                          {R?.recommendationTypeLabel ?? "Tipo de recomendación"}
                                         </ThemedText>
-                                        <View
-                                          style={styles.radioGroupContainer}
-                                        >
+                                        <View style={[styles.radioGroupContainer, { flex: 1, minWidth: 0, marginTop: 8 }]}>
                                           <View
                                             style={[
                                               styles.radioGroupRow,
@@ -1860,34 +2005,176 @@ export function RecommendationsLayer({
                                           </View>
                                         </View>
 
-                                        {/* Selector de oferta en edición */}
-                                        {offerings.length > 0 && (
-                                          <>
-                                            <ThemedText
-                                              type="body2"
-                                              style={[
-                                                styles.label,
-                                                {
-                                                  color: colors.text,
-                                                  marginTop: 16,
+                                        {/* Imagen y Order siempre en la misma fila (sobre todo en móvil); Offerings puede bajar de fila */}
+                                        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20 }}>
+                                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, ...(isMobile ? { flexShrink: 0 } : { flex: 1, minWidth: 200 }) }}>
+                                          <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
+                                            {formData?.image ? (
+                                              <>
+                                                <Image
+                                                  source={{
+                                                    uri: (formData.image || "").startsWith("data:")
+                                                      ? formData.image!
+                                                      : `data:image/jpeg;base64,${formData.image}`,
+                                                  }}
+                                                  style={{
+                                                    position: "absolute",
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: recommendationImageSize,
+                                                    height: recommendationImageSize,
+                                                    borderRadius: 8,
+                                                    backgroundColor: colors.border,
+                                                  }}
+                                                  resizeMode="cover"
+                                                />
+                                                <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                                                  <Tooltip text={R?.removeImage ?? "Quitar imagen"} position="top">
+                                                    <TouchableOpacity
+                                                      onPress={() => setEditingRecommendationData((prev) => ({ ...prev, [recommendation.id]: { ...(prev[recommendation.id] || {}), image: null } as any }))}
+                                                      style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                                    >
+                                                      <Ionicons name="trash-outline" size={14} color="#fff" />
+                                                    </TouchableOpacity>
+                                                  </Tooltip>
+                                                  <Tooltip text={R?.enlarge ?? "Ampliar"} position="top">
+                                                    <TouchableOpacity
+                                                      onPress={() => setImageViewerUri((formData.image || "").startsWith("data:") ? formData.image! : `data:image/jpeg;base64,${formData.image}`)}
+                                                      style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                                    >
+                                                      <Ionicons name="expand-outline" size={14} color="#fff" />
+                                                    </TouchableOpacity>
+                                                  </Tooltip>
+                                                </View>
+                                              </>
+                                            ) : (
+                                              <TouchableOpacity
+                                                onPress={() => pickRecommendationImage(recommendation.id)}
+                                                style={{ width: recommendationImageSize, height: recommendationImageSize, borderRadius: 8, backgroundColor: colors.border + "60", alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.textSecondary + "60" }}
+                                              >
+                                                <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                                              </TouchableOpacity>
+                                            )}
+                                          </View>
+                                          <View style={{ flex: 1, minWidth: 0 }}>
+                                            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                              <ThemedText
+                                                type="body2"
+                                                style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}
+                                              >
+                                                {R?.orderLabel ?? "Orden"}
+                                              </ThemedText>
+                                              <ThemedText
+                                                type="caption"
+                                                style={{
+                                                  color: colors.textSecondary,
                                                   marginBottom: 0,
+                                                  flex: 1,
+                                                  minWidth: 0,
+                                                  ...(isMobile && { fontSize: 11 }),
+                                                }}
+                                              >
+                                                {R?.orderHint ?? "Menor número = más importante (default: 0)"}
+                                              </ThemedText>
+                                            </View>
+                                            <NumericInput
+                                              value={
+                                                formData?.order?.toString() || "0"
+                                              }
+                                              onChangeText={(val) => {
+                                                const num = parseInt(val, 10);
+                                                if (!isNaN(num) && num >= 0) {
+                                                  setEditingRecommendationData(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [recommendation.id]: {
+                                                        ...(prev[
+                                                          recommendation.id
+                                                        ] || {
+                                                          type: recommendation.type,
+                                                          message:
+                                                            recommendation.message,
+                                                          order:
+                                                            recommendation.order ??
+                                                            0,
+                                                          status: currentStatus,
+                                                          offeringId:
+                                                            recommendation.offeringId ??
+                                                            null,
+                                                        }),
+                                                        order: num,
+                                                      },
+                                                    }),
+                                                  );
+                                                } else if (val === "") {
+                                                  setEditingRecommendationData(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [recommendation.id]: {
+                                                        ...(prev[
+                                                          recommendation.id
+                                                        ] || {
+                                                          type: recommendation.type,
+                                                          message:
+                                                            recommendation.message,
+                                                          order:
+                                                            recommendation.order ??
+                                                            0,
+                                                          status: currentStatus,
+                                                          offeringId:
+                                                            recommendation.offeringId ??
+                                                            null,
+                                                        }),
+                                                        order: 0,
+                                                      },
+                                                    }),
+                                                  );
+                                                }
+                                              }}
+                                              placeholder="0"
+                                              disabled={saving}
+                                              containerStyle={[
+                                                styles.inputContainer,
+                                                {
+                                                  backgroundColor: colors.filterInputBackground,
+                                                  borderColor: colors.border,
                                                 },
                                               ]}
-                                            >
-                                              Ofertas
-                                            </ThemedText>
-                                            <ThemedText
-                                              type="caption"
-                                              style={{
-                                                color: colors.textSecondary,
-                                                marginBottom: 8,
-                                              }}
-                                            >
-                                              Deja vacío para recomendación
-                                              general, o selecciona una oferta
-                                              para recomendación específica
-                                            </ThemedText>
-                                            <Select
+                                              inputStyle={styles.input}
+                                              min={0}
+                                            />
+                                          </View>
+                                          </View>
+                                          {offerings.length > 0 && (
+                                            <View style={{ flex: 1, minWidth: 220 }}>
+                                              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                                <ThemedText
+                                                  type="body2"
+                                                  style={[
+                                                    styles.label,
+                                                    {
+                                                      color: colors.text,
+                                                      marginTop: 0,
+                                                      marginBottom: 0,
+                                                    },
+                                                  ]}
+                                                >
+                                                  {R?.offersLabel ?? "Ofertas"}
+                                                </ThemedText>
+                                                <ThemedText
+                                                  type="caption"
+                                                  style={{
+                                                    color: colors.textSecondary,
+                                                    marginBottom: 0,
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    ...(isMobile && { fontSize: 11 }),
+                                                  }}
+                                                >
+                                                  {R?.offerSelectorCaption ?? "Selecciona una oferta para una recomendación específica."}
+                                                </ThemedText>
+                                              </View>
+                                              <Select
                                               value={formData?.offeringId || ""}
                                               options={[
                                                 {
@@ -1900,12 +2187,12 @@ export function RecommendationsLayer({
                                                     if (
                                                       currentType === "general"
                                                     )
-                                                      return "Recomendación General";
+                                                      return R?.generalRecommendation ?? "Recomendación General";
                                                     if (
                                                       currentType === "warning"
                                                     )
-                                                      return "Advertencia General";
-                                                    return "Recomendación General";
+                                                      return R?.warningGeneral ?? "Advertencia General";
+                                                    return R?.generalRecommendation ?? "Recomendación General";
                                                   })(),
                                                 },
                                                 ...offerings.map((off) => ({
@@ -2002,11 +2289,12 @@ export function RecommendationsLayer({
                                                   );
                                                 }
                                               }}
-                                              placeholder="Selecciona una oferta"
+                                              placeholder={R?.selectOfferPlaceholder ?? "Selecciona una oferta"}
                                               searchable={true}
                                             />
-                                          </>
-                                        )}
+                                            </View>
+                                          )}
+                                        </View>
 
                                         <ThemedText
                                           type="body2"
@@ -2018,7 +2306,7 @@ export function RecommendationsLayer({
                                             },
                                           ]}
                                         >
-                                          Mensaje de recomendación *
+                                          {R?.messageLabel ?? "Mensaje de recomendación *"}
                                         </ThemedText>
                                         <InputWithFocus
                                           containerStyle={[
@@ -2035,7 +2323,7 @@ export function RecommendationsLayer({
                                               styles.textArea,
                                               { color: colors.text },
                                             ]}
-                                            placeholder="Describe el mensaje de recomendación..."
+                                            placeholder={R?.messagePlaceholder ?? "Describe el mensaje de recomendación..."}
                                             placeholderTextColor={
                                               colors.textSecondary
                                             }
@@ -2070,97 +2358,39 @@ export function RecommendationsLayer({
                                             editable={!saving}
                                           />
                                         </InputWithFocus>
-                                        <View style={{ marginTop: 12 }}>
-                                          <ThemedText
-                                            type="body2"
-                                            style={[
-                                              styles.label,
-                                              { color: colors.text },
-                                            ]}
-                                          >
-                                            Orden
-                                          </ThemedText>
-                                          <ThemedText
-                                            type="caption"
-                                            style={{
-                                              color: colors.textSecondary,
-                                              marginBottom: 8,
-                                            }}
-                                          >
-                                            Menor número = más importante
-                                            (default: 0)
-                                          </ThemedText>
-                                          <NumericInput
-                                            value={
-                                              formData?.order?.toString() || "0"
-                                            }
-                                            onChangeText={(val) => {
-                                              const num = parseInt(val, 10);
-                                              if (!isNaN(num) && num >= 0) {
-                                                setEditingRecommendationData(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [recommendation.id]: {
-                                                      ...(prev[
-                                                        recommendation.id
-                                                      ] || {
-                                                        type: recommendation.type,
-                                                        message:
-                                                          recommendation.message,
-                                                        order:
-                                                          recommendation.order ??
-                                                          0,
-                                                        status: currentStatus,
-                                                        offeringId:
-                                                          recommendation.offeringId ||
-                                                          null,
-                                                      }),
-                                                      order: num,
-                                                    },
-                                                  }),
-                                                );
-                                              } else if (val === "") {
-                                                setEditingRecommendationData(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [recommendation.id]: {
-                                                      ...(prev[
-                                                        recommendation.id
-                                                      ] || {
-                                                        type: recommendation.type,
-                                                        message:
-                                                          recommendation.message,
-                                                        order:
-                                                          recommendation.order ??
-                                                          0,
-                                                        status: currentStatus,
-                                                        offeringId:
-                                                          recommendation.offeringId ||
-                                                          null,
-                                                      }),
-                                                      order: 0,
-                                                    },
-                                                  }),
-                                                );
-                                              }
-                                            }}
-                                            placeholder="0"
-                                            disabled={saving}
-                                            containerStyle={[
-                                              styles.inputContainer,
-                                              {
-                                                backgroundColor: colors.filterInputBackground,
-                                                borderColor: colors.border,
-                                              },
-                                            ]}
-                                            inputStyle={styles.input}
-                                            min={0}
-                                          />
-                                        </View>
 
                                         <View style={styles.formActions}>
                                           <Button
-                                            title="Cancelar"
+                                            title={t.common.delete}
+                                            onPress={() =>
+                                              handleDeleteRecommendation(
+                                                recommendation.id,
+                                                () => {
+                                                  setEditingRecommendationId(null);
+                                                  setEditingRecommendationData((prev) => {
+                                                    const next = { ...prev };
+                                                    delete next[recommendation.id];
+                                                    return next;
+                                                  });
+                                                  setEditingLocalRecommendationType((prev) => {
+                                                    const next = { ...prev };
+                                                    delete next[recommendation.id];
+                                                    return next;
+                                                  });
+                                                  setEditingPreviousRecommendationType((prev) => {
+                                                    const next = { ...prev };
+                                                    delete next[recommendation.id];
+                                                    return next;
+                                                  });
+                                                },
+                                              )
+                                            }
+                                            variant="ghost"
+                                            size="md"
+                                            disabled={saving}
+                                          />
+                                          <Button
+                                            title={t.common.cancel}
                                             onPress={() => {
                                               setEditingRecommendationId(null);
                                               setEditingRecommendationData(
@@ -2191,12 +2421,12 @@ export function RecommendationsLayer({
                                                 },
                                               );
                                             }}
-                                            variant="outline"
+                                            variant="outlined"
                                             size="md"
                                             disabled={saving}
                                           />
                                           <Button
-                                            title="Aceptar"
+                                            title={R?.accept ?? t.common.save}
                                             onPress={() =>
                                               handleSaveRecommendation(
                                                 recommendation.id,
@@ -2207,7 +2437,7 @@ export function RecommendationsLayer({
                                             disabled={saving}
                                           />
                                         </View>
-                                      </>
+                                      </View>
                                     )}
                                   </View>
                                 );
@@ -2226,7 +2456,11 @@ export function RecommendationsLayer({
 
         {/* Formulario de nueva recomendación */}
         {showForm ? (
-          <Card variant="elevated" style={styles.formCard}>
+          <Card
+            variant="elevated"
+            style={[styles.formCard, { backgroundColor: colors.filterInputBackground }]}
+          >
+            <View style={{ flex: 1 }}>
             <View style={styles.sectionHeader}>
               <Ionicons
                 name="add-circle-outline"
@@ -2234,7 +2468,7 @@ export function RecommendationsLayer({
                 color={colors.primary}
               />
               <ThemedText type="h4" style={styles.sectionTitle}>
-                Nueva Recomendación
+                {R?.newRecommendation ?? "Nueva Recomendación"}
               </ThemedText>
             </View>
 
@@ -2242,9 +2476,9 @@ export function RecommendationsLayer({
               type="body2"
               style={[styles.label, { color: colors.text }]}
             >
-              Tipo de recomendación
+              {R?.recommendationTypeLabel ?? "Tipo de recomendación"}
             </ThemedText>
-            <View style={styles.radioGroupContainer}>
+            <View style={[styles.radioGroupContainer, { flex: 1, minWidth: 0, marginTop: 8 }]}>
               <View
                 style={[
                   styles.radioGroupRow,
@@ -2331,26 +2565,127 @@ export function RecommendationsLayer({
               </View>
             </View>
 
-            {/* Selector de oferta */}
-            {offerings.length > 0 && (
-              <>
-                <ThemedText
-                  type="body2"
-                  style={[
-                    styles.label,
-                    { color: colors.text, marginTop: 16, marginBottom: 0 },
+            {/* Imagen y Order siempre en la misma fila (sobre todo en móvil); Offerings puede bajar de fila */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20, width: "100%" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, ...(isMobile ? { flexShrink: 0 } : { flex: 1, minWidth: 200 }) }}>
+              <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
+                {formData.image ? (
+                  <>
+                    <Image
+                      source={{
+                        uri: (formData.image || "").startsWith("data:")
+                          ? formData.image!
+                          : `data:image/jpeg;base64,${formData.image}`,
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: recommendationImageSize,
+                        height: recommendationImageSize,
+                        borderRadius: 8,
+                        backgroundColor: colors.border,
+                      }}
+                      resizeMode="cover"
+                    />
+                    <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                      <Tooltip text={R?.removeImage ?? "Quitar imagen"} position="top">
+                        <TouchableOpacity
+                          onPress={() => setFormData((prev) => ({ ...prev, image: null }))}
+                          style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </Tooltip>
+                      <Tooltip text={R?.enlarge ?? "Ampliar"} position="top">
+                        <TouchableOpacity
+                          onPress={() => setImageViewerUri((formData.image || "").startsWith("data:") ? formData.image! : `data:image/jpeg;base64,${formData.image}`)}
+                          style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Ionicons name="expand-outline" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </Tooltip>
+                    </View>
+                  </>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => pickRecommendationImage(null)}
+                                                style={{ width: recommendationImageSize, height: recommendationImageSize, borderRadius: 8, backgroundColor: colors.border + "60", alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.textSecondary + "60" }}
+                  >
+                    <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                  <ThemedText
+                    type="body2"
+                    style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}
+                  >
+                    {R?.orderLabel ?? "Orden"}
+                  </ThemedText>
+                  <ThemedText
+                    type="caption"
+                    style={{
+                      color: colors.textSecondary,
+                      marginBottom: 0,
+                      flex: 1,
+                      minWidth: 0,
+                      ...(isMobile && { fontSize: 11 }),
+                    }}
+                  >
+                    {R?.orderHint ?? "Menor número = más importante (default: 0)"}
+                  </ThemedText>
+                </View>
+                <NumericInput
+                  value={formData.order.toString()}
+                  onChangeText={(val) => {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num) && num >= 0) {
+                      setFormData((prev) => ({ ...prev, order: num }));
+                    } else if (val === "") {
+                      setFormData((prev) => ({ ...prev, order: 0 }));
+                    }
+                  }}
+                  placeholder="0"
+                  containerStyle={[
+                    styles.inputContainer,
+                    {
+                      backgroundColor: colors.filterInputBackground,
+                      borderColor: colors.border,
+                    },
                   ]}
-                >
-                  Ofertas
-                </ThemedText>
-                <ThemedText
-                  type="caption"
-                  style={{ color: colors.textSecondary, marginBottom: 8 }}
-                >
-                  Deja vacío para recomendación general, o selecciona una oferta
-                  para recomendación específica
-                </ThemedText>
-                <Select
+                  inputStyle={styles.input}
+                  min={0}
+                />
+              </View>
+              </View>
+              {offerings.length > 0 && (
+                <View style={{ flex: 1, minWidth: 220 }}>
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                    <ThemedText
+                      type="body2"
+                      style={[
+                        styles.label,
+                        { color: colors.text, marginTop: 0, marginBottom: 0 },
+                      ]}
+                    >
+                      {R?.offersLabel ?? "Ofertas"}
+                    </ThemedText>
+                    <ThemedText
+                      type="caption"
+                      style={{
+                        color: colors.textSecondary,
+                        marginBottom: 0,
+                        flex: 1,
+                        minWidth: 0,
+                        ...(isMobile && { fontSize: 11 }),
+                      }}
+                    >
+                      {R?.offerSelectorCaption ?? "Selecciona una oferta para una recomendación específica."}
+                    </ThemedText>
+                  </View>
+                  <Select
                   value={formData.offeringId || ""}
                   options={[
                     {
@@ -2359,10 +2694,10 @@ export function RecommendationsLayer({
                         const currentType =
                           previousRecommendationType || localRecommendationType;
                         if (currentType === "general")
-                          return "Recomendación General";
+                          return R?.generalRecommendation ?? "Recomendación General";
                         if (currentType === "warning")
-                          return "Advertencia General";
-                        return "Recomendación General";
+                          return R?.warningGeneral ?? "Advertencia General";
+                        return R?.generalRecommendation ?? "Recomendación General";
                       })(),
                     },
                     ...offerings.map((offering) => ({
@@ -2394,17 +2729,18 @@ export function RecommendationsLayer({
                       }));
                     }
                   }}
-                  placeholder="Selecciona una oferta"
+                  placeholder={R?.selectOfferPlaceholder ?? "Selecciona una oferta"}
                   searchable={true}
                 />
-              </>
-            )}
+                </View>
+              )}
+            </View>
 
             <ThemedText
               type="body2"
               style={[styles.label, { color: colors.text, marginTop: 16 }]}
             >
-              Mensaje de recomendación *
+              {R?.messageLabel ?? "Mensaje de recomendación *"}
             </ThemedText>
             <InputWithFocus
               containerStyle={[
@@ -2435,50 +2771,9 @@ export function RecommendationsLayer({
               />
             </InputWithFocus>
 
-            <ThemedText
-              type="body2"
-              style={[styles.label, { color: colors.text, marginTop: 16 }]}
-            >
-              Orden
-            </ThemedText>
-            <ThemedText
-              type="caption"
-              style={{ color: colors.textSecondary, marginBottom: 8 }}
-            >
-              Menor número = más importante (default: 0)
-            </ThemedText>
-            <NumericInput
-              value={formData.order.toString()}
-              onChangeText={(val) => {
-                const num = parseInt(val, 10);
-                if (!isNaN(num) && num >= 0) {
-                  setFormData((prev) => ({ ...prev, order: num }));
-                } else if (val === "") {
-                  setFormData((prev) => ({ ...prev, order: 0 }));
-                }
-              }}
-              placeholder="0"
-              containerStyle={[
-                styles.inputContainer,
-                {
-                  backgroundColor: colors.filterInputBackground,
-                  borderColor: colors.border,
-                },
-              ]}
-              inputStyle={styles.input}
-              min={0}
-            />
-            <ThemedText
-              type="caption"
-              style={{ color: colors.textSecondary, marginTop: 4 }}
-            >
-              Mayor número = mayor prioridad. La IA mostrará primero las
-              recomendaciones con mayor prioridad.
-            </ThemedText>
-
             <View style={styles.formActions}>
               <Button
-                title="Cancelar"
+                title={t.common.cancel}
                 onPress={() => {
                   setShowForm(false);
                   setFormData({
@@ -2486,6 +2781,7 @@ export function RecommendationsLayer({
                     message: "",
                     offeringId: "",
                     order: 0, // Cambiado de priority a order
+                    image: null,
                   });
                   setLocalRecommendationType("general"); // Resetear al tipo por defecto
                   setPreviousRecommendationType(null); // Limpiar el tipo guardado
@@ -2501,6 +2797,7 @@ export function RecommendationsLayer({
                 size="md"
                 disabled={saving}
               />
+            </View>
             </View>
           </Card>
         ) : (
@@ -2595,6 +2892,51 @@ export function RecommendationsLayer({
           )}
         </View>
       </View>
+
+      {/* Modal ver imagen ampliada */}
+      <Modal
+        visible={!!imageViewerUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImageViewerUri(null)}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.85)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+          onPress={() => setImageViewerUri(null)}
+        >
+          <Pressable style={{ maxWidth: "100%", maxHeight: "100%" }} onPress={(e) => e.stopPropagation()}>
+            {imageViewerUri ? (
+              <Image
+                source={{ uri: imageViewerUri }}
+                style={{ width: 320, height: 320, borderRadius: 12 }}
+                resizeMode="contain"
+              />
+            ) : null}
+          </Pressable>
+          <TouchableOpacity
+            onPress={() => setImageViewerUri(null)}
+            style={{
+              position: "absolute",
+              top: Platform.OS === "web" ? 48 : 56,
+              right: 24,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "rgba(255,255,255,0.2)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
