@@ -89,6 +89,7 @@ export function RecommendationsLayer({
     detail?: string;
   } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false); // Flag para evitar llamados repetitivos
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Opciones locales de tipo de recomendación (temporal, hasta implementar en BDD)
   type LocalRecommendationType = "general" | "offer_specific" | "warning";
@@ -507,6 +508,16 @@ export function RecommendationsLayer({
     [applyReorder],
   );
 
+  // Al abrir el formulario de nueva recomendación, hacer scroll al final para que el panel sea visible
+  useEffect(() => {
+    if (showForm) {
+      const t = setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showForm]);
+
   if (loading && recommendations.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -522,7 +533,7 @@ export function RecommendationsLayer({
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
+    <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} style={styles.container}>
       {generalError && (
         <InlineAlert
           type="error"
@@ -2914,7 +2925,7 @@ export function RecommendationsLayer({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 0,
   },
   loadingContainer: {
     padding: 32,

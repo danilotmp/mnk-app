@@ -4936,7 +4936,7 @@ export function PaymentsLayer({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 0,
   },
   loadingContainer: {
     padding: 32,

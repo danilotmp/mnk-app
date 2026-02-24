@@ -484,6 +484,7 @@ export function CommercialSetupScreen() {
               style={[
                 styles.contentCard,
                 currentLayer === "interactionGuidelines" && { gap: 0 },
+                currentLayer === "offerings" && isMobile && styles.contentCardOfferingsMobile,
               ]}
             >
               <View
@@ -1034,43 +1035,6 @@ export function CommercialSetupScreen() {
             </Card>
           </>
         )}
-
-        {/* Información sobre capacidades */}
-        <Card variant="outlined" style={styles.infoCard}>
-          <View style={styles.infoContent}>
-            <Ionicons
-              name="bulb-outline"
-              size={pageLayout.iconSubtitle}
-              color={colors.primary}
-            />
-            <View style={styles.infoText}>
-              <ThemedText type="body2" style={styles.infoTitle}>
-                {t.wizard.infoTitle}
-              </ThemedText>
-              <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-                {layerProgress
-                  .find((p) => p.layer === currentLayer)
-                  ?.enabledCapabilities.map((cap) => {
-                    const labels: Record<string, string> = {
-                      canAnswerAboutBusiness:
-                        t.wizard.capabilities.canAnswerAboutBusiness,
-                      canAnswerAboutLocation:
-                        t.wizard.capabilities.canAnswerAboutLocation,
-                      canAnswerAboutPrices:
-                        t.wizard.capabilities.canAnswerAboutPrices,
-                      canAnswerAboutPayment:
-                        t.wizard.capabilities.canAnswerAboutPayment,
-                      canRecommend: t.wizard.capabilities.canRecommend,
-                      canSuggestProducts:
-                        t.wizard.capabilities.canSuggestProducts,
-                    };
-                    return labels[cap] || cap;
-                  })
-                  .join(", ") || t.wizard.completeLayerToActivate}
-              </ThemedText>
-            </View>
-          </View>
-        </Card>
       </ScrollView>
     </ThemedView>
   );

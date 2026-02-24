@@ -488,7 +488,7 @@ export function CompanySetupLayer({ onComplete }: CompanySetupLayerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 0,
   },
   alert: {
     marginBottom: 16,

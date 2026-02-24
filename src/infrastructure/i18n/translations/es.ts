@@ -334,6 +334,7 @@ export const es: Translations = {
         continue: "Continuar",
         record: "registro",
         records: "registros",
+        recordsPerPage: "Registros por página",
         product: "Producto",
         service: "Servicio",
         taxesIncluded: "Incluidos",

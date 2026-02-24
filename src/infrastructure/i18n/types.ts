@@ -283,6 +283,7 @@ export interface Translations {
         continue: string;
         record: string;
         records: string;
+        recordsPerPage: string;
         product: string;
         service: string;
         taxesIncluded: string;

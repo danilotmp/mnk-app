@@ -332,6 +332,7 @@ export const en: Translations = {
         continue: "Continue",
         record: "record",
         records: "records",
+        recordsPerPage: "Records per page",
         product: "Product",
         service: "Service",
         taxesIncluded: "Included",

@@ -8,6 +8,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -104,7 +105,7 @@ export function OperationalLayer({
   const [commercialProfile, setCommercialProfile] =
     useState<CommercialProfile | null>(null); // Perfil comercial para obtener defaultTaxMode, currency, timezone, language
   const [currentPage, setCurrentPage] = useState(1); // Página actual de la paginación
-  const itemsPerPage = 5; // Registros por página
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Registros por página (selector)
   const [imageViewerUri, setImageViewerUri] = useState<string | null>(null); // URI para ver imagen ampliada
 
   const [offeringType, setOfferingType] = useState<"product" | "service">(
@@ -685,6 +686,11 @@ export function OperationalLayer({
       validTo: null,
       status: "active",
     };
+
+    // Ir a la última página para que el nuevo ítem (al final) y el panel de creación sean visibles
+    const nextTotal = offerings.length + 1;
+    const lastPage = Math.max(1, Math.ceil(nextTotal / itemsPerPage));
+    setCurrentPage(lastPage);
 
     // Agregar a la lista visual
     setOfferings((prev) => [...prev, newOffering]);
@@ -1766,10 +1772,12 @@ export function OperationalLayer({
                     </View>
                   </View>
 
-                  {/* Controles de paginación */}
-                  {totalPages > 1 && (
-                    <View style={styles.paginationContainer}>
-                      <TouchableOpacity
+                  {/* Fila: paginación centrada (web) / izquierda (móvil); registros por página a la derecha */}
+                  <View style={styles.paginationWrapper}>
+                    <View style={[styles.paginationLeftSlot, isMobile && styles.paginationLeftSlotMobile]} />
+                    {totalPages > 1 ? (
+                      <View style={styles.paginationContainer}>
+                        <TouchableOpacity
                         style={[
                           styles.paginationButton,
                           {
@@ -1901,7 +1909,44 @@ export function OperationalLayer({
                         />
                       </TouchableOpacity>
                     </View>
-                  )}
+                    ) : (
+                      <View />
+                    )}
+                    <View style={styles.paginationRightSlot}>
+                    <View style={styles.itemsPerPageRow}>
+                      {!isMobile && (
+                      <ThemedText
+                        type="body2"
+                        style={[styles.itemsPerPageLabel, { color: colors.textSecondary }]}
+                      >
+                        {O?.recordsPerPage ?? "Registros por página"}
+                      </ThemedText>
+                      )}
+                      <View style={styles.itemsPerPageSelectWrap}>
+                        <Select
+                          value={String(itemsPerPage)}
+                          options={[
+                            { value: "5", label: "5" },
+                            { value: "10", label: "10" },
+                            { value: "25", label: "25" },
+                            { value: "50", label: "50" },
+                          ]}
+                          onSelect={(val) => {
+                            const n = Number(val);
+                            if (!Number.isNaN(n) && n > 0) {
+                              setItemsPerPage(n);
+                              setCurrentPage(1);
+                              setExpandedOfferingId(null);
+                            }
+                          }}
+                          placeholder={String(itemsPerPage)}
+                          searchable={false}
+                          triggerStyle={styles.itemsPerPageTrigger}
+                        />
+                      </View>
+                    </View>
+                    </View>
+                  </View>
                 </>
               );
             })()}
@@ -1965,7 +2010,7 @@ export function OperationalLayer({
           )}
 
           {/* Botones de acción: Carga individual y masiva */}
-          <View style={styles.actionButtons}>
+          <View style={[styles.actionButtons, isMobile && styles.actionButtonsMobile]}>
             {expandedOfferingId === null && (
               <>
                 <Button
@@ -1973,7 +2018,7 @@ export function OperationalLayer({
                   onPress={handleAddNewOffering}
                   variant="outlined"
                   size="md"
-                  style={styles.addButton}
+                  style={[styles.addButton, isMobile && styles.addButtonMobile]}
                 >
                   <Ionicons
                     name="add"
@@ -1997,7 +2042,7 @@ export function OperationalLayer({
                     }}
                     variant="outlined"
                     size="md"
-                    style={styles.addButton}
+                    style={[styles.addButton, isMobile && styles.addButtonMobile]}
                     disabled={uploadingBulk}
                   >
                     {uploadingBulk ? (
@@ -2026,7 +2071,7 @@ export function OperationalLayer({
                     }}
                     variant="outlined"
                     size="md"
-                    style={styles.addButton}
+                    style={[styles.addButton, isMobile && styles.addButtonMobile]}
                   >
                     <Ionicons
                       name="cloud-upload-outline"
@@ -2041,7 +2086,7 @@ export function OperationalLayer({
                   onPress={handleDownloadTemplate}
                   variant="outlined"
                   size="md"
-                  style={styles.addButton}
+                  style={[styles.addButton, isMobile && styles.addButtonMobile]}
                 >
                   <Ionicons
                     name="download-outline"
@@ -2328,7 +2373,7 @@ export function OperationalLayer({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 0,
   },
   loadingContainer: {
     padding: 32,
@@ -2508,11 +2553,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginRight: 8,
   },
+  addButtonMobile: {
+    marginTop: 8,
+    marginRight: 0,
+    width: "100%",
+    alignSelf: "stretch",
+  },
   actionButtons: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 8,
+  },
+  actionButtonsMobile: {
+    width: "100%",
+    flexWrap: "nowrap",
+    flexDirection: "column",
   },
   uploadButton: {
     marginTop: 8,
@@ -2536,8 +2592,47 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
     gap: 8,
+  },
+  paginationWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: 16,
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  paginationLeftSlot: {
+    flex: 1,
+  },
+  paginationLeftSlotMobile: {
+    flex: 0,
+  },
+  paginationRightSlot: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  itemsPerPageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 36,
+  },
+  itemsPerPageLabel: {
+    marginRight: 8,
+  },
+  itemsPerPageSelectWrap: {
+    height: 36,
+    minWidth: 56,
+    justifyContent: "center",
+  },
+  itemsPerPageTrigger: {
+    height: 36,
+    minHeight: 36,
+    paddingVertical: 0,
+    justifyContent: "center",
   },
   paginationButton: {
     width: 36,

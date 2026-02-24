@@ -995,7 +995,7 @@ WhatsAppConnectionLayer.displayName = "WhatsAppConnectionLayer";
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 0,
   },
   formContainer: {
     gap: 24,

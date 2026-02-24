@@ -50,7 +50,7 @@ export function WizardStepper({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isMobile && { paddingBottom: 0 }]}>
       {steps.map((step, index) => {
         const status = getStepStatus(step, index);
         const isLast = index === steps.length - 1;

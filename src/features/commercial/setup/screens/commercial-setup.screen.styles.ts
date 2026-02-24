@@ -71,6 +71,8 @@ export interface CommercialSetupScreenStyles {
   subtitle: TextStyle;
   stepperCard: ViewStyle;
   contentCard: ViewStyle;
+  /** Smartphone: reduce 50% el espacio entre filtro y segundo título Ofertas */
+  contentCardOfferingsMobile: ViewStyle;
   contentHeaderRow: ViewStyle;
   contentHeaderRowMobile: ViewStyle;
   contentHeaderRowNoMargin: ViewStyle;
@@ -107,6 +109,7 @@ export function createCommercialSetupScreenStyles(
       padding: t.spacing.md,
       paddingTop: t.pageLayout.headerTitleGap,
       paddingBottom: t.spacing.xl,
+      flexGrow: 0,
     },
     scrollContentMobile: {
       paddingTop: t.pageLayout.headerTitleGapMobile,
@@ -167,6 +170,10 @@ export function createCommercialSetupScreenStyles(
       padding: t.spacing.lg,
       marginBottom: t.spacing.md,
       gap: t.spacing.md,
+    },
+    contentCardOfferingsMobile: {
+      paddingBottom: Math.round(t.spacing.lg * 0.5),
+      marginBottom: Math.round(t.spacing.md * 0.5),
     },
     contentHeaderRow: {
       flexDirection: "row",
@@ -241,7 +248,7 @@ export function createCommercialSetupScreenStyles(
       width: "100%",
     },
     layerContent: {
-      minHeight: 200,
+      flexGrow: 0,
     },
     layerContentNoPadding: {
       paddingTop: 0,
