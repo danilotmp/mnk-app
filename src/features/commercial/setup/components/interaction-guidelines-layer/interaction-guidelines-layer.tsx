@@ -13,8 +13,8 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-    InteractionGuideline,
-    InteractionGuidelinePayload,
+  InteractionGuideline,
+  InteractionGuidelinePayload,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import { DynamicIcon } from "@/src/domains/shared/components";
@@ -24,12 +24,12 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface InteractionGuidelinesLayerProps {
@@ -1179,10 +1179,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionCard: {
-    padding: 16,
-    paddingTop: 20,
-    paddingLeft: 0,
-    paddingRight: 0,
+    padding: 0,
+    paddingBottom: 20,
     gap: 16,
   },
   sectionHeader: {

@@ -16,10 +16,10 @@ import { useTheme } from "@/hooks/use-theme";
 import { CatalogService } from "@/src/domains/catalog";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-    CommercialProfile,
-    Offering,
-    OfferingPrice,
-    OfferingPricePayload,
+  CommercialProfile,
+  Offering,
+  OfferingPrice,
+  OfferingPricePayload,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import { CurrencyInput, DatePicker } from "@/src/domains/shared/components";
@@ -27,26 +27,27 @@ import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { TemplateService } from "@/src/infrastructure/templates/template.service";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
+
+import { styles } from "./operational-layer.styles";
 
 interface OperationalLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -432,7 +433,8 @@ export function OperationalLayer({
   // Elegir imagen para la oferta (crear/editar)
   const pickOfferingImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         alert.showError("Se necesita permiso para acceder a las fotos.");
         return;
@@ -447,7 +449,9 @@ export function OperationalLayer({
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const base64 = asset.base64;
-        const dataUri = base64 ? `data:image/jpeg;base64,${base64}` : (asset.uri || null);
+        const dataUri = base64
+          ? `data:image/jpeg;base64,${base64}`
+          : asset.uri || null;
         setOfferingForm((prev) => ({ ...prev, image: dataUri }));
       }
     } catch (e) {
@@ -514,7 +518,14 @@ export function OperationalLayer({
     setOfferings((prev) =>
       prev.map((o) =>
         o.id === offering.id
-          ? { ...o, ...updatedOffering, image: updatedOffering.image !== undefined ? updatedOffering.image ?? null : o.image }
+          ? {
+              ...o,
+              ...updatedOffering,
+              image:
+                updatedOffering.image !== undefined
+                  ? (updatedOffering.image ?? null)
+                  : o.image,
+            }
           : o,
       ),
     );
@@ -763,7 +774,10 @@ export function OperationalLayer({
               : originalOffering.description,
           type: modified.offering.type || originalOffering.type,
           requiresConditions: false, // Siempre false por ahora
-          image: modified.offering.image !== undefined ? modified.offering.image : originalOffering.image ?? null,
+          image:
+            modified.offering.image !== undefined
+              ? modified.offering.image
+              : (originalOffering.image ?? null),
           price: {
             id: originalPrice?.id,
             basePrice:
@@ -1143,7 +1157,7 @@ export function OperationalLayer({
         <ActivityIndicator size="large" color={colors.primary} />
         <ThemedText
           type="body2"
-          style={{ marginTop: 16, color: colors.textSecondary }}
+          style={[styles.loadingMessage, { color: colors.textSecondary }]}
         >
           {O?.loadingOfferings ?? "Cargando ofertas..."}
         </ThemedText>
@@ -1165,12 +1179,7 @@ export function OperationalLayer({
           <View
             style={[
               styles.sectionDescriptionContainer,
-              {
-                backgroundColor: colors.filterInputBackground,
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderRadius: 12,
-              },
+              { backgroundColor: colors.filterInputBackground },
             ]}
           >
             <ThemedText
@@ -1186,7 +1195,7 @@ export function OperationalLayer({
             {filteredOfferings.length > 0 && (
               <ThemedText
                 type="body2"
-                style={{ color: colors.textSecondary, fontWeight: "600" }}
+                style={[styles.sectionRecordsCount, { color: colors.textSecondary }]}
               >
                 {filteredOfferings.length}{" "}
                 {filteredOfferings.length === 1
@@ -1266,7 +1275,10 @@ export function OperationalLayer({
                                   <View style={styles.listItemContentMobile}>
                                     <ThemedText
                                       type="body1"
-                                      style={{ fontWeight: "600", width: "100%" }}
+                                      style={{
+                                        fontWeight: "600",
+                                        width: "100%",
+                                      }}
                                     >
                                       {offering.name}
                                     </ThemedText>
@@ -1301,8 +1313,9 @@ export function OperationalLayer({
                                         gap: 8,
                                       }}
                                     >
-                                      <View style={{ alignItems: "flex-end" }}>
-                                        {mainPrice && mainPrice.basePrice > 0 ? (
+                                      <View style={styles.alignEnd}>
+                                        {mainPrice &&
+                                        mainPrice.basePrice > 0 ? (
                                           <>
                                             <ThemedText
                                               type="h4"
@@ -1311,8 +1324,11 @@ export function OperationalLayer({
                                                 color: colors.primary,
                                               }}
                                             >
-                                              {commercialProfile?.currency || "USD"}{" "}
-                                              {Number(mainPrice.basePrice).toFixed(2)}
+                                              {commercialProfile?.currency ||
+                                                "USD"}{" "}
+                                              {Number(
+                                                mainPrice.basePrice,
+                                              ).toFixed(2)}
                                             </ThemedText>
                                             <ThemedText
                                               type="body2"
@@ -1323,8 +1339,10 @@ export function OperationalLayer({
                                             >
                                               Impuestos{" "}
                                               {mainPrice.taxMode === "included"
-                                                ? (O?.taxesIncluded ?? "Incluidos")
-                                                : (O?.taxesExcluded ?? "Excluidos")}
+                                                ? (O?.taxesIncluded ??
+                                                  "Incluidos")
+                                                : (O?.taxesExcluded ??
+                                                  "Excluidos")}
                                             </ThemedText>
                                           </>
                                         ) : (
@@ -1357,7 +1375,9 @@ export function OperationalLayer({
                                     {offering.image ? (
                                       <Image
                                         source={{
-                                          uri: offering.image.startsWith("data:")
+                                          uri: offering.image.startsWith(
+                                            "data:",
+                                          )
                                             ? offering.image
                                             : `data:image/jpeg;base64,${offering.image}`,
                                         }}
@@ -1375,10 +1395,13 @@ export function OperationalLayer({
                                       name={typeIcon}
                                       size={24}
                                       color={colors.textSecondary}
-                                      style={{ marginRight: 12 }}
+                                      style={styles.listItemTypeIcon}
                                     />
                                     <View
-                                      style={[styles.listItemContent, { flex: 1 }]}
+                                      style={[
+                                        styles.listItemContent,
+                                        { flex: 1 },
+                                      ]}
                                     >
                                       <View
                                         style={{
@@ -1419,7 +1442,7 @@ export function OperationalLayer({
                                     </View>
                                   </View>
                                   <View style={styles.listItemRight}>
-                                    <View style={{ alignItems: "flex-end" }}>
+                                    <View style={styles.alignEnd}>
                                       {mainPrice && mainPrice.basePrice > 0 ? (
                                         <>
                                           <ThemedText
@@ -1429,8 +1452,11 @@ export function OperationalLayer({
                                               color: colors.primary,
                                             }}
                                           >
-                                            {commercialProfile?.currency || "USD"}{" "}
-                                            {Number(mainPrice.basePrice).toFixed(2)}
+                                            {commercialProfile?.currency ||
+                                              "USD"}{" "}
+                                            {Number(
+                                              mainPrice.basePrice,
+                                            ).toFixed(2)}
                                           </ThemedText>
                                           <ThemedText
                                             type="body2"
@@ -1442,8 +1468,10 @@ export function OperationalLayer({
                                           >
                                             Impuestos{" "}
                                             {mainPrice.taxMode === "included"
-                                              ? (O?.taxesIncluded ?? "Incluidos")
-                                              : (O?.taxesExcluded ?? "Excluidos")}
+                                              ? (O?.taxesIncluded ??
+                                                "Incluidos")
+                                              : (O?.taxesExcluded ??
+                                                "Excluidos")}
                                           </ThemedText>
                                         </>
                                       ) : (
@@ -1466,7 +1494,7 @@ export function OperationalLayer({
                                       }
                                       size={20}
                                       color={colors.textSecondary}
-                                      style={{ marginLeft: 8 }}
+                                      style={styles.listItemCaptionSpacer}
                                     />
                                   </View>
                                 </>
@@ -1480,13 +1508,30 @@ export function OperationalLayer({
                                 style={styles.accordionCard}
                               >
                                 {/* Fila 1: Imagen pequeña + selector Producto/Servicio, desplazados a la derecha */}
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginLeft: 20, marginRight: 20, marginBottom: 4 }}>
-                                  <View style={{ position: "relative", width: 56, height: 56 }}>
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 12,
+                                    marginLeft: 20,
+                                    marginRight: 20,
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  <View
+                                    style={{
+                                      position: "relative",
+                                      width: 56,
+                                      height: 56,
+                                    }}
+                                  >
                                     {offeringForm.image ? (
                                       <>
                                         <Image
                                           source={{
-                                            uri: offeringForm.image.startsWith("data:")
+                                            uri: offeringForm.image.startsWith(
+                                              "data:",
+                                            )
                                               ? offeringForm.image
                                               : `data:image/jpeg;base64,${offeringForm.image}`,
                                           }}
@@ -1501,35 +1546,76 @@ export function OperationalLayer({
                                           }}
                                           resizeMode="cover"
                                         />
-                                        <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
-                                          <Tooltip text={O?.removeImage ?? "Quitar imagen"} position="top">
+                                        <View
+                                          style={{
+                                            position: "absolute",
+                                            top: 4,
+                                            left: 4,
+                                            right: 4,
+                                            flexDirection: "row",
+                                            justifyContent: "space-between",
+                                            zIndex: 10,
+                                          }}
+                                        >
+                                          <Tooltip
+                                            text={
+                                              O?.removeImage ?? "Quitar imagen"
+                                            }
+                                            position="top"
+                                          >
                                             <TouchableOpacity
-                                              onPress={() => setOfferingForm((p) => ({ ...p, image: null }))}
+                                              onPress={() =>
+                                                setOfferingForm((p) => ({
+                                                  ...p,
+                                                  image: null,
+                                                }))
+                                              }
                                               style={{
                                                 width: 24,
                                                 height: 24,
                                                 borderRadius: 12,
-                                                backgroundColor: "rgba(0,0,0,0.5)",
+                                                backgroundColor:
+                                                  "rgba(0,0,0,0.5)",
                                                 alignItems: "center",
                                                 justifyContent: "center",
                                               }}
                                             >
-                                              <Ionicons name="trash-outline" size={14} color="#fff" />
+                                              <Ionicons
+                                                name="trash-outline"
+                                                size={14}
+                                                color="#fff"
+                                              />
                                             </TouchableOpacity>
                                           </Tooltip>
-                                          <Tooltip text={O?.viewImage ?? "Ver imagen"} position="top">
+                                          <Tooltip
+                                            text={O?.viewImage ?? "Ver imagen"}
+                                            position="top"
+                                          >
                                             <TouchableOpacity
-                                              onPress={() => setImageViewerUri(offeringForm.image!.startsWith("data:") ? offeringForm.image! : `data:image/jpeg;base64,${offeringForm.image}`)}
+                                              onPress={() =>
+                                                setImageViewerUri(
+                                                  offeringForm.image!.startsWith(
+                                                    "data:",
+                                                  )
+                                                    ? offeringForm.image!
+                                                    : `data:image/jpeg;base64,${offeringForm.image}`,
+                                                )
+                                              }
                                               style={{
                                                 width: 24,
                                                 height: 24,
                                                 borderRadius: 12,
-                                                backgroundColor: "rgba(0,0,0,0.5)",
+                                                backgroundColor:
+                                                  "rgba(0,0,0,0.5)",
                                                 alignItems: "center",
                                                 justifyContent: "center",
                                               }}
                                             >
-                                              <Ionicons name="expand-outline" size={14} color="#fff" />
+                                              <Ionicons
+                                                name="expand-outline"
+                                                size={14}
+                                                color="#fff"
+                                              />
                                             </TouchableOpacity>
                                           </Tooltip>
                                         </View>
@@ -1546,223 +1632,232 @@ export function OperationalLayer({
                                           justifyContent: "center",
                                           borderWidth: 1,
                                           borderStyle: "dashed",
-                                          borderColor: colors.textSecondary + "60",
+                                          borderColor:
+                                            colors.textSecondary + "60",
                                         }}
                                       >
-                                        <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                                        <Ionicons
+                                          name="image-outline"
+                                          size={24}
+                                          color={colors.textSecondary}
+                                        />
                                       </TouchableOpacity>
                                     )}
                                   </View>
-                                  <View style={{ flex: 1, minWidth: 0 }}>
+                                  <View style={styles.flexShrink}>
                                     <View style={styles.typeSelector}>
-                                    {productTypeOptions.map((option) => {
-                                      const isSelected =
-                                        offeringType === option.value;
+                                      {productTypeOptions.map((option) => {
+                                        const isSelected =
+                                          offeringType === option.value;
 
-                                      return (
-                                        <TouchableOpacity
-                                          key={option.value}
-                                          style={[
-                                            styles.typeOption,
-                                            {
-                                              backgroundColor: isSelected
-                                                ? colors.primary
-                                                : "transparent",
-                                              borderColor: isSelected
-                                                ? colors.primary
-                                                : colors.border,
-                                            },
-                                          ]}
-                                          onPress={() =>
-                                            setOfferingType(
-                                              option.value as
-                                                | "product"
-                                                | "service",
-                                            )
-                                          }
-                                        >
-                                          {option.icon && (
-                                            <Ionicons
-                                              name={option.icon as any}
-                                              size={18}
-                                              color={
-                                                isSelected
-                                                  ? colors.contrastText
-                                                  : colors.textSecondary
-                                              }
-                                            />
-                                          )}
-                                          <ThemedText
-                                            type="body2"
-                                            style={{
-                                              color: isSelected
-                                                ? colors.contrastText
-                                                : colors.text,
-                                              marginLeft: 6,
-                                              fontWeight: isSelected
-                                                ? "600"
-                                                : "400",
-                                            }}
+                                        return (
+                                          <TouchableOpacity
+                                            key={option.value}
+                                            style={[
+                                              styles.typeOption,
+                                              {
+                                                backgroundColor: isSelected
+                                                  ? colors.primary
+                                                  : "transparent",
+                                                borderColor: isSelected
+                                                  ? colors.primary
+                                                  : colors.border,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setOfferingType(
+                                                option.value as
+                                                  | "product"
+                                                  | "service",
+                                              )
+                                            }
                                           >
-                                            {option.label}
-                                          </ThemedText>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
+                                            {option.icon && (
+                                              <Ionicons
+                                                name={option.icon as any}
+                                                size={18}
+                                                color={
+                                                  isSelected
+                                                    ? colors.contrastText
+                                                    : colors.textSecondary
+                                                }
+                                              />
+                                            )}
+                                            <ThemedText
+                                              type="body2"
+                                              style={{
+                                                color: isSelected
+                                                  ? colors.contrastText
+                                                  : colors.text,
+                                                marginLeft: 6,
+                                                fontWeight: isSelected
+                                                  ? "600"
+                                                  : "400",
+                                              }}
+                                            >
+                                              {option.label}
+                                            </ThemedText>
+                                          </TouchableOpacity>
+                                        );
+                                      })}
                                     </View>
                                   </View>
                                 </View>
 
                                 {/* Resto del formulario alineado con la fila de imagen (mismo margen) */}
-                                <View style={{ marginLeft: 20, marginRight: 20 }}>
-                                {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea (desktop) o apilados (móvil) */}
                                 <View
-                                  style={[
-                                    styles.rowContainer,
-                                    isMobile && { flexDirection: "column" },
-                                  ]}
+                                  style={styles.expandableFormRowMargins}
                                 >
+                                  {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea (desktop) o apilados (móvil) */}
                                   <View
                                     style={[
-                                      styles.halfWidth,
-                                      isMobile && { width: "100%" },
+                                      styles.rowContainer,
+                                      isMobile && { flexDirection: "column" },
                                     ]}
                                   >
-                                    <ThemedText
-                                      type="body2"
+                                    <View
                                       style={[
-                                        styles.label,
-                                        { color: colors.text, marginTop: 16 },
+                                        styles.halfWidth,
+                                        isMobile && { width: "100%" },
                                       ]}
                                     >
-                                      {O?.nameLabel ?? "Nombre *"}
-                                    </ThemedText>
-                                    <InputWithFocus
-                                      containerStyle={[
-                                        styles.inputContainer,
-                                        {
-                                          backgroundColor:
-                                            colors.filterInputBackground,
-                                          borderColor: colors.border,
-                                        },
-                                      ]}
-                                      primaryColor={colors.primary}
-                                    >
-                                      <TextInput
+                                      <ThemedText
+                                        type="body2"
                                         style={[
-                                          styles.input,
-                                          { color: colors.text },
+                                          styles.label,
+                                          { color: colors.text, marginTop: 16 },
                                         ]}
-                                        placeholder={
-                                          O?.namePlaceholder ??
-                                          "Ej: Habitación estándar"
-                                        }
-                                        placeholderTextColor={
-                                          colors.textSecondary
-                                        }
-                                        value={offeringForm.name}
+                                      >
+                                        {O?.nameLabel ?? "Nombre *"}
+                                      </ThemedText>
+                                      <InputWithFocus
+                                        containerStyle={[
+                                          styles.inputContainer,
+                                          {
+                                            backgroundColor:
+                                              colors.filterInputBackground,
+                                            borderColor: colors.border,
+                                          },
+                                        ]}
+                                        primaryColor={colors.primary}
+                                      >
+                                        <TextInput
+                                          style={[
+                                            styles.input,
+                                            { color: colors.text },
+                                          ]}
+                                          placeholder={
+                                            O?.namePlaceholder ??
+                                            "Ej: Habitación estándar"
+                                          }
+                                          placeholderTextColor={
+                                            colors.textSecondary
+                                          }
+                                          value={offeringForm.name}
+                                          onChangeText={(val) =>
+                                            setOfferingForm((prev) => ({
+                                              ...prev,
+                                              name: val,
+                                            }))
+                                          }
+                                        />
+                                      </InputWithFocus>
+                                    </View>
+                                    <View
+                                      style={[
+                                        styles.halfWidth,
+                                        isMobile && { width: "100%" },
+                                      ]}
+                                    >
+                                      <ThemedText
+                                        type="body2"
+                                        style={[
+                                          styles.label,
+                                          { color: colors.text, marginTop: 16 },
+                                        ]}
+                                      >
+                                        {O?.basePriceLabel ?? "Precio Base *"}
+                                      </ThemedText>
+                                      <CurrencyInput
+                                        value={priceForm.basePrice}
                                         onChangeText={(val) =>
-                                          setOfferingForm((prev) => ({
+                                          setPriceForm((prev) => ({
                                             ...prev,
-                                            name: val,
+                                            basePrice: val,
                                           }))
                                         }
+                                        currency={
+                                          commercialProfile?.currency || "USD"
+                                        }
+                                        disabled={saving}
                                       />
-                                    </InputWithFocus>
+                                    </View>
                                   </View>
-                                  <View
+
+                                  {/* Descripción al final */}
+                                  <ThemedText
+                                    type="body2"
                                     style={[
-                                      styles.halfWidth,
-                                      isMobile && { width: "100%" },
+                                      styles.label,
+                                      { color: colors.text, marginTop: 16 },
                                     ]}
                                   >
-                                    <ThemedText
-                                      type="body2"
+                                    {O?.descriptionOptional ??
+                                      "Descripción (opcional)"}
+                                  </ThemedText>
+                                  <InputWithFocus
+                                    containerStyle={[
+                                      styles.textAreaContainer,
+                                      {
+                                        backgroundColor:
+                                          colors.filterInputBackground,
+                                        borderColor: colors.border,
+                                      },
+                                    ]}
+                                    primaryColor={colors.primary}
+                                  >
+                                    <TextInput
                                       style={[
-                                        styles.label,
-                                        { color: colors.text, marginTop: 16 },
+                                        styles.textArea,
+                                        { color: colors.text },
                                       ]}
-                                    >
-                                      {O?.basePriceLabel ?? "Precio Base *"}
-                                    </ThemedText>
-                                    <CurrencyInput
-                                      value={priceForm.basePrice}
+                                      placeholder={
+                                        O?.descriptionPlaceholder ??
+                                        "Describe brevemente la oferta"
+                                      }
+                                      placeholderTextColor={
+                                        colors.textSecondary
+                                      }
+                                      value={offeringForm.description}
                                       onChangeText={(val) =>
-                                        setPriceForm((prev) => ({
+                                        setOfferingForm((prev) => ({
                                           ...prev,
-                                          basePrice: val,
+                                          description: val,
                                         }))
                                       }
-                                      currency={
-                                        commercialProfile?.currency || "USD"
-                                      }
+                                      multiline
+                                      numberOfLines={3}
+                                    />
+                                  </InputWithFocus>
+
+                                  {/* Botones del acordeón */}
+                                  <View style={styles.formActions}>
+                                    <View style={styles.formActionsSpacer} />
+                                    <Button
+                                      title={O?.cancel ?? "Cancelar"}
+                                      onPress={handleCancelEdit}
+                                      variant="outlined"
+                                      size="md"
+                                      disabled={saving}
+                                    />
+                                    <Button
+                                      title={O?.accept ?? "Aceptar"}
+                                      onPress={handleAcceptChanges}
+                                      variant="primary"
+                                      size="md"
                                       disabled={saving}
                                     />
                                   </View>
-                                </View>
-
-                                {/* Descripción al final */}
-                                <ThemedText
-                                  type="body2"
-                                  style={[
-                                    styles.label,
-                                    { color: colors.text, marginTop: 16 },
-                                  ]}
-                                >
-                                  {O?.descriptionOptional ??
-                                    "Descripción (opcional)"}
-                                </ThemedText>
-                                <InputWithFocus
-                                  containerStyle={[
-                                    styles.textAreaContainer,
-                                    {
-                                      backgroundColor:
-                                        colors.filterInputBackground,
-                                      borderColor: colors.border,
-                                    },
-                                  ]}
-                                  primaryColor={colors.primary}
-                                >
-                                  <TextInput
-                                    style={[
-                                      styles.textArea,
-                                      { color: colors.text },
-                                    ]}
-                                    placeholder={
-                                      O?.descriptionPlaceholder ??
-                                      "Describe brevemente la oferta"
-                                    }
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={offeringForm.description}
-                                    onChangeText={(val) =>
-                                      setOfferingForm((prev) => ({
-                                        ...prev,
-                                        description: val,
-                                      }))
-                                    }
-                                    multiline
-                                    numberOfLines={3}
-                                  />
-                                </InputWithFocus>
-
-                                {/* Botones del acordeón */}
-                                <View style={styles.formActions}>
-                                  <View style={{ flex: 1 }} />
-                                  <Button
-                                    title={O?.cancel ?? "Cancelar"}
-                                    onPress={handleCancelEdit}
-                                    variant="outlined"
-                                    size="md"
-                                    disabled={saving}
-                                  />
-                                  <Button
-                                    title={O?.accept ?? "Aceptar"}
-                                    onPress={handleAcceptChanges}
-                                    variant="primary"
-                                    size="md"
-                                    disabled={saving}
-                                  />
-                                </View>
                                 </View>
                               </Card>
                             )}
@@ -1774,177 +1869,188 @@ export function OperationalLayer({
 
                   {/* Fila: paginación centrada (web) / izquierda (móvil); registros por página a la derecha */}
                   <View style={styles.paginationWrapper}>
-                    <View style={[styles.paginationLeftSlot, isMobile && styles.paginationLeftSlotMobile]} />
+                    <View
+                      style={[
+                        styles.paginationLeftSlot,
+                        isMobile && styles.paginationLeftSlotMobile,
+                      ]}
+                    />
                     {totalPages > 1 ? (
                       <View style={styles.paginationContainer}>
                         <TouchableOpacity
-                        style={[
-                          styles.paginationButton,
-                          {
-                            backgroundColor:
+                          style={[
+                            styles.paginationButton,
+                            {
+                              backgroundColor:
+                                currentPage === 1
+                                  ? colors.surface
+                                  : colors.primary,
+                              borderColor:
+                                currentPage === 1
+                                  ? colors.border
+                                  : colors.primary,
+                            },
+                          ]}
+                          onPress={() => {
+                            if (currentPage > 1) {
+                              setCurrentPage(currentPage - 1);
+                              setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
+                            }
+                          }}
+                          disabled={currentPage === 1}
+                        >
+                          <Ionicons
+                            name="chevron-back"
+                            size={18}
+                            color={
                               currentPage === 1
-                                ? colors.surface
-                                : colors.primary,
-                            borderColor:
-                              currentPage === 1
-                                ? colors.border
-                                : colors.primary,
-                          },
-                        ]}
-                        onPress={() => {
-                          if (currentPage > 1) {
-                            setCurrentPage(currentPage - 1);
-                            setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
-                          }
-                        }}
-                        disabled={currentPage === 1}
-                      >
-                        <Ionicons
-                          name="chevron-back"
-                          size={18}
-                          color={
-                            currentPage === 1 ? colors.textSecondary : "#FFFFFF"
-                          }
-                        />
-                      </TouchableOpacity>
+                                ? colors.textSecondary
+                                : "#FFFFFF"
+                            }
+                          />
+                        </TouchableOpacity>
 
-                      <View style={styles.paginationNumbers}>
-                        {Array.from(
-                          { length: totalPages },
-                          (_, i) => i + 1,
-                        ).map((page) => {
-                          // Mostrar solo algunas páginas alrededor de la actual
-                          if (
-                            page === 1 ||
-                            page === totalPages ||
-                            (page >= currentPage - 1 && page <= currentPage + 1)
-                          ) {
-                            return (
-                              <TouchableOpacity
-                                key={page}
-                                style={[
-                                  styles.paginationNumber,
-                                  {
-                                    backgroundColor:
-                                      currentPage === page
-                                        ? colors.primary
-                                        : "transparent",
-                                    borderColor:
-                                      currentPage === page
-                                        ? colors.primary
-                                        : colors.border,
-                                  },
-                                ]}
-                                onPress={() => {
-                                  setCurrentPage(page);
-                                  setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
-                                }}
-                              >
-                                <ThemedText
-                                  type="body2"
-                                  style={{
-                                    color:
-                                      currentPage === page
-                                        ? colors.contrastText
-                                        : colors.text,
-                                    fontWeight:
-                                      currentPage === page ? "600" : "400",
+                        <View style={styles.paginationNumbers}>
+                          {Array.from(
+                            { length: totalPages },
+                            (_, i) => i + 1,
+                          ).map((page) => {
+                            // Mostrar solo algunas páginas alrededor de la actual
+                            if (
+                              page === 1 ||
+                              page === totalPages ||
+                              (page >= currentPage - 1 &&
+                                page <= currentPage + 1)
+                            ) {
+                              return (
+                                <TouchableOpacity
+                                  key={page}
+                                  style={[
+                                    styles.paginationNumber,
+                                    {
+                                      backgroundColor:
+                                        currentPage === page
+                                          ? colors.primary
+                                          : "transparent",
+                                      borderColor:
+                                        currentPage === page
+                                          ? colors.primary
+                                          : colors.border,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setCurrentPage(page);
+                                    setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
                                   }}
                                 >
-                                  {page}
+                                  <ThemedText
+                                    type="body2"
+                                    style={{
+                                      color:
+                                        currentPage === page
+                                          ? colors.contrastText
+                                          : colors.text,
+                                      fontWeight:
+                                        currentPage === page ? "600" : "400",
+                                    }}
+                                  >
+                                    {page}
+                                  </ThemedText>
+                                </TouchableOpacity>
+                              );
+                            } else if (
+                              page === currentPage - 2 ||
+                              page === currentPage + 2
+                            ) {
+                              return (
+                                <ThemedText
+                                  key={page}
+                                  type="body2"
+                                  style={{
+                                    color: colors.textSecondary,
+                                    marginHorizontal: 4,
+                                  }}
+                                >
+                                  ...
                                 </ThemedText>
-                              </TouchableOpacity>
-                            );
-                          } else if (
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                          ) {
-                            return (
-                              <ThemedText
-                                key={page}
-                                type="body2"
-                                style={{
-                                  color: colors.textSecondary,
-                                  marginHorizontal: 4,
-                                }}
-                              >
-                                ...
-                              </ThemedText>
-                            );
-                          }
-                          return null;
-                        })}
-                      </View>
+                              );
+                            }
+                            return null;
+                          })}
+                        </View>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.paginationButton,
-                          {
-                            backgroundColor:
+                        <TouchableOpacity
+                          style={[
+                            styles.paginationButton,
+                            {
+                              backgroundColor:
+                                currentPage === totalPages
+                                  ? colors.surface
+                                  : colors.primary,
+                              borderColor:
+                                currentPage === totalPages
+                                  ? colors.border
+                                  : colors.primary,
+                            },
+                          ]}
+                          onPress={() => {
+                            if (currentPage < totalPages) {
+                              setCurrentPage(currentPage + 1);
+                              setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
+                            }
+                          }}
+                          disabled={currentPage === totalPages}
+                        >
+                          <Ionicons
+                            name="chevron-forward"
+                            size={18}
+                            color={
                               currentPage === totalPages
-                                ? colors.surface
-                                : colors.primary,
-                            borderColor:
-                              currentPage === totalPages
-                                ? colors.border
-                                : colors.primary,
-                          },
-                        ]}
-                        onPress={() => {
-                          if (currentPage < totalPages) {
-                            setCurrentPage(currentPage + 1);
-                            setExpandedOfferingId(null); // Cerrar acordeón al cambiar de página
-                          }
-                        }}
-                        disabled={currentPage === totalPages}
-                      >
-                        <Ionicons
-                          name="chevron-forward"
-                          size={18}
-                          color={
-                            currentPage === totalPages
-                              ? colors.textSecondary
-                              : "#FFFFFF"
-                          }
-                        />
-                      </TouchableOpacity>
-                    </View>
+                                ? colors.textSecondary
+                                : "#FFFFFF"
+                            }
+                          />
+                        </TouchableOpacity>
+                      </View>
                     ) : (
                       <View />
                     )}
                     <View style={styles.paginationRightSlot}>
-                    <View style={styles.itemsPerPageRow}>
-                      {!isMobile && (
-                      <ThemedText
-                        type="body2"
-                        style={[styles.itemsPerPageLabel, { color: colors.textSecondary }]}
-                      >
-                        {O?.recordsPerPage ?? "Registros por página"}
-                      </ThemedText>
-                      )}
-                      <View style={styles.itemsPerPageSelectWrap}>
-                        <Select
-                          value={String(itemsPerPage)}
-                          options={[
-                            { value: "5", label: "5" },
-                            { value: "10", label: "10" },
-                            { value: "25", label: "25" },
-                            { value: "50", label: "50" },
-                          ]}
-                          onSelect={(val) => {
-                            const n = Number(val);
-                            if (!Number.isNaN(n) && n > 0) {
-                              setItemsPerPage(n);
-                              setCurrentPage(1);
-                              setExpandedOfferingId(null);
-                            }
-                          }}
-                          placeholder={String(itemsPerPage)}
-                          searchable={false}
-                          triggerStyle={styles.itemsPerPageTrigger}
-                        />
+                      <View style={styles.itemsPerPageRow}>
+                        {!isMobile && (
+                          <ThemedText
+                            type="body2"
+                            style={[
+                              styles.itemsPerPageLabel,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            {O?.recordsPerPage ?? "Registros por página"}
+                          </ThemedText>
+                        )}
+                        <View style={styles.itemsPerPageSelectWrap}>
+                          <Select
+                            value={String(itemsPerPage)}
+                            options={[
+                              { value: "5", label: "5" },
+                              { value: "10", label: "10" },
+                              { value: "25", label: "25" },
+                              { value: "50", label: "50" },
+                            ]}
+                            onSelect={(val) => {
+                              const n = Number(val);
+                              if (!Number.isNaN(n) && n > 0) {
+                                setItemsPerPage(n);
+                                setCurrentPage(1);
+                                setExpandedOfferingId(null);
+                              }
+                            }}
+                            placeholder={String(itemsPerPage)}
+                            searchable={false}
+                            triggerStyle={styles.itemsPerPageTrigger}
+                          />
+                        </View>
                       </View>
-                    </View>
                     </View>
                   </View>
                 </>
@@ -1960,7 +2066,7 @@ export function OperationalLayer({
                 type="file"
                 accept=".csv,.xlsx,.xls"
                 onChange={handleBulkUpload}
-                style={{ display: "none" }}
+                style={styles.hiddenInput}
               />
             </>
           )}
@@ -1994,7 +2100,7 @@ export function OperationalLayer({
                   <ActivityIndicator
                     size="small"
                     color={colors.contrastText}
-                    style={{ marginRight: 8 }}
+                    style={styles.actionButtonLeadingIcon}
                   />
                 )}
                 <Ionicons
@@ -2003,14 +2109,19 @@ export function OperationalLayer({
                   }
                   size={20}
                   color={colors.contrastText}
-                  style={{ marginRight: 8 }}
+                  style={styles.actionButtonLeadingIcon}
                 />
               </Button>
             </View>
           )}
 
           {/* Botones de acción: Carga individual y masiva */}
-          <View style={[styles.actionButtons, isMobile && styles.actionButtonsMobile]}>
+          <View
+            style={[
+              styles.actionButtons,
+              isMobile && styles.actionButtonsMobile,
+            ]}
+          >
             {expandedOfferingId === null && (
               <>
                 <Button
@@ -2024,7 +2135,7 @@ export function OperationalLayer({
                     name="add"
                     size={20}
                     color={colors.primary}
-                    style={{ marginRight: 8 }}
+                    style={styles.actionButtonLeadingIcon}
                   />
                 </Button>
                 {Platform.OS === "web" ? (
@@ -2042,21 +2153,24 @@ export function OperationalLayer({
                     }}
                     variant="outlined"
                     size="md"
-                    style={[styles.addButton, isMobile && styles.addButtonMobile]}
+                    style={[
+                      styles.addButton,
+                      isMobile && styles.addButtonMobile,
+                    ]}
                     disabled={uploadingBulk}
                   >
                     {uploadingBulk ? (
                       <ActivityIndicator
                         size="small"
                         color={colors.primary}
-                        style={{ marginRight: 8 }}
+                        style={styles.actionButtonLeadingIcon}
                       />
                     ) : (
                       <Ionicons
                         name="cloud-upload-outline"
                         size={20}
                         color={colors.primary}
-                        style={{ marginRight: 8 }}
+                        style={styles.actionButtonLeadingIcon}
                       />
                     )}
                   </Button>
@@ -2071,13 +2185,16 @@ export function OperationalLayer({
                     }}
                     variant="outlined"
                     size="md"
-                    style={[styles.addButton, isMobile && styles.addButtonMobile]}
+                    style={[
+                      styles.addButton,
+                      isMobile && styles.addButtonMobile,
+                    ]}
                   >
                     <Ionicons
                       name="cloud-upload-outline"
                       size={20}
                       color={colors.primary}
-                      style={{ marginRight: 8 }}
+                      style={styles.actionButtonLeadingIcon}
                     />
                   </Button>
                 )}
@@ -2092,7 +2209,7 @@ export function OperationalLayer({
                     name="download-outline"
                     size={20}
                     color={colors.primary}
-                    style={{ marginRight: 8 }}
+                    style={styles.actionButtonLeadingIcon}
                   />
                 </Button>
               </>
@@ -2138,13 +2255,13 @@ export function OperationalLayer({
                     ]}
                   >
                     <View style={styles.listItemContent}>
-                      <ThemedText type="body1" style={{ fontWeight: "600" }}>
+                      <ThemedText type="body1" style={styles.priceModalTitle}>
                         {commercialProfile?.currency || "USD"}{" "}
                         {price.basePrice.toFixed(2)}
                       </ThemedText>
                       <ThemedText
                         type="body2"
-                        style={{ color: colors.textSecondary, marginTop: 4 }}
+                        style={[styles.priceModalCaption, { color: colors.textSecondary }]}
                       >
                         Impuestos{" "}
                         {price.taxMode === "included"
@@ -2153,7 +2270,7 @@ export function OperationalLayer({
                       </ThemedText>
                       <ThemedText
                         type="caption"
-                        style={{ color: colors.textSecondary, marginTop: 4 }}
+                        style={[styles.priceModalCaption, { color: colors.textSecondary }]}
                       >
                         {O?.validFrom?.replace(" *", "") ?? "Válido desde"}:{" "}
                         {new Date(price.validFrom).toLocaleDateString()}
@@ -2195,7 +2312,7 @@ export function OperationalLayer({
 
                 <ThemedText
                   type="body2"
-                  style={[styles.label, { color: colors.text, marginTop: 16 }]}
+                  style={[styles.formLabelWithTopSpacing, { color: colors.text }]}
                 >
                   {O?.validFrom ?? "Válido desde *"}
                 </ThemedText>
@@ -2210,7 +2327,7 @@ export function OperationalLayer({
 
                 <ThemedText
                   type="body2"
-                  style={[styles.label, { color: colors.text, marginTop: 16 }]}
+                  style={[styles.formLabelWithTopSpacing, { color: colors.text }]}
                 >
                   {O?.validToOptional ?? "Válido hasta (opcional)"}
                 </ThemedText>
@@ -2266,7 +2383,7 @@ export function OperationalLayer({
                   name="add"
                   size={20}
                   color={colors.primary}
-                  style={{ marginRight: 8 }}
+                  style={styles.actionButtonLeadingIcon}
                 />
               </Button>
             )}
@@ -2282,7 +2399,7 @@ export function OperationalLayer({
             />
             <ThemedText
               type="body2"
-              style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
+              style={[styles.infoCardText, { color: colors.textSecondary }]}
             >
               {O?.infoPackages ??
                 "Si deseas generar Paquetes, promociones o descuentos, puedes realizarlos desde la pantalla de administración de Chat IA"}
@@ -2295,7 +2412,7 @@ export function OperationalLayer({
             <Ionicons name="bulb-outline" size={20} color={colors.primary} />
             <ThemedText
               type="body2"
-              style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
+              style={[styles.infoCardText, { color: colors.textSecondary }]}
             >
               {O?.startWithFirstOffering ??
                 "Comienza creando tu primera oferta. Puede ser un producto, servicio o paquete."}
@@ -2313,7 +2430,7 @@ export function OperationalLayer({
               />
               <ThemedText
                 type="body2"
-                style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}
+                style={[styles.infoCardText, { color: colors.textSecondary }]}
               >
                 {O?.noResultsFilter ??
                   "No se encontraron ofertas que coincidan con el filtro"}{" "}
@@ -2330,37 +2447,27 @@ export function OperationalLayer({
           onRequestClose={() => setImageViewerUri(null)}
         >
           <Pressable
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.85)",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: 24,
-            }}
+            style={styles.imageViewerOverlay}
             onPress={() => setImageViewerUri(null)}
           >
-            <Pressable style={{ maxWidth: "100%", maxHeight: "100%" }} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+              style={styles.imageViewerContent}
+              onPress={(e) => e.stopPropagation()}
+            >
               {imageViewerUri ? (
                 <Image
                   source={{ uri: imageViewerUri }}
-                  style={{ width: 320, height: 320, borderRadius: 12 }}
+                  style={styles.imageViewerImage}
                   resizeMode="contain"
                 />
               ) : null}
             </Pressable>
             <TouchableOpacity
               onPress={() => setImageViewerUri(null)}
-              style={{
-                position: "absolute",
-                top: Platform.OS === "web" ? 48 : 56,
-                right: 24,
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: "rgba(255,255,255,0.2)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              style={[
+                styles.imageViewerCloseButton,
+                { top: Platform.OS === "web" ? 48 : 56 },
+              ]}
             >
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
@@ -2370,290 +2477,3 @@ export function OperationalLayer({
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 0,
-  },
-  loadingContainer: {
-    padding: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  formContainer: {
-    gap: 20,
-  },
-  sectionCard: {
-    padding: 20,
-    paddingLeft: 0,
-    paddingRight: 0,
-    gap: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  sectionTitle: {
-    flex: 1,
-  },
-  sectionDescriptionContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  sectionDescription: {
-    lineHeight: 20,
-    flex: 1,
-  },
-  paginatedListContainer: {
-    marginTop: 8,
-    minHeight: 400, // Altura mínima para mantener consistencia visual
-  },
-  listContainer: {
-    gap: 12,
-  },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-  },
-  listItemMobile: {
-    alignItems: "flex-start",
-  },
-  listItemContent: {
-    flex: 1,
-  },
-  listItemContentMobile: {
-    flex: 1,
-    flexDirection: "column",
-    minWidth: 0,
-  },
-  listItemLeft: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    flex: 1,
-  },
-  listItemRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    justifyContent: "flex-end",
-  },
-  formCard: {
-    padding: 16,
-    marginTop: 8,
-    gap: 16,
-  },
-  accordionCard: {
-    padding: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    gap: 16,
-  },
-  saveAllContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    gap: 12,
-  },
-  saveAllButton: {
-    flex: 1,
-  },
-  cancelAllButton: {
-    flex: 1,
-  },
-  label: {
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-  },
-  textAreaContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 160,
-  },
-  textArea: {
-    fontSize: 16,
-    minHeight: 120,
-    textAlignVertical: "top",
-  },
-  rowContainer: {
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "flex-start",
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  typeSelector: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
-  },
-  typeOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    flex: 1,
-  },
-  radioGroup: {
-    gap: 12,
-    marginTop: 8,
-  },
-  radioOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  formActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  addButton: {
-    marginTop: 8,
-    marginRight: 8,
-  },
-  addButtonMobile: {
-    marginTop: 8,
-    marginRight: 0,
-    width: "100%",
-    alignSelf: "stretch",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-  },
-  actionButtonsMobile: {
-    width: "100%",
-    flexWrap: "nowrap",
-    flexDirection: "column",
-  },
-  uploadButton: {
-    marginTop: 8,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 12,
-  },
-  continueButtonContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    alignItems: "center",
-  },
-  continueButton: {
-    minWidth: 200,
-    width: "100%",
-  },
-  paginationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  paginationWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    marginTop: 16,
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  paginationLeftSlot: {
-    flex: 1,
-  },
-  paginationLeftSlotMobile: {
-    flex: 0,
-  },
-  paginationRightSlot: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  itemsPerPageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: 36,
-  },
-  itemsPerPageLabel: {
-    marginRight: 8,
-  },
-  itemsPerPageSelectWrap: {
-    height: 36,
-    minWidth: 56,
-    justifyContent: "center",
-  },
-  itemsPerPageTrigger: {
-    height: 36,
-    minHeight: 36,
-    paddingVertical: 0,
-    justifyContent: "center",
-  },
-  paginationButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  paginationNumbers: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  paginationNumber: {
-    minWidth: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
-  },
-});

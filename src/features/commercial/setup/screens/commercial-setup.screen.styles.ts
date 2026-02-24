@@ -171,9 +171,11 @@ export function createCommercialSetupScreenStyles(
       marginBottom: t.spacing.md,
       gap: t.spacing.md,
     },
+    /** Smartphone Ofertas: minimizar separación entre contenedor (título+filtro) y sección (lista) */
     contentCardOfferingsMobile: {
-      paddingBottom: Math.round(t.spacing.lg * 0.5),
-      marginBottom: Math.round(t.spacing.md * 0.5),
+      gap: 0,
+      paddingBottom: 0,
+      marginBottom: 0,
     },
     contentHeaderRow: {
       flexDirection: "row",
@@ -187,7 +189,7 @@ export function createCommercialSetupScreenStyles(
       alignItems: "flex-start",
       justifyContent: "space-between",
       marginBottom: t.spacing.md,
-      gap: t.spacing.md,
+      gap: t.spacing.sm,
     },
     contentHeaderRowNoMargin: {
       marginBottom: 0,

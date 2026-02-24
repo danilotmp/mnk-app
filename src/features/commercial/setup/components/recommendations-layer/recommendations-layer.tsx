@@ -34,12 +34,13 @@ import {
     Platform,
     Pressable,
     ScrollView,
-    StyleSheet,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+
+import { styles } from "./recommendations-layer.styles";
 
 interface RecommendationsLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -1372,7 +1373,7 @@ export function RecommendationsLayer({
                               </View>
 
                               {/* Imagen y Offerings; el orden se gestiona con el icono de mover en la lista */}
-                              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20 }}>
+                              <View style={styles.formRowWrapInline}>
                                 <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
                                     {formData?.image ? (
                                     <>
@@ -1393,11 +1394,11 @@ export function RecommendationsLayer({
                                         }}
                                         resizeMode="cover"
                                       />
-                                      <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                                      <View style={styles.imageOverlayRow}>
                                         <Tooltip text={R?.removeImage ?? "Quitar imagen"} position="top">
                                           <TouchableOpacity
                                             onPress={() => setEditingRecommendationData((prev) => ({ ...prev, [recommendation.id]: { ...(prev[recommendation.id] || {}), image: null } as any }))}
-                                            style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                            style={styles.imageOverlayButton}
                                           >
                                             <Ionicons name="trash-outline" size={14} color="#fff" />
                                           </TouchableOpacity>
@@ -1405,7 +1406,7 @@ export function RecommendationsLayer({
                                         <Tooltip text={R?.enlarge ?? "Ampliar"} position="top">
                                           <TouchableOpacity
                                             onPress={() => setImageViewerUri((formData.image || "").startsWith("data:") ? formData.image! : `data:image/jpeg;base64,${formData.image}`)}
-                                            style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                            style={styles.imageOverlayButton}
                                           >
                                             <Ionicons name="expand-outline" size={14} color="#fff" />
                                           </TouchableOpacity>
@@ -1415,15 +1416,15 @@ export function RecommendationsLayer({
                                   ) : (
                                     <TouchableOpacity
                                       onPress={() => pickRecommendationImage(recommendation.id)}
-                                      style={{ width: recommendationImageSize, height: recommendationImageSize, borderRadius: 8, backgroundColor: colors.border + "60", alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.textSecondary + "60" }}
+                                      style={[styles.imagePlaceholder, { width: recommendationImageSize, height: recommendationImageSize, backgroundColor: colors.border + "60", borderColor: colors.textSecondary + "60" }]}
                                     >
                                       <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                                     </TouchableOpacity>
                                   )}
                                 </View>
                                 {offerings.length > 0 && (
-                                  <View style={{ flex: 1, minWidth: 220 }}>
-                                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                  <View style={styles.formImageOffersWrap}>
+                                    <View style={styles.imagePlaceholderRow}>
                                       <ThemedText
                                         type="body2"
                                         style={[
@@ -2123,7 +2124,7 @@ export function RecommendationsLayer({
                                         </View>
 
                                         {/* Imagen y Offerings; el orden se gestiona con el icono de mover en la lista */}
-                                        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20 }}>
+                                        <View style={styles.formRowWrapInline}>
                                           <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
                                             {formData?.image ? (
                                               <>
@@ -2144,11 +2145,11 @@ export function RecommendationsLayer({
                                                   }}
                                                   resizeMode="cover"
                                                 />
-                                                <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                                                <View style={styles.imageOverlayRow}>
                                                   <Tooltip text={R?.removeImage ?? "Quitar imagen"} position="top">
                                                     <TouchableOpacity
                                                       onPress={() => setEditingRecommendationData((prev) => ({ ...prev, [recommendation.id]: { ...(prev[recommendation.id] || {}), image: null } as any }))}
-                                                      style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                                      style={styles.imageOverlayButton}
                                                     >
                                                       <Ionicons name="trash-outline" size={14} color="#fff" />
                                                     </TouchableOpacity>
@@ -2156,7 +2157,7 @@ export function RecommendationsLayer({
                                                   <Tooltip text={R?.enlarge ?? "Ampliar"} position="top">
                                                     <TouchableOpacity
                                                       onPress={() => setImageViewerUri((formData.image || "").startsWith("data:") ? formData.image! : `data:image/jpeg;base64,${formData.image}`)}
-                                                      style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                                                      style={styles.imageOverlayButton}
                                                     >
                                                       <Ionicons name="expand-outline" size={14} color="#fff" />
                                                     </TouchableOpacity>
@@ -2166,15 +2167,15 @@ export function RecommendationsLayer({
                                             ) : (
                                               <TouchableOpacity
                                                 onPress={() => pickRecommendationImage(recommendation.id)}
-                                                style={{ width: recommendationImageSize, height: recommendationImageSize, borderRadius: 8, backgroundColor: colors.border + "60", alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.textSecondary + "60" }}
+                                                style={[styles.imagePlaceholder, { width: recommendationImageSize, height: recommendationImageSize, backgroundColor: colors.border + "60", borderColor: colors.textSecondary + "60" }]}
                                               >
                                                 <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                                               </TouchableOpacity>
                                             )}
                                           </View>
                                           {offerings.length > 0 && (
-                                            <View style={{ flex: 1, minWidth: 220 }}>
-                                              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                                            <View style={styles.formImageOffersWrap}>
+                                              <View style={styles.imagePlaceholderRow}>
                                                 <ThemedText
                                                   type="body2"
                                                   style={[
@@ -2593,7 +2594,7 @@ export function RecommendationsLayer({
             </View>
 
             {/* Imagen y Offerings; el orden se asigna al crear según posición en lista */}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20, width: "100%" }}>
+            <View style={styles.formRowWrap}>
               <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
                 {formData.image ? (
                   <>
@@ -2614,11 +2615,11 @@ export function RecommendationsLayer({
                       }}
                       resizeMode="cover"
                     />
-                    <View style={{ position: "absolute", top: 4, left: 4, right: 4, flexDirection: "row", justifyContent: "space-between", zIndex: 10 }}>
+                    <View style={styles.imageOverlayRow}>
                       <Tooltip text={R?.removeImage ?? "Quitar imagen"} position="top">
                         <TouchableOpacity
                           onPress={() => setFormData((prev) => ({ ...prev, image: null }))}
-                          style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                          style={styles.imageOverlayButton}
                         >
                           <Ionicons name="trash-outline" size={14} color="#fff" />
                         </TouchableOpacity>
@@ -2626,7 +2627,7 @@ export function RecommendationsLayer({
                       <Tooltip text={R?.enlarge ?? "Ampliar"} position="top">
                         <TouchableOpacity
                           onPress={() => setImageViewerUri((formData.image || "").startsWith("data:") ? formData.image! : `data:image/jpeg;base64,${formData.image}`)}
-                          style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}
+                          style={styles.imageOverlayButton}
                         >
                           <Ionicons name="expand-outline" size={14} color="#fff" />
                         </TouchableOpacity>
@@ -2636,15 +2637,15 @@ export function RecommendationsLayer({
                 ) : (
                   <TouchableOpacity
                     onPress={() => pickRecommendationImage(null)}
-                                                style={{ width: recommendationImageSize, height: recommendationImageSize, borderRadius: 8, backgroundColor: colors.border + "60", alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.textSecondary + "60" }}
+                                                style={[styles.imagePlaceholder, { width: recommendationImageSize, height: recommendationImageSize, backgroundColor: colors.border + "60", borderColor: colors.textSecondary + "60" }]}
                   >
                     <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
               </View>
               {offerings.length > 0 && (
-                <View style={{ flex: 1, minWidth: 220 }}>
-                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                <View style={styles.formImageOffersWrap}>
+                  <View style={styles.imagePlaceholderRow}>
                     <ThemedText
                       type="body2"
                       style={[
@@ -2922,197 +2923,3 @@ export function RecommendationsLayer({
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 0,
-  },
-  loadingContainer: {
-    padding: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  alert: {
-    marginBottom: 16,
-  },
-  formContainer: {
-    gap: 20,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: 16,
-    gap: 12,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  sectionCard: {
-    padding: 20,
-    paddingLeft: 0,
-    paddingRight: 0,
-    gap: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  sectionTitle: {
-    flex: 1,
-  },
-  listContainer: {
-    gap: 12,
-    marginTop: 8,
-  },
-  recommendationCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
-  },
-  recommendationHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  recommendationType: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  recommendationMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  relatedOffering: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  badgeActionsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  statusOptionsContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  statusOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  cancelButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  formActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 16,
-  },
-  formCard: {
-    padding: 20,
-    gap: 16,
-  },
-  label: {
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  radioGroupContainer: {
-    marginTop: 8,
-  },
-  radioGroupRow: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "stretch",
-  },
-  radioOptionHorizontal: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  radioLabelHorizontal: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  selectContainer: {
-    gap: 8,
-    marginTop: 8,
-  },
-  selectOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-  },
-  textAreaContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 120,
-  },
-  textArea: {
-    fontSize: 16,
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  switchRow: {
-    marginTop: 8,
-  },
-  addButton: {
-    marginTop: 8,
-  },
-  continueButtonContainer: {
-    marginTop: 24,
-    marginBottom: 16,
-    gap: 12,
-  },
-  continueButton: {
-    width: "100%",
-  },
-  skipButton: {
-    width: "100%",
-  },
-});

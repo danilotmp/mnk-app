@@ -11,6 +11,14 @@ component-name/
   └── component-name.types.ts     # Tipos e interfaces
 ```
 
+## Estilos
+
+- Definir estilos en **clases** (StyleSheet o `.styles.ts`), no inline en el JSX.
+- **Un estilo por elemento/rol**: agrupar en un solo estilo todo lo que aplica a ese elemento (ej. `actionButtonLeadingIcon` con marginRight y demás propiedades del icono), no crear un estilo por cada atributo (evitar `iconMarginRight`, `iconPadding`, etc.).
+- **Genérico:** lo reutilizable (tokens, `colors.primary`) en tema o lugar general; en JSX se usa el token.
+- **Particular:** si el estilo solo se usa en este componente, se define en su StyleSheet; si ya existe uno reutilizable, se reutiliza.
+- **Excepción:** valores que dependen del tema o de props pueden ir en un objeto mínimo: `style={[styles.xyz, { backgroundColor: colors.surface }]}`.
+
 ## Ejemplo
 
 ```

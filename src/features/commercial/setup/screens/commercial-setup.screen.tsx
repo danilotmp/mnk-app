@@ -11,8 +11,8 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-    CommercialCapabilities,
-    LayerProgress,
+  CommercialCapabilities,
+  LayerProgress,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import { DynamicIcon, SearchFilterBar } from "@/src/domains/shared/components";
@@ -21,11 +21,11 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { CompanySetupLayer } from "../components/company-setup-layer/company-setup-layer";
@@ -35,8 +35,8 @@ import { OperationalLayer } from "../components/operational-layer/operational-la
 import { PaymentsLayer } from "../components/payments-layer/payments-layer";
 import { RecommendationsLayer } from "../components/recommendations-layer/recommendations-layer";
 import {
-    WhatsAppConnectionLayer,
-    WhatsAppConnectionLayerRef,
+  WhatsAppConnectionLayer,
+  WhatsAppConnectionLayerRef,
 } from "../components/whatsapp-connection-layer";
 import { WizardStep, WizardStepper } from "../components/wizard-stepper";
 import { createCommercialSetupScreenStyles } from "./commercial-setup.screen.styles";
@@ -483,8 +483,8 @@ export function CommercialSetupScreen() {
               variant="elevated"
               style={[
                 styles.contentCard,
-                currentLayer === "interactionGuidelines" && { gap: 0 },
-                currentLayer === "offerings" && isMobile && styles.contentCardOfferingsMobile,
+                { gap: 0 },
+                styles.contentCardOfferingsMobile,
               ]}
             >
               <View
@@ -492,8 +492,7 @@ export function CommercialSetupScreen() {
                   isMobile
                     ? styles.contentHeaderRowMobile
                     : styles.contentHeaderRow,
-                  currentLayer === "interactionGuidelines" &&
-                    styles.contentHeaderRowNoMargin,
+                  styles.contentHeaderRowNoMargin,
                 ]}
               >
                 <View
@@ -572,7 +571,7 @@ export function CommercialSetupScreen() {
                     ]}
                   >
                     <Button
-                      title={isMobile ? "" : t.wizard.createConnection}
+                      title={t.wizard.createConnection}
                       onPress={() => {
                         whatsappConnectionRef.current?.handleCreate();
                       }}
@@ -584,9 +583,7 @@ export function CommercialSetupScreen() {
                         name="add"
                         size={pageLayout.iconSubtitle}
                         color={colors.contrastText}
-                        style={
-                          !isMobile ? { marginRight: spacing.sm } : undefined
-                        }
+                        style={{ marginRight: spacing.sm }}
                       />
                     </Button>
                   </View>
@@ -639,11 +636,7 @@ export function CommercialSetupScreen() {
 
               {/* Renderizar componente de la capa actual */}
               <View
-                style={[
-                  styles.layerContent,
-                  currentLayer === "interactionGuidelines" &&
-                    styles.layerContentNoPadding,
-                ]}
+                style={[styles.layerContent, styles.layerContentNoPadding]}
               >
                 {currentLayer === "institutional" && (
                   <InstitutionalLayer
