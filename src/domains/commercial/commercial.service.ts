@@ -41,6 +41,18 @@ import type {
 const BASE_COMMERCIAL = '/commercial';
 const BASE_INTERACCIONES = '/interacciones';
 
+/** Zona horaria del sistema para alinear progreso institucional con la capa (timezone por defecto en el form). */
+function getSystemTimezone(): string {
+  try {
+    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    }
+  } catch {
+    // ignore
+  }
+  return 'UTC';
+}
+
 // Helper para construir querystring
 const buildQuery = (base: string, params?: Record<string, any>): string => {
   if (!params) return base;
@@ -974,12 +986,12 @@ export const CommercialService = {
     
     const layers: LayerProgress[] = [];
     
-    // Capa 1: Contexto Institucional
+    // Capa 1: Contexto Institucional (alineado con InstitutionalLayer: timezone vacío = default en form)
     const institutionalFields = [
       profile?.businessDescription,
       profile?.industry,
       profile?.language,
-      profile?.timezone,
+      (profile?.timezone && profile.timezone.trim()) ? profile.timezone : getSystemTimezone(),
     ];
     // Filtrar campos que tengan valor (no null, undefined, ni string vacío)
     const institutionalCompleted = institutionalFields.filter(f => {

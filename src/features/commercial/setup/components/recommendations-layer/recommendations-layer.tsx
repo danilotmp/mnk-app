@@ -21,12 +21,12 @@ import {
     RecommendationType,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
-import { DynamicIcon, NumericInput } from "@/src/domains/shared/components";
+import { DynamicIcon } from "@/src/domains/shared/components";
 import { RecordStatus } from "@/src/domains/shared/types/status.types";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -159,6 +159,12 @@ export function RecommendationsLayer({
     editingPreviousRecommendationType,
     setEditingPreviousRecommendationType,
   ] = useState<Record<string, LocalRecommendationType | null>>({}); // Tipo anterior guardado en edición
+
+  // Arrastre para reordenar (como en administración del menú)
+  const [draggingRecommendationId, setDraggingRecommendationId] = useState<string | null>(null);
+  const [dragOverRecommendationId, setDragOverRecommendationId] = useState<string | null>(null);
+  const [dragSection, setDragSection] = useState<"general" | string | null>(null);
+  const dragOverRef = useRef<string | null>(null);
 
   // Cargar recomendaciones - evitar llamados repetitivos
   const loadRecommendations = useCallback(async () => {
@@ -438,6 +444,69 @@ export function RecommendationsLayer({
     );
   };
 
+  // Reordenar por arrastre: actualiza order en backend según posición visual (como menú admin)
+  const applyReorder = useCallback(
+    async (draggedId: string, targetId: string, section: "general" | string) => {
+      if (draggedId === targetId) return;
+      const list =
+        section === "general"
+          ? recommendations.filter((r) => !r.offeringId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          : recommendations.filter((r) => r.offeringId === section).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const fromIdx = list.findIndex((r) => r.id === draggedId);
+      const toIdx = list.findIndex((r) => r.id === targetId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const next = [...list];
+      const [item] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, item);
+      setSaving(true);
+      try {
+        for (let i = 0; i < next.length; i++) {
+          if ((next[i].order ?? 0) !== i) {
+            await CommercialService.updateRecommendation(next[i].id, { order: i });
+          }
+        }
+        await loadRecommendations();
+      } catch (e: any) {
+        alert.showError(e?.message || R?.errorUpdatingRecommendation || "Error al actualizar orden");
+      } finally {
+        setSaving(false);
+        setDraggingRecommendationId(null);
+        setDragOverRecommendationId(null);
+        setDragSection(null);
+        dragOverRef.current = null;
+      }
+    },
+    [recommendations, loadRecommendations, R?.errorUpdatingRecommendation],
+  );
+
+  // Web: iniciar arrastre desde el icono de mover
+  const handleReorderMouseDown = useCallback(
+    (e: any, recommendationId: string, section: "general" | string) => {
+      if (Platform.OS !== "web") return;
+      e.preventDefault();
+      e.stopPropagation();
+      setDraggingRecommendationId(recommendationId);
+      setDragSection(section);
+      setDragOverRecommendationId(null);
+      dragOverRef.current = null;
+      const onMouseUp = (upEvent: MouseEvent) => {
+        upEvent.preventDefault();
+        const targetId = dragOverRef.current;
+        if (targetId && targetId !== recommendationId) {
+          applyReorder(recommendationId, targetId, section);
+        } else {
+          setDraggingRecommendationId(null);
+          setDragOverRecommendationId(null);
+          setDragSection(null);
+          dragOverRef.current = null;
+        }
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+      document.addEventListener("mouseup", onMouseUp, { once: true });
+    },
+    [applyReorder],
+  );
+
   if (loading && recommendations.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -500,25 +569,26 @@ export function RecommendationsLayer({
                     })
                   : recommendations;
 
-                const generalRecommendations = filteredRecommendations.filter(
-                  (r) => !r.offeringId,
-                );
+                const generalRecommendations = filteredRecommendations
+                  .filter((r) => !r.offeringId)
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
                 const offerRecommendations = filteredRecommendations.filter(
                   (r) => r.offeringId,
                 );
 
-                // Agrupar recomendaciones por offeringId
+                // Agrupar recomendaciones por offeringId (cada grupo ordenado por order)
                 const groupedByOffering = offerRecommendations.reduce(
                   (acc, rec) => {
                     const offeringId = rec.offeringId || "unknown";
-                    if (!acc[offeringId]) {
-                      acc[offeringId] = [];
-                    }
+                    if (!acc[offeringId]) acc[offeringId] = [];
                     acc[offeringId].push(rec);
                     return acc;
                   },
                   {} as Record<string, Recommendation[]>,
                 );
+                Object.keys(groupedByOffering).forEach((key) => {
+                  groupedByOffering[key].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                });
 
                 return (
                   <>
@@ -575,7 +645,34 @@ export function RecommendationsLayer({
                               backgroundColor: colors.filterInputBackground,
                               borderColor: colors.border,
                             },
+                            draggingRecommendationId === recommendation.id && ({
+                              opacity: 0.6,
+                              ...(Platform.OS === "web" ? { cursor: "grabbing" } : {}),
+                            } as any),
+                            dragSection === "general" &&
+                              dragOverRecommendationId === recommendation.id && {
+                              borderColor: colors.primary,
+                              backgroundColor: (colors.primary || "") + "18",
+                            },
                           ]}
+                          {...(Platform.OS === "web" &&
+                            draggingRecommendationId &&
+                            dragSection === "general"
+                            ? {
+                                onMouseEnter: () => {
+                                  if (draggingRecommendationId !== recommendation.id) {
+                                    dragOverRef.current = recommendation.id;
+                                    setDragOverRecommendationId(recommendation.id);
+                                  }
+                                },
+                                onMouseLeave: () => {
+                                  if (dragOverRecommendationId === recommendation.id) {
+                                    dragOverRef.current = null;
+                                    setDragOverRecommendationId(null);
+                                  }
+                                },
+                              }
+                            : {})}
                         >
                           <View
                             style={[
@@ -594,6 +691,31 @@ export function RecommendationsLayer({
                                 isMobile && isEditing && { width: "100%" },
                               ]}
                             >
+                              {!isEditing && (
+                                <Tooltip text="Mantén pulsado y arrastra para reordenar" position="top">
+                                  <View
+                                    {...(Platform.OS === "web"
+                                      ? ({
+                                          onMouseDown: (e: any) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleReorderMouseDown(e, recommendation.id, "general");
+                                          },
+                                        } as any)
+                                      : {})}
+                                    style={[
+                                      { padding: 4, marginRight: 4 },
+                                      Platform.OS === "web" ? { cursor: "grab" } : {},
+                                    ] as any}
+                                  >
+                                    <Ionicons
+                                      name="reorder-three-outline"
+                                      size={20}
+                                      color={colors.textSecondary}
+                                    />
+                                  </View>
+                                </Tooltip>
+                              )}
                               <Ionicons
                                 name={
                                   typeOption?.icon ||
@@ -1238,9 +1360,8 @@ export function RecommendationsLayer({
                                 </View>
                               </View>
 
-                              {/* Imagen y Order siempre en la misma fila (sobre todo en móvil); Offerings puede bajar de fila */}
+                              {/* Imagen y Offerings; el orden se gestiona con el icono de mover en la lista */}
                               <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, ...(isMobile ? { flexShrink: 0 } : { flex: 1, minWidth: 200 }) }}>
                                 <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
                                     {formData?.image ? (
                                     <>
@@ -1288,77 +1409,6 @@ export function RecommendationsLayer({
                                       <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                                     </TouchableOpacity>
                                   )}
-                                </View>
-                                <View style={{ flex: 1, minWidth: 0 }}>
-                                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                                    <ThemedText
-                                      type="body2"
-                                      style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}
-                                    >
-                                      {R?.orderLabel ?? "Orden"}
-                                    </ThemedText>
-                                    <ThemedText
-                                      type="caption"
-                                      style={{
-                                        color: colors.textSecondary,
-                                        marginBottom: 0,
-                                        flex: 1,
-                                        minWidth: 0,
-                                        ...(isMobile && { fontSize: 11 }),
-                                      }}
-                                    >
-                                      {R?.orderHint ?? "Menor número = más importante (default: 0)"}
-                                    </ThemedText>
-                                  </View>
-                                  <NumericInput
-                                  value={formData?.order?.toString() || "0"}
-                                  onChangeText={(val) => {
-                                    const num = parseInt(val, 10);
-                                    if (!isNaN(num) && num >= 0) {
-                                      setEditingRecommendationData((prev) => ({
-                                        ...prev,
-                                        [recommendation.id]: {
-                                          ...(prev[recommendation.id] || {
-                                            type: recommendation.type,
-                                            message: recommendation.message,
-                                            order: recommendation.order ?? 0,
-                                            status: currentStatus,
-                                            offeringId:
-                                              recommendation.offeringId || null,
-                                          }),
-                                          order: num,
-                                        },
-                                      }));
-                                    } else if (val === "") {
-                                      setEditingRecommendationData((prev) => ({
-                                        ...prev,
-                                        [recommendation.id]: {
-                                          ...(prev[recommendation.id] || {
-                                            type: recommendation.type,
-                                            message: recommendation.message,
-                                            order: recommendation.order ?? 0,
-                                            status: currentStatus,
-                                            offeringId:
-                                              recommendation.offeringId || null,
-                                          }),
-                                          order: 0,
-                                        },
-                                      }));
-                                    }
-                                  }}
-                                  placeholder="0"
-                                  disabled={saving}
-                                  containerStyle={[
-                                    styles.inputContainer,
-                                    {
-                                      backgroundColor: colors.filterInputBackground,
-                                      borderColor: colors.border,
-                                    },
-                                  ]}
-                                  inputStyle={styles.input}
-                                  min={0}
-                                />
-                                </View>
                                 </View>
                                 {offerings.length > 0 && (
                                   <View style={{ flex: 1, minWidth: 220 }}>
@@ -1737,10 +1787,41 @@ export function RecommendationsLayer({
                                 return (
                                   <View
                                     key={recommendation.id}
-                                    style={{ marginTop: index > 0 ? 16 : 12 }}
+                                    style={[
+                                      { marginTop: index > 0 ? 16 : 12 },
+                                      draggingRecommendationId === recommendation.id && ({
+                                        opacity: 0.6,
+                                        ...(Platform.OS === "web" ? { cursor: "grabbing" } : {}),
+                                      } as any),
+                                      dragSection === offeringId &&
+                                        dragOverRecommendationId === recommendation.id && {
+                                        borderRadius: 8,
+                                        borderWidth: 2,
+                                        borderColor: colors.primary,
+                                        backgroundColor: (colors.primary || "") + "18",
+                                      },
+                                    ]}
+                                    {...(Platform.OS === "web" &&
+                                      draggingRecommendationId &&
+                                      dragSection === offeringId
+                                      ? {
+                                          onMouseEnter: () => {
+                                            if (draggingRecommendationId !== recommendation.id) {
+                                              dragOverRef.current = recommendation.id;
+                                              setDragOverRecommendationId(recommendation.id);
+                                            }
+                                          },
+                                          onMouseLeave: () => {
+                                            if (dragOverRecommendationId === recommendation.id) {
+                                              dragOverRef.current = null;
+                                              setDragOverRecommendationId(null);
+                                            }
+                                          },
+                                        }
+                                      : {})}
                                   >
                                     {!isEditing ? (
-                                      /* Vista colapsada: imagen (opcional) + mensaje con estado e iconos */
+                                      /* Vista colapsada: icono mover + imagen (opcional) + mensaje con estado e iconos */
                                       <View
                                         style={{
                                           flexDirection: "row",
@@ -1748,6 +1829,31 @@ export function RecommendationsLayer({
                                           justifyContent: "space-between",
                                         }}
                                       >
+                                        {!isEditing && (
+                                          <Tooltip text="Mantén pulsado y arrastra para reordenar" position="top">
+                                            <View
+                                              {...(Platform.OS === "web"
+                                                ? ({
+                                                    onMouseDown: (e: any) => {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      handleReorderMouseDown(e, recommendation.id, offeringId);
+                                                    },
+                                                  } as any)
+                                                : {})}
+                                              style={[
+                                                { padding: 4, marginRight: 4 },
+                                                Platform.OS === "web" ? { cursor: "grab" } : {},
+                                              ] as any}
+                                            >
+                                              <Ionicons
+                                                name="reorder-three-outline"
+                                                size={20}
+                                                color={colors.textSecondary}
+                                              />
+                                            </View>
+                                          </Tooltip>
+                                        )}
                                         {recommendation.image ? (
                                           <Image
                                             source={{
@@ -2005,9 +2111,8 @@ export function RecommendationsLayer({
                                           </View>
                                         </View>
 
-                                        {/* Imagen y Order siempre en la misma fila (sobre todo en móvil); Offerings puede bajar de fila */}
+                                        {/* Imagen y Offerings; el orden se gestiona con el icono de mover en la lista */}
                                         <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20 }}>
-                                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, ...(isMobile ? { flexShrink: 0 } : { flex: 1, minWidth: 200 }) }}>
                                           <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
                                             {formData?.image ? (
                                               <>
@@ -2055,95 +2160,6 @@ export function RecommendationsLayer({
                                                 <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                                               </TouchableOpacity>
                                             )}
-                                          </View>
-                                          <View style={{ flex: 1, minWidth: 0 }}>
-                                            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                                              <ThemedText
-                                                type="body2"
-                                                style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}
-                                              >
-                                                {R?.orderLabel ?? "Orden"}
-                                              </ThemedText>
-                                              <ThemedText
-                                                type="caption"
-                                                style={{
-                                                  color: colors.textSecondary,
-                                                  marginBottom: 0,
-                                                  flex: 1,
-                                                  minWidth: 0,
-                                                  ...(isMobile && { fontSize: 11 }),
-                                                }}
-                                              >
-                                                {R?.orderHint ?? "Menor número = más importante (default: 0)"}
-                                              </ThemedText>
-                                            </View>
-                                            <NumericInput
-                                              value={
-                                                formData?.order?.toString() || "0"
-                                              }
-                                              onChangeText={(val) => {
-                                                const num = parseInt(val, 10);
-                                                if (!isNaN(num) && num >= 0) {
-                                                  setEditingRecommendationData(
-                                                    (prev) => ({
-                                                      ...prev,
-                                                      [recommendation.id]: {
-                                                        ...(prev[
-                                                          recommendation.id
-                                                        ] || {
-                                                          type: recommendation.type,
-                                                          message:
-                                                            recommendation.message,
-                                                          order:
-                                                            recommendation.order ??
-                                                            0,
-                                                          status: currentStatus,
-                                                          offeringId:
-                                                            recommendation.offeringId ??
-                                                            null,
-                                                        }),
-                                                        order: num,
-                                                      },
-                                                    }),
-                                                  );
-                                                } else if (val === "") {
-                                                  setEditingRecommendationData(
-                                                    (prev) => ({
-                                                      ...prev,
-                                                      [recommendation.id]: {
-                                                        ...(prev[
-                                                          recommendation.id
-                                                        ] || {
-                                                          type: recommendation.type,
-                                                          message:
-                                                            recommendation.message,
-                                                          order:
-                                                            recommendation.order ??
-                                                            0,
-                                                          status: currentStatus,
-                                                          offeringId:
-                                                            recommendation.offeringId ??
-                                                            null,
-                                                        }),
-                                                        order: 0,
-                                                      },
-                                                    }),
-                                                  );
-                                                }
-                                              }}
-                                              placeholder="0"
-                                              disabled={saving}
-                                              containerStyle={[
-                                                styles.inputContainer,
-                                                {
-                                                  backgroundColor: colors.filterInputBackground,
-                                                  borderColor: colors.border,
-                                                },
-                                              ]}
-                                              inputStyle={styles.input}
-                                              min={0}
-                                            />
-                                          </View>
                                           </View>
                                           {offerings.length > 0 && (
                                             <View style={{ flex: 1, minWidth: 220 }}>
@@ -2565,9 +2581,8 @@ export function RecommendationsLayer({
               </View>
             </View>
 
-            {/* Imagen y Order siempre en la misma fila (sobre todo en móvil); Offerings puede bajar de fila */}
+            {/* Imagen y Offerings; el orden se asigna al crear según posición en lista */}
             <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 20, marginTop: 20, width: "100%" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, ...(isMobile ? { flexShrink: 0 } : { flex: 1, minWidth: 200 }) }}>
               <View style={{ position: "relative", width: recommendationImageSize, height: recommendationImageSize, flexShrink: 0 }}>
                 {formData.image ? (
                   <>
@@ -2615,50 +2630,6 @@ export function RecommendationsLayer({
                     <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                  <ThemedText
-                    type="body2"
-                    style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}
-                  >
-                    {R?.orderLabel ?? "Orden"}
-                  </ThemedText>
-                  <ThemedText
-                    type="caption"
-                    style={{
-                      color: colors.textSecondary,
-                      marginBottom: 0,
-                      flex: 1,
-                      minWidth: 0,
-                      ...(isMobile && { fontSize: 11 }),
-                    }}
-                  >
-                    {R?.orderHint ?? "Menor número = más importante (default: 0)"}
-                  </ThemedText>
-                </View>
-                <NumericInput
-                  value={formData.order.toString()}
-                  onChangeText={(val) => {
-                    const num = parseInt(val, 10);
-                    if (!isNaN(num) && num >= 0) {
-                      setFormData((prev) => ({ ...prev, order: num }));
-                    } else if (val === "") {
-                      setFormData((prev) => ({ ...prev, order: 0 }));
-                    }
-                  }}
-                  placeholder="0"
-                  containerStyle={[
-                    styles.inputContainer,
-                    {
-                      backgroundColor: colors.filterInputBackground,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  inputStyle={styles.input}
-                  min={0}
-                />
-              </View>
               </View>
               {offerings.length > 0 && (
                 <View style={{ flex: 1, minWidth: 220 }}>
