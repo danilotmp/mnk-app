@@ -277,8 +277,12 @@ export function InstitutionalLayer({
         // Guardar los datos originales para comparar cambios
         setOriginalFormData(newFormData);
       } catch (error: any) {
-        // Si no existe perfil (404), es normal (primera vez) - no es un error
-        if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
+        // Back devuelve 404 con type "info" o 404 sin type para "no existe perfil (primera vez)"
+        const isNoProfile =
+          error?.resultType === "info" ||
+          error?.statusCode === 404 ||
+          error?.result?.statusCode === 404;
+        if (isNoProfile) {
           // Perfil no existe, es la primera vez - inicializar con valores por defecto
           setProfile(null);
 

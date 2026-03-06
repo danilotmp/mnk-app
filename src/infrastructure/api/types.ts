@@ -10,10 +10,22 @@ export interface ApiResponse<T = any> {
   data: T;
   result: {
     statusCode: number;
+    /**
+     * Tipo lógico del mensaje devuelto por el backend.
+     * Cuando está presente, el front debe usarlo para decidir cómo mostrar
+     * la notificación (éxito, error, advertencia, informativo).
+     */
+    type?: ApiMessageType;
     description: string;
     details: any;
   };
 }
+
+/**
+ * Tipos de mensaje soportados por el backend para result.type.
+ * Se mantienen en minúsculas para alinearse con el contrato descrito.
+ */
+export type ApiMessageType = "success" | "error" | "warning" | "info";
 
 /**
  * Tipos de lenguaje soportados - importado de i18n

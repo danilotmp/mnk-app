@@ -7,11 +7,12 @@ import { API_CONFIG, ApiConfig } from "./config";
 import { HTTP_STATUS, SUCCESS_STATUS_CODE } from "./constants";
 import { getStorageAdapter } from "./storage.adapter";
 import {
-    ApiResponse,
-    RequestConfig,
-    RequestHeaders,
-    StorageAdapter,
-    Tokens,
+  ApiMessageType,
+  ApiResponse,
+  RequestConfig,
+  RequestHeaders,
+  StorageAdapter,
+  Tokens,
 } from "./types";
 
 export class ApiClient {
@@ -91,49 +92,51 @@ export class ApiClient {
         );
       }
 
-      // IMPORTANTE: Según el estándar del backend:
-      // - Header HTTP puede ser 200 (OK) o 201 (Created) para operaciones exitosas
-      // - result.statusCode en el body siempre es 200 para éxito
-      // - Solo debemos validar result.statusCode === 200 para determinar éxito
-      // - Los errores tienen result.statusCode diferente a 200 (401, 403, 404, etc.)
+      // Contrato del backend: si result.type existe, usarlo; si no, statusCode 2xx = éxito.
+      const statusCode = data.result?.statusCode ?? response.status;
+      const resultType = (data.result?.type ?? "").toString().toLowerCase();
 
-      // Validar si result.statusCode es 200 (éxito)
-      // Si no es 200, es un error y lanzar ApiError
-      if (data.result?.statusCode !== SUCCESS_STATUS_CODE) {
-        const errorDescription = data.result?.description || "";
-        const errorDescriptionLower = errorDescription.toLowerCase();
-        const isTokenExpired =
-          errorDescriptionLower.includes("token expirado") ||
-          errorDescriptionLower.includes("token expired");
-        const isUnauthenticated =
-          errorDescriptionLower.includes("usuario no autenticado") ||
-          errorDescriptionLower.includes("user not authenticated") ||
-          errorDescriptionLower.includes("no autenticado") ||
-          errorDescriptionLower.includes("not authenticated");
-
-        // Si el mensaje indica "Token expirado", "Usuario no autenticado" o es un error 401, cerrar sesión y redirigir
-        if (
-          (isTokenExpired ||
-            isUnauthenticated ||
-            data.result?.statusCode === HTTP_STATUS.UNAUTHORIZED) &&
-          !config.skipAuth
-        ) {
-          await this.handleTokenExpired();
-        }
-
-        throw new ApiError(
-          errorDescription || "Error en la petición",
-          data.result?.statusCode || response.status,
-          data.result?.details,
-        );
+      if (statusCode === SUCCESS_STATUS_CODE) {
+        return data;
       }
 
-      // Devolver la respuesta tal como viene del API (con estructura data-result)
-      return data;
+      // Si result.type === "success" aunque statusCode !== 200, tratar como éxito (ej. 409 instancia ya existe)
+      if (resultType === "success") {
+        return data;
+      }
+
+      // Para el resto (error, warning, info o sin tipo), lanzar ApiError
+      const errorDescription = data.result?.description || "";
+      const errorDescriptionLower = errorDescription.toLowerCase();
+      const isTokenExpired =
+        errorDescriptionLower.includes("token expirado") ||
+        errorDescriptionLower.includes("token expired");
+      const isUnauthenticated =
+        errorDescriptionLower.includes("usuario no autenticado") ||
+        errorDescriptionLower.includes("user not authenticated") ||
+        errorDescriptionLower.includes("no autenticado") ||
+        errorDescriptionLower.includes("not authenticated");
+
+      if (
+        (isTokenExpired ||
+          isUnauthenticated ||
+          statusCode === HTTP_STATUS.UNAUTHORIZED) &&
+        !config.skipAuth
+      ) {
+        await this.handleTokenExpired();
+      }
+
+      throw new ApiError(
+        errorDescription || "Error en la petición",
+        statusCode,
+        data.result?.details,
+        data.result?.type as ApiMessageType | undefined,
+      );
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
+      // Error genérico de red/conexión: statusCode 0, sin tipo explícito (se tratará como error)
       throw new ApiError("Error de conexión", 0, error);
     }
   }
@@ -439,6 +442,12 @@ export class ApiError extends Error {
     message: string,
     public statusCode: number,
     public details?: any,
+    /**
+     * Tipo lógico de mensaje devuelto por el backend (si aplica).
+     * Cuando está presente, el front puede usarlo para decidir si mostrar
+     * un toast de éxito, error, advertencia o informativo.
+     */
+    public resultType?: ApiMessageType,
   ) {
     super(message);
     this.name = "ApiError";

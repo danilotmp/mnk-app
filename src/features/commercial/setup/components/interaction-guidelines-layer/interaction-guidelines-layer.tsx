@@ -96,8 +96,12 @@ export function InteractionGuidelinesLayer({
       const data = await CommercialService.getInteractionGuidelines(company.id);
       setGuidelines(data || []);
     } catch (error: any) {
-      // Si es 404 o no hay datos, no hay directrices aún - es normal
-      if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
+      // Back devuelve 404 con type "info" o 404 sin type para "no hay directrices aún"
+      const isNoData =
+        error?.resultType === "info" ||
+        error?.statusCode === 404 ||
+        error?.result?.statusCode === 404;
+      if (isNoData) {
         setGuidelines([]);
       } else {
         // Para otros errores, mostrar mensaje pero permitir continuar

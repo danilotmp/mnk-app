@@ -155,6 +155,12 @@ export function useAlert() {
       detail?: string,
       error?: any,
     ) => {
+      // Determinar el objeto de error "real" (puede venir en messageKey o en error)
+      const errorObject =
+        typeof messageKey === "object" && messageKey !== null
+          ? messageKey
+          : error;
+
       // Si messageKey es un objeto de error, extraer el mensaje y el detalle
       let message: string;
       let errorDetail: string | undefined = detail;
@@ -167,15 +173,64 @@ export function useAlert() {
         // Es una clave de traducción o mensaje directo
         message = getTranslation(messageKey);
         // Si se proporciona un objeto error, extraer el detalle
-        if (error) {
-          errorDetail = errorDetail || extractErrorDetail(error);
+        if (errorObject) {
+          errorDetail = errorDetail || extractErrorDetail(errorObject);
         }
       }
 
-      if (SILENT_ERROR_MESSAGES.has(message.trim())) {
+      // Intentar leer un tipo lógico de mensaje desde el error (cuando proviene del backend)
+      // Prioridad: error.result.type -> error.resultType -> error.type
+      let resultType: string | undefined;
+      if (errorObject && typeof errorObject === "object") {
+        const anyError = errorObject as any;
+        if (anyError.result?.type) {
+          resultType = String(anyError.result.type);
+        } else if (anyError.resultType) {
+          resultType = String(anyError.resultType);
+        } else if (anyError.type) {
+          resultType = String(anyError.type);
+        }
+      }
+
+      // Normalizar a minúsculas para comparar con contrato ("success" | "error" | "warning" | "info")
+      const normalizedType = resultType?.toLowerCase();
+
+      // Si el backend indica explícitamente que es info o warning, enrutar a los helpers correspondientes
+      if (normalizedType === "info") {
+        if (toast) {
+          toast.showInfo(message);
+        } else {
+          alertService.showAlert("Información", message);
+        }
         return;
       }
 
+      if (normalizedType === "warning") {
+        if (toast) {
+          toast.showWarning(message);
+        } else {
+          alertService.showAlert("Advertencia", message);
+        }
+        return;
+      }
+
+      if (normalizedType === "success") {
+        if (toast) {
+          toast.showSuccess(message);
+        } else {
+          alertService.showSuccess(message, onPress);
+        }
+        return;
+      }
+
+      // Solo aplicar lista silenciosa cuando NO tenemos un tipo explícito
+      if (!normalizedType || normalizedType === "error") {
+        if (SILENT_ERROR_MESSAGES.has(message.trim())) {
+          return;
+        }
+      }
+
+      // Caso por defecto: error "rojo"
       if (toast) {
         // Si hay detalle, el toast no se auto-cerrará
         toast.showError(message, undefined, undefined, errorDetail);

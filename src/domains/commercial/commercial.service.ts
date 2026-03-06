@@ -920,9 +920,12 @@ export const CommercialService = {
       const res = await apiClient.get<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`);
       return res.data;
     } catch (error: any) {
-      // Si el recurso no existe (404), retornar valores por defecto
-      // El backend creará el recurso cuando sea necesario
-      if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
+      // Back devuelve 404 con type "info" o 404 sin type para "no hay configuración aún"
+      const isNoData =
+        error?.resultType === "info" ||
+        error?.statusCode === 404 ||
+        error?.result?.statusCode === 404;
+      if (isNoData) {
         return {
           canAnswerAboutBusiness: false,
           canAnswerAboutLocation: false,
@@ -944,9 +947,12 @@ export const CommercialService = {
       const res = await apiClient.put<CommercialCapabilities>(`${BASE_INTERACCIONES}/context/${companyId}/capabilities`, capabilities);
       return res.data;
     } catch (error: any) {
-      // Si el recurso no existe (404), retornar valores por defecto y terminar aquí
-      // NO hacer GET, NO reintentar, NO causar bucles
-      if (error?.statusCode === 404 || error?.result?.statusCode === 404) {
+      // Back devuelve 404 con type "info" o 404 sin type para "no hay configuración aún"
+      const isNoData =
+        error?.resultType === "info" ||
+        error?.statusCode === 404 ||
+        error?.result?.statusCode === 404;
+      if (isNoData) {
         return {
           canAnswerAboutBusiness: false,
           canAnswerAboutLocation: false,
@@ -957,7 +963,6 @@ export const CommercialService = {
           ...capabilities,
         } as CommercialCapabilities;
       }
-      // Para otros errores, lanzar el error
       throw error;
     }
   },
@@ -1122,32 +1127,18 @@ export const CommercialService = {
   // ===== WhatsApp Connection =====
   /** POST /whatsapp/instance/create — Respuesta según doc: success, data.instance, data.qrcode (base64, code). */
   async createWhatsAppInstance(name: string): Promise<WhatsAppCreateResponse> {
-    try {
-      const res = await apiClient.post<WhatsAppCreateResponse['data']>(
-        `/whatsapp/instance/create`,
-        { name, data: {} }
-      ) as unknown as { success?: boolean; data?: WhatsAppCreateResponse['data']; result?: WhatsAppCreateResponse['result'] };
-      // El backend devuelve { success, data, result }; el cliente devuelve el body completo
-      return {
-        success: res.success ?? res.result?.statusCode === 200,
-        data: res.data,
-        result: res.result,
-      } as WhatsAppCreateResponse;
-    } catch (error: any) {
-      // 409 = instancia ya creada anteriormente → continuar con el flujo (obtener QR, etc.)
-      if (error?.statusCode === 409) {
-        return { success: true };
-      }
-      // Temporal: 500 con "Error al crear la instancia" es un falso positivo (instancia ya existe)
-      // Continuar con el flujo en lugar de fallar
-      if (
-        error?.statusCode === 500 &&
-        String(error?.message || '').includes('Error al crear la instancia')
-      ) {
-        return { success: true };
-      }
-      throw error;
-    }
+    const res = await apiClient.post<WhatsAppCreateResponse['data']>(
+      `/whatsapp/instance/create`,
+      { name, data: {} }
+    ) as unknown as { success?: boolean; data?: WhatsAppCreateResponse['data']; result?: WhatsAppCreateResponse['result'] };
+    return {
+      success:
+        (res.success ?? false) ||
+        res.result?.statusCode === 200 ||
+        res.result?.type === "success",
+      data: res.data,
+      result: res.result,
+    } as WhatsAppCreateResponse;
   },
 
   /** GET /whatsapp/instance/:whatsapp/qrcode — Acepta forma legacy (qrcode string) o unificada (data.qrcode.base64). */
@@ -1200,17 +1191,8 @@ export const CommercialService = {
         }
       }
     } else {
-      // Si ya hay QR proporcionado, solo crear la instancia en WhatsApp (puede que ya exista)
-      // Esto es para asegurar que la instancia existe antes de guardarla en el perfil
-      try {
-        await this.createWhatsAppInstance(payload.whatsapp);
-      } catch (error: any) {
-        // Si falla porque ya existe (409) o es un falso positivo (500), está bien, continuar
-        if (error?.statusCode !== 409 && 
-            !(error?.statusCode === 500 && String(error?.message || '').includes('Error al crear la instancia'))) {
-          console.error('Error al crear instancia de WhatsApp:', error);
-        }
-      }
+      // Si ya hay QR proporcionado, crear la instancia en WhatsApp (el back devuelve type success si ya existe)
+      await this.createWhatsAppInstance(payload.whatsapp);
     }
 
     // Actualizar el perfil con la nueva instancia
