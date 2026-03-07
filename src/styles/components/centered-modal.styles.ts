@@ -53,11 +53,41 @@ export const createCenteredModalStyles = (
       borderBottomWidth: 1,
       gap: modalLayout.headerGap,
     },
+    /** Contenedor del header cuando hay alerta: columna sin padding para que la alerta vaya a ancho completo. */
+    headerOuter: {
+      padding: 0,
+      flexDirection: "column",
+      alignItems: "stretch",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    /** Fila interna del header: título, subtítulo y botón cerrar con padding estándar. */
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: modalLayout.headerGap,
+      paddingHorizontal: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.headerPadding,
+      paddingVertical: isMobile
+        ? modalLayout.headerPaddingMobile
+        : modalLayout.headerPadding,
+    },
+    /** Contenedor de la alerta inline debajo del título/subtítulo. */
+    topAlertContainer: {
+      width: "100%",
+      marginTop: 0,
+      paddingHorizontal: 16,
+    },
     headerTitle: {
       flex: 1,
     },
     title: {
       marginBottom: modalLayout.titleSubtitleGap,
+    },
+    /** Subtítulo del modal. */
+    subtitle: {
+      color: colors.textSecondary,
     },
     closeButton: {
       padding: modalLayout.closeButtonPadding,
@@ -82,14 +112,5 @@ export const createCenteredModalStyles = (
         : modalLayout.footerPadding,
       borderTopWidth: 1,
       gap: modalLayout.footerGap,
-    },
-    /** Contenedor del topAlert (encima del título). */
-    topAlertContainer: {
-      paddingHorizontal: isMobile
-        ? modalLayout.headerPaddingMobile
-        : modalLayout.headerPadding,
-      paddingTop: isMobile
-        ? modalLayout.headerPaddingMobile
-        : modalLayout.headerPadding,
     },
   });

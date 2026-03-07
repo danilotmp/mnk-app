@@ -60,12 +60,38 @@ export const createSideModalStyles = (
       gap: modalLayout.headerGap,
       flexShrink: 0,
     },
+    /** Contenedor del header cuando hay alerta: columna sin padding para que la alerta vaya a ancho completo. */
+    headerOuter: {
+      padding: 0,
+      flexDirection: "column",
+      alignItems: "stretch",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      flexShrink: 0,
+    },
+    /** Fila interna del header: título, subtítulo y botón cerrar con padding estándar. */
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: modalLayout.headerGap,
+      padding: isMobile ? modalLayout.headerPaddingMobile : modalLayout.headerPadding,
+    },
+    /** Contenedor de la alerta inline debajo del título/subtítulo. */
+    topAlertContainer: {
+      width: "100%",
+      marginTop: 0,
+      paddingHorizontal: 16,
+    },
     headerTitle: {
       flex: 1,
     },
     /** Título del modal (ej. "Create User"). Tamaño correcto en web y smartphone. */
     title: {
       marginBottom: modalLayout.titleSubtitleGap,
+    },
+    /** Subtítulo del modal. */
+    subtitle: {
+      color: (colors as any).subtitle ?? colors.textSecondary,
     },
     closeButton: {
       padding: modalLayout.closeButtonPadding,

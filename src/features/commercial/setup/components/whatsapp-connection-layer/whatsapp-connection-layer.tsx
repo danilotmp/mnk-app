@@ -20,6 +20,7 @@ import { DataTable } from "@/src/domains/shared/components/data-table/data-table
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
+import { extractErrorDetail } from "@/src/infrastructure/messages/error-utils";
 import { formatCode } from "@/src/infrastructure/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
@@ -86,7 +87,11 @@ export const WhatsAppConnectionLayer = forwardRef<
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [generatedQR, setGeneratedQR] = useState<string | null>(null);
-  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalAlert, setModalAlert] = useState<{
+    message: string;
+    detail?: string;
+    type: "error" | "info";
+  } | null>(null);
   const createModalScrollRef = useRef<ScrollView | null>(null);
 
   // Cargar instancias al montar
@@ -174,6 +179,7 @@ export const WhatsAppConnectionLayer = forwardRef<
     setFormData({ whatsapp: "", isActive: true });
     setFormErrors({});
     setSelectedInstance(null);
+    setModalAlert(null);
     setModalMode("create");
     setIsModalVisible(true);
   };
@@ -187,12 +193,14 @@ export const WhatsAppConnectionLayer = forwardRef<
     setFormData({ whatsapp: instance.whatsapp, isActive: instance.isActive });
     setFormErrors({});
     setSelectedInstance(instance);
+    setModalAlert(null);
     setModalMode("edit");
     setIsModalVisible(true);
   };
 
   const handleViewQR = (instance: WhatsAppInstance) => {
     setSelectedInstance(instance);
+    setModalAlert(null);
     setModalMode("view-qr");
     setIsModalVisible(true);
   };
@@ -204,7 +212,7 @@ export const WhatsAppConnectionLayer = forwardRef<
     setFormData({ whatsapp: "" });
     setFormErrors({});
     setGeneratedQR(null);
-    setModalError(null);
+    setModalAlert(null);
   };
 
   const validateForm = (): boolean => {
@@ -241,10 +249,15 @@ export const WhatsAppConnectionLayer = forwardRef<
         L?.qrRegenerated ?? "Código QR regenerado correctamente",
       );
     } catch (error: any) {
-      const errorMessage =
+      const message =
         error?.message ||
         (L?.errorRegeneratingQR ?? "Error al regenerar el código QR");
-      alert.showError(errorMessage);
+      const detail = extractErrorDetail(error);
+      const type =
+        (error?.resultType ?? "").toString().toLowerCase() === "info"
+          ? "info"
+          : "error";
+      setModalAlert({ message, detail, type });
     } finally {
       setGeneratingQR(false);
     }
@@ -261,7 +274,7 @@ export const WhatsAppConnectionLayer = forwardRef<
     }
 
     setGeneratingQR(true);
-    setModalError(null);
+    setModalAlert(null);
     try {
       const whatsappValue = formatCode(formData.whatsapp.trim());
 
@@ -270,9 +283,11 @@ export const WhatsAppConnectionLayer = forwardRef<
         await CommercialService.createWhatsAppInstance(whatsappValue);
 
       if (!createResponse.success) {
-        setModalError(
-          L?.errorCreatingInstance ?? "Error al crear la instancia de WhatsApp",
-        );
+        setModalAlert({
+          message:
+            L?.errorCreatingInstance ?? "Error al crear la instancia de WhatsApp",
+          type: "error",
+        });
         return;
       }
 
@@ -285,7 +300,10 @@ export const WhatsAppConnectionLayer = forwardRef<
       }
 
       if (!qrImage) {
-        setModalError(L?.errorGettingQR ?? "Error al obtener el código QR");
+        setModalAlert({
+          message: L?.errorGettingQR ?? "Error al obtener el código QR",
+          type: "error",
+        });
         return;
       }
 
@@ -296,10 +314,15 @@ export const WhatsAppConnectionLayer = forwardRef<
       }, 150);
       alert.showSuccess(L?.qrGenerated ?? "Código QR generado correctamente");
     } catch (error: any) {
-      const errorMessage =
+      const message =
         error?.message ||
         (L?.errorGettingQR ?? "Error al generar el código QR");
-      setModalError(errorMessage);
+      const detail = extractErrorDetail(error);
+      const type =
+        (error?.resultType ?? "").toString().toLowerCase() === "info"
+          ? "info"
+          : "error";
+      setModalAlert({ message, detail, type });
     } finally {
       setGeneratingQR(false);
     }
@@ -383,8 +406,13 @@ export const WhatsAppConnectionLayer = forwardRef<
         handleCloseModal();
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Error al guardar la instancia";
-      setModalError(errorMessage);
+      const message = error?.message || "Error al guardar la instancia";
+      const detail = extractErrorDetail(error);
+      const type =
+        (error?.resultType ?? "").toString().toLowerCase() === "info"
+          ? "info"
+          : "error";
+      setModalAlert({ message, detail, type });
     } finally {
       setSaving(false);
     }
@@ -638,11 +666,12 @@ export const WhatsAppConnectionLayer = forwardRef<
             visible={isModalVisible}
             onClose={handleCloseModal}
             topAlert={
-              modalError ? (
+              modalAlert ? (
                 <InlineAlert
-                  type="error"
-                  message={modalError}
-                  onDismiss={() => setModalError(null)}
+                  type={modalAlert.type}
+                  message={modalAlert.message}
+                  detail={modalAlert.detail}
+                  onDismiss={() => setModalAlert(null)}
                   autoClose={false}
                 />
               ) : undefined
@@ -895,6 +924,17 @@ export const WhatsAppConnectionLayer = forwardRef<
           <SideModal
             visible={isModalVisible}
             onClose={handleCloseModal}
+            topAlert={
+              modalAlert ? (
+                <InlineAlert
+                  type={modalAlert.type}
+                  message={modalAlert.message}
+                  detail={modalAlert.detail}
+                  onDismiss={() => setModalAlert(null)}
+                  autoClose={false}
+                />
+              ) : undefined
+            }
             title={L?.qrModalTitle ?? "Código QR de WhatsApp"}
             subtitle={
               L?.qrModalSubtitle ??

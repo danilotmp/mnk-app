@@ -28,7 +28,7 @@ interface CenteredModalProps {
   footer?: React.ReactNode; // Footer fijo con botones de acción
   width?: number | string; // Porcentaje o número absoluto (default: 90%)
   height?: number | string; // Porcentaje o número absoluto (default: 90%)
-  topAlert?: React.ReactNode; // Alerta que aparece encima del título del modal
+  topAlert?: React.ReactNode; // Alerta que aparece debajo del título y subtítulo del modal
 }
 
 export function CenteredModal({
@@ -119,29 +119,31 @@ export function CenteredModal({
               },
             ]}
           >
-            {/* Top Alert - aparece encima del título */}
-            {topAlert && (
-              <View style={styles.topAlertContainer}>{topAlert}</View>
-            )}
-
-            {/* Header fijo */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-              <View style={styles.headerTitle}>
-                <ThemedText type="h3" style={styles.title}>
-                  {title}
-                </ThemedText>
-                {subtitle && (
-                  <ThemedText
-                    type="body2"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    {subtitle}
+            {/* Header fijo: título y subtítulo con padding; alerta a ancho completo debajo */}
+            <View style={styles.headerOuter}>
+              <View style={styles.headerRow}>
+                <View style={styles.headerTitle}>
+                  <ThemedText type="h3" style={styles.title}>
+                    {title}
                   </ThemedText>
-                )}
+                  {subtitle && (
+                    <ThemedText
+                      type="body2"
+                      style={styles.subtitle}
+                    >
+                      {subtitle}
+                    </ThemedText>
+                  )}
+                </View>
+                <Pressable style={styles.closeButton} onPress={onClose}>
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </Pressable>
               </View>
-              <Pressable style={styles.closeButton} onPress={onClose}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </Pressable>
+              {topAlert && (
+                <View style={styles.topAlertContainer}>
+                  {topAlert}
+                </View>
+              )}
             </View>
 
             {/* Content scrollable */}
