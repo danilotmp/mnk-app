@@ -63,6 +63,19 @@ const buildQuery = (base: string, params?: Record<string, any>): string => {
   return qs ? `${base}?${qs}` : base;
 };
 
+/** Normaliza una instancia de WhatsApp de la API (snake_case o camelCase) a WhatsAppInstance. */
+function normalizeWhatsAppInstance(raw: Record<string, any>): WhatsAppInstance {
+  const isActive = raw.isActive ?? raw.is_active;
+  return {
+    id: raw.id ?? '',
+    whatsapp: raw.whatsapp ?? '',
+    whatsappQR: raw.whatsappQR ?? raw.whatsapp_qr ?? null,
+    isActive: typeof isActive === 'boolean' ? isActive : true,
+    chatIAFlow: raw.chatIAFlow ?? raw.chat_ia_flow ?? null,
+    chatIAFlowFilename: raw.chatIAFlowFilename ?? raw.chat_ia_flow_filename ?? null,
+  };
+}
+
 export const CommercialService = {
   // ===== Commercial Profile =====
   async getProfile(companyId: string): Promise<CommercialProfile> {
@@ -74,9 +87,16 @@ export const CommercialService = {
     // - { data: { data: { commercial: {...} } } }
     // Necesitamos extraer y mapear de snake_case a camelCase
     const commercialData = res.data?.commercial || res.data?.data?.commercial || res.data;
-    
+    const commercialProfileId =
+      commercialData?.id ??
+      commercialData?.commercial_id ??
+      res.data?.commercial?.id ??
+      res.data?.commercial_id ??
+      null;
+
     // Mapear de snake_case a camelCase si es necesario
     const profile: CommercialProfile = {
+      id: commercialProfileId ?? undefined,
       companyId,
       businessDescription: commercialData?.business_description || commercialData?.businessDescription || null,
       industry: commercialData?.industry || null,
@@ -110,9 +130,16 @@ export const CommercialService = {
     // - { data: { id, companyId, whatsapp, ... } }
     // - { data: { data: { commercial: {...} } } }
     const commercialData = res.data?.commercial || res.data?.data?.commercial || res.data;
-    
+    const commercialProfileId =
+      commercialData?.id ??
+      commercialData?.commercial_id ??
+      res.data?.commercial?.id ??
+      res.data?.commercial_id ??
+      null;
+
     // Mapear manualmente para asegurar que todos los campos se mapeen correctamente
     const profile: CommercialProfile = {
+      id: commercialProfileId ?? undefined,
       companyId: commercialData?.companyId || payload.companyId,
       businessDescription: commercialData?.business_description || commercialData?.businessDescription || null,
       industry: commercialData?.industry || null,
@@ -1269,10 +1296,27 @@ export const CommercialService = {
     return updatedInstance;
   },
 
+  /**
+   * Elimina la instancia de WhatsApp en contexto.
+   * POST /interacciones/context/whatsapp-delete/:commercialProfileId
+   * Si el backend expone profile.id, se usa ese commercialProfileId; si no, se actualiza solo el perfil local.
+   */
   async deleteWhatsAppInstance(companyId: string, instanceId: string): Promise<void> {
     const profile = await this.getProfile(companyId);
-    const instances = (profile.whatsappInstances || []).filter(inst => inst.id !== instanceId);
+    const instance = profile.whatsappInstances?.find(inst => inst.id === instanceId);
+    if (!instance) {
+      throw new Error('Instancia no encontrada');
+    }
 
+    const commercialProfileId = profile.id;
+    if (commercialProfileId) {
+      await apiClient.post<unknown>(
+        `${BASE_INTERACCIONES}/context/whatsapp-delete/${commercialProfileId}`,
+        { whatsappNumber: instance.whatsapp },
+      );
+    }
+
+    const instances = (profile.whatsappInstances || []).filter(inst => inst.id !== instanceId);
     await this.updateProfile(companyId, {
       whatsappInstances: instances.map(inst => ({
         whatsapp: inst.whatsapp,
@@ -1286,19 +1330,63 @@ export const CommercialService = {
     return this.updateWhatsAppInstance(companyId, instanceId, { isActive });
   },
 
+  /**
+   * Regenera el QR de la instancia de WhatsApp.
+   * Si el backend expone profile.id, usa POST /interacciones/context/whatsapp-regenerate/:commercialProfileId.
+   * Si no, obtiene QR por getWhatsAppQRCode y actualiza el perfil.
+   */
   async regenerateWhatsAppQR(companyId: string, instanceId: string): Promise<WhatsAppInstance> {
     const profile = await this.getProfile(companyId);
     const instance = profile.whatsappInstances?.find(inst => inst.id === instanceId);
-    
     if (!instance) {
       throw new Error('Instancia no encontrada');
     }
 
-    // Obtener nuevo QR code
+    const commercialProfileId = profile.id;
+    if (commercialProfileId) {
+      const res = await apiClient.post<{
+        data?: { qrcode?: { base64: string; code?: string } };
+      }>(
+        `${BASE_INTERACCIONES}/context/whatsapp-regenerate/${commercialProfileId}`,
+        { whatsappNumber: instance.whatsapp },
+      );
+      const data = res.data?.data ?? res.data;
+      const base64 = data?.qrcode?.base64 ?? null;
+      if (base64) {
+        return this.updateWhatsAppInstance(companyId, instanceId, { whatsappQR: base64 });
+      }
+    }
+
     const qrResponse = await this.getWhatsAppQRCode(instance.whatsapp);
     const qrCode = qrResponse.qrcode || null;
-
-    // Actualizar la instancia con el nuevo QR
     return this.updateWhatsAppInstance(companyId, instanceId, { whatsappQR: qrCode });
+  },
+
+  /**
+   * Reconexión: elimina la instancia en el proveedor y obtiene un nuevo QR.
+   * POST /interacciones/context/whatsapp-reconnect/:commercialProfileId
+   * Body opcional: { whatsappNumber: "593..." } si hay varias instancias.
+   * 200: data con misma estructura que creación (data.qrcode.base64).
+   * 400: result.description, result.type, result.details.
+   * 404: perfil o instancia no encontrados.
+   */
+  async reconnectWhatsApp(
+    commercialProfileId: string,
+    body?: { whatsappNumber: string },
+  ): Promise<{ qrcode: { base64: string; code?: string } }> {
+    const res = await apiClient.post<{
+      data?: { qrcode?: { base64: string; code?: string } };
+      result?: { description?: string; type?: string; details?: unknown };
+    }>(
+      `${BASE_INTERACCIONES}/context/whatsapp-reconnect/${commercialProfileId}`,
+      body ?? {},
+    );
+    const data = res.data?.data ?? res.data;
+    const base64 = data?.qrcode?.base64 ?? '';
+    const code = data?.qrcode?.code;
+    if (!base64) {
+      throw new Error('No se recibió código QR en la reconexión');
+    }
+    return { qrcode: { base64, code } };
   },
 };

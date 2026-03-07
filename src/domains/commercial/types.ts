@@ -33,6 +33,8 @@ export interface WhatsAppCreateResponse {
 
 // ===== Commercial Profile =====
 export interface CommercialProfile {
+  /** UUID del perfil comercial (commercialProfileId). Requerido para endpoints de contexto WhatsApp. */
+  id?: string | null;
   companyId: string;
   businessDescription?: string | null;
   industry?: string | null;

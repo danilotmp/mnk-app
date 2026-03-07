@@ -41,9 +41,35 @@ export const styles = StyleSheet.create({
   modalContent: {
     padding: 20,
     gap: 20,
+    width: "100%",
+    alignSelf: "stretch",
   },
   inputGroup: {
     gap: 8,
+    width: "100%",
+    alignSelf: "stretch",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    width: "100%",
+  },
+  modalFooterActions: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  estadoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  estadoLabel: {
+    fontWeight: "600",
   },
   label: {
     fontWeight: "600",

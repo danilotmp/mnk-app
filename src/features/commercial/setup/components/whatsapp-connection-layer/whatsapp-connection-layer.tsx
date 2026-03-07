@@ -80,6 +80,7 @@ export const WhatsAppConnectionLayer = forwardRef<
   const [selectedInstance, setSelectedInstance] =
     useState<WhatsAppInstance | null>(null);
   const [generatingQR, setGeneratingQR] = useState(false);
+  const [reconnectingWhatsapp, setReconnectingWhatsapp] = useState<string | null>(null);
   const [formData, setFormData] = useState<WhatsAppInstanceFormData>({
     whatsapp: "",
     isActive: true,
@@ -356,17 +357,11 @@ export const WhatsAppConnectionLayer = forwardRef<
         onProgressUpdate?.(hasActiveInstances ? 100 : 0);
         onDataChange?.(hasActiveInstances);
 
-        // Si la instancia tiene QR, mostrar el modal de QR automáticamente
-        if (newInstance.whatsappQR) {
-          setSelectedInstance(newInstance);
-          setModalMode("view-qr");
-          setIsModalVisible(true);
-          setGeneratedQR(null); // Limpiar QR generado
-          alert.showSuccess("Instancia de WhatsApp creada correctamente");
-        } else {
-          handleCloseModal();
-          alert.showSuccess("Instancia de WhatsApp creada correctamente");
-        }
+        handleCloseModal();
+        alert.showSuccess(
+          L?.instanceCreated ??
+            "Instancia de WhatsApp creada correctamente",
+        );
       } else if (modalMode === "edit" && selectedInstance) {
         // Actualizar instancia existente
         const updatedInstance = await CommercialService.updateWhatsAppInstance(
@@ -450,6 +445,77 @@ export const WhatsAppConnectionLayer = forwardRef<
             error?.message ||
             (L?.errorDeletingInstance ?? "Error al eliminar la instancia");
           alert.showError(errorMessage);
+        }
+      },
+    );
+  };
+
+  const handleReconnect = (instance: WhatsAppInstance) => {
+    if (!company?.id) return;
+
+    alert.showConfirm(
+      L?.reconnectConfirmTitle ?? "Reconectar",
+      L?.reconnectConfirmMessage ??
+        "Se generará una nueva instancia de conexión. Los dispositivos actualmente conectados se desconectarán.\n\nPara reconectarlos deberás escanear el nuevo código QR generado.\n\n¿Deseas continuar?",
+      async () => {
+        try {
+          setReconnectingWhatsapp(instance.whatsapp);
+          setModalAlert(null);
+          const profile = await CommercialService.getProfile(company.id);
+          const commercialProfileId = profile.id;
+          if (!commercialProfileId) {
+            throw new Error(
+              L?.errorReconnecting ??
+                "No se pudo obtener el perfil comercial. El backend debe exponer data.commercial.id en GET /api/interacciones/profile/:companyId.",
+            );
+          }
+          const { qrcode } = await CommercialService.reconnectWhatsApp(
+            commercialProfileId,
+            { whatsappNumber: instance.whatsapp },
+          );
+          const newQR = qrcode?.base64 ?? null;
+          if (!newQR) {
+            throw new Error(L?.errorReconnecting ?? "Error al reconectar la instancia");
+          }
+          const updatedInstances = instances.map((inst) =>
+            inst.whatsapp === instance.whatsapp
+              ? { ...inst, whatsappQR: newQR }
+              : inst,
+          );
+          setInstances(updatedInstances);
+          if (selectedInstance?.whatsapp === instance.whatsapp) {
+            setSelectedInstance((prev) =>
+              prev ? { ...prev, whatsappQR: newQR } : null,
+            );
+          }
+          setModalAlert({
+            message: L?.reconnectSuccess ?? "Reconexión correcta. Escanea el nuevo código QR.",
+            type: "info",
+          });
+          alert.showSuccess(
+            L?.reconnectSuccess ?? "Reconexión correcta. Escanea el nuevo código QR.",
+          );
+        } catch (error: any) {
+          const description =
+            error?.result?.description ??
+            error?.message ??
+            (L?.errorReconnecting ?? "Error al reconectar la instancia");
+          const detail =
+            error?.details != null
+              ? typeof error.details === "object"
+                ? JSON.stringify(error.details)
+                : String(error.details)
+              : error?.result?.details != null
+                ? String(error.result.details)
+                : undefined;
+          setModalAlert({
+            message: description,
+            detail,
+            type: "error",
+          });
+          alert.showError(description);
+        } finally {
+          setReconnectingWhatsapp(null);
         }
       },
     );
@@ -620,6 +686,20 @@ export const WhatsAppConnectionLayer = forwardRef<
               />
             </TouchableOpacity>
           </Tooltip>
+          {/* Orden: Reconectar, Editar, Eliminar. Icono: ver docs/ICON_REFERENCE.md (icons.expo.fyi) */}
+          <Tooltip text={L?.reconnect ?? "Reconectar"} position="left">
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleReconnect(instance)}
+              disabled={reconnectingWhatsapp !== null}
+            >
+              {reconnectingWhatsapp === instance.whatsapp ? (
+                <ActivityIndicator size="small" color={actionIconColor} />
+              ) : (
+                <Ionicons name="link" size={18} color={actionIconColor} />
+              )}
+            </TouchableOpacity>
+          </Tooltip>
           <Tooltip text="Editar" position="left">
             <TouchableOpacity
               style={styles.actionButton}
@@ -688,34 +768,91 @@ export const WhatsAppConnectionLayer = forwardRef<
                   "Completa los datos para crear una nueva instancia")
             }
             footer={
-              <>
-                <Button
-                  title={L?.cancel ?? "Cancelar"}
-                  onPress={handleCloseModal}
-                  variant="outline"
-                  size="md"
-                  disabled={saving || generatingQR}
-                />
-                <Button
-                  title={
-                    saving
-                      ? (L?.saving ?? "Guardando...")
-                      : (L?.save ?? "Guardar")
-                  }
-                  onPress={handleSave}
-                  variant="primary"
-                  size="md"
-                  disabled={saving || generatingQR}
-                >
-                  {saving && (
-                    <ActivityIndicator
-                      size="small"
-                      color={colors.contrastText}
-                      style={{ marginRight: 8 }}
-                    />
+              <View style={styles.modalFooter}>
+                <View style={styles.modalFooterActions}>
+                  {modalMode === "edit" &&
+                    selectedInstance?.chatIAFlow &&
+                    selectedInstance?.chatIAFlowFilename && (
+                      <Button
+                        onPress={() =>
+                          selectedInstance && handleDownloadFlow(selectedInstance)
+                        }
+                        variant="ghost"
+                        size="md"
+                      >
+                        <Ionicons
+                          name="download-outline"
+                          size={18}
+                          color={colors.primary}
+                          style={{ marginRight: 6 }}
+                        />
+                        <ThemedText
+                          type="body2"
+                          style={{ color: colors.primary, fontWeight: "500" }}
+                        >
+                          N8N
+                        </ThemedText>
+                      </Button>
+                    )}
+                  <Button
+                    title={L?.cancel ?? "Cancelar"}
+                    onPress={handleCloseModal}
+                    variant="outlined"
+                    size="md"
+                    disabled={saving || generatingQR}
+                  />
+                  {/* En creación: un solo botón principal; primero "Generar", luego "Guardar" */}
+                  {modalMode === "create" && !generatedQR && (
+                    <Button
+                      title={
+                        generatingQR
+                          ? (L?.generating ?? "Generando...")
+                          : (L?.generateQR ?? "Generar")
+                      }
+                      onPress={handleGenerateFromInput}
+                      variant="primary"
+                      size="md"
+                      disabled={generatingQR || !formData.whatsapp.trim()}
+                    >
+                      {generatingQR ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={colors.contrastText}
+                          style={{ marginRight: 8 }}
+                        />
+                      ) : (
+                        <Ionicons
+                          name="qr-code-outline"
+                          size={18}
+                          color={colors.contrastText}
+                          style={{ marginRight: 8 }}
+                        />
+                      )}
+                    </Button>
                   )}
-                </Button>
-              </>
+                  {(modalMode === "edit" || (modalMode === "create" && generatedQR)) && (
+                    <Button
+                      title={
+                        saving
+                          ? (L?.saving ?? "Guardando...")
+                          : (L?.save ?? "Guardar")
+                      }
+                      onPress={handleSave}
+                      variant="primary"
+                      size="md"
+                      disabled={saving || generatingQR}
+                    >
+                      {saving && (
+                        <ActivityIndicator
+                          size="small"
+                          color={colors.contrastText}
+                          style={{ marginRight: 8 }}
+                        />
+                      )}
+                    </Button>
+                  )}
+                </View>
+              </View>
             }
           >
             <View style={styles.modalContent}>
@@ -754,62 +891,38 @@ export const WhatsAppConnectionLayer = forwardRef<
                     "Número de WhatsApp o identificador IA"}
                 </ThemedText>
 
-                {/* Switch de estado activo/inactivo - Solo en modo edición */}
+                {/* Estado activo/inactivo - Solo en modo edición: etiqueta izquierda, switch derecha */}
                 {modalMode === "edit" && (
-                  <View style={{ marginTop: 16 }}>
+                  <View style={styles.estadoRow}>
+                    <ThemedText
+                      type="body2"
+                      style={[styles.estadoLabel, { color: colors.text }]}
+                    >
+                      {L?.columnStatus ?? "Estado"}
+                    </ThemedText>
                     <CustomSwitch
                       value={formData.isActive ?? false}
                       onValueChange={(value) => {
                         setFormData((prev) => ({ ...prev, isActive: value }));
                       }}
-                      label={L?.instanceStatusLabel ?? "Estado de la instancia"}
+                      label=""
                     />
-                    <ThemedText
-                      type="caption"
-                      style={{ color: colors.textSecondary, marginTop: 4 }}
-                    >
-                      {formData.isActive
-                        ? (L?.instanceActiveCaption ??
-                          "La instancia está activa y disponible para uso")
-                        : (L?.instanceInactiveCaption ??
-                          "La instancia está inactiva y no estará disponible")}
-                    </ThemedText>
                   </View>
                 )}
-
-                {/* Botón Generar QR - Solo mostrar si no hay QR generado y estamos en modo creación */}
-                {modalMode === "create" && !generatedQR && (
-                  <View style={{ marginTop: 12 }}>
-                    <Button
-                      title={
-                        generatingQR
-                          ? (L?.generating ?? "Generando...")
-                          : (L?.generateQR ?? "Generar")
-                      }
-                      onPress={handleGenerateFromInput}
-                      variant="outline"
-                      size="md"
-                      disabled={generatingQR || !formData.whatsapp.trim()}
-                    >
-                      {generatingQR ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={colors.primary}
-                          style={{ marginRight: 8 }}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="qr-code-outline"
-                          size={18}
-                          color={colors.primary}
-                          style={{ marginRight: 8 }}
-                        />
-                      )}
-                    </Button>
-                  </View>
+                {modalMode === "edit" && (
+                  <ThemedText
+                    type="caption"
+                    style={{ color: colors.textSecondary, marginTop: -8, marginBottom: 8 }}
+                  >
+                    {formData.isActive
+                      ? (L?.instanceActiveCaption ??
+                        "La instancia está activa y disponible para uso")
+                      : (L?.instanceInactiveCaption ??
+                        "La instancia está inactiva y no estará disponible")}
+                  </ThemedText>
                 )}
 
-                {/* Mostrar QR generado si existe (solo en creación) */}
+                {/* Mostrar QR generado + pasos de conexión (solo en creación); el botón Generar está en el footer */}
                 {modalMode === "create" && generatedQR && toQRImageUri(generatedQR) && (
                   <View style={styles.inputGroup}>
                     <ThemedText
@@ -833,14 +946,35 @@ export const WhatsAppConnectionLayer = forwardRef<
                         resizeMode="contain"
                       />
                     </View>
+                    {/* Pasos de conexión debajo del QR (mismo contenido que en el modal ver QR) */}
+                    <ThemedText
+                      type="body2"
+                      style={[
+                        styles.label,
+                        { color: colors.text, marginTop: 16, marginBottom: 8 },
+                      ]}
+                    >
+                      {L?.qrModalSubtitle ??
+                        "Escanea este código con WhatsApp para conectar"}
+                    </ThemedText>
+                    <ThemedText
+                      type="body2"
+                      style={[
+                        styles.qrInstructions,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {L?.qrInstructions ??
+                        '1. Abre WhatsApp en tu teléfono\n2. Ve a Configuración → Dispositivos vinculados\n3. Toca "Vincular un dispositivo"\n4. Escanea este código QR'}
+                    </ThemedText>
                   </View>
                 )}
               </View>
 
-              {/* En modo edición, mostrar QR existente y botón regenerar */}
+              {/* En modo edición: sin QR → solo Regenerar; con QR → mostrar imagen y solo Reconectar */}
               {modalMode === "edit" && selectedInstance && (
                 <View style={styles.inputGroup}>
-                  {selectedInstance.whatsappQR && toQRImageUri(selectedInstance.whatsappQR) && (
+                  {selectedInstance.whatsappQR && toQRImageUri(selectedInstance.whatsappQR) ? (
                     <>
                       <ThemedText
                         type="body2"
@@ -863,56 +997,65 @@ export const WhatsAppConnectionLayer = forwardRef<
                           resizeMode="contain"
                         />
                       </View>
-                    </>
-                  )}
-                  <View style={{ marginTop: 12 }}>
-                    <Button
-                      title={
-                        generatingQR
-                          ? (L?.regenerating ?? "Regenerando...")
-                          : (L?.regenerateQR ?? "Regenerar QR")
-                      }
-                      onPress={handleGenerateQR}
-                      variant="outline"
-                      size="md"
-                      disabled={generatingQR}
-                    >
-                      {generatingQR ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={colors.primary}
-                          style={{ marginRight: 8 }}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="refresh-outline"
+                      <View style={{ marginTop: 12 }}>
+                        <Button
+                          title={
+                            reconnectingWhatsapp === selectedInstance.whatsapp
+                              ? (L?.reconnecting ?? "Reconectando...")
+                              : (L?.reconnect ?? "Reconectar")
+                          }
+                          onPress={() => handleReconnect(selectedInstance)}
+                          variant="outlined"
+                          size="md"
+                          disabled={reconnectingWhatsapp !== null}
+                        >
+                          {reconnectingWhatsapp === selectedInstance.whatsapp ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={colors.primary}
+                              style={{ marginRight: 8 }}
+                            />
+                          ) : (
+                            <Ionicons
+name="link"
                           size={18}
                           color={colors.primary}
-                          style={{ marginRight: 8 }}
-                        />
-                      )}
-                    </Button>
-                  </View>
-                {selectedInstance?.chatIAFlow &&
-                  selectedInstance?.chatIAFlowFilename && (
-                  <View style={{ marginTop: 12 }}>
-                    <Button
-                      title="Descargar flujo ChatIA"
-                      onPress={() =>
-                        handleDownloadFlow(selectedInstance)
-                      }
-                      variant="outline"
-                      size="md"
-                    >
-                      <Ionicons
-                        name="download-outline"
-                        size={18}
-                        color={colors.primary}
-                        style={{ marginRight: 8 }}
-                      />
-                    </Button>
-                  </View>
-                )}
+                              style={{ marginRight: 8 }}
+                            />
+                          )}
+                        </Button>
+                      </View>
+                    </>
+                  ) : (
+                    <View style={{ marginTop: 12 }}>
+                      <Button
+                        title={
+                          generatingQR
+                            ? (L?.regenerating ?? "Regenerando...")
+                            : (L?.regenerateQR ?? "Regenerar QR")
+                        }
+                        onPress={handleGenerateQR}
+                        variant="outlined"
+                        size="md"
+                        disabled={generatingQR}
+                      >
+                        {generatingQR ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={colors.primary}
+                            style={{ marginRight: 8 }}
+                          />
+                        ) : (
+                          <Ionicons
+                            name="refresh-outline"
+                            size={18}
+                            color={colors.primary}
+                            style={{ marginRight: 8 }}
+                          />
+                        )}
+                      </Button>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -945,7 +1088,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                 <Button
                   title={L?.close ?? "Cerrar"}
                   onPress={handleCloseModal}
-                  variant="outline"
+                  variant="outlined"
                   size="md"
                 />
                 {selectedInstance?.chatIAFlow &&
@@ -955,7 +1098,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                     onPress={() =>
                       handleDownloadFlow(selectedInstance)
                     }
-                    variant="outline"
+                    variant="outlined"
                     size="md"
                   >
                     <Ionicons

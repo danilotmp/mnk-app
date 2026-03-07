@@ -565,6 +565,13 @@ export const en: Translations = {
         currentQR: "Current QR Code",
         regenerateQR: "Regenerate QR",
         regenerating: "Regenerating...",
+        reconnect: "Reconnect",
+        reconnecting: "Reconnecting...",
+        reconnectConfirmTitle: "Reconnect",
+        reconnectConfirmMessage:
+          "A new connection instance will be created and currently connected devices will be disconnected.\n\nTo reconnect them you must scan the new QR code.\n\nDo you want to continue?",
+        reconnectSuccess: "Reconnection successful. Scan the new QR code.",
+        errorReconnecting: "Error reconnecting instance",
         qrModalTitle: "WhatsApp QR Code",
         qrModalSubtitle: "Scan this code with WhatsApp to connect",
         close: "Close",

@@ -502,6 +502,12 @@ export interface Translations {
         currentQR: string;
         regenerateQR: string;
         regenerating: string;
+        reconnect: string;
+        reconnecting: string;
+        reconnectConfirmTitle: string;
+        reconnectConfirmMessage: string;
+        reconnectSuccess: string;
+        errorReconnecting: string;
         qrModalTitle: string;
         qrModalSubtitle: string;
         close: string;
