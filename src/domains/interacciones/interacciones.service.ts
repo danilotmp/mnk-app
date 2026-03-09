@@ -109,6 +109,9 @@ export const InteraccionesService = {
       if (payload.aiContext) {
         formData.append('aiContext', JSON.stringify(payload.aiContext));
       }
+      if (payload.contactName != null && payload.contactName !== '') {
+        formData.append('contactName', payload.contactName);
+      }
 
       // Agregar archivos según la plataforma
       files.forEach((file) => {
@@ -130,7 +133,7 @@ export const InteraccionesService = {
       const res = await apiClient.post<Message>(`${BASE_INTERACCIONES}/messages`, formData);
       return res.data;
     } else {
-      // Sin archivos: usar JSON normal
+      // Sin archivos: usar JSON normal (contactName opcional, documentado en el back)
       const res = await apiClient.post<Message>(`${BASE_INTERACCIONES}/messages`, payload);
       return res.data;
     }

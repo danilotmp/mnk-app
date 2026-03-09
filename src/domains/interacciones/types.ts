@@ -76,6 +76,8 @@ export interface MessagePayload {
   direction: MessageDirection;
   content: string;
   status?: MessageStatus;
+  /** Nombre del contacto en el canal (ej. pushName de WhatsApp). Opcional; el backend lo documenta en Swagger. */
+  contactName?: string;
   metadata?: Record<string, any>;
   parentMessageId?: string;
   isFromBot?: boolean;

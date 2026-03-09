@@ -106,8 +106,8 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
-      // Mapear whatsappInstances: array de instancias de WhatsApp
-      whatsappInstances: commercialData?.whatsappInstances || commercialData?.whatsapp_instances || [],
+      // Mapear whatsappInstances: normalizar is_active → isActive para que la UI muestre el estado correcto
+      whatsappInstances: (commercialData?.whatsappInstances || commercialData?.whatsapp_instances || []).map(normalizeWhatsAppInstance),
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
       updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,
       createdBy: commercialData?.createdBy || commercialData?.created_by || null,
@@ -119,11 +119,11 @@ export const CommercialService = {
 
   /**
    * UPSERT: Crea o actualiza el perfil comercial
+   * PUT /api/commercial/profile — companyId en el body, no en la URL
    * El backend decide si crear (201) o actualizar (200) basado en si existe o no
-   * companyId debe estar en el body, no en la URL
    */
   async upsertProfile(payload: CommercialProfilePayload): Promise<CommercialProfile> {
-    const res = await apiClient.put<any>(`${BASE_INTERACCIONES}/profile`, payload);
+    const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/profile`, payload);
     
     // La respuesta puede venir en diferentes formatos:
     // - { data: { commercial: {...} }, result: {...} }
@@ -149,7 +149,7 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
-      whatsappInstances: commercialData?.whatsappInstances || commercialData?.whatsapp_instances || [],
+      whatsappInstances: (commercialData?.whatsappInstances || commercialData?.whatsapp_instances || []).map(normalizeWhatsAppInstance),
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
       updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,
       createdBy: commercialData?.createdBy || commercialData?.created_by || null,
