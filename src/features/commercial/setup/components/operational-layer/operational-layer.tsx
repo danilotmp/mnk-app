@@ -22,6 +22,10 @@ import {
   OfferingPricePayload,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
+import {
+  getStatusDescription,
+  RecordStatus,
+} from "@/src/domains/shared/types/status.types";
 import { CurrencyInput, DatePicker } from "@/src/domains/shared/components";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
@@ -122,6 +126,7 @@ export function OperationalLayer({
     description: "",
     code: "",
     image: null as string | null,
+    status: RecordStatus.PENDING as number,
   });
   const [uploadingBulk, setUploadingBulk] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -338,6 +343,17 @@ export function OperationalLayer({
     // No llamar automáticamente a onComplete - solo cuando el usuario presione "Continuar"
   }, [offerings, offeringsPrices, company?.id, onProgressUpdate, onDataChange]);
 
+  // Normalizar status de oferta (backend puede devolver number o string)
+  const normalizeOfferingStatus = useCallback(
+    (s: Offering["status"] | undefined): number => {
+      if (typeof s === "number") return s;
+      if (s === "active") return RecordStatus.ACTIVE;
+      if (s === "inactive") return RecordStatus.INACTIVE;
+      return RecordStatus.PENDING;
+    },
+    [],
+  );
+
   // Inicializar formulario cuando se expande una oferta (acordeón)
   useEffect(() => {
     if (expandedOfferingId) {
@@ -349,6 +365,7 @@ export function OperationalLayer({
           description: offering.description || "",
           code: offering.code || "",
           image: offering.image ?? null,
+          status: normalizeOfferingStatus(offering.status),
         });
 
         // Cargar precio principal (usar precio modificado si existe, sino el original)
@@ -383,7 +400,13 @@ export function OperationalLayer({
       }
     } else {
       // Resetear formulario cuando se cierra el acordeón
-      setOfferingForm({ name: "", description: "", code: "", image: null });
+      setOfferingForm({
+        name: "",
+        description: "",
+        code: "",
+        image: null,
+        status: RecordStatus.PENDING,
+      });
       // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
       const defaultTaxMode = commercialProfile?.defaultTaxMode || "included";
       setPriceForm({
@@ -400,6 +423,7 @@ export function OperationalLayer({
     offeringsPrices,
     modifiedOfferings,
     commercialProfile,
+    normalizeOfferingStatus,
   ]);
 
   // Ajustar página actual si es necesario cuando cambia la cantidad de ofertas filtradas
@@ -488,6 +512,7 @@ export function OperationalLayer({
       type: offeringType,
       requiresConditions: false, // Siempre false por ahora
       image: offeringForm.image ?? undefined,
+      status: offeringForm.status,
     };
 
     // Usar defaultTaxMode del perfil comercial para todas las ofertas
@@ -582,6 +607,7 @@ export function OperationalLayer({
           description: originalOffering.description || "",
           code: originalOffering.code || "",
           image: originalOffering.image ?? null,
+          status: normalizeOfferingStatus(originalOffering.status),
         });
       }
 
@@ -681,7 +707,7 @@ export function OperationalLayer({
       code: null,
       type: "product",
       requiresConditions: false,
-      status: "active",
+      status: RecordStatus.PENDING,
       image: null,
     };
 
@@ -712,7 +738,13 @@ export function OperationalLayer({
 
     // Expandir automáticamente para editar
     setExpandedOfferingId(tempId);
-    setOfferingForm({ name: "", description: "", code: "", image: null });
+    setOfferingForm({
+      name: "",
+      description: "",
+      code: "",
+      image: null,
+      status: RecordStatus.PENDING,
+    });
     setPriceForm({
       basePrice: "",
       taxMode: defaultTaxMode,
@@ -742,6 +774,10 @@ export function OperationalLayer({
           description: newOffering.offering.description,
           type: newOffering.offering.type || "product",
           requiresConditions: false, // Siempre false por ahora
+          status:
+            typeof newOffering.offering.status === "number"
+              ? newOffering.offering.status
+              : RecordStatus.PENDING,
           image: newOffering.offering.image ?? null,
           price: {
             basePrice: newOffering.price.basePrice,
@@ -774,6 +810,10 @@ export function OperationalLayer({
               : originalOffering.description,
           type: modified.offering.type || originalOffering.type,
           requiresConditions: false, // Siempre false por ahora
+          status:
+            typeof modified.offering.status === "number"
+              ? modified.offering.status
+              : normalizeOfferingStatus(originalOffering.status),
           image:
             modified.offering.image !== undefined
               ? modified.offering.image
@@ -806,7 +846,7 @@ export function OperationalLayer({
           description: originalOffering.description,
           type: originalOffering.type,
           requiresConditions: false,
-          status: "inactive", // Cambiar estado a inactive
+          status: RecordStatus.INACTIVE, // Cambiar estado a inactive (0)
           image: originalOffering.image ?? null,
           price: {
             id: originalPrice?.id,
@@ -819,7 +859,7 @@ export function OperationalLayer({
             validFrom: today,
             validTo: null,
           },
-        } as any); // Usar 'as any' porque status no está en el tipo TypeScript pero el backend lo acepta
+        });
       }
 
       if (bulkPayloads.length === 0) {
@@ -1425,6 +1465,20 @@ export function OperationalLayer({
                                         >
                                           ({typeLabel})
                                         </ThemedText>
+                                        <StatusBadge
+                                          status={normalizeOfferingStatus(
+                                            offering.status,
+                                          )}
+                                          statusDescription={
+                                            offering.statusDescription ||
+                                            getStatusDescription(
+                                              normalizeOfferingStatus(
+                                                offering.status,
+                                              ),
+                                            )
+                                          }
+                                          size="small"
+                                        />
                                       </View>
                                       {offering.description && (
                                         <ThemedText
@@ -1507,24 +1561,39 @@ export function OperationalLayer({
                                 variant="outlined"
                                 style={styles.accordionCard}
                               >
-                                {/* Fila 1: Imagen pequeña + selector Producto/Servicio, desplazados a la derecha */}
+                                {/* Web: Imagen + Tipo + Estado en una fila, todo el ancho. Móvil: fila1=Imagen+Tipo, fila2=Estado (mismo margen que Nombre) */}
                                 <View
-                                  style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 12,
-                                    marginLeft: 20,
-                                    marginRight: 20,
-                                    marginBottom: 4,
-                                  }}
+                                  style={[
+                                    styles.expandableFormRowMargins,
+                                    {
+                                      flexDirection: isMobile ? "column" : "row",
+                                      alignItems: "center",
+                                      gap: 12,
+                                      marginBottom: 4,
+                                      overflow: "hidden",
+                                    },
+                                  ]}
                                 >
-                                  <View
-                                    style={{
-                                      position: "relative",
-                                      width: 56,
-                                      height: 56,
-                                    }}
-                                  >
+                                  {isMobile ? (
+                                    <>
+                                      {/* Móvil: Imagen + Tipo en una fila, centrados verticalmente, sin desborde */}
+                                      <View
+                                        style={[
+                                          styles.imageAndTypeRow,
+                                          {
+                                            width: "100%",
+                                            minWidth: 0,
+                                            overflow: "hidden",
+                                          },
+                                        ]}
+                                      >
+                                        <View
+                                          style={{
+                                            position: "relative",
+                                            width: 56,
+                                            height: 56,
+                                          }}
+                                        >
                                     {offeringForm.image ? (
                                       <>
                                         <Image
@@ -1643,65 +1712,546 @@ export function OperationalLayer({
                                         />
                                       </TouchableOpacity>
                                     )}
-                                  </View>
-                                  <View style={styles.flexShrink}>
-                                    <View style={styles.typeSelector}>
-                                      {productTypeOptions.map((option) => {
-                                        const isSelected =
-                                          offeringType === option.value;
+                                        </View>
+                                        <View style={[styles.typeSelector, { flex: 1, minWidth: 0 }]}>
+                                        {productTypeOptions.map((option) => {
+                                          const isSelected =
+                                            offeringType === option.value;
 
-                                        return (
+                                          return (
+                                            <TouchableOpacity
+                                              key={option.value}
+                                              style={[
+                                                styles.typeOption,
+                                                {
+                                                  backgroundColor: isSelected
+                                                    ? colors.primary
+                                                    : "transparent",
+                                                  borderColor: isSelected
+                                                    ? colors.primary
+                                                    : colors.border,
+                                                },
+                                              ]}
+                                              onPress={() =>
+                                                setOfferingType(
+                                                  option.value as
+                                                    | "product"
+                                                    | "service",
+                                                )
+                                              }
+                                            >
+                                              {option.icon && (
+                                                <Ionicons
+                                                  name={option.icon as any}
+                                                  size={18}
+                                                  color={
+                                                    isSelected
+                                                      ? colors.contrastText
+                                                      : colors.textSecondary
+                                                  }
+                                                />
+                                              )}
+                                              <ThemedText
+                                                type="body2"
+                                                style={{
+                                                  color: isSelected
+                                                    ? colors.contrastText
+                                                    : colors.text,
+                                                  marginLeft: 6,
+                                                  fontWeight: isSelected
+                                                    ? "600"
+                                                    : "400",
+                                                }}
+                                              >
+                                                {option.label}
+                                              </ThemedText>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                        </View>
+                                      </View>
+                                      {/* Móvil: estado en la siguiente fila, contenido sin desbordar */}
+                                      <View
+                                        style={{
+                                          width: "100%",
+                                          marginTop: 8,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <ScrollView
+                                          horizontal
+                                          showsHorizontalScrollIndicator={false}
+                                        >
+                                          <View
+                                            style={
+                                              styles.statusOptionsContainer
+                                            }
+                                          >
                                           <TouchableOpacity
-                                            key={option.value}
                                             style={[
-                                              styles.typeOption,
+                                              styles.statusOption,
                                               {
-                                                backgroundColor: isSelected
-                                                  ? colors.primary
-                                                  : "transparent",
-                                                borderColor: isSelected
-                                                  ? colors.primary
-                                                  : colors.border,
+                                                backgroundColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.ACTIVE
+                                                    ? colors.success
+                                                    : "transparent",
+                                                borderColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.ACTIVE
+                                                    ? colors.success
+                                                    : colors.border,
                                               },
                                             ]}
                                             onPress={() =>
-                                              setOfferingType(
-                                                option.value as
-                                                  | "product"
-                                                  | "service",
-                                              )
+                                              setOfferingForm((prev) => ({
+                                                ...prev,
+                                                status: RecordStatus.ACTIVE,
+                                              }))
                                             }
                                           >
-                                            {option.icon && (
-                                              <Ionicons
-                                                name={option.icon as any}
-                                                size={18}
-                                                color={
-                                                  isSelected
-                                                    ? colors.contrastText
-                                                    : colors.textSecondary
-                                                }
-                                              />
-                                            )}
                                             <ThemedText
-                                              type="body2"
+                                              type="caption"
                                               style={{
-                                                color: isSelected
-                                                  ? colors.contrastText
-                                                  : colors.text,
-                                                marginLeft: 6,
-                                                fontWeight: isSelected
-                                                  ? "600"
-                                                  : "400",
+                                                color:
+                                                  offeringForm.status ===
+                                                  RecordStatus.ACTIVE
+                                                    ? colors.contrastText
+                                                    : colors.text,
                                               }}
                                             >
-                                              {option.label}
+                                              {t.security?.users?.active ||
+                                                "Activo"}
                                             </ThemedText>
                                           </TouchableOpacity>
-                                        );
-                                      })}
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.statusOption,
+                                              {
+                                                backgroundColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.INACTIVE
+                                                    ? colors.error
+                                                    : "transparent",
+                                                borderColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.INACTIVE
+                                                    ? colors.error
+                                                    : colors.border,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setOfferingForm((prev) => ({
+                                                ...prev,
+                                                status: RecordStatus.INACTIVE,
+                                              }))
+                                            }
+                                          >
+                                            <ThemedText
+                                              type="caption"
+                                              style={{
+                                                color:
+                                                  offeringForm.status ===
+                                                  RecordStatus.INACTIVE
+                                                    ? colors.contrastText
+                                                    : colors.text,
+                                              }}
+                                            >
+                                              {t.security?.users?.inactive ||
+                                                "Inactivo"}
+                                            </ThemedText>
+                                          </TouchableOpacity>
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.statusOption,
+                                              {
+                                                backgroundColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.PENDING
+                                                    ? colors.warning
+                                                    : "transparent",
+                                                borderColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.PENDING
+                                                    ? colors.warning
+                                                    : colors.border,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setOfferingForm((prev) => ({
+                                                ...prev,
+                                                status: RecordStatus.PENDING,
+                                              }))
+                                            }
+                                          >
+                                            <ThemedText
+                                              type="caption"
+                                              style={{
+                                                color:
+                                                  offeringForm.status ===
+                                                  RecordStatus.PENDING
+                                                    ? "#FFFFFF"
+                                                    : colors.text,
+                                              }}
+                                            >
+                                              {t.security?.users?.pending ||
+                                                "Pendiente"}
+                                            </ThemedText>
+                                          </TouchableOpacity>
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.statusOption,
+                                              {
+                                                backgroundColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.SUSPENDED
+                                                    ? colors.suspended
+                                                    : "transparent",
+                                                borderColor:
+                                                  offeringForm.status ===
+                                                  RecordStatus.SUSPENDED
+                                                    ? colors.suspended
+                                                    : colors.border,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setOfferingForm((prev) => ({
+                                                ...prev,
+                                                status: RecordStatus.SUSPENDED,
+                                              }))
+                                            }
+                                          >
+                                            <ThemedText
+                                              type="caption"
+                                              style={{
+                                                color:
+                                                  offeringForm.status ===
+                                                  RecordStatus.SUSPENDED
+                                                    ? colors.contrastText
+                                                    : colors.text,
+                                              }}
+                                            >
+                                              {t.security?.users?.suspended ||
+                                                "Suspendido"}
+                                            </ThemedText>
+                                          </TouchableOpacity>
+                                        </View>
+                                      </ScrollView>
                                     </View>
-                                  </View>
+                                  </>
+                                  ) : (
+                                    <>
+                                      {/* Web: Imagen + Tipo + Estado en una fila, cubriendo todo el ancho */}
+                                      <View
+                                        style={{
+                                          position: "relative",
+                                          width: 56,
+                                          height: 56,
+                                        }}
+                                      >
+                                        {offeringForm.image ? (
+                                          <>
+                                            <Image
+                                              source={{
+                                                uri: offeringForm.image.startsWith("data:")
+                                                  ? offeringForm.image
+                                                  : `data:image/jpeg;base64,${offeringForm.image}`,
+                                              }}
+                                              style={{
+                                                position: "absolute",
+                                                top: 0,
+                                                left: 0,
+                                                width: 56,
+                                                height: 56,
+                                                borderRadius: 8,
+                                                backgroundColor: colors.border,
+                                              }}
+                                              resizeMode="cover"
+                                            />
+                                            <View
+                                              style={{
+                                                position: "absolute",
+                                                top: 4,
+                                                left: 4,
+                                                right: 4,
+                                                flexDirection: "row",
+                                                justifyContent: "space-between",
+                                                zIndex: 10,
+                                              }}
+                                            >
+                                              <Tooltip text={O?.removeImage ?? "Quitar imagen"} position="top">
+                                                <TouchableOpacity
+                                                  onPress={() => setOfferingForm((p) => ({ ...p, image: null }))}
+                                                  style={{
+                                                    width: 24, height: 24, borderRadius: 12,
+                                                    backgroundColor: "rgba(0,0,0,0.5)",
+                                                    alignItems: "center", justifyContent: "center",
+                                                  }}
+                                                >
+                                                  <Ionicons name="trash-outline" size={14} color="#fff" />
+                                                </TouchableOpacity>
+                                              </Tooltip>
+                                              <Tooltip text={O?.viewImage ?? "Ver imagen"} position="top">
+                                                <TouchableOpacity
+                                                  onPress={() =>
+                                                    setImageViewerUri(
+                                                      offeringForm.image!.startsWith("data:")
+                                                        ? offeringForm.image!
+                                                        : `data:image/jpeg;base64,${offeringForm.image}`,
+                                                    )
+                                                  }
+                                                  style={{
+                                                    width: 24, height: 24, borderRadius: 12,
+                                                    backgroundColor: "rgba(0,0,0,0.5)",
+                                                    alignItems: "center", justifyContent: "center",
+                                                  }}
+                                                >
+                                                  <Ionicons name="expand-outline" size={14} color="#fff" />
+                                                </TouchableOpacity>
+                                              </Tooltip>
+                                            </View>
+                                          </>
+                                        ) : (
+                                          <TouchableOpacity
+                                            onPress={pickOfferingImage}
+                                            style={{
+                                              width: 56, height: 56, borderRadius: 8,
+                                              backgroundColor: colors.border + "60",
+                                              alignItems: "center", justifyContent: "center",
+                                              borderWidth: 1, borderStyle: "dashed",
+                                              borderColor: colors.textSecondary + "60",
+                                            }}
+                                          >
+                                            <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                                          </TouchableOpacity>
+                                        )}
+                                      </View>
+                                    <View style={[styles.flexShrink, { flex: 1, alignSelf: "stretch" }]}>
+                                      <View style={styles.typeAndStatusRow}>
+                                        <View
+                                          style={[
+                                            styles.typeSelector,
+                                            styles.typeSelectorFlex,
+                                          ]}
+                                        >
+                                          {productTypeOptions.map((option) => {
+                                            const isSelected =
+                                              offeringType === option.value;
+                                            return (
+                                              <TouchableOpacity
+                                                key={option.value}
+                                                style={[
+                                                  styles.typeOption,
+                                                  {
+                                                    backgroundColor: isSelected
+                                                      ? colors.primary
+                                                      : "transparent",
+                                                    borderColor: isSelected
+                                                      ? colors.primary
+                                                      : colors.border,
+                                                  },
+                                                ]}
+                                                onPress={() =>
+                                                  setOfferingType(
+                                                    option.value as
+                                                      | "product"
+                                                      | "service",
+                                                  )
+                                                }
+                                              >
+                                                {option.icon && (
+                                                  <Ionicons
+                                                    name={option.icon as any}
+                                                    size={18}
+                                                    color={
+                                                      isSelected
+                                                        ? colors.contrastText
+                                                        : colors.textSecondary
+                                                    }
+                                                  />
+                                                )}
+                                                <ThemedText
+                                                  type="body2"
+                                                  style={{
+                                                    color: isSelected
+                                                      ? colors.contrastText
+                                                      : colors.text,
+                                                    marginLeft: 6,
+                                                    fontWeight: isSelected
+                                                      ? "600"
+                                                      : "400",
+                                                  }}
+                                                >
+                                                  {option.label}
+                                                </ThemedText>
+                                              </TouchableOpacity>
+                                            );
+                                          })}
+                                        </View>
+                                        {/* Web: View para que estado cubra el ancho; sin ScrollView */}
+                                        <View
+                                          style={[
+                                            styles.statusOptionsContainer,
+                                            styles.statusOptionsContainerWeb,
+                                          ]}
+                                        >
+                                            <TouchableOpacity
+                                              style={[
+                                                styles.statusOption,
+                                                styles.statusOptionWeb,
+                                                {
+                                                  backgroundColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.ACTIVE
+                                                      ? colors.success
+                                                      : "transparent",
+                                                  borderColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.ACTIVE
+                                                      ? colors.success
+                                                      : colors.border,
+                                                },
+                                              ]}
+                                              onPress={() =>
+                                                setOfferingForm((prev) => ({
+                                                  ...prev,
+                                                  status: RecordStatus.ACTIVE,
+                                                }))
+                                              }
+                                            >
+                                              <ThemedText
+                                                type="caption"
+                                                style={{
+                                                  color:
+                                                    offeringForm.status ===
+                                                    RecordStatus.ACTIVE
+                                                      ? colors.contrastText
+                                                      : colors.text,
+                                                }}
+                                              >
+                                                {t.security?.users?.active ||
+                                                  "Activo"}
+                                              </ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                              style={[
+                                                styles.statusOption,
+                                                styles.statusOptionWeb,
+                                                {
+                                                  backgroundColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.INACTIVE
+                                                      ? colors.error
+                                                      : "transparent",
+                                                  borderColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.INACTIVE
+                                                      ? colors.error
+                                                      : colors.border,
+                                                },
+                                              ]}
+                                              onPress={() =>
+                                                setOfferingForm((prev) => ({
+                                                  ...prev,
+                                                  status: RecordStatus.INACTIVE,
+                                                }))
+                                              }
+                                            >
+                                              <ThemedText
+                                                type="caption"
+                                                style={{
+                                                  color:
+                                                    offeringForm.status ===
+                                                    RecordStatus.INACTIVE
+                                                      ? colors.contrastText
+                                                      : colors.text,
+                                                }}
+                                              >
+                                                {t.security?.users?.inactive ||
+                                                  "Inactivo"}
+                                              </ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                              style={[
+                                                styles.statusOption,
+                                                styles.statusOptionWeb,
+                                                {
+                                                  backgroundColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.PENDING
+                                                      ? colors.warning
+                                                      : "transparent",
+                                                  borderColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.PENDING
+                                                      ? colors.warning
+                                                      : colors.border,
+                                                },
+                                              ]}
+                                              onPress={() =>
+                                                setOfferingForm((prev) => ({
+                                                  ...prev,
+                                                  status: RecordStatus.PENDING,
+                                                }))
+                                              }
+                                            >
+                                              <ThemedText
+                                                type="caption"
+                                                style={{
+                                                  color:
+                                                    offeringForm.status ===
+                                                    RecordStatus.PENDING
+                                                      ? "#FFFFFF"
+                                                      : colors.text,
+                                                }}
+                                              >
+                                                {t.security?.users?.pending ||
+                                                  "Pendiente"}
+                                              </ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                              style={[
+                                                styles.statusOption,
+                                                styles.statusOptionWeb,
+                                                {
+                                                  backgroundColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.SUSPENDED
+                                                      ? colors.suspended
+                                                      : "transparent",
+                                                  borderColor:
+                                                    offeringForm.status ===
+                                                    RecordStatus.SUSPENDED
+                                                      ? colors.suspended
+                                                      : colors.border,
+                                                },
+                                              ]}
+                                              onPress={() =>
+                                                setOfferingForm((prev) => ({
+                                                  ...prev,
+                                                  status: RecordStatus.SUSPENDED,
+                                                }))
+                                              }
+                                            >
+                                              <ThemedText
+                                                type="caption"
+                                                style={{
+                                                  color:
+                                                    offeringForm.status ===
+                                                    RecordStatus.SUSPENDED
+                                                      ? colors.contrastText
+                                                      : colors.text,
+                                                }}
+                                              >
+                                                {t.security?.users?.suspended ||
+                                                  "Suspendido"}
+                                              </ThemedText>
+                                            </TouchableOpacity>
+                                          </View>
+                                      </View>
+                                    </View>
+                                    </>
+                                  )}
                                 </View>
 
                                 {/* Resto del formulario alineado con la fila de imagen (mismo margen) */}

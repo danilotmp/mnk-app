@@ -86,6 +86,22 @@ export const getStatusIcon = (status: number): string => {
   return STATUS_ICONS[status] ?? "help-circle-outline";
 };
 
+/** Descripciones por defecto para estados */
+export const STATUS_LABELS: Record<number, string> = {
+  [RecordStatus.DELETED]: "Eliminado",
+  [RecordStatus.INACTIVE]: "Inactivo",
+  [RecordStatus.ACTIVE]: "Activo",
+  [RecordStatus.PENDING]: "Pendiente",
+  [RecordStatus.SUSPENDED]: "Suspendido",
+};
+
+/**
+ * Helper para obtener descripción del estado
+ */
+export const getStatusDescription = (status: number): string => {
+  return STATUS_LABELS[status] ?? "Activo";
+};
+
 /**
  * Verificar si un registro está activo
  */

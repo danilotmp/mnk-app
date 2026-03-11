@@ -165,6 +165,8 @@ export interface OfferingPayload {
   code?: string;
   type: OfferingType; // REQUERIDO según V1.0: product, service, package
   requiresConditions?: boolean; // Opcional: solo para servicios
+  /** Estado: 0=Inactivo, 1=Activo, 2=Pendiente, 3=Suspendido (RecordStatus) */
+  status?: number;
   // Metadata opcional para category y tags (puede que el backend lo acepte temporalmente)
   metadata?: Record<string, any>;
   /** Imagen de la oferta (base64). Opcional. */

@@ -25,12 +25,16 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { SYSTEM_GUIDELINE_NAMES } from "@/src/config/system-guidelines.config";
 
 interface InteractionGuidelinesLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -83,6 +87,18 @@ export function InteractionGuidelinesLayer({
     description: "",
     status: RecordStatus.PENDING, // Default: Pendiente (2)
   });
+
+  const [showSystemNamesModal, setShowSystemNamesModal] = useState(false);
+
+  // Nombres del sistema que aún no están usados por directrices existentes
+  const availableSystemNames = React.useMemo(() => {
+    const usedTitles = new Set(
+      guidelines.map((g) => (g.title || "").trim().toUpperCase()),
+    );
+    return SYSTEM_GUIDELINE_NAMES.filter(
+      (item) => !usedTitles.has(item.title.toUpperCase()),
+    );
+  }, [guidelines]);
 
   // Cargar directrices de interacción - evitar llamados repetitivos
   const loadGuidelines = useCallback(async () => {
@@ -705,24 +721,6 @@ export function InteractionGuidelinesLayer({
                                 />
                                 <View style={styles.actionIconsContainer}>
                                   <Tooltip
-                                    text={L?.accept ? "Editar" : "Editar"}
-                                    position="top"
-                                  >
-                                    <TouchableOpacity
-                                      style={styles.actionIconButton}
-                                      onPress={() =>
-                                        handleTitleClick(guideline)
-                                      }
-                                      disabled={saving}
-                                    >
-                                      <Ionicons
-                                        name="pencil"
-                                        size={18}
-                                        color={actionIconColor}
-                                      />
-                                    </TouchableOpacity>
-                                  </Tooltip>
-                                  <Tooltip
                                     text={t.common?.delete ?? "Eliminar"}
                                     position="top"
                                   >
@@ -735,6 +733,24 @@ export function InteractionGuidelinesLayer({
                                     >
                                       <Ionicons
                                         name="trash"
+                                        size={18}
+                                        color={actionIconColor}
+                                      />
+                                    </TouchableOpacity>
+                                  </Tooltip>
+                                  <Tooltip
+                                    text={L?.accept ? "Editar" : "Editar"}
+                                    position="top"
+                                  >
+                                    <TouchableOpacity
+                                      style={styles.actionIconButton}
+                                      onPress={() =>
+                                        handleTitleClick(guideline)
+                                      }
+                                      disabled={saving}
+                                    >
+                                      <Ionicons
+                                        name="pencil"
                                         size={18}
                                         color={actionIconColor}
                                       />
@@ -840,31 +856,63 @@ export function InteractionGuidelinesLayer({
                   color={colors.primary}
                   style={{ marginRight: 8 }}
                 />
-                <InputWithFocus
-                  containerStyle={[
-                    styles.titleInputContainer,
-                    {
-                      backgroundColor: colors.filterInputBackground,
-                      borderColor: colors.border,
-                      flex: 1,
-                      width: isMobile ? "100%" : undefined,
-                    },
-                  ]}
-                  primaryColor={colors.primary}
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    minWidth: 0,
+                  }}
                 >
-                  <TextInput
-                    style={[styles.titleInput, { color: colors.text }]}
-                    placeholder={
-                      L?.newGuidelinePlaceholder ?? "Nueva Directriz"
-                    }
-                    placeholderTextColor={colors.textSecondary}
-                    value={newFormData.title}
-                    onChangeText={(text) =>
-                      setNewFormData((prev) => ({ ...prev, title: text }))
-                    }
-                    editable={!saving}
-                  />
-                </InputWithFocus>
+                  <InputWithFocus
+                    containerStyle={[
+                      styles.titleInputContainer,
+                      {
+                        backgroundColor: colors.filterInputBackground,
+                        borderColor: colors.border,
+                        flex: 1,
+                        width: isMobile ? "100%" : undefined,
+                        minWidth: 0,
+                      },
+                    ]}
+                    primaryColor={colors.primary}
+                  >
+                    <TextInput
+                      style={[styles.titleInput, { color: colors.text }]}
+                      placeholder={
+                        L?.newGuidelinePlaceholder ?? "Nueva Directriz"
+                      }
+                      placeholderTextColor={colors.textSecondary}
+                      value={newFormData.title}
+                      onChangeText={(text) =>
+                        setNewFormData((prev) => ({ ...prev, title: text }))
+                      }
+                      editable={!saving}
+                    />
+                  </InputWithFocus>
+                  <Tooltip text="Sistema" position="top">
+                    <TouchableOpacity
+                      onPress={() => setShowSystemNamesModal(true)}
+                      disabled={saving || availableSystemNames.length === 0}
+                      style={{
+                        padding: 4,
+                        opacity: availableSystemNames.length === 0 ? 0.5 : 1,
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name="library-outline"
+                        size={22}
+                        color={
+                          availableSystemNames.length === 0
+                            ? colors.textSecondary
+                            : actionIconColor
+                        }
+                      />
+                    </TouchableOpacity>
+                  </Tooltip>
+                </View>
                 <View
                   style={[
                     styles.badgeActionsContainer,
@@ -998,6 +1046,7 @@ export function InteractionGuidelinesLayer({
                     style={styles.cancelButton}
                     onPress={() => {
                       setShowNewForm(false);
+                      setShowSystemNamesModal(false);
                       setNewFormData({
                         title: "",
                         description: "",
@@ -1050,6 +1099,7 @@ export function InteractionGuidelinesLayer({
                 title={L?.cancel ?? "Cancelar"}
                 onPress={() => {
                   setShowNewForm(false);
+                  setShowSystemNamesModal(false);
                   setNewFormData({
                     title: "",
                     description: "",
@@ -1068,6 +1118,100 @@ export function InteractionGuidelinesLayer({
                 disabled={saving}
               />
             </View>
+
+            {/* Modal: lista de nombres predefinidos del sistema */}
+            <Modal
+              visible={showSystemNamesModal}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setShowSystemNamesModal(false)}
+            >
+              <Pressable
+                style={{
+                  flex: 1,
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: 24,
+                }}
+                onPress={() => setShowSystemNamesModal(false)}
+              >
+                <Pressable
+                  style={{
+                    backgroundColor: colors.background,
+                    borderRadius: 12,
+                    padding: 20,
+                    width: "100%",
+                    maxWidth: 420,
+                    maxHeight: "80%",
+                  }}
+                  onPress={(e) => e.stopPropagation()}
+                >
+                  <ThemedText
+                    type="subtitle"
+                    style={{
+                      marginBottom: 16,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Nombres Predefinidos
+                  </ThemedText>
+                  <ScrollView
+                    style={{ maxHeight: 320 }}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {availableSystemNames.map((item) => (
+                      <TouchableOpacity
+                        key={item.title}
+                        onPress={() => {
+                          setNewFormData((prev) => ({
+                            ...prev,
+                            title: item.title,
+                            description: item.defaultContent,
+                          }));
+                          setShowSystemNamesModal(false);
+                        }}
+                        style={{
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          backgroundColor: colors.filterInputBackground,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <ThemedText
+                          type="body1"
+                          style={{
+                            fontWeight: "600",
+                            color: colors.text,
+                          }}
+                        >
+                          {item.title}
+                        </ThemedText>
+                        <ThemedText
+                          type="caption"
+                          style={{
+                            marginTop: 4,
+                            color: colors.textSecondary,
+                          }}
+                        >
+                          {item.usage}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <Button
+                    title={L?.cancel ?? "Cancelar"}
+                    onPress={() => setShowSystemNamesModal(false)}
+                    variant="outlined"
+                    size="md"
+                    style={{ marginTop: 16 }}
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
           </Card>
         ) : (
           <Card variant="elevated" style={styles.addCard}>

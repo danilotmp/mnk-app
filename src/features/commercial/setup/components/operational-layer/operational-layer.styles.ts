@@ -188,6 +188,46 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     flex: 1,
+    minWidth: 0,
+  },
+  /** Fila que contiene tipo y estado - web: cubre todo el ancho restante */
+  typeAndStatusRow: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    minWidth: 0,
+    alignSelf: "stretch",
+  },
+  /** Fila imagen + tipo para móvil (una sola fila, centrados verticalmente) */
+  imageAndTypeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  /** Selector de tipo - flex para cubrir ancho en web */
+  typeSelectorFlex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statusOptionsContainer: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  /** En web: los botones de estado cubren el ancho disponible */
+  statusOptionsContainerWeb: {
+    flex: 1,
+  },
+  statusOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  /** En web: cada opción de estado crece para cubrir el ancho */
+  statusOptionWeb: {
+    flex: 1,
   },
   radioGroup: {
     gap: 12,

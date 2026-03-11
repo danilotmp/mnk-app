@@ -463,6 +463,8 @@ export const CommercialService = {
     description?: string;
     type: 'product' | 'service' | 'package';
     requiresConditions?: boolean;
+    /** Estado: 0=Inactivo, 1=Activo, 2=Pendiente, 3=Suspendido */
+    status?: number;
     image?: string | null;
     price: {
       id?: string; // Opcional: si está presente, indica actualización del precio
@@ -511,7 +513,8 @@ export const CommercialService = {
         code: item.offering?.code || null,
         type: (item.offering?.type || 'product') as 'product' | 'service' | 'package',
         requiresConditions: item.offering?.requires_conditions ?? item.offering?.requiresConditions ?? false,
-        status: item.offering?.status === 'active' ? 'active' : item.offering?.status === 'inactive' ? 'inactive' : item.offering?.status || 'active',
+        status: item.offering?.status === 'active' ? 'active' : item.offering?.status === 'inactive' ? 'inactive' : item.offering?.status ?? 1,
+        statusDescription: item.offering?.status_description || item.offering?.statusDescription,
         metadata: item.offering?.metadata || null,
         image: item.offering?.image ?? null,
       } as Offering,
