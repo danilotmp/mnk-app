@@ -534,7 +534,7 @@ export function CapabilitiesScreen() {
                   type="h5"
                   style={[styles.conceptTitle, { color: colors.text }]}
                 >
-                  {cap?.conceptFlexibilityTitle ?? "Flexibilidad"}
+                  {cap?.conceptFlexibilityTitle ?? "Flexible"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -588,7 +588,7 @@ export function CapabilitiesScreen() {
                   type="h5"
                   style={[styles.conceptTitle, { color: colors.text }]}
                 >
-                  {cap?.conceptCouplingTitle ?? "Acoplamiento"}
+                  {cap?.conceptCouplingTitle ?? "Modular"}
                 </ThemedText>
                 <ThemedText
                   type="body2"
@@ -599,7 +599,7 @@ export function CapabilitiesScreen() {
                   ]}
                 >
                   {cap?.conceptCouplingDescription ??
-                    "Módulos integrados que trabajan en conjunto"}
+                    "Módulos customizables que trabajan en conjunto para una mejor integración"}
                 </ThemedText>
               </View>
 
@@ -664,7 +664,7 @@ export function CapabilitiesScreen() {
                   type="h5"
                   style={[styles.conceptTitle, { color: colors.text }]}
                 >
-                  {cap?.conceptProcessesTitle ?? "Procesos"}
+                  {cap?.conceptProcessesTitle ?? "Intuitivo"}
                 </ThemedText>
                 <ThemedText
                   type="body2"

@@ -90,7 +90,7 @@ export const es: Translations = {
     home: {
       mainTitle: "Soluciones empresariales con Inteligencia Artificial",
       mainDescription:
-        "AIBox es una plataforma multi-empresa diseñada para crecer según tus necesidades. Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable.",
+        "AIBox es una plataforma Multi-Empresarial diseñada para crecer según tus necesidades. Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable.",
       feature1Title: "WhatsApp con ChatIA",
       feature1Description:
         "Conecta tu WhatsApp con inteligencia artificial para automatizar conversaciones y mejorar la atención al cliente con respuestas inteligentes y contextuales.",
@@ -100,7 +100,7 @@ export const es: Translations = {
       feature3Title: "Módulo ERP",
       feature3Description:
         "Planificación de recursos empresariales para gestionar inventarios, compras, ventas y procesos operativos de tu negocio.",
-      keyPoint1: "✓ Arquitectura multi-empresa",
+      keyPoint1: "✓ Arquitectura Multi-Empresarial",
       keyPoint2: "✓ Escalable y modular",
       keyPoint3: "✓ Integración con WhatsApp",
       strengths: {
@@ -110,7 +110,7 @@ export const es: Translations = {
             "Crece con tu negocio. Desde una sucursal hasta múltiples empresas y ubicaciones.",
         },
         multi: {
-          title: "Multi-empresa",
+          title: "Multi-Empresarial",
           description:
             "Gestiona varias empresas y sucursales desde una sola plataforma.",
         },
@@ -183,11 +183,12 @@ export const es: Translations = {
       },
       badgeAvailable: "Disponible",
       badgeComingSoon: "Próximamente",
-      conceptFlexibilityTitle: "Flexibilidad",
+      conceptFlexibilityTitle: "Flexible",
       conceptFlexibilityDescription: "Se adapta a tu negocio sin rigideces",
-      conceptCouplingTitle: "Acoplamiento",
-      conceptCouplingDescription: "Módulos integrados que trabajan en conjunto",
-      conceptProcessesTitle: "Procesos",
+      conceptCouplingTitle: "Modular",
+      conceptCouplingDescription:
+        "Módulos customizables que trabajan en conjunto para una mejor integración",
+      conceptProcessesTitle: "Intuitivo",
       conceptProcessesDescription:
         "Procesos claros y continuos que guían cada interacción",
     },

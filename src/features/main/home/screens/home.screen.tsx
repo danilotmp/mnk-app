@@ -109,7 +109,7 @@ export function HomeScreen() {
               ]}
             >
               {home?.mainDescription ??
-                "AIBox es una plataforma multi-empresa diseñada para crecer según tus necesidades. Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable."}
+                "AIBox es una plataforma Multi-Empresarial diseñada para crecer según tus necesidades. Integra diferentes módulos y funcionalidades empresariales en una sola solución escalable."}
             </ThemedText>
 
             {isMobile && (
@@ -210,7 +210,7 @@ export function HomeScreen() {
                   { color: colors.textSecondary },
                 ]}
               >
-                {home?.keyPoint1 ?? "✓ Arquitectura multi-empresa"}
+                {home?.keyPoint1 ?? "✓ Arquitectura Multi-Empresarial"}
               </ThemedText>
               <ThemedText
                 type="body2"

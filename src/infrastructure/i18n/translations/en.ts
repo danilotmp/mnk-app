@@ -100,7 +100,7 @@ export const en: Translations = {
       feature3Title: "ERP Module",
       feature3Description:
         "Enterprise resource planning to manage inventory, purchases, sales and operational processes for your business.",
-      keyPoint1: "✓ Multi-company architecture",
+      keyPoint1: "✓ Multi-Enterprise architecture",
       keyPoint2: "✓ Scalable and modular",
       keyPoint3: "✓ WhatsApp integration",
       strengths: {
@@ -110,7 +110,7 @@ export const en: Translations = {
             "Grow with your business. From one branch to multiple companies and locations.",
         },
         multi: {
-          title: "Multi-company",
+          title: "Multi-Enterprise",
           description:
             "Manage multiple companies and branches from a single platform.",
         },
@@ -183,11 +183,12 @@ export const en: Translations = {
       },
       badgeAvailable: "Available",
       badgeComingSoon: "Coming soon",
-      conceptFlexibilityTitle: "Flexibility",
+      conceptFlexibilityTitle: "Flexible",
       conceptFlexibilityDescription: "Adapts to your business without rigidity",
-      conceptCouplingTitle: "Integration",
-      conceptCouplingDescription: "Integrated modules that work together",
-      conceptProcessesTitle: "Processes",
+      conceptCouplingTitle: "Modular",
+      conceptCouplingDescription:
+        "Customizable modules that work together for better integration",
+      conceptProcessesTitle: "Intuitive",
       conceptProcessesDescription:
         "Clear, continuous processes that guide every interaction",
     },
