@@ -8,7 +8,14 @@ import { AppConfig } from '@/src/config';
 export const API_CONFIG = {
   // URL base del backend (desde configuración centralizada)
   BASE_URL: AppConfig.api.baseUrl,
-  
+
+  // Código de empresa por defecto (multiempresa). Requerido en headers para login, refresh y todas las peticiones.
+  // Valores: AIBOX, OPTIMAGEN, AIBOX-QA. Sobreescribir con EXPO_PUBLIC_COMPANY_CODE en .env
+  DEFAULT_COMPANY_CODE:
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_COMPANY_CODE) ||
+    "AIBOX",
+
   // Claves de almacenamiento
   STORAGE_KEYS: {
     ACCESS_TOKEN: 'accessToken',

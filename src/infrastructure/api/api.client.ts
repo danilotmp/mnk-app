@@ -174,11 +174,10 @@ export class ApiClient {
       headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
-    // Agregar información de multiempresa
+    // Agregar información de multiempresa (obligatorio según contrato API)
     const userContext = this.config.getUserContext();
-    if (userContext?.companyCode) {
-      headers["company-code"] = userContext.companyCode;
-    }
+    headers["company-code"] =
+      userContext?.companyCode || API_CONFIG.DEFAULT_COMPANY_CODE;
     if (userContext?.userId) {
       headers["user-id"] = userContext.userId;
     }
@@ -251,6 +250,7 @@ export class ApiClient {
       throw new Error("No refresh token available");
     }
 
+    const userContext = this.config.getUserContext();
     const response = await fetch(
       `${this.config.getBaseUrl()}${API_CONFIG.ENDPOINTS.REFRESH_TOKEN}`,
       {
@@ -258,6 +258,8 @@ export class ApiClient {
         headers: {
           "Content-Type": "application/json",
           "Accept-Language": this.config.getCurrentLanguage() as any,
+          "company-code":
+            userContext?.companyCode || API_CONFIG.DEFAULT_COMPANY_CODE,
         },
         body: JSON.stringify({ refreshToken }),
       },
