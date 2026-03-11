@@ -14,16 +14,23 @@ export const AppConfig = {
     environment: process.env.NODE_ENV || 'development',
   },
 
-  // Configuración de API (backend en puerto 3000; Swagger: http://localhost:3000/swagger)
+  // Configuración de API (backend en puerto 15000; fuente: app.json extra.apiBaseUrl o EXPO_PUBLIC_API_BASE_URL)
   api: {
     baseUrl: (() => {
       if (typeof process !== 'undefined' && process.env.EXPO_PUBLIC_API_BASE_URL) {
         return process.env.EXPO_PUBLIC_API_BASE_URL;
       }
-      if (typeof window !== 'undefined' && window.location?.hostname) {
-        return `http://${window.location.hostname}:3000/api`;
+      const base = Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:15000/api';
+      if (typeof window !== 'undefined' && window.location?.hostname && window.location.hostname !== 'localhost') {
+        try {
+          const u = new URL(base);
+          u.hostname = window.location.hostname;
+          return u.toString();
+        } catch {
+          return base;
+        }
       }
-      return Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3000/api';
+      return base;
     })(),
     timeout: Constants.expoConfig?.extra?.apiTimeout || 30000, // 30 segundos
     retries: 3,

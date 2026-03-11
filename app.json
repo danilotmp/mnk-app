@@ -46,7 +46,7 @@
       // "reactCompiler": true  // Deshabilitado temporalmente - causa lentitud en compilación
     },
     "extra": {
-      "apiBaseUrl": "http://localhost:3000/api",
+      "apiBaseUrl": "http://localhost:15000/api",
       "apiTimeout": 30000,
       "accessTokenDuration": 900000,
       "refreshTokenDuration": 604800000,
