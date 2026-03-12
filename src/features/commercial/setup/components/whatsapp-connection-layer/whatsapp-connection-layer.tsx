@@ -109,7 +109,33 @@ export const WhatsAppConnectionLayer = forwardRef<
     try {
       setLoading(true);
       const profile = await CommercialService.getProfile(company.id);
-      const loadedInstances = profile.whatsappInstances || [];
+      let loadedInstances = profile.whatsappInstances || [];
+
+      // Si hay commercialProfileId, obtener contexto (incluye chatIAFlow para super admin)
+      if (profile.id) {
+        try {
+          const { whatsappInstances: contextInstances } =
+            await CommercialService.getProfileContext(profile.id);
+          if (contextInstances.length > 0) {
+            loadedInstances = loadedInstances.map((inst) => {
+              const enriched = contextInstances.find(
+                (c) => c.id === inst.id || c.whatsapp === inst.whatsapp
+              );
+              if (enriched?.chatIAFlow && enriched?.chatIAFlowFilename) {
+                return {
+                  ...inst,
+                  chatIAFlow: enriched.chatIAFlow,
+                  chatIAFlowFilename: enriched.chatIAFlowFilename,
+                };
+              }
+              return inst;
+            });
+          }
+        } catch {
+          // Si falla el contexto (ej. no super admin), usar instancias base
+        }
+      }
+
       setInstances(loadedInstances);
 
       // Actualizar progreso basado en si hay instancias activas

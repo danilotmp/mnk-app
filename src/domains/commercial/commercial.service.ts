@@ -118,6 +118,27 @@ export const CommercialService = {
   },
 
   /**
+   * Obtiene el perfil de contexto por commercialProfileId.
+   * GET /api/interacciones/context/profile/:commercialProfileId
+   * Incluye whatsappInstances con chatIAFlow y chatIAFlowFilename solo si el usuario es super administrador.
+   */
+  async getProfileContext(commercialProfileId: string): Promise<{
+    whatsappInstances: WhatsAppInstance[];
+  }> {
+    const res = await apiClient.get<any>(
+      `${BASE_INTERACCIONES}/context/profile/${commercialProfileId}`
+    );
+    const data = res.data?.data ?? res.data;
+    const rawInstances =
+      data?.whatsappInstances ?? data?.whatsapp_instances ?? [];
+    const whatsappInstances = (Array.isArray(rawInstances)
+      ? rawInstances
+      : []
+    ).map(normalizeWhatsAppInstance);
+    return { whatsappInstances };
+  },
+
+  /**
    * UPSERT: Crea o actualiza el perfil comercial
    * PUT /api/interacciones/profile — companyId en el body, no en la URL
    * El backend decide si crear (201) o actualizar (200) basado en si existe o no
