@@ -119,11 +119,11 @@ export const CommercialService = {
 
   /**
    * UPSERT: Crea o actualiza el perfil comercial
-   * PUT /api/commercial/profile — companyId en el body, no en la URL
+   * PUT /api/interacciones/profile — companyId en el body, no en la URL
    * El backend decide si crear (201) o actualizar (200) basado en si existe o no
    */
   async upsertProfile(payload: CommercialProfilePayload): Promise<CommercialProfile> {
-    const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/profile`, payload);
+    const res = await apiClient.put<any>(`${BASE_INTERACCIONES}/profile`, payload);
     
     // La respuesta puede venir en diferentes formatos:
     // - { data: { commercial: {...} }, result: {...} }
