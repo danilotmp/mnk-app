@@ -11,33 +11,58 @@ export const SYSTEM_GUIDELINE_NAMES = [
       "¡Hola! Te has comunicado con [nombre de la empresa]. ¿En qué podemos ayudarte?",
   },
   {
+    title: "COMPORTAMIENTO",
+    usage: "Tono, prohibiciones y reglas de disponibilidad",
+    defaultContent:
+      'Tono natural, educado, amigable. PROHIBIDO: "no tenemos habitaciones disponibles", "no hay", "no disponemos". Preguntas de disponibilidad: conserva fechas/personas en memoria. Sin fechas pero con personas: muestra productos + "La disponibilidad depende de las fechas. ¿Me indicas fecha de llegada y salida?" Personas obligatorio. Con fechas y personas: muestra opciones, valida disponibilidad.',
+  },
+  {
     title: "INFORMACION_RESERVA",
     usage: "Datos a solicitar antes de validar una reserva",
     defaultContent:
-      "Para validar tu reserva necesito: Cédula o pasaporte, Nombres completos, Correo electrónico, Fecha de llegada/salida, Número de personas. ¿Algún dato adicional que debamos conocer?",
+      "Para validar reserva: Cédula o pasaporte, Nombres completos, Fecha llegada y salida, Número de personas.",
   },
   {
     title: "FORMATO_MENSAJE_PRODUCTOS",
-    usage: "Estructura al mostrar productos (opción, precio, incluye, notas)",
-    defaultContent: `Estructura por producto:
-{opcion}. *{name} - {cantidadPersonas} persona/s*
-_{descripcion corta del producto}_
-[URL del producto o web de la empresa]
-
-*Precio:* {PRECIO_CALCULADO} USD
-
-*Incluye:*
-- {items detectados en description del producto}
-
-Si el producto tiene notas o restricciones, mostrarlas al final como:
-*Notas:*
-- {condiciones relevantes}`,
+    usage: "Estructura al mostrar productos (opción, precio, notas)",
+    defaultContent:
+      "Estructura por producto:\n{opcion}. *{name producto}*\n_{descripcion corta}_\n*Precio:* {PRECIO_CALCULADO} USD\nNotas al final si aplica.",
+  },
+  {
+    title: "CONFIRMACION_RESERVA",
+    usage: "Proceso para confirmar una reserva (abono, confirmación)",
+    defaultContent:
+      "Solicita abono mínimo del 50%. Al recibir, informa al cliente que su reserva está confirmada.",
   },
   {
     title: "INFORMACION_PAGO",
     usage: "Instrucciones al elegir un método de pago",
     defaultContent:
-      "Cuando el cliente elija un método de pago, proporciona: Para Efectivo: indicar dónde y cuándo se realiza el pago. Para Transferencia: mostrar cuenta bancaria, titular, número de cuenta, RUC/identificación y banco. Indicar que debe enviar el comprobante.",
+      "Efectivo: indicar dónde y cuándo. Transferencia: cuenta bancaria, titular, RUC, banco. Indicar enviar comprobante para confirmar.",
+  },
+  {
+    title: "PRODUCTOS_PRECIOS",
+    usage: "Comportamiento con productos y precios",
+    defaultContent:
+      'Ofrece productos/precios. Usa lista configurada. NUNCA digas "no tengo" o "no hay".',
+  },
+  {
+    title: "PAGOS",
+    usage: "Instrucciones de pagos y reservas",
+    defaultContent:
+      "Pagos antes de reserva. Mínimo 50% para reservar. Resto al confirmar.",
+  },
+  {
+    title: "METODOS_PAGO",
+    usage: "Instrucciones de métodos de pago",
+    defaultContent:
+      "Efectivo: en establecimiento. Transferencia: cuentas bancarias configuradas.",
+  },
+  {
+    title: "GLOSARIO",
+    usage: "Palabras clave y significados (NO OBLIGATORIO)",
+    defaultContent:
+      "disponibilidad > cliente solicita información de productos/servicios.",
   },
 ] as const;
 
