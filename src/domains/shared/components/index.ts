@@ -3,6 +3,8 @@
  */
 
 export { AccessGuard } from './access-guard/access-guard';
+export { AttributesEditor } from './attributes-editor/attributes-editor';
+export type { AttributesEditorProps } from './attributes-editor/attributes-editor.types';
 export type { AccessGuardProps } from './access-guard/access-guard.types';
 export { BranchSelector } from './branch-selector/branch-selector';
 export type { BranchSelectorProps } from './branch-selector/branch-selector.types';

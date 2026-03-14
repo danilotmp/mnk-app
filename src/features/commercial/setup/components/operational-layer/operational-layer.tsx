@@ -26,7 +26,11 @@ import {
   getStatusDescription,
   RecordStatus,
 } from "@/src/domains/shared/types/status.types";
-import { CurrencyInput, DatePicker } from "@/src/domains/shared/components";
+import {
+  AttributesEditor,
+  CurrencyInput,
+  DatePicker,
+} from "@/src/domains/shared/components";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { TemplateService } from "@/src/infrastructure/templates/template.service";
@@ -127,6 +131,7 @@ export function OperationalLayer({
     code: "",
     image: null as string | null,
     status: RecordStatus.PENDING as number,
+    properties: null as Record<string, unknown> | null,
   });
   const [uploadingBulk, setUploadingBulk] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -366,6 +371,11 @@ export function OperationalLayer({
           code: offering.code || "",
           image: offering.image ?? null,
           status: normalizeOfferingStatus(offering.status),
+          properties:
+            offering.properties &&
+            Object.keys(offering.properties).length > 0
+              ? offering.properties
+              : null,
         });
 
         // Cargar precio principal (usar precio modificado si existe, sino el original)
@@ -406,6 +416,7 @@ export function OperationalLayer({
         code: "",
         image: null,
         status: RecordStatus.PENDING,
+        properties: null,
       });
       // Usar defaultTaxMode del perfil comercial, o 'included' por defecto
       const defaultTaxMode = commercialProfile?.defaultTaxMode || "included";
@@ -513,6 +524,7 @@ export function OperationalLayer({
       requiresConditions: false, // Siempre false por ahora
       image: offeringForm.image ?? undefined,
       status: offeringForm.status,
+      properties: offeringForm.properties,
     };
 
     // Usar defaultTaxMode del perfil comercial para todas las ofertas
@@ -608,6 +620,11 @@ export function OperationalLayer({
           code: originalOffering.code || "",
           image: originalOffering.image ?? null,
           status: normalizeOfferingStatus(originalOffering.status),
+          properties:
+            originalOffering.properties &&
+            Object.keys(originalOffering.properties).length > 0
+              ? originalOffering.properties
+              : null,
         });
       }
 
@@ -744,6 +761,7 @@ export function OperationalLayer({
       code: "",
       image: null,
       status: RecordStatus.PENDING,
+      properties: null,
     });
     setPriceForm({
       basePrice: "",
@@ -779,6 +797,7 @@ export function OperationalLayer({
               ? newOffering.offering.status
               : RecordStatus.PENDING,
           image: newOffering.offering.image ?? null,
+          properties: newOffering.offering.properties ?? null,
           price: {
             basePrice: newOffering.price.basePrice,
             taxMode: newOffering.price.taxMode,
@@ -818,6 +837,10 @@ export function OperationalLayer({
             modified.offering.image !== undefined
               ? modified.offering.image
               : (originalOffering.image ?? null),
+          properties:
+            modified.offering.properties !== undefined
+              ? modified.offering.properties
+              : (originalOffering.properties ?? null),
           price: {
             id: originalPrice?.id,
             basePrice:
@@ -848,6 +871,7 @@ export function OperationalLayer({
           requiresConditions: false,
           status: RecordStatus.INACTIVE, // Cambiar estado a inactive (0)
           image: originalOffering.image ?? null,
+          properties: originalOffering.properties ?? null,
           price: {
             id: originalPrice?.id,
             basePrice: originalPrice?.basePrice || 0,
@@ -1007,6 +1031,40 @@ export function OperationalLayer({
         return;
       }
 
+      // Columnas estándar (no van a properties)
+      const STANDARD_COLS = new Set([
+        "tipo", "nombre", "descripción", "descripcion",
+        "precio base", "precio_base", "modo de impuestos", "modo_impuestos",
+      ]);
+
+      // Mapeo header Excel -> clave en properties (normalizado sin espacios/acentos)
+      const PROPERTY_HEADERS: Record<string, string> = {
+        "valor mínimo (opcional)": "valorMinimo",
+        "valorminimo": "valorMinimo",
+        "valor por persona (opcional)": "valorPorPersona",
+        "valorporpersona": "valorPorPersona",
+        "máx. personas (opcional)": "maxPersonas",
+        "máx personas (opcional)": "maxPersonas",
+        "maxpersonas": "maxPersonas",
+        "max personas": "maxPersonas",
+      };
+
+      const toCamelCase = (s: string): string =>
+        s.replace(/\s+(.)/g, (_, c) => c.toUpperCase()).replace(/^./, (c) => c.toLowerCase());
+
+      const buildPropertiesFromRow = (row: Record<string, unknown>): Record<string, unknown> | null => {
+        const props: Record<string, unknown> = {};
+        for (const [header, value] of Object.entries(row)) {
+          if (value === null || value === undefined || value === "") continue;
+          const h = String(header).toLowerCase().trim().replace(/\s+/g, " ");
+          if (STANDARD_COLS.has(h)) continue;
+          const key = PROPERTY_HEADERS[h] ?? toCamelCase(String(header).trim());
+          const num = Number(value);
+          props[key] = !Number.isNaN(num) && String(value).trim() !== "" ? num : value;
+        }
+        return Object.keys(props).length > 0 ? props : null;
+      };
+
       // Preparar ofertas para el endpoint bulk
       const offeringsPayload: Array<{
         companyId: string;
@@ -1015,28 +1073,29 @@ export function OperationalLayer({
         description?: string;
         type: "product" | "service";
         requiresConditions?: boolean;
+        properties?: Record<string, unknown> | null;
         price: {
           basePrice: number;
           taxMode: "included" | "excluded";
-          branchId: null; // Siempre null para precio global en wizard
-          validFrom?: string; // YYYY-MM-DD
-          validTo?: string | null; // YYYY-MM-DD o null
+          branchId: null;
+          validFrom?: string;
+          validTo?: string | null;
         };
       }> = [];
 
       // Procesar cada fila
       for (let index = 0; index < data.length; index++) {
-        const row = data[index];
+        const row = data[index] as Record<string, unknown>;
 
         try {
           // Validar campos requeridos
-          const name = (row["Nombre"] || row["nombre"] || "").trim();
+          const name = (row["Nombre"] || row["nombre"] || "").toString().trim();
           if (!name) {
             throw new Error("El nombre es requerido");
           }
 
           const precioBase = row["Precio Base"] || row["precio_base"];
-          if (!precioBase || isNaN(parseFloat(String(precioBase)))) {
+          if (!precioBase || Number.isNaN(Number.parseFloat(String(precioBase)))) {
             throw new Error(
               "El precio base es requerido y debe ser un número válido",
             );
@@ -1048,6 +1107,7 @@ export function OperationalLayer({
 
           // Mapear tipo: convertir español a inglés (solo producto y servicio para wizard)
           const tipoStr = (row["Tipo"] || row["tipo"] || "producto")
+            .toString()
             .toLowerCase()
             .trim();
           let type: "product" | "service" = "product";
@@ -1058,21 +1118,24 @@ export function OperationalLayer({
           // Preparar precio - validFrom siempre usa fecha actual, validTo siempre null
           const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-          // Construir payload según nuevo endpoint (campos esenciales para wizard)
+          // Construir properties desde columnas no estándar (valorMinimo, valorPorPersona, maxPersonas, etc.)
+          const properties = buildPropertiesFromRow(row);
+
           offeringsPayload.push({
             companyId: company.id,
             name,
             description:
-              (row["Descripción"] || row["descripcion"] || "").trim() ||
+              (row["Descripción"] || row["descripcion"] || "").toString().trim() ||
               undefined,
             type,
-            requiresConditions: type === "service" ? false : undefined, // Por defecto false para servicios
+            requiresConditions: type === "service" ? false : undefined,
+            properties: properties ?? null,
             price: {
-              basePrice: parseFloat(String(precioBase)),
-              taxMode: modoImpuestos, // Usa defaultTaxMode del perfil comercial
-              branchId: null, // Siempre null para precio global en wizard
-              validFrom: today, // Siempre fecha actual
-              validTo: null, // Siempre null (sin caducidad)
+              basePrice: Number.parseFloat(String(precioBase)),
+              taxMode: modoImpuestos,
+              branchId: null,
+              validFrom: today,
+              validTo: null,
             },
           });
         } catch (error: any) {
@@ -1275,6 +1338,18 @@ export function OperationalLayer({
                             : (O?.product ?? "Producto");
 
                         const isExpanded = expandedOfferingId === offering.id;
+                        const isPendingSave =
+                          offering.id.startsWith("temp-") ||
+                          !!modifiedOfferings[offering.id];
+                        const displayStatus = isExpanded
+                          ? offeringForm.status
+                          : (modifiedOfferings[offering.id]?.offering?.status ??
+                            offering.status);
+                        const displayStatusNorm = normalizeOfferingStatus(
+                          typeof displayStatus === "number"
+                            ? displayStatus
+                            : offering.status,
+                        );
 
                         return (
                           <View key={offering.id}>
@@ -1295,67 +1370,147 @@ export function OperationalLayer({
                             >
                               {isMobile ? (
                                 <>
-                                  {offering.image ? (
-                                    <Image
-                                      source={{
-                                        uri: offering.image.startsWith("data:")
-                                          ? offering.image
-                                          : `data:image/jpeg;base64,${offering.image}`,
-                                      }}
-                                      style={{
-                                        width: 80,
-                                        height: 80,
-                                        borderRadius: 8,
-                                        marginRight: 12,
-                                        backgroundColor: colors.border,
-                                      }}
-                                      resizeMode="cover"
-                                    />
-                                  ) : null}
-                                  <View style={styles.listItemContentMobile}>
-                                    <ThemedText
-                                      type="body1"
-                                      style={{
-                                        fontWeight: "600",
-                                        width: "100%",
-                                      }}
-                                    >
-                                      {offering.name}
-                                    </ThemedText>
-                                    <ThemedText
-                                      type="caption"
-                                      style={{
-                                        color: colors.textSecondary,
-                                        marginTop: 4,
-                                      }}
-                                    >
-                                      {typeLabel}
-                                    </ThemedText>
-                                    {offering.description ? (
-                                      <ThemedText
-                                        type="body2"
-                                        numberOfLines={3}
-                                        style={{
-                                          color: colors.textSecondary,
-                                          marginTop: 4,
-                                          fontSize: 13,
-                                        }}
-                                      >
-                                        {offering.description}
-                                      </ThemedText>
-                                    ) : null}
+                                  {/* Fila 1: Nombre + Estado - ancho completo */}
+                                  <View style={styles.listItemNameRow}>
                                     <View
                                       style={{
                                         flexDirection: "row",
                                         alignItems: "center",
-                                        justifyContent: "flex-end",
-                                        marginTop: 8,
-                                        gap: 8,
+                                        gap: 6,
+                                        flex: 1,
+                                        minWidth: 0,
                                       }}
                                     >
-                                      <View style={styles.alignEnd}>
-                                        {mainPrice &&
-                                        mainPrice.basePrice > 0 ? (
+                                      <ThemedText
+                                        type="body1"
+                                        style={{
+                                          fontWeight: "600",
+                                        }}
+                                      >
+                                        {offering.name}
+                                      </ThemedText>
+                                      <ThemedText
+                                        type="caption"
+                                        style={{
+                                          color: colors.textSecondary,
+                                        }}
+                                      >
+                                        ({typeLabel})
+                                      </ThemedText>
+                                    </View>
+                                    <View
+                                      style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        gap: 6,
+                                      }}
+                                    >
+                                      <StatusBadge
+                                        status={displayStatusNorm}
+                                        statusDescription={getStatusDescription(
+                                          displayStatusNorm,
+                                        )}
+                                        size="small"
+                                      />
+                                      {isPendingSave ? (
+                                        <View
+                                          style={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: 4,
+                                            backgroundColor:
+                                              colors.suspended ?? "#e74c3c",
+                                          }}
+                                        />
+                                      ) : null}
+                                    </View>
+                                  </View>
+                                  {/* Fila 2: Detalle (izq) | Precio (der) */}
+                                  <View
+                                    style={[
+                                      styles.listItemDetailRow,
+                                      { flexDirection: "row", alignItems: "flex-start" },
+                                    ]}
+                                  >
+                                    <View
+                                      style={[
+                                        styles.listItemContentMobile,
+                                        { flex: 1, minWidth: 0 },
+                                      ]}
+                                    >
+                                      {offering.image ? (
+                                        <Image
+                                          source={{
+                                            uri: offering.image.startsWith("data:")
+                                              ? offering.image
+                                              : `data:image/jpeg;base64,${offering.image}`,
+                                          }}
+                                          style={{
+                                            width: 80,
+                                            height: 80,
+                                            borderRadius: 8,
+                                            marginBottom: 8,
+                                            backgroundColor: colors.border,
+                                          }}
+                                          resizeMode="cover"
+                                        />
+                                      ) : null}
+                                      {offering.description ? (
+                                        <ThemedText
+                                          type="body2"
+                                          numberOfLines={3}
+                                          style={{
+                                            color: colors.textSecondary,
+                                            marginTop: 2,
+                                            fontSize: 13,
+                                          }}
+                                        >
+                                          {offering.description}
+                                        </ThemedText>
+                                      ) : null}
+                                      {offering.properties &&
+                                        Object.keys(offering.properties).length >
+                                          0 ? (
+                                        <View
+                                          style={{
+                                            marginTop: 10,
+                                            flexDirection: "row",
+                                            flexWrap: "wrap",
+                                            gap: 6,
+                                          }}
+                                        >
+                                          {Object.entries(
+                                            offering.properties,
+                                          ).map(([k, v]) => (
+                                            <ThemedText
+                                              key={k}
+                                              type="caption"
+                                              style={{
+                                                color: colors.textSecondary,
+                                                backgroundColor:
+                                                  colors.filterInputBackground,
+                                                paddingHorizontal: 6,
+                                                paddingVertical: 2,
+                                                borderRadius: 4,
+                                              }}
+                                            >
+                                              {k}: {String(v)}
+                                            </ThemedText>
+                                        ))}
+                                      </View>
+                                    ) : null}
+                                    </View>
+                                    <View
+                                      style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        alignSelf: "flex-end",
+                                      }}
+                                    >
+                                        <View style={styles.alignEnd}>
+                                          {mainPrice &&
+                                          mainPrice.basePrice > 0 ? (
                                           <>
                                             <ThemedText
                                               type="h4"
@@ -1411,145 +1566,201 @@ export function OperationalLayer({
                                 </>
                               ) : (
                                 <>
-                                  <View style={styles.listItemLeft}>
-                                    {offering.image ? (
-                                      <Image
-                                        source={{
-                                          uri: offering.image.startsWith(
-                                            "data:",
-                                          )
-                                            ? offering.image
-                                            : `data:image/jpeg;base64,${offering.image}`,
-                                        }}
-                                        style={{
-                                          width: 100,
-                                          height: 100,
-                                          borderRadius: 8,
-                                          marginRight: 12,
-                                          backgroundColor: colors.border,
-                                        }}
-                                        resizeMode="cover"
-                                      />
-                                    ) : null}
-                                    <Ionicons
-                                      name={typeIcon}
-                                      size={24}
-                                      color={colors.textSecondary}
-                                      style={styles.listItemTypeIcon}
-                                    />
+                                  {/* Fila 1: Nombre + Estado - ancho completo */}
+                                  <View style={styles.listItemNameRow}>
                                     <View
-                                      style={[
-                                        styles.listItemContent,
-                                        { flex: 1 },
-                                      ]}
+                                      style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        flex: 1,
+                                        minWidth: 0,
+                                      }}
                                     >
-                                      <View
+                                      <Ionicons
+                                        name={typeIcon}
+                                        size={24}
+                                        color={colors.textSecondary}
+                                        style={styles.listItemTypeIcon}
+                                      />
+                                      <ThemedText
+                                        type="body1"
+                                        style={{ fontWeight: "600" }}
+                                      >
+                                        {offering.name}
+                                      </ThemedText>
+                                      <ThemedText
+                                        type="caption"
                                         style={{
-                                          flexDirection: "row",
-                                          alignItems: "center",
-                                          gap: 8,
+                                          color: colors.textSecondary,
+                                          fontSize: 11,
                                         }}
                                       >
-                                        <ThemedText
-                                          type="body1"
-                                          style={{ fontWeight: "600" }}
-                                        >
-                                          {offering.name}
-                                        </ThemedText>
-                                        <ThemedText
-                                          type="caption"
+                                        ({typeLabel})
+                                      </ThemedText>
+                                    </View>
+                                    <View
+                                      style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        gap: 8,
+                                      }}
+                                    >
+                                      <StatusBadge
+                                        status={displayStatusNorm}
+                                        statusDescription={getStatusDescription(
+                                          displayStatusNorm,
+                                        )}
+                                        size="small"
+                                      />
+                                      {isPendingSave ? (
+                                        <View
                                           style={{
-                                            color: colors.textSecondary,
-                                            fontSize: 11,
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: 4,
+                                            backgroundColor:
+                                              colors.suspended ?? "#e74c3c",
                                           }}
-                                        >
-                                          ({typeLabel})
-                                        </ThemedText>
-                                        <StatusBadge
-                                          status={normalizeOfferingStatus(
-                                            offering.status,
-                                          )}
-                                          statusDescription={
-                                            offering.statusDescription ||
-                                            getStatusDescription(
-                                              normalizeOfferingStatus(
-                                                offering.status,
-                                              ),
-                                            )
-                                          }
-                                          size="small"
                                         />
-                                      </View>
-                                      {offering.description && (
-                                        <ThemedText
-                                          type="body2"
-                                          numberOfLines={3}
-                                          style={{
-                                            color: colors.textSecondary,
-                                            marginTop: 4,
-                                            fontSize: 13,
-                                          }}
-                                        >
-                                          {offering.description}
-                                        </ThemedText>
-                                      )}
+                                      ) : null}
                                     </View>
                                   </View>
-                                  <View style={styles.listItemRight}>
-                                    <View style={styles.alignEnd}>
-                                      {mainPrice && mainPrice.basePrice > 0 ? (
-                                        <>
+                                  {/* Fila 2: Detalle (izq) | Precio (der) */}
+                                  <View style={styles.listItemDetailRow}>
+                                    <View
+                                      style={[
+                                        styles.listItemLeft,
+                                        { flex: 1, minWidth: 0 },
+                                      ]}
+                                    >
+                                      {offering.image ? (
+                                        <Image
+                                          source={{
+                                            uri: offering.image.startsWith(
+                                              "data:",
+                                            )
+                                              ? offering.image
+                                              : `data:image/jpeg;base64,${offering.image}`,
+                                          }}
+                                          style={{
+                                            width: 100,
+                                            height: 100,
+                                            borderRadius: 8,
+                                            marginRight: 12,
+                                            backgroundColor: colors.border,
+                                          }}
+                                          resizeMode="cover"
+                                        />
+                                      ) : null}
+                                      <View
+                                        style={[
+                                          styles.listItemContent,
+                                          { flex: 1 },
+                                        ]}
+                                      >
+                                        {offering.description && (
                                           <ThemedText
-                                            type="h4"
+                                            type="body2"
+                                            numberOfLines={3}
                                             style={{
-                                              fontWeight: "700",
-                                              color: colors.primary,
+                                              color: colors.textSecondary,
+                                              fontSize: 13,
                                             }}
                                           >
-                                            {commercialProfile?.currency ||
-                                              "USD"}{" "}
-                                            {Number(
-                                              mainPrice.basePrice,
-                                            ).toFixed(2)}
+                                            {offering.description}
                                           </ThemedText>
+                                        )}
+                                        {offering.properties &&
+                                          Object.keys(offering.properties)
+                                            .length > 0 && (
+                                            <View
+                                              style={{
+                                                marginTop: 10,
+                                                flexDirection: "row",
+                                                flexWrap: "wrap",
+                                                gap: 6,
+                                              }}
+                                            >
+                                              {Object.entries(
+                                                offering.properties,
+                                              ).map(([k, v]) => (
+                                                <ThemedText
+                                                  key={k}
+                                                  type="caption"
+                                                  style={{
+                                                    color: colors.textSecondary,
+                                                    backgroundColor:
+                                                      colors.filterInputBackground,
+                                                    paddingHorizontal: 6,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                  }}
+                                                >
+                                                  {k}: {String(v)}
+                                                </ThemedText>
+                                              ))}
+                                            </View>
+                                          )}
+                                      </View>
+                                    </View>
+                                    <View style={styles.listItemRight}>
+                                        <View style={styles.alignEnd}>
+                                          {mainPrice &&
+                                          mainPrice.basePrice > 0 ? (
+                                          <>
+                                            <ThemedText
+                                              type="h4"
+                                              style={{
+                                                fontWeight: "700",
+                                                color: colors.primary,
+                                              }}
+                                            >
+                                              {commercialProfile?.currency ||
+                                                "USD"}{" "}
+                                              {Number(
+                                                mainPrice.basePrice,
+                                              ).toFixed(2)}
+                                            </ThemedText>
+                                            <ThemedText
+                                              type="body2"
+                                              style={{
+                                                color: colors.textSecondary,
+                                                marginTop: 4,
+                                                fontSize: 12,
+                                              }}
+                                            >
+                                              Impuestos{" "}
+                                              {mainPrice.taxMode === "included"
+                                                ? (O?.taxesIncluded ??
+                                                  "Incluidos")
+                                                : (O?.taxesExcluded ??
+                                                  "Excluidos")}
+                                            </ThemedText>
+                                          </>
+                                        ) : (
                                           <ThemedText
                                             type="body2"
                                             style={{
                                               color: colors.textSecondary,
-                                              marginTop: 4,
-                                              fontSize: 12,
+                                              fontStyle: "italic",
                                             }}
                                           >
-                                            Impuestos{" "}
-                                            {mainPrice.taxMode === "included"
-                                              ? (O?.taxesIncluded ??
-                                                "Incluidos")
-                                              : (O?.taxesExcluded ??
-                                                "Excluidos")}
+                                            {O?.noPrice ?? "Sin precio"}
                                           </ThemedText>
-                                        </>
-                                      ) : (
-                                        <ThemedText
-                                          type="body2"
-                                          style={{
-                                            color: colors.textSecondary,
-                                            fontStyle: "italic",
-                                          }}
-                                        >
-                                          {O?.noPrice ?? "Sin precio"}
-                                        </ThemedText>
-                                      )}
+                                        )}
+                                      </View>
+                                      <Ionicons
+                                        name={
+                                          isExpanded
+                                            ? "chevron-down"
+                                            : "chevron-forward"
+                                        }
+                                        size={20}
+                                        color={colors.textSecondary}
+                                        style={styles.listItemCaptionSpacer}
+                                      />
                                     </View>
-                                    <Ionicons
-                                      name={
-                                        isExpanded
-                                          ? "chevron-down"
-                                          : "chevron-forward"
-                                      }
-                                      size={20}
-                                      color={colors.textSecondary}
-                                      style={styles.listItemCaptionSpacer}
-                                    />
                                   </View>
                                 </>
                               )}
@@ -2344,51 +2555,76 @@ export function OperationalLayer({
                                     </View>
                                   </View>
 
-                                  {/* Descripción al final */}
-                                  <ThemedText
-                                    type="body2"
-                                    style={[
-                                      styles.label,
-                                      { color: colors.text, marginTop: 16 },
-                                    ]}
-                                  >
-                                    {O?.descriptionOptional ??
-                                      "Descripción (opcional)"}
-                                  </ThemedText>
-                                  <InputWithFocus
-                                    containerStyle={[
-                                      styles.textAreaContainer,
-                                      {
-                                        backgroundColor:
-                                          colors.filterInputBackground,
-                                        borderColor: colors.border,
-                                      },
-                                    ]}
-                                    primaryColor={colors.primary}
-                                  >
-                                    <TextInput
-                                      style={[
-                                        styles.textArea,
-                                        { color: colors.text },
-                                      ]}
-                                      placeholder={
-                                        O?.descriptionPlaceholder ??
-                                        "Describe brevemente la oferta"
-                                      }
-                                      placeholderTextColor={
-                                        colors.textSecondary
-                                      }
-                                      value={offeringForm.description}
-                                      onChangeText={(val) =>
-                                        setOfferingForm((prev) => ({
-                                          ...prev,
-                                          description: val,
-                                        }))
-                                      }
-                                      multiline
-                                      numberOfLines={3}
-                                    />
-                                  </InputWithFocus>
+                                  {/* Descripción y Atributos 50-50 */}
+                                  <View style={[styles.rowContainer, { marginTop: 16 }]}>
+                                    <View style={styles.halfWidth}>
+                                      <ThemedText
+                                        type="body2"
+                                        style={[
+                                          styles.label,
+                                          { color: colors.text },
+                                        ]}
+                                      >
+                                        {O?.descriptionOptional ??
+                                          "Descripción (opcional)"}
+                                      </ThemedText>
+                                      <InputWithFocus
+                                        containerStyle={[
+                                          styles.textAreaContainer,
+                                          {
+                                            backgroundColor:
+                                              colors.filterInputBackground,
+                                            borderColor: colors.border,
+                                          },
+                                        ]}
+                                        primaryColor={colors.primary}
+                                      >
+                                        <TextInput
+                                          style={[
+                                            styles.textArea,
+                                            { color: colors.text },
+                                          ]}
+                                          placeholder={
+                                            O?.descriptionPlaceholder ??
+                                            "Describe brevemente la oferta"
+                                          }
+                                          placeholderTextColor={
+                                            colors.textSecondary
+                                          }
+                                          value={offeringForm.description}
+                                          onChangeText={(val) =>
+                                            setOfferingForm((prev) => ({
+                                              ...prev,
+                                              description: val,
+                                            }))
+                                          }
+                                          multiline
+                                          numberOfLines={3}
+                                        />
+                                      </InputWithFocus>
+                                    </View>
+                                    <View style={styles.halfWidth}>
+                                      <AttributesEditor
+                                        key={expandedOfferingId ?? "new"}
+                                        value={offeringForm.properties}
+                                        onChange={(val) =>
+                                          setOfferingForm((prev) => ({
+                                            ...prev,
+                                            properties: val,
+                                          }))
+                                        }
+                                        label={
+                                          O?.propertiesLabel ??
+                                          "Atributos (opcional)"
+                                        }
+                                        placeholder={
+                                          O?.propertiesPlaceholder ??
+                                          "Sin atributos"
+                                        }
+                                        addButtonLabel="Agregar atributo"
+                                      />
+                                    </View>
+                                  </View>
 
                                   {/* Botones del acordeón */}
                                   <View style={styles.formActions}>

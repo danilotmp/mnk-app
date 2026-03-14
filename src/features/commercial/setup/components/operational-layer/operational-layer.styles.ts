@@ -67,13 +67,28 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
   listItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
+    gap: 6,
+  },
+  /** Fila nombre+estado que cubre todo el ancho */
+  listItemNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: 6,
+  },
+  /** Fila inferior: detalle a la izquierda, precio a la derecha */
+  listItemDetailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    flex: 1,
     gap: 12,
+    minWidth: 0,
   },
   listItemMobile: {
     alignItems: "flex-start",

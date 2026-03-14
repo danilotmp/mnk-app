@@ -273,6 +273,9 @@ export interface Translations {
         namePlaceholder: string;
         descriptionOptional: string;
         descriptionPlaceholder: string;
+        propertiesLabel: string;
+        propertiesPlaceholder: string;
+        propertiesJsonInvalid: string;
         cancel: string;
         accept: string;
         addOffering: string;

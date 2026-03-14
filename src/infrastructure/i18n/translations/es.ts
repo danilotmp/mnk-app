@@ -325,6 +325,11 @@ export const es: Translations = {
         namePlaceholder: "Ej: Habitación estándar",
         descriptionOptional: "Descripción (opcional)",
         descriptionPlaceholder: "Describe brevemente la oferta",
+        propertiesLabel: "Atributos (JSON opcional)",
+        propertiesPlaceholder:
+          '{"valorMinimo": 50, "valorPorPersona": 15, "maxPersonas": 4}',
+        propertiesJsonInvalid:
+          "Atributos: JSON inválido. Use formato { \"clave\": valor }",
         cancel: "Cancelar",
         accept: "Aceptar",
         addOffering: "Agregar Oferta",

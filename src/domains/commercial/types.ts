@@ -156,6 +156,11 @@ export interface Offering {
   prices?: OfferingPrice[];
   /** Imagen de la oferta (base64). Opcional en escritura, presente en lectura. */
   image?: string | null;
+  /**
+   * Atributos flexibles según tipo de negocio (ej. hotel: valorMinimo, valorPorPersona, maxPersonas).
+   * La IA los usa según directrices; el frontend solo envía/muestra, sin lógica de cálculo.
+   */
+  properties?: Record<string, unknown> | null;
 }
 
 export interface OfferingPayload {
@@ -171,6 +176,11 @@ export interface OfferingPayload {
   metadata?: Record<string, any>;
   /** Imagen de la oferta (base64). Opcional. */
   image?: string | null;
+  /**
+   * Atributos flexibles según tipo de negocio. Opcional.
+   * Enviar null para borrar; omitir si no hay cambios.
+   */
+  properties?: Record<string, unknown> | null;
 }
 
 // ===== Offering Prices =====

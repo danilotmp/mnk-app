@@ -63,6 +63,27 @@ export class TemplateService {
               description: 'Descripción detallada de la oferta (opcional, puede afinarse después)',
             },
             {
+              name: 'valorMinimo',
+              label: 'Valor Mínimo (opcional)',
+              required: false,
+              type: 'number',
+              description: 'Atributo para properties. Ej: hotel',
+            },
+            {
+              name: 'valorPorPersona',
+              label: 'Valor por Persona (opcional)',
+              required: false,
+              type: 'number',
+              description: 'Atributo para properties. Ej: hotel',
+            },
+            {
+              name: 'maxPersonas',
+              label: 'Máx. Personas (opcional)',
+              required: false,
+              type: 'number',
+              description: 'Atributo para properties. Ej: hotel',
+            },
+            {
               name: 'precio_base',
               label: 'Precio Base',
               required: true,
@@ -112,11 +133,19 @@ export class TemplateService {
         case 'tipo':
           return 'producto';
         case 'nombre':
-          return 'Ejemplo de Producto';
+          return 'Habitación Doble';
         case 'descripcion':
-          return 'Descripción del producto';
+          return 'Habitación para 2 personas';
+        case 'valorMinimo':
+          return 50;
+        case 'valorPorPersona':
+          return 15;
+        case 'maxPersonas':
+          return 4;
         case 'precio_base':
           return 100;
+        case 'modo_impuestos':
+          return 'included';
         default:
           return '';
       }

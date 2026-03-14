@@ -497,8 +497,12 @@ export function InteractionGuidelinesLayer({
                               activeOpacity={0.7}
                             >
                               <ThemedText
-                                type="h4"
-                                style={{ fontWeight: "700", flex: 1 }}
+                                type="body1"
+                                style={{
+                                  fontWeight: "600",
+                                  flex: 1,
+                                  fontSize: 15,
+                                }}
                               >
                                 {guideline.title}
                               </ThemedText>
@@ -823,7 +827,12 @@ export function InteractionGuidelinesLayer({
                       ) : (
                         <ThemedText
                           type="body2"
-                          style={{ color: colors.text, marginTop: 12 }}
+                          numberOfLines={3}
+                          style={{
+                            color: colors.textSecondary,
+                            marginTop: 0,
+                            fontSize: 13,
+                          }}
                         >
                           {guideline.description}
                         </ThemedText>
@@ -1357,8 +1366,8 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "600",
     padding: 0,
   },
   listContainer: {
@@ -1468,7 +1477,7 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
   textArea: {
-    fontSize: 16,
+    fontSize: 13,
     minHeight: 60,
     textAlignVertical: "top",
   },

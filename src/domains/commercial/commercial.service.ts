@@ -345,7 +345,7 @@ export const CommercialService = {
 
   // ===== Offerings =====
   async getOfferings(companyId: string): Promise<Offering[]> {
-    const endpoint = buildQuery(`${BASE_COMMERCIAL}/offerings`, { companyId });
+    const endpoint = buildQuery(`${BASE_COMMERCIAL}/offerings`, { companyId, admin: 'true' });
     try {
       const res = await apiClient.get<any[]>(endpoint);
       // Mapear datos del backend a formato frontend (snake_case a camelCase y asegurar type)
@@ -384,6 +384,7 @@ export const CommercialService = {
           metadata: item.metadata || null, // Mantener metadata para category y tags
           prices: prices.length > 0 ? prices : undefined, // Incluir precios si existen
           image: item.image ?? null,
+          properties: item.properties ?? null,
         };
       });
       return offerings;
@@ -403,7 +404,7 @@ export const CommercialService = {
 
   async getOfferingById(offeringId: string): Promise<Offering> {
     const res = await apiClient.get<any>(`${BASE_COMMERCIAL}/offerings/${offeringId}`);
-    const item = res.data;
+    const item = res.data?.data ?? res.data;
     // Mapear datos del backend a formato frontend
     return {
       id: item.id,
@@ -421,12 +422,13 @@ export const CommercialService = {
       updatedBy: item.updated_by || item.updatedBy,
       metadata: item.metadata || null,
       image: item.image ?? null,
+      properties: item.properties ?? null,
     };
   },
 
   async createOffering(payload: OfferingPayload): Promise<Offering> {
     const res = await apiClient.post<any>(`${BASE_COMMERCIAL}/offerings`, payload);
-    const item = res.data;
+    const item = res.data?.data ?? res.data;
     // Mapear respuesta del backend
     return {
       id: item.id,
@@ -444,12 +446,13 @@ export const CommercialService = {
       updatedBy: item.updated_by || item.updatedBy,
       metadata: item.metadata || payload.metadata || null,
       image: item.image ?? payload.image ?? null,
+      properties: item.properties ?? payload.properties ?? null,
     };
   },
 
   async updateOffering(offeringId: string, payload: Partial<OfferingPayload>): Promise<Offering> {
     const res = await apiClient.put<any>(`${BASE_COMMERCIAL}/offerings/${offeringId}`, payload);
-    const item = res.data;
+    const item = res.data?.data ?? res.data;
     return {
       id: item.id,
       companyId: item.company_id || item.companyId,
@@ -466,6 +469,7 @@ export const CommercialService = {
       updatedBy: item.updated_by || item.updatedBy,
       metadata: item.metadata ?? null,
       image: item.image ?? null,
+      properties: item.properties ?? payload.properties ?? null,
     };
   },
 
@@ -487,6 +491,8 @@ export const CommercialService = {
     /** Estado: 0=Inactivo, 1=Activo, 2=Pendiente, 3=Suspendido */
     status?: number;
     image?: string | null;
+    /** Atributos flexibles por tipo de negocio. Enviar explícitamente en cada item. */
+    properties?: Record<string, unknown> | null;
     price: {
       id?: string; // Opcional: si está presente, indica actualización del precio
       basePrice: number;
@@ -538,6 +544,7 @@ export const CommercialService = {
         statusDescription: item.offering?.status_description || item.offering?.statusDescription,
         metadata: item.offering?.metadata || null,
         image: item.offering?.image ?? null,
+        properties: item.offering?.properties ?? null,
       } as Offering,
       price: {
         id: item.price?.id,
