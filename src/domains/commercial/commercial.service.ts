@@ -1260,8 +1260,8 @@ export const CommercialService = {
       await this.createWhatsAppInstance(payload.whatsapp);
     }
 
-    // Actualizar el perfil con la nueva instancia
-    const profile = await this.getProfile(companyId);
+    // Actualizar el perfil con la nueva instancia (admin para incluir inactivas en el merge)
+    const profile = await this.getProfile(companyId, true);
     const updatedInstances = [
       ...(profile.whatsappInstances || []),
       {
@@ -1291,7 +1291,7 @@ export const CommercialService = {
   },
 
   async updateWhatsAppInstance(companyId: string, instanceId: string, payload: Partial<WhatsAppInstancePayload>): Promise<WhatsAppInstance> {
-    const profile = await this.getProfile(companyId);
+    const profile = await this.getProfile(companyId, true);
     const instances = profile.whatsappInstances || [];
     const instanceIndex = instances.findIndex(inst => inst.id === instanceId);
     
@@ -1335,27 +1335,39 @@ export const CommercialService = {
   },
 
   /**
-   * Elimina la instancia de WhatsApp en contexto.
+   * Elimina físicamente la instancia de WhatsApp (BD + proveedor).
    * POST /interacciones/context/whatsapp-delete/:commercialProfileId
-   * Si el backend expone profile.id, se usa ese commercialProfileId; si no, se actualiza solo el perfil local.
+   * Body: { whatsappNumber: "593..." }
    */
   async deleteWhatsAppInstance(companyId: string, instanceId: string): Promise<void> {
-    const profile = await this.getProfile(companyId);
+    const profile = await this.getProfile(companyId, true);
     const instance = profile.whatsappInstances?.find(inst => inst.id === instanceId);
     if (!instance) {
       throw new Error('Instancia no encontrada');
     }
 
     const commercialProfileId = profile.id;
-    if (commercialProfileId) {
-      await apiClient.post<unknown>(
-        `${BASE_INTERACCIONES}/context/whatsapp-delete/${commercialProfileId}`,
-        { whatsappNumber: instance.whatsapp },
-      );
+    if (!commercialProfileId) {
+      throw new Error('Perfil comercial no encontrado');
     }
 
+    await apiClient.post<unknown>(
+      `${BASE_INTERACCIONES}/context/whatsapp-delete/${commercialProfileId}`,
+      { whatsappNumber: instance.whatsapp },
+    );
+  },
+
+  /**
+   * Desactiva (soft delete) una instancia quitándola del array en el PUT.
+   * El backend marca como INACTIVE las que no estén en la lista.
+   * Para reactivar: usar admin=true al listar y volver a incluirla.
+   */
+  async inactivateWhatsAppInstanceViaUpsert(companyId: string, instanceId: string): Promise<void> {
+    const profile = await this.getProfile(companyId, true);
     const instances = (profile.whatsappInstances || []).filter(inst => inst.id !== instanceId);
-    await this.updateProfile(companyId, {
+
+    await this.upsertProfile({
+      companyId,
       whatsappInstances: instances.map(inst => ({
         whatsapp: inst.whatsapp,
         whatsappQR: inst.whatsappQR,
@@ -1374,7 +1386,7 @@ export const CommercialService = {
    * Si no, obtiene QR por getWhatsAppQRCode y actualiza el perfil.
    */
   async regenerateWhatsAppQR(companyId: string, instanceId: string): Promise<WhatsAppInstance> {
-    const profile = await this.getProfile(companyId);
+    const profile = await this.getProfile(companyId, true);
     const instance = profile.whatsappInstances?.find(inst => inst.id === instanceId);
     if (!instance) {
       throw new Error('Instancia no encontrada');
