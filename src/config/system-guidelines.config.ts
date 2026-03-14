@@ -23,10 +23,16 @@ export const SYSTEM_GUIDELINE_NAMES = [
       "Para validar reserva: Cédula o pasaporte, Nombres completos, Fecha llegada y salida, Número de personas.",
   },
   {
-    title: "FORMATO_MENSAJE_PRODUCTOS",
-    usage: "Estructura al mostrar productos (opción, precio, notas)",
+    title: "FORMATO_MENSAJE_LISTA_PRODUCTOS",
+    usage: "Lista de opciones (varios productos). Simple: nombre + descripción, sin precios.",
     defaultContent:
-      "Estructura por producto:\n{opcion}. *{name producto}*\n_{descripcion corta}_\n*Precio:* {PRECIO_CALCULADO} USD\nNotas al final si aplica.",
+      "Lista de opciones (simple): {opcion}. *{name producto}*\n_{descripcion corta}_\n\nSin precios. Solo nombre y descripción.",
+  },
+  {
+    title: "FORMATO_MENSAJE_PRODUCTO",
+    usage: "Un producto seleccionado (detalle). Nombre + descripción + precio.",
+    defaultContent:
+      "Un producto seleccionado (detallado): *{name producto}*\n_{descripcion corta}_\n\n*Precio:* {PRECIO_CALCULADO} USD\nNotas al final si aplica.",
   },
   {
     title: "CONFIRMACION_RESERVA",
@@ -60,7 +66,7 @@ export const SYSTEM_GUIDELINE_NAMES = [
   },
   {
     title: "GLOSARIO",
-    usage: "Palabras clave y significados (NO OBLIGATORIO)",
+    usage: "Palabras clave y equivalencias para búsqueda (formato: clave: valor1, valor2)",
     defaultContent:
       "disponibilidad > cliente solicita información de productos/servicios.",
   },
