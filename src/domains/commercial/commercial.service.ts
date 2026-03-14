@@ -78,8 +78,12 @@ function normalizeWhatsAppInstance(raw: Record<string, any>): WhatsAppInstance {
 
 export const CommercialService = {
   // ===== Commercial Profile =====
-  async getProfile(companyId: string): Promise<CommercialProfile> {
-    const res = await apiClient.get<any>(`${BASE_INTERACCIONES}/profile/${companyId}`);
+  /**
+   * Obtiene el perfil comercial. Con admin=true incluye instancias WhatsApp inactivas (para wizard).
+   */
+  async getProfile(companyId: string, admin = false): Promise<CommercialProfile> {
+    const endpoint = buildQuery(`${BASE_INTERACCIONES}/profile/${companyId}`, admin ? { admin: 'true' } : undefined);
+    const res = await apiClient.get<any>(endpoint);
     
     // El API devuelve diferentes formatos posibles:
     // - { data: { commercial: {...} }, result: {...} }
@@ -121,13 +125,16 @@ export const CommercialService = {
    * Obtiene el perfil de contexto por commercialProfileId.
    * GET /api/interacciones/context/profile/:commercialProfileId
    * Incluye whatsappInstances con chatIAFlow y chatIAFlowFilename solo si el usuario es super administrador.
+   * Con admin=true incluye instancias WhatsApp inactivas (para wizard/admin).
    */
-  async getProfileContext(commercialProfileId: string): Promise<{
+  async getProfileContext(commercialProfileId: string, admin = false): Promise<{
     whatsappInstances: WhatsAppInstance[];
   }> {
-    const res = await apiClient.get<any>(
-      `${BASE_INTERACCIONES}/context/profile/${commercialProfileId}`
+    const endpoint = buildQuery(
+      `${BASE_INTERACCIONES}/context/profile/${commercialProfileId}`,
+      admin ? { admin: 'true' } : undefined
     );
+    const res = await apiClient.get<any>(endpoint);
     const data = res.data?.data ?? res.data;
     const rawInstances =
       data?.whatsappInstances ?? data?.whatsapp_instances ?? [];

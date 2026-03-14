@@ -108,14 +108,14 @@ export const WhatsAppConnectionLayer = forwardRef<
     if (!company?.id) return;
     try {
       setLoading(true);
-      const profile = await CommercialService.getProfile(company.id);
+      const profile = await CommercialService.getProfile(company.id, true);
       let loadedInstances = profile.whatsappInstances || [];
 
-      // Si hay commercialProfileId, obtener contexto (incluye chatIAFlow para super admin)
+      // Si hay commercialProfileId, obtener contexto (incluye chatIAFlow para super admin, instancias inactivas con admin)
       if (profile.id) {
         try {
           const { whatsappInstances: contextInstances } =
-            await CommercialService.getProfileContext(profile.id);
+            await CommercialService.getProfileContext(profile.id, true);
           if (contextInstances.length > 0) {
             loadedInstances = loadedInstances.map((inst) => {
               const enriched = contextInstances.find(
@@ -487,7 +487,7 @@ export const WhatsAppConnectionLayer = forwardRef<
         try {
           setReconnectingWhatsapp(instance.whatsapp);
           setModalAlert(null);
-          const profile = await CommercialService.getProfile(company.id);
+          const profile = await CommercialService.getProfile(company.id, true);
           const commercialProfileId = profile.id;
           if (!commercialProfileId) {
             throw new Error(
