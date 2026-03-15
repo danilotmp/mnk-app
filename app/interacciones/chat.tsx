@@ -46,6 +46,7 @@ import {
     ActivityIndicator,
     Animated,
     Image,
+    ImageBackground,
     Modal,
     Platform,
     ScrollView,
@@ -54,6 +55,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+
+const CHAT_BACKGROUND_URI =
+  "https://static.whatsapp.net/rsrc.php/v4/y1/r/m5BEg2K4OR4.png";
 
 /** Convierte un buffer serializado del backend a data URL para mostrar imágenes inline */
 function getMediaDataUrl(
@@ -2836,33 +2840,38 @@ export default function ChatIAScreen() {
                   </Animated.View>
                 )}
 
-                {/* Área de mensajes */}
-                {loadingMessages ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                  </View>
-                ) : (
-                  <ScrollView
-                    ref={messagesScrollRef}
-                    style={styles.messagesArea}
-                    contentContainerStyle={styles.messagesContent}
-                    showsVerticalScrollIndicator={false}
-                    onContentSizeChange={() => {
-                      // Hacer scroll al final solo cuando se debe (al cargar o enviar mensaje)
-                      if (shouldScrollToEnd && messagesScrollRef.current) {
-                        messagesScrollRef.current.scrollToEnd({
-                          animated: false,
-                        });
-                        setShouldScrollToEnd(false);
-                      }
-                    }}
-                    onScrollBeginDrag={() => {
-                      // Cerrar menú al hacer scroll
-                      if (messageMenuVisible) {
-                        setMessageMenuVisible(null);
-                      }
-                    }}
-                  >
+                {/* Área de mensajes con fondo de chat */}
+                <ImageBackground
+                  source={{ uri: CHAT_BACKGROUND_URI }}
+                  style={styles.messagesAreaBackground}
+                  resizeMode="repeat"
+                >
+                  {loadingMessages ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color={colors.primary} />
+                    </View>
+                  ) : (
+                    <ScrollView
+                      ref={messagesScrollRef}
+                      style={styles.messagesArea}
+                      contentContainerStyle={styles.messagesContent}
+                      showsVerticalScrollIndicator={false}
+                      onContentSizeChange={() => {
+                        // Hacer scroll al final solo cuando se debe (al cargar o enviar mensaje)
+                        if (shouldScrollToEnd && messagesScrollRef.current) {
+                          messagesScrollRef.current.scrollToEnd({
+                            animated: false,
+                          });
+                          setShouldScrollToEnd(false);
+                        }
+                      }}
+                      onScrollBeginDrag={() => {
+                        // Cerrar menú al hacer scroll
+                        if (messageMenuVisible) {
+                          setMessageMenuVisible(null);
+                        }
+                      }}
+                    >
                     {messages.length === 0 ? (
                       <View
                         style={[
@@ -3549,8 +3558,9 @@ export default function ChatIAScreen() {
                           )}
                       </>
                     )}
-                  </ScrollView>
-                )}
+                    </ScrollView>
+                  )}
+                </ImageBackground>
 
                 {/* Archivos adjuntos - Thumbnails (fuera del contenedor del input) */}
                 {attachedFiles.length > 0 && (
@@ -4861,6 +4871,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+  },
+  messagesAreaBackground: {
+    flex: 1,
   },
   messagesArea: {
     flex: 1,
