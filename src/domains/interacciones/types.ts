@@ -54,6 +54,12 @@ export interface MessageAttachment {
   createdAt: string;
 }
 
+/** Buffer serializado que devuelve el backend (ej. mensajes con imagen inline de WhatsApp) */
+export interface SerializedBuffer {
+  type: "Buffer";
+  data: number[];
+}
+
 export interface Message {
   id: string;
   contactId: string;
@@ -61,6 +67,10 @@ export interface Message {
   content: string;
   status: MessageStatus;
   metadata?: Record<string, any>;
+  /** Imagen inline en buffer (viene del backend para mensajes tipo imagen sin attachment) */
+  media?: SerializedBuffer | Buffer;
+  mediaType?: string;
+  mediaFilename?: string;
   attachments?: MessageAttachment[]; // Nuevo sistema de archivos adjuntos
   isEdited?: boolean; // Indica si el mensaje fue editado
   editedAt?: string; // Fecha de edición

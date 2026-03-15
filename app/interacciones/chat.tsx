@@ -18,6 +18,7 @@ import type {
     ContactWithLastMessage,
     Message,
     MessageAttachment,
+    SerializedBuffer,
 } from "@/src/domains/interacciones";
 import {
     InteraccionesService,
@@ -53,6 +54,43 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+
+/** Convierte un buffer serializado del backend a data URL para mostrar imágenes inline */
+function getMediaDataUrl(
+  media: SerializedBuffer | Buffer | undefined,
+  mediaType: string = "image/jpeg",
+): string | null {
+  if (!media) return null;
+  let data: number[] | Uint8Array;
+  if (Array.isArray((media as SerializedBuffer).data)) {
+    data = (media as SerializedBuffer).data;
+  } else if (media instanceof Uint8Array) {
+    data = Array.from(media);
+  } else if (typeof (media as Buffer).length === "number") {
+    data = Array.from(media as Buffer);
+  } else {
+    return null;
+  }
+  if (data.length === 0) return null;
+  let base64: string;
+  try {
+    if (typeof Buffer !== "undefined") {
+      base64 = Buffer.from(data).toString("base64");
+    } else if (typeof btoa !== "undefined") {
+      let binary = "";
+      for (let i = 0; i < data.length; i++) {
+        binary += String.fromCharCode(data[i]);
+      }
+      base64 = btoa(binary);
+    } else {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  const mime = mediaType?.startsWith("image/") ? mediaType : "image/jpeg";
+  return `data:${mime};base64,${base64}`;
+}
 
 export default function ChatIAScreen() {
   const { colors } = useTheme();
@@ -3120,14 +3158,88 @@ export default function ChatIAScreen() {
                                     );
                                   })()}
 
-                                {/* Contenido del mensaje */}
-                                {message.content ? (
-                                  <ThemedText
-                                    type="body2"
-                                    style={{ color: colors.text }}
+                                {/* Imagen inline (media buffer del backend, ej. WhatsApp) */}
+                                {(() => {
+                                  const media =
+                                    message.media ??
+                                    (message as any).metadata?.media;
+                                  const mediaType =
+                                    message.mediaType ??
+                                    (message as any).metadata?.mediaType ??
+                                    "image/jpeg";
+                                  const dataUrl = getMediaDataUrl(
+                                    media as SerializedBuffer | undefined,
+                                    mediaType,
+                                  );
+                                  if (!dataUrl) return null;
+                                  return (
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.messageAttachment,
+                                        {
+                                          borderColor: colors.border,
+                                        },
+                                        isMobile && styles.messageAttachmentMobile,
+                                      ]}
+                                      onPress={() => {
+                                        handleOpenLocalFilesViewer(
+                                          [
+                                            {
+                                              name:
+                                                message.mediaFilename ??
+                                                "imagen",
+                                              size: 0,
+                                              type: mediaType,
+                                              uri: dataUrl,
+                                            },
+                                          ],
+                                          0,
+                                        );
+                                      }}
+                                      activeOpacity={0.8}
+                                    >
+                                      {Platform.OS === "web" ? (
+                                        <Image
+                                          source={{ uri: dataUrl }}
+                                          style={styles.messageAttachmentImage}
+                                          resizeMode="cover"
+                                        />
+                                      ) : (
+                                        <ExpoImage
+                                          source={{ uri: dataUrl }}
+                                          style={styles.messageAttachmentImage}
+                                          contentFit="cover"
+                                          cachePolicy="memory-disk"
+                                          transition={200}
+                                        />
+                                      )}
+                                    </TouchableOpacity>
+                                  );
+                                })()}
+
+                                {/* Contenido del mensaje (no mostrar "[Imagen]" cuando hay media) */}
+                                {message.content &&
+                                  !(
+                                    (message.content === "[Imagen]" ||
+                                      message.content === "[imagen]") &&
+                                    (message.media ??
+                                      (message as any).metadata?.media)
+                                  ) ? (
+                                  <View
+                                    style={
+                                      message.media ??
+                                      (message as any).metadata?.media
+                                        ? { marginTop: 8 }
+                                        : undefined
+                                    }
                                   >
-                                    {message.content}
-                                  </ThemedText>
+                                    <ThemedText
+                                      type="body2"
+                                      style={{ color: colors.text }}
+                                    >
+                                      {message.content}
+                                    </ThemedText>
+                                  </View>
                                 ) : null}
 
                                 {/* Archivos adjuntos */}
