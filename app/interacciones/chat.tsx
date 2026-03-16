@@ -2844,6 +2844,7 @@ export default function ChatIAScreen() {
                 <ImageBackground
                   source={{ uri: CHAT_BACKGROUND_URI }}
                   style={styles.messagesAreaBackground}
+                  imageStyle={styles.messagesAreaBackgroundImage}
                   resizeMode="repeat"
                 >
                   {loadingMessages ? (
@@ -4874,6 +4875,9 @@ const styles = StyleSheet.create({
   },
   messagesAreaBackground: {
     flex: 1,
+  },
+  messagesAreaBackgroundImage: {
+    opacity: 0.5,
   },
   messagesArea: {
     flex: 1,
