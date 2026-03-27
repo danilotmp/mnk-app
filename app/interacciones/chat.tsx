@@ -42,6 +42,7 @@ import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import type { Socket } from "socket.io-client";
 import {
   ActivityIndicator,
   Animated,
@@ -58,6 +59,41 @@ import {
 
 const CHAT_BACKGROUND_URI =
   "https://static.whatsapp.net/rsrc.php/v4/y1/r/m5BEg2K4OR4.png";
+const { io } = require("socket.io-client/dist/socket.io.js") as {
+  io: (uri: string, opts?: Record<string, unknown>) => Socket;
+};
+
+interface WsMessageCreatedPayload {
+  id: string;
+  contactId: string;
+  parentMessageId?: string | null;
+  content: string;
+  direction: "inbound" | "outbound";
+  isFromBot?: boolean;
+  status?: string;
+  mediaType?: string | null;
+  mediaFilename?: string | null;
+  hasMedia?: boolean;
+  createdAt: string;
+  updatedAt?: string | null;
+  editedAt?: string | null;
+  isEdited?: boolean;
+}
+
+interface WsContactUpdatedPayload {
+  id: string;
+  companyId: string;
+  phoneNumber: string;
+  name: string;
+  botEnabled?: boolean;
+  lastInteractionAt?: string;
+  lastMessage?: {
+    id: string;
+    content: string;
+    direction: "inbound" | "outbound";
+    createdAt: string;
+  };
+}
 
 /** Convierte un buffer serializado del backend a data URL para mostrar imágenes inline */
 function getMediaDataUrl(
@@ -97,7 +133,7 @@ function getMediaDataUrl(
 }
 
 export default function ChatIAScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const router = useRouter();
@@ -219,6 +255,8 @@ export default function ChatIAScreen() {
 
   // Estado del selector de mensajes rápidos
   const [showQuickMessages, setShowQuickMessages] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const activeContactIdRef = useRef<string | null>(null);
 
   // Lista de mensajes rápidos desde catálogo (detalles completos)
   const [quickMessages, setQuickMessages] = useState<CatalogEntry[]>([]);
@@ -230,6 +268,26 @@ export default function ChatIAScreen() {
   // Estado para recomendaciones
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  const sortContactsByLastMessage = useCallback(
+    (list: ContactWithLastMessage[]) => {
+      return [...list].sort((a, b) => {
+        if (!a.lastMessage && !b.lastMessage) return 0;
+        if (!a.lastMessage) return 1;
+        if (!b.lastMessage) return -1;
+        return (
+          new Date(b.lastMessage.createdAt).getTime() -
+          new Date(a.lastMessage.createdAt).getTime()
+        );
+      });
+    },
+    [],
+  );
+
+  const isViewVisible = useCallback(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return true;
+    return document.visibilityState === "visible";
+  }, []);
 
   // Lista de emojis populares con palabras clave para búsqueda
   const emojisWithKeywords: Array<{ emoji: string; keywords: string[] }> = [
@@ -1276,18 +1334,7 @@ export default function ChatIAScreen() {
         }),
       );
 
-      // Ordenar por último mensaje (más reciente primero)
-      contactsWithMessages.sort((a, b) => {
-        if (!a.lastMessage && !b.lastMessage) return 0;
-        if (!a.lastMessage) return 1;
-        if (!b.lastMessage) return -1;
-        return (
-          new Date(b.lastMessage.createdAt).getTime() -
-          new Date(a.lastMessage.createdAt).getTime()
-        );
-      });
-
-      setContacts(contactsWithMessages);
+      setContacts(sortContactsByLastMessage(contactsWithMessages));
     } catch (error: any) {
       console.error("Error al cargar contactos:", error);
       alert.showError("Error al cargar contactos", error?.message);
@@ -1295,7 +1342,182 @@ export default function ChatIAScreen() {
       setLoading(false);
       setIsLoadingContacts(false);
     }
-  }, [company?.id]);
+  }, [company?.id, sortContactsByLastMessage]);
+
+  useEffect(() => {
+    activeContactIdRef.current = selectedContact?.id ?? null;
+  }, [selectedContact?.id]);
+
+  // Fallback resiliente: polling suave de contactos
+  useEffect(() => {
+    if (!company?.id) return;
+
+    const intervalId = setInterval(() => {
+      if (!isViewVisible()) return;
+      loadContacts();
+    }, 45000);
+
+    return () => clearInterval(intervalId);
+  }, [company?.id, isViewVisible, loadContacts]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const connectSocket = async () => {
+      if (!company?.id) return;
+
+      const storage = getStorageAdapter();
+      const rawToken = await storage.getItem(API_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
+      if (disposed) return;
+
+      const token = rawToken ? String(rawToken).replace(/^Bearer\s+/i, "") : "";
+      const wsBaseUrl = API_CONFIG.BASE_URL.replace(/\/api\/?$/, "");
+
+      const socket = io(`${wsBaseUrl}/ws/chat`, {
+        transports: ["websocket"],
+        reconnection: true,
+        auth: token ? { token: `Bearer ${token}` } : undefined,
+        extraHeaders: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      socketRef.current = socket;
+
+      socket.on("connect", () => {
+        socket.emit("join.company", { companyId: company.id });
+        if (activeContactIdRef.current) {
+          socket.emit("join.contact", { contactId: activeContactIdRef.current });
+        }
+      });
+
+      socket.on("message.created", (payload: WsMessageCreatedPayload) => {
+        const mappedMessage: Message = {
+          id: payload.id,
+          contactId: payload.contactId,
+          content: payload.content ?? "",
+          direction:
+            payload.direction?.toLowerCase() === "outbound"
+              ? MessageDirection.OUTBOUND
+              : MessageDirection.INBOUND,
+          status: (payload.status || "SENT").toUpperCase() as any,
+          parentMessageId: payload.parentMessageId ?? undefined,
+          mediaType: payload.mediaType ?? undefined,
+          mediaFilename: payload.mediaFilename ?? undefined,
+          isEdited: Boolean(payload.isEdited),
+          editedAt: payload.editedAt ?? undefined,
+          createdAt: payload.createdAt,
+          updatedAt: payload.updatedAt || payload.createdAt,
+        };
+
+        setContacts((prev) => {
+          const merged = prev.map((contact) => {
+            if (contact.id !== payload.contactId) return contact;
+            const unreadDelta =
+              payload.direction === "inbound" &&
+              activeContactIdRef.current !== payload.contactId
+                ? 1
+                : 0;
+
+            return {
+              ...contact,
+              unreadCount: Math.max(0, (contact.unreadCount || 0) + unreadDelta),
+              lastMessage: mappedMessage,
+            };
+          });
+          return sortContactsByLastMessage(merged);
+        });
+
+        if (activeContactIdRef.current === payload.contactId) {
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.id === mappedMessage.id)) return prev;
+            const merged = [...prev, mappedMessage];
+            merged.sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+            );
+            return merged;
+          });
+          setShouldScrollToEnd(true);
+        }
+      });
+
+      socket.on("contact.updated", (payload: WsContactUpdatedPayload) => {
+        setContacts((prev) => {
+          const merged = prev.map((contact) => {
+            if (contact.id !== payload.id) return contact;
+            return {
+              ...contact,
+              name: payload.name ?? contact.name,
+              phoneNumber: payload.phoneNumber ?? contact.phoneNumber,
+              botEnabled:
+                typeof payload.botEnabled === "boolean"
+                  ? payload.botEnabled
+                  : contact.botEnabled,
+              lastMessage: payload.lastMessage
+                ? {
+                    ...contact.lastMessage,
+                    id: payload.lastMessage.id,
+                    contactId: payload.id,
+                    content: payload.lastMessage.content,
+                    direction:
+                      payload.lastMessage.direction === "outbound"
+                        ? MessageDirection.OUTBOUND
+                        : MessageDirection.INBOUND,
+                    status: contact.lastMessage?.status || "SENT",
+                    createdAt: payload.lastMessage.createdAt,
+                    updatedAt: payload.lastMessage.createdAt,
+                  }
+                : contact.lastMessage,
+            } as ContactWithLastMessage;
+          });
+          return sortContactsByLastMessage(merged);
+        });
+
+        setSelectedContact((prev) => {
+          if (!prev || prev.id !== payload.id) return prev;
+          return {
+            ...prev,
+            name: payload.name ?? prev.name,
+            phoneNumber: payload.phoneNumber ?? prev.phoneNumber,
+            botEnabled:
+              typeof payload.botEnabled === "boolean"
+                ? payload.botEnabled
+                : prev.botEnabled,
+          };
+        });
+      });
+    };
+
+    connectSocket();
+
+    return () => {
+      disposed = true;
+      const socket = socketRef.current;
+      if (socket) {
+        if (activeContactIdRef.current) {
+          socket.emit("leave.contact", { contactId: activeContactIdRef.current });
+        }
+        socket.disconnect();
+      }
+      socketRef.current = null;
+    };
+  }, [company?.id, sortContactsByLastMessage]);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    const previousContactId = activeContactIdRef.current;
+    const currentContactId = selectedContact?.id ?? null;
+
+    if (socket.connected && previousContactId && previousContactId !== currentContactId) {
+      socket.emit("leave.contact", { contactId: previousContactId });
+    }
+    if (socket.connected && currentContactId && previousContactId !== currentContactId) {
+      socket.emit("join.contact", { contactId: currentContactId });
+    }
+
+    activeContactIdRef.current = currentContactId;
+  }, [selectedContact?.id]);
 
   // Obtener userId del contexto
   useEffect(() => {
@@ -1336,6 +1558,18 @@ export default function ChatIAScreen() {
       setLoadingMessages(false);
     }
   }, []);
+
+  // Fallback resiliente: polling del chat activo
+  useEffect(() => {
+    if (!selectedContact?.id) return;
+
+    const intervalId = setInterval(() => {
+      if (!isViewVisible()) return;
+      loadMessages(selectedContact.id);
+    }, 12000);
+
+    return () => clearInterval(intervalId);
+  }, [isViewVisible, loadMessages, selectedContact?.id]);
 
   // Editar mensaje
   const handleEditMessage = useCallback(
@@ -2440,6 +2674,16 @@ export default function ChatIAScreen() {
                 >
                   {filteredContacts.map((contact) => {
                     const isSelected = selectedContact?.id === contact.id;
+                    const isLastInbound =
+                      String(contact.lastMessage?.direction || "").toUpperCase() ===
+                      "INBOUND";
+                    const showBotStatusDot = isLastInbound;
+                    const botStatusDotColor =
+                      contact.botEnabled === false
+                        ? colors.secondary
+                        : isDark
+                          ? colors.textSecondary
+                          : colors.chatOutboundBackground;
                     return (
                       <TouchableOpacity
                         key={contact.id}
@@ -2468,23 +2712,39 @@ export default function ChatIAScreen() {
                         </View>
                         <View style={styles.contactInfo}>
                           <View style={styles.contactHeader}>
-                            <ThemedText
-                              type="body2"
-                              style={{ fontWeight: "600", color: colors.text }}
-                              numberOfLines={1}
-                            >
-                              {contact.name}
-                            </ThemedText>
-                            {contact.lastMessage && (
+                            <View style={styles.contactNameRow}>
                               <ThemedText
-                                type="caption"
-                                style={{ color: colors.textSecondary }}
+                                type="body2"
+                                style={{ fontWeight: "600", color: colors.text }}
+                                numberOfLines={1}
                               >
-                                {formatRelativeTime(
-                                  contact.lastMessage.createdAt,
-                                )}
+                                {contact.name}
                               </ThemedText>
-                            )}
+                            </View>
+                            <View style={styles.contactHeaderRight}>
+                              <View style={styles.contactRobotSlot}>
+                                {contact.botEnabled === true && (
+                                  <DynamicIcon
+                                    name="FontAwesome5:robot"
+                                    size={12}
+                                    color={colors.textSecondary}
+                                  />
+                                )}
+                              </View>
+                              {contact.lastMessage && (
+                                <ThemedText
+                                  type="caption"
+                                  style={[
+                                    styles.contactTimeText,
+                                    { color: colors.textSecondary },
+                                  ]}
+                                >
+                                  {formatRelativeTime(
+                                    contact.lastMessage.createdAt,
+                                  )}
+                                </ThemedText>
+                              )}
+                            </View>
                           </View>
                           <View style={styles.contactFooter}>
                             <ThemedText
@@ -2495,6 +2755,14 @@ export default function ChatIAScreen() {
                               {contact.lastMessage?.content ||
                                 contact.phoneNumber}
                             </ThemedText>
+                            {showBotStatusDot && (
+                              <View
+                                style={[
+                                  styles.botStatusDot,
+                                  { backgroundColor: botStatusDotColor },
+                                ]}
+                              />
+                            )}
                             {contact.unreadCount && contact.unreadCount > 0 && (
                               <View
                                 style={[
@@ -2632,7 +2900,7 @@ export default function ChatIAScreen() {
                           size={24}
                           color={
                             (selectedContact?.botEnabled ?? true)
-                              ? colors.secondary
+                              ? colors.primary
                               : colors.textSecondary
                           }
                         />
@@ -4920,6 +5188,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
   },
+  contactNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  contactHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 78,
+    justifyContent: "flex-end",
+    flexShrink: 0,
+  },
+  contactRobotSlot: {
+    width: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  contactTimeText: {
+    minWidth: 56,
+    textAlign: "right",
+  },
   contactFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -4932,6 +5229,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 6,
     marginLeft: 8,
+  },
+  botStatusDot: {
+    width: 13,
+    height: 13,
+    borderRadius: 99,
+    marginLeft: 8,
+    marginRight: 2,
   },
   chatPanel: {
     flex: 1,

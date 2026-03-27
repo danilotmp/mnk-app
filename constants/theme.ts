@@ -75,7 +75,7 @@ const LightPalette = {
   primary: "#00338D", // Azul marino (Light)
   primaryLight: BrandColors.blue[100],
   primaryDark: BrandColors.blue[800],
-  secondary: "#22c55e",
+  secondary: "#5a9c5a",
   secondaryLight: BrandColors.green[100],
   accent: BrandColors.blue[500],
   background: "#FFFFFF",
