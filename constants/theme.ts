@@ -75,7 +75,7 @@ const LightPalette = {
   primary: "#00338D", // Azul marino (Light)
   primaryLight: BrandColors.blue[100],
   primaryDark: BrandColors.blue[800],
-  secondary: BrandColors.green[600],
+  secondary: "#22c55e",
   secondaryLight: BrandColors.green[100],
   accent: BrandColors.blue[500],
   background: "#FFFFFF",
@@ -84,6 +84,10 @@ const LightPalette = {
   surfaceMid: "#F5F7F8",
   dropdownBackground: BrandColors.gray[100], // Fondo selector empresas y Cerrar sesión (Light = surfaceVariant)
   filterInputBackground: BrandColors.gray[100], // Input de filtros (Light = surfaceVariant, mismo que menú)
+  /** Fondo inbound del chat (en light igual a filterInputBackground). */
+  chatInboundBackground: "rgba(244, 246, 251, 0.9)",
+  /** Burbujas outbound del chat. */
+  chatOutboundBackground: "rgba(200, 208, 224, 0.9)",
   border: BrandColors.gray[300],
   borderLight: BrandColors.gray[200],
   text: "#1E2538",
@@ -122,6 +126,8 @@ export const LightTheme = {
     surfaceMid: LightPalette.surfaceMid,
     dropdownBackground: LightPalette.dropdownBackground,
     filterInputBackground: LightPalette.filterInputBackground,
+    chatInboundBackground: LightPalette.chatInboundBackground,
+    chatOutboundBackground: LightPalette.chatOutboundBackground,
     stripedRow: LightPalette.stripedRow,
 
     text: LightPalette.text,
@@ -196,7 +202,7 @@ const DarkPalette = {
   primary: "#0087FF",
   primaryLight: "#7ee0ff",
   primaryDark: "#00a8cc",
-  secondary: "#00d4aa",
+  secondary: "#22c55e",
   secondaryLight: "#33e0bb",
   accent: "#4dd4ff",
   background: "#1e2538",
@@ -205,6 +211,10 @@ const DarkPalette = {
   surfaceMid: "#1a1f33", // Color intermedio entre background y surfaceVariant (para header/footer de tabla)
   dropdownBackground: "#151b2e", // Fondo selector empresas y Cerrar sesión (Dark = surfaceVariant, sin cambiar)
   filterInputBackground: "rgba(188,197,239,.2)", // Input de filtros (Dark = surface, sin cambiar)
+  /** Fondo inbound del chat: slate azulado opaco en dark. */
+  chatInboundBackground: "rgba(90, 100, 120, 0.88)",
+  /** Burbujas outbound del chat. */
+  chatOutboundBackground: "rgba(44, 62, 90, 0.88)",
   border: "#1e2538",
   borderLight: "#2a3142",
   text: "#ffffff",
@@ -239,6 +249,8 @@ export const DarkTheme = {
     surfaceMid: DarkPalette.surfaceMid,
     dropdownBackground: DarkPalette.dropdownBackground,
     filterInputBackground: DarkPalette.filterInputBackground,
+    chatInboundBackground: DarkPalette.chatInboundBackground,
+    chatOutboundBackground: DarkPalette.chatOutboundBackground,
     stripedRow: DarkPalette.stripedRow,
 
     text: DarkPalette.text,

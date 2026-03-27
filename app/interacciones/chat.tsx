@@ -14,15 +14,15 @@ import type { CatalogEntry } from "@/src/domains/catalog/types";
 import { CommercialService } from "@/src/domains/commercial";
 import type { Recommendation } from "@/src/domains/commercial/types";
 import type {
-    Contact,
-    ContactWithLastMessage,
-    Message,
-    MessageAttachment,
-    SerializedBuffer,
+  Contact,
+  ContactWithLastMessage,
+  Message,
+  MessageAttachment,
+  SerializedBuffer,
 } from "@/src/domains/interacciones";
 import {
-    InteraccionesService,
-    MessageDirection,
+  InteraccionesService,
+  MessageDirection,
 } from "@/src/domains/interacciones";
 import { useCompany } from "@/src/domains/shared";
 import { DynamicIcon } from "@/src/domains/shared/components";
@@ -43,17 +43,17 @@ import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Image,
-    ImageBackground,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Image,
+  ImageBackground,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const CHAT_BACKGROUND_URI =
@@ -211,8 +211,8 @@ export default function ChatIAScreen() {
 
   // Panel de información del contacto - siempre visible cuando hay contacto seleccionado
 
-  // Estado del Chat IA (mock por ahora)
-  const [chatIAEnabled, setChatIAEnabled] = useState(true);
+  // Estado de actualización del toggle de bot por contacto
+  const [updatingBotEnabled, setUpdatingBotEnabled] = useState(false);
 
   // Estado del selector de emojis
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1536,6 +1536,73 @@ export default function ChatIAScreen() {
     [isMobile],
   );
 
+  const handleToggleBotEnabled = useCallback(async () => {
+    if (!selectedContact?.id || updatingBotEnabled) return;
+
+    const currentValue = selectedContact.botEnabled ?? true;
+    const nextValue = !currentValue;
+    const contactId = selectedContact.id;
+
+    // Optimistic UI en contacto seleccionado
+    setSelectedContact((prev) =>
+      prev && prev.id === contactId ? { ...prev, botEnabled: nextValue } : prev,
+    );
+    // Optimistic UI en listado de contactos
+    setContacts((prev) =>
+      prev.map((contact) =>
+        contact.id === contactId
+          ? { ...contact, botEnabled: nextValue }
+          : contact,
+      ),
+    );
+
+    try {
+      setUpdatingBotEnabled(true);
+      const updatedContact = await InteraccionesService.updateContact(contactId, {
+        botEnabled: nextValue,
+      });
+
+      // Sincronizar con respuesta real del backend
+      setSelectedContact((prev) =>
+        prev && prev.id === contactId
+          ? {
+              ...prev,
+              ...updatedContact,
+              botEnabled: updatedContact.botEnabled ?? nextValue,
+            }
+          : prev,
+      );
+      setContacts((prev) =>
+        prev.map((contact) =>
+          contact.id === contactId
+            ? {
+                ...contact,
+                ...updatedContact,
+                botEnabled: updatedContact.botEnabled ?? nextValue,
+              }
+            : contact,
+        ),
+      );
+    } catch (error: any) {
+      // Rollback si falla la persistencia
+      setSelectedContact((prev) =>
+        prev && prev.id === contactId
+          ? { ...prev, botEnabled: currentValue }
+          : prev,
+      );
+      setContacts((prev) =>
+        prev.map((contact) =>
+          contact.id === contactId
+            ? { ...contact, botEnabled: currentValue }
+            : contact,
+        ),
+      );
+      alert.showError("No se pudo actualizar el estado del bot", error?.message);
+    } finally {
+      setUpdatingBotEnabled(false);
+    }
+  }, [alert, selectedContact, updatingBotEnabled]);
+
   // Solicitar permisos para expo-image-picker
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -2549,20 +2616,23 @@ export default function ChatIAScreen() {
                     {/* Botón de activar/desactivar Chat IA */}
                     <Tooltip
                       text={
-                        chatIAEnabled ? "Desactivar Chat IA" : "Activar Chat IA"
+                        (selectedContact?.botEnabled ?? true)
+                          ? "Desactivar Chat IA"
+                          : "Activar Chat IA"
                       }
                       position="bottom"
                     >
                       <TouchableOpacity
-                        onPress={() => setChatIAEnabled(!chatIAEnabled)}
+                        onPress={handleToggleBotEnabled}
                         style={styles.chatIAToggle}
+                        disabled={updatingBotEnabled}
                       >
                         <DynamicIcon
                           name="FontAwesome5:robot"
                           size={24}
                           color={
-                            chatIAEnabled
-                              ? colors.primary
+                            (selectedContact?.botEnabled ?? true)
+                              ? colors.secondary
                               : colors.textSecondary
                           }
                         />
@@ -2873,548 +2943,548 @@ export default function ChatIAScreen() {
                         }
                       }}
                     >
-                    {messages.length === 0 ? (
-                      <View
-                        style={[
-                          styles.emptyMessages,
-                          { backgroundColor: "transparent" },
-                        ]}
-                      >
-                        <Ionicons
-                          name="chatbubble-outline"
-                          size={48}
-                          color={colors.textSecondary}
-                        />
-                        <ThemedText
-                          type="body2"
-                          style={{
-                            marginTop: 16,
-                            color: colors.textSecondary,
-                            textAlign: "center",
-                          }}
+                      {messages.length === 0 ? (
+                        <View
+                          style={[
+                            styles.emptyMessages,
+                            { backgroundColor: "transparent" },
+                          ]}
                         >
-                          No hay mensajes aún
-                        </ThemedText>
-                      </View>
-                    ) : (
-                      <>
-                        {filteredMessages.map((message) => {
-                          // El backend devuelve direction en minúsculas: "inbound" o "outbound"
-                          const directionStr = String(
-                            message.direction,
-                          ).toLowerCase();
-                          const isOutbound = directionStr === "outbound";
-                          const isLastMessage =
-                            message ===
-                            filteredMessages[filteredMessages.length - 1];
-                          const canEdit =
-                            isOutbound &&
-                            currentUserId &&
-                            message.createdBy === currentUserId;
-                          const canDelete =
-                            isOutbound &&
-                            currentUserId &&
-                            message.createdBy === currentUserId;
-                          const showMenu = messageMenuVisible === message.id;
+                          <Ionicons
+                            name="chatbubble-outline"
+                            size={48}
+                            color={colors.textSecondary}
+                          />
+                          <ThemedText
+                            type="body2"
+                            style={{
+                              marginTop: 16,
+                              color: colors.textSecondary,
+                              textAlign: "center",
+                            }}
+                          >
+                            No hay mensajes aún
+                          </ThemedText>
+                        </View>
+                      ) : (
+                        <>
+                          {filteredMessages.map((message) => {
+                            // El backend devuelve direction en minúsculas: "inbound" o "outbound"
+                            const directionStr = String(
+                              message.direction,
+                            ).toLowerCase();
+                            const isOutbound = directionStr === "outbound";
+                            const isLastMessage =
+                              message ===
+                              filteredMessages[filteredMessages.length - 1];
+                            const canEdit =
+                              isOutbound &&
+                              currentUserId &&
+                              message.createdBy === currentUserId;
+                            const canDelete =
+                              isOutbound &&
+                              currentUserId &&
+                              message.createdBy === currentUserId;
+                            const showMenu = messageMenuVisible === message.id;
 
-                          return (
-                            <View
-                              key={message.id}
-                              id={
-                                Platform.OS === "web"
-                                  ? `message-${message.id}`
-                                  : undefined
-                              }
-                              ref={(ref) => {
-                                messageRefs.current[message.id] = ref;
-                              }}
-                              style={[
-                                styles.messageContainer,
-                                isOutbound
-                                  ? styles.messageOutbound
-                                  : styles.messageInbound,
-                                showMenu && { zIndex: 1000 },
-                              ]}
-                            >
+                            return (
                               <View
+                                key={message.id}
+                                id={
+                                  Platform.OS === "web"
+                                    ? `message-${message.id}`
+                                    : undefined
+                                }
+                                ref={(ref) => {
+                                  messageRefs.current[message.id] = ref;
+                                }}
                                 style={[
-                                  styles.messageBubble,
-                                  {
-                                    backgroundColor: isOutbound
-                                      ? colors.surfaceVariant
-                                      : colors.surface,
-                                    borderColor: colors.border,
-                                  },
+                                  styles.messageContainer,
+                                  isOutbound
+                                    ? styles.messageOutbound
+                                    : styles.messageInbound,
+                                  showMenu && { zIndex: 1000 },
                                 ]}
                               >
-                                {/* Botón de menú (flecha) - dentro del bubble, parte superior derecha */}
-                                <TouchableOpacity
-                                  style={styles.messageMenuButtonInside}
-                                  onPress={() => toggleMessageMenu(message.id)}
-                                  activeOpacity={0.7}
-                                  data-message-menu-button={
-                                    Platform.OS === "web" ? true : undefined
-                                  }
+                                <View
+                                  style={[
+                                    styles.messageBubble,
+                                    {
+                                      backgroundColor: isOutbound
+                                        ? colors.chatOutboundBackground
+                                        : colors.chatInboundBackground,
+                                      borderColor: colors.border,
+                                      shadowColor: colors.shadow,
+                                      shadowOffset: { width: 0, height: 1 },
+                                      shadowOpacity: 0.14,
+                                      shadowRadius: 3,
+                                      elevation: 2,
+                                    },
+                                  ]}
                                 >
-                                  <Ionicons
-                                    name={
-                                      showMenu ? "chevron-up" : "chevron-down"
+                                  {/* Botón de menú (flecha) - dentro del bubble, parte superior derecha */}
+                                  <TouchableOpacity
+                                    style={styles.messageMenuButtonInside}
+                                    onPress={() =>
+                                      toggleMessageMenu(message.id)
                                     }
-                                    size={16}
-                                    color={colors.textSecondary}
-                                  />
-                                </TouchableOpacity>
+                                    activeOpacity={0.7}
+                                    data-message-menu-button={
+                                      Platform.OS === "web" ? true : undefined
+                                    }
+                                  >
+                                    <Ionicons
+                                      name={
+                                        showMenu ? "chevron-up" : "chevron-down"
+                                      }
+                                      size={16}
+                                      color={colors.textSecondary}
+                                    />
+                                  </TouchableOpacity>
 
-                                {/* Cita del mensaje original (si es una respuesta) */}
-                                {message.parentMessage &&
-                                  (() => {
-                                    // Buscar el mensaje padre completo en la lista de mensajes para obtener attachments
-                                    const fullParentMessage =
-                                      message.parentMessageId
-                                        ? messages.find(
-                                            (m) =>
-                                              m.id === message.parentMessageId,
-                                          )
-                                        : null;
+                                  {/* Cita del mensaje original (si es una respuesta) */}
+                                  {message.parentMessage &&
+                                    (() => {
+                                      // Buscar el mensaje padre completo en la lista de mensajes para obtener attachments
+                                      const fullParentMessage =
+                                        message.parentMessageId
+                                          ? messages.find(
+                                              (m) =>
+                                                m.id ===
+                                                message.parentMessageId,
+                                            )
+                                          : null;
 
-                                    // Usar el mensaje completo si está disponible, sino usar el parentMessage básico
-                                    const parentMessageToUse =
-                                      fullParentMessage ||
-                                      message.parentMessage;
+                                      // Usar el mensaje completo si está disponible, sino usar el parentMessage básico
+                                      const parentMessageToUse =
+                                        fullParentMessage ||
+                                        message.parentMessage;
 
-                                    return (
-                                      <TouchableOpacity
-                                        style={[
-                                          styles.messageQuote,
-                                          {
-                                            backgroundColor: isOutbound
-                                              ? colors.surfaceVariant + "CC"
-                                              : colors.surface + "CC",
-                                            borderLeftColor: colors.primary,
-                                          },
-                                        ]}
-                                        activeOpacity={0.7}
-                                        onPress={() => {
-                                          // Hacer scroll al mensaje padre usando su ID como sección (anchor link)
-                                          if (
-                                            message.parentMessageId &&
-                                            messagesScrollRef.current
-                                          ) {
-                                            const parentRef =
-                                              messageRefs.current[
-                                                message.parentMessageId
-                                              ];
-                                            if (parentRef) {
-                                              // En web, usar scrollIntoView (funcionalidad de secciones/anchor links)
-                                              if (Platform.OS === "web") {
-                                                const element =
-                                                  document.getElementById(
-                                                    `message-${message.parentMessageId}`,
-                                                  );
-                                                if (element) {
-                                                  element.scrollIntoView({
-                                                    behavior: "smooth",
-                                                    block: "start",
-                                                  });
-                                                }
-                                              } else {
-                                                // En móvil, usar measureLayout para obtener posición relativa al ScrollView
-                                                parentRef.measureLayout(
-                                                  messagesScrollRef.current as any,
-                                                  (x: number, y: number) => {
-                                                    messagesScrollRef.current?.scrollTo(
-                                                      {
-                                                        y: Math.max(0, y - 20), // 20px de margen superior
-                                                        animated: true,
-                                                      },
+                                      return (
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.messageQuote,
+                                            {
+                                              backgroundColor: isOutbound
+                                                ? colors.chatOutboundBackground
+                                                : colors.chatInboundBackground,
+                                              borderLeftColor: colors.primary,
+                                            },
+                                          ]}
+                                          activeOpacity={0.7}
+                                          onPress={() => {
+                                            // Hacer scroll al mensaje padre usando su ID como sección (anchor link)
+                                            if (
+                                              message.parentMessageId &&
+                                              messagesScrollRef.current
+                                            ) {
+                                              const parentRef =
+                                                messageRefs.current[
+                                                  message.parentMessageId
+                                                ];
+                                              if (parentRef) {
+                                                // En web, usar scrollIntoView (funcionalidad de secciones/anchor links)
+                                                if (Platform.OS === "web") {
+                                                  const element =
+                                                    document.getElementById(
+                                                      `message-${message.parentMessageId}`,
                                                     );
-                                                  },
-                                                  () => {
-                                                    // Fallback si measureLayout falla
-                                                  },
-                                                );
+                                                  if (element) {
+                                                    element.scrollIntoView({
+                                                      behavior: "smooth",
+                                                      block: "start",
+                                                    });
+                                                  }
+                                                } else {
+                                                  // En móvil, usar measureLayout para obtener posición relativa al ScrollView
+                                                  parentRef.measureLayout(
+                                                    messagesScrollRef.current as any,
+                                                    (x: number, y: number) => {
+                                                      messagesScrollRef.current?.scrollTo(
+                                                        {
+                                                          y: Math.max(
+                                                            0,
+                                                            y - 20,
+                                                          ), // 20px de margen superior
+                                                          animated: true,
+                                                        },
+                                                      );
+                                                    },
+                                                    () => {
+                                                      // Fallback si measureLayout falla
+                                                    },
+                                                  );
+                                                }
                                               }
                                             }
-                                          }
-                                        }}
-                                      >
-                                        <View style={styles.messageQuoteHeader}>
-                                          <ThemedText
-                                            type="caption"
-                                            style={{
-                                              color: colors.primary,
-                                              fontWeight: "600",
-                                              fontSize: 11,
-                                            }}
-                                          >
-                                            {parentMessageToUse.direction.toLowerCase() ===
-                                            "outbound"
-                                              ? "Tú"
-                                              : selectedContact?.name ||
-                                                "Contacto"}
-                                          </ThemedText>
-                                        </View>
-                                        <View
-                                          style={{
-                                            flexDirection: "row",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            marginTop: 2,
                                           }}
                                         >
                                           <View
-                                            style={{
-                                              flex: 1,
-                                              flexDirection: "row",
-                                              alignItems: "center",
-                                              gap: 4,
-                                              marginRight: 8,
-                                            }}
+                                            style={styles.messageQuoteHeader}
                                           >
-                                            {/* Mostrar icono de adjunto si tiene attachments */}
-                                            {parentMessageToUse.attachments &&
-                                              parentMessageToUse.attachments
-                                                .length > 0 && (
-                                                <Ionicons
-                                                  name={
-                                                    parentMessageToUse.attachments.some(
-                                                      (a: MessageAttachment) =>
-                                                        a.fileType.startsWith(
-                                                          "image/",
-                                                        ),
-                                                    )
-                                                      ? "image-outline"
-                                                      : "document-outline"
-                                                  }
-                                                  size={12}
-                                                  color={colors.textSecondary}
-                                                />
-                                              )}
                                             <ThemedText
                                               type="caption"
                                               style={{
-                                                color: colors.textSecondary,
-                                                fontSize: 12,
+                                                color: colors.primary,
+                                                fontWeight: "600",
+                                                fontSize: 11,
                                               }}
-                                              numberOfLines={1}
                                             >
-                                              {/* Mostrar contenido si existe, si no mostrar "Archivo adjunto" */}
-                                              {parentMessageToUse.content ||
-                                                "Archivo adjunto"}
+                                              {parentMessageToUse.direction.toLowerCase() ===
+                                              "outbound"
+                                                ? "Tú"
+                                                : selectedContact?.name ||
+                                                  "Contacto"}
                                             </ThemedText>
                                           </View>
-                                          {/* Mostrar miniatura de adjunto a la derecha si hay attachments */}
-                                          {(() => {
-                                            const firstAttachment =
-                                              parentMessageToUse
-                                                .attachments?.[0];
-                                            if (firstAttachment) {
-                                              const isImage =
-                                                firstAttachment.fileType.startsWith(
-                                                  "image/",
-                                                );
-                                              return (
-                                                <MessageQuoteAttachmentThumbnail
-                                                  attachment={firstAttachment}
-                                                  messageId={
-                                                    parentMessageToUse.id
-                                                  }
-                                                  getFileIcon={getFileIcon}
-                                                  onPress={() => {
-                                                    if (parentMessageToUse) {
-                                                      if (isImage) {
-                                                        const imageAttachments =
-                                                          parentMessageToUse.attachments?.filter(
-                                                            (
-                                                              a: MessageAttachment,
-                                                            ) =>
-                                                              a.fileType.startsWith(
-                                                                "image/",
-                                                              ),
-                                                          ) || [];
-                                                        const clickedIndex =
-                                                          imageAttachments.findIndex(
-                                                            (a) =>
-                                                              a.id ===
-                                                              firstAttachment.id,
-                                                          );
-                                                        handleOpenImageViewer(
-                                                          imageAttachments,
-                                                          parentMessageToUse.id,
-                                                          clickedIndex >= 0
-                                                            ? clickedIndex
-                                                            : 0,
-                                                        );
-                                                      } else {
-                                                        // Para otros tipos de archivo, abrir el visor de imágenes con el adjunto
-                                                        // o implementar lógica específica según el tipo
-                                                        const attachmentUrl =
-                                                          InteraccionesService.getAttachmentUrl(
-                                                            parentMessageToUse.id,
-                                                            firstAttachment.id,
-                                                            firstAttachment.filePath,
-                                                          );
-                                                        // Por ahora, solo mostrar el archivo (puedes implementar descarga o preview)
-                                                      }
+                                          <View
+                                            style={{
+                                              flexDirection: "row",
+                                              alignItems: "center",
+                                              justifyContent: "space-between",
+                                              marginTop: 2,
+                                            }}
+                                          >
+                                            <View
+                                              style={{
+                                                flex: 1,
+                                                flexDirection: "row",
+                                                alignItems: "center",
+                                                gap: 4,
+                                                marginRight: 8,
+                                              }}
+                                            >
+                                              {/* Mostrar icono de adjunto si tiene attachments */}
+                                              {parentMessageToUse.attachments &&
+                                                parentMessageToUse.attachments
+                                                  .length > 0 && (
+                                                  <Ionicons
+                                                    name={
+                                                      parentMessageToUse.attachments.some(
+                                                        (
+                                                          a: MessageAttachment,
+                                                        ) =>
+                                                          a.fileType.startsWith(
+                                                            "image/",
+                                                          ),
+                                                      )
+                                                        ? "image-outline"
+                                                        : "document-outline"
                                                     }
-                                                  }}
-                                                />
-                                              );
+                                                    size={12}
+                                                    color={colors.textSecondary}
+                                                  />
+                                                )}
+                                              <ThemedText
+                                                type="caption"
+                                                style={{
+                                                  color: colors.textSecondary,
+                                                  fontSize: 12,
+                                                }}
+                                                numberOfLines={1}
+                                              >
+                                                {/* Mostrar contenido si existe, si no mostrar "Archivo adjunto" */}
+                                                {parentMessageToUse.content ||
+                                                  "Archivo adjunto"}
+                                              </ThemedText>
+                                            </View>
+                                            {/* Mostrar miniatura de adjunto a la derecha si hay attachments */}
+                                            {(() => {
+                                              const firstAttachment =
+                                                parentMessageToUse
+                                                  .attachments?.[0];
+                                              if (firstAttachment) {
+                                                const isImage =
+                                                  firstAttachment.fileType.startsWith(
+                                                    "image/",
+                                                  );
+                                                return (
+                                                  <MessageQuoteAttachmentThumbnail
+                                                    attachment={firstAttachment}
+                                                    messageId={
+                                                      parentMessageToUse.id
+                                                    }
+                                                    getFileIcon={getFileIcon}
+                                                    onPress={() => {
+                                                      if (parentMessageToUse) {
+                                                        if (isImage) {
+                                                          const imageAttachments =
+                                                            parentMessageToUse.attachments?.filter(
+                                                              (
+                                                                a: MessageAttachment,
+                                                              ) =>
+                                                                a.fileType.startsWith(
+                                                                  "image/",
+                                                                ),
+                                                            ) || [];
+                                                          const clickedIndex =
+                                                            imageAttachments.findIndex(
+                                                              (a) =>
+                                                                a.id ===
+                                                                firstAttachment.id,
+                                                            );
+                                                          handleOpenImageViewer(
+                                                            imageAttachments,
+                                                            parentMessageToUse.id,
+                                                            clickedIndex >= 0
+                                                              ? clickedIndex
+                                                              : 0,
+                                                          );
+                                                        } else {
+                                                          // Para otros tipos de archivo, abrir el visor de imágenes con el adjunto
+                                                          // o implementar lógica específica según el tipo
+                                                          const attachmentUrl =
+                                                            InteraccionesService.getAttachmentUrl(
+                                                              parentMessageToUse.id,
+                                                              firstAttachment.id,
+                                                              firstAttachment.filePath,
+                                                            );
+                                                          // Por ahora, solo mostrar el archivo (puedes implementar descarga o preview)
+                                                        }
+                                                      }
+                                                    }}
+                                                  />
+                                                );
+                                              }
+                                              return null;
+                                            })()}
+                                          </View>
+                                        </TouchableOpacity>
+                                      );
+                                    })()}
+
+                                  {/* Imagen inline (media buffer del backend, ej. WhatsApp) */}
+                                  {(() => {
+                                    const media =
+                                      message.media ??
+                                      (message as any).metadata?.media;
+                                    const mediaType =
+                                      message.mediaType ??
+                                      (message as any).metadata?.mediaType ??
+                                      "image/jpeg";
+                                    const dataUrl = getMediaDataUrl(
+                                      media as SerializedBuffer | undefined,
+                                      mediaType,
+                                    );
+                                    if (!dataUrl) return null;
+                                    return (
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.messageAttachment,
+                                          {
+                                            borderColor: colors.border,
+                                          },
+                                          isMobile &&
+                                            styles.messageAttachmentMobile,
+                                        ]}
+                                        onPress={() => {
+                                          handleOpenLocalFilesViewer(
+                                            [
+                                              {
+                                                name:
+                                                  message.mediaFilename ??
+                                                  "imagen",
+                                                size: 0,
+                                                type: mediaType,
+                                                uri: dataUrl,
+                                              },
+                                            ],
+                                            0,
+                                          );
+                                        }}
+                                        activeOpacity={0.8}
+                                      >
+                                        {Platform.OS === "web" ? (
+                                          <Image
+                                            source={{ uri: dataUrl }}
+                                            style={
+                                              styles.messageAttachmentImage
                                             }
-                                            return null;
-                                          })()}
-                                        </View>
+                                            resizeMode="cover"
+                                          />
+                                        ) : (
+                                          <ExpoImage
+                                            source={{ uri: dataUrl }}
+                                            style={
+                                              styles.messageAttachmentImage
+                                            }
+                                            contentFit="cover"
+                                            cachePolicy="memory-disk"
+                                            transition={200}
+                                          />
+                                        )}
                                       </TouchableOpacity>
                                     );
                                   })()}
 
-                                {/* Imagen inline (media buffer del backend, ej. WhatsApp) */}
-                                {(() => {
-                                  const media =
-                                    message.media ??
-                                    (message as any).metadata?.media;
-                                  const mediaType =
-                                    message.mediaType ??
-                                    (message as any).metadata?.mediaType ??
-                                    "image/jpeg";
-                                  const dataUrl = getMediaDataUrl(
-                                    media as SerializedBuffer | undefined,
-                                    mediaType,
-                                  );
-                                  if (!dataUrl) return null;
-                                  return (
-                                    <TouchableOpacity
-                                      style={[
-                                        styles.messageAttachment,
-                                        {
-                                          borderColor: colors.border,
-                                        },
-                                        isMobile && styles.messageAttachmentMobile,
-                                      ]}
-                                      onPress={() => {
-                                        handleOpenLocalFilesViewer(
-                                          [
-                                            {
-                                              name:
-                                                message.mediaFilename ??
-                                                "imagen",
-                                              size: 0,
-                                              type: mediaType,
-                                              uri: dataUrl,
-                                            },
-                                          ],
-                                          0,
-                                        );
-                                      }}
-                                      activeOpacity={0.8}
-                                    >
-                                      {Platform.OS === "web" ? (
-                                        <Image
-                                          source={{ uri: dataUrl }}
-                                          style={styles.messageAttachmentImage}
-                                          resizeMode="cover"
-                                        />
-                                      ) : (
-                                        <ExpoImage
-                                          source={{ uri: dataUrl }}
-                                          style={styles.messageAttachmentImage}
-                                          contentFit="cover"
-                                          cachePolicy="memory-disk"
-                                          transition={200}
-                                        />
-                                      )}
-                                    </TouchableOpacity>
-                                  );
-                                })()}
-
-                                {/* Contenido del mensaje (no mostrar "[Imagen]" cuando hay media) */}
-                                {message.content &&
+                                  {/* Contenido del mensaje (no mostrar "[Imagen]" cuando hay media) */}
+                                  {message.content &&
                                   !(
                                     (message.content === "[Imagen]" ||
                                       message.content === "[imagen]") &&
                                     (message.media ??
                                       (message as any).metadata?.media)
                                   ) ? (
-                                  <View
-                                    style={
-                                      message.media ??
-                                      (message as any).metadata?.media
-                                        ? { marginTop: 8 }
-                                        : undefined
-                                    }
-                                  >
-                                    <ThemedText
-                                      type="body2"
-                                      style={{ color: colors.text }}
+                                    <View
+                                      style={
+                                        (message.media ??
+                                        (message as any).metadata?.media)
+                                          ? { marginTop: 8 }
+                                          : undefined
+                                      }
                                     >
-                                      {message.content}
-                                    </ThemedText>
-                                  </View>
-                                ) : null}
-
-                                {/* Archivos adjuntos */}
-                                {message.attachments &&
-                                  message.attachments.length > 0 && (
-                                    <View style={styles.messageAttachments}>
-                                      {message.attachments.map(
-                                        (attachment, index) => {
-                                          const imageAttachments =
-                                            message.attachments?.filter((a) =>
-                                              a.fileType.startsWith("image/"),
-                                            ) || [];
-                                          const imageIndex =
-                                            imageAttachments.findIndex(
-                                              (a) => a.id === attachment.id,
-                                            );
-                                          return (
-                                            <MessageAttachmentItem
-                                              key={attachment.id}
-                                              attachment={attachment}
-                                              messageId={message.id}
-                                              colors={colors}
-                                              isMobile={isMobile}
-                                              onPress={() => {
-                                                if (
-                                                  attachment.fileType.startsWith(
-                                                    "image/",
-                                                  )
-                                                ) {
-                                                  handleOpenImageViewer(
-                                                    imageAttachments,
-                                                    message.id,
-                                                    imageIndex >= 0
-                                                      ? imageIndex
-                                                      : 0,
-                                                  );
-                                                }
-                                              }}
-                                            />
-                                          );
-                                        },
-                                      )}
+                                      <ThemedText
+                                        type="body2"
+                                        style={{ color: colors.text }}
+                                      >
+                                        {message.content}
+                                      </ThemedText>
                                     </View>
-                                  )}
+                                  ) : null}
 
-                                <View style={styles.messageFooter}>
-                                  <View
-                                    style={{
-                                      flexDirection: "row",
-                                      alignItems: "center",
-                                      gap: 4,
-                                    }}
-                                  >
-                                    <ThemedText
-                                      type="caption"
+                                  {/* Archivos adjuntos */}
+                                  {message.attachments &&
+                                    message.attachments.length > 0 && (
+                                      <View style={styles.messageAttachments}>
+                                        {message.attachments.map(
+                                          (attachment, index) => {
+                                            const imageAttachments =
+                                              message.attachments?.filter((a) =>
+                                                a.fileType.startsWith("image/"),
+                                              ) || [];
+                                            const imageIndex =
+                                              imageAttachments.findIndex(
+                                                (a) => a.id === attachment.id,
+                                              );
+                                            return (
+                                              <MessageAttachmentItem
+                                                key={attachment.id}
+                                                attachment={attachment}
+                                                messageId={message.id}
+                                                colors={colors}
+                                                isMobile={isMobile}
+                                                onPress={() => {
+                                                  if (
+                                                    attachment.fileType.startsWith(
+                                                      "image/",
+                                                    )
+                                                  ) {
+                                                    handleOpenImageViewer(
+                                                      imageAttachments,
+                                                      message.id,
+                                                      imageIndex >= 0
+                                                        ? imageIndex
+                                                        : 0,
+                                                    );
+                                                  }
+                                                }}
+                                              />
+                                            );
+                                          },
+                                        )}
+                                      </View>
+                                    )}
+
+                                  <View style={styles.messageFooter}>
+                                    <View
                                       style={{
-                                        color: colors.textSecondary,
-                                        fontSize: 10,
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        gap: 4,
                                       }}
                                     >
-                                      {new Date(
-                                        message.createdAt,
-                                      ).toLocaleTimeString("es-ES", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </ThemedText>
-                                    {message.isEdited && (
                                       <ThemedText
                                         type="caption"
                                         style={{
                                           color: colors.textSecondary,
-                                          fontSize: 9,
-                                          fontStyle: "italic",
+                                          fontSize: 10,
                                         }}
                                       >
-                                        (editado)
+                                        {new Date(
+                                          message.createdAt,
+                                        ).toLocaleTimeString("es-ES", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
                                       </ThemedText>
-                                    )}
-                                  </View>
-
-                                  {/* Indicador de progreso de carga dentro del mensaje */}
-                                  {isOutbound &&
-                                    isLastMessage &&
-                                    isUploading &&
-                                    uploadProgress > 0 && (
-                                      <View style={styles.uploadProgressInline}>
-                                        <View
-                                          style={styles.uploadProgressBarInline}
-                                        >
-                                          <View
-                                            style={[
-                                              styles.uploadProgressFill,
-                                              {
-                                                width: `${uploadProgress}%`,
-                                                backgroundColor: colors.primary,
-                                              },
-                                            ]}
-                                          />
-                                        </View>
+                                      {message.isEdited && (
                                         <ThemedText
                                           type="caption"
                                           style={{
                                             color: colors.textSecondary,
-                                            marginLeft: 6,
-                                            fontSize: 10,
+                                            fontSize: 9,
+                                            fontStyle: "italic",
                                           }}
                                         >
-                                          {Math.round(uploadProgress)}%
+                                          (editado)
                                         </ThemedText>
-                                      </View>
-                                    )}
-                                </View>
+                                      )}
+                                    </View>
 
-                                {/* Menú contextual - dentro del bubble para posicionamiento relativo a la flecha */}
-                                {showMenu && (
-                                  <Animated.View
-                                    style={[
-                                      styles.messageContextMenu,
-                                      {
-                                        backgroundColor:
-                                          colors.filterInputBackground,
-                                        borderColor: colors.border,
-                                        shadowColor: colors.shadow,
-                                      },
-                                    ]}
-                                    data-message-menu={
-                                      Platform.OS === "web" ? true : undefined
-                                    }
-                                  >
-                                    {/* Responder */}
-                                    <TouchableOpacity
-                                      style={styles.messageContextMenuItem}
-                                      onPress={() =>
-                                        handleReplyToMessage(message)
+                                    {/* Indicador de progreso de carga dentro del mensaje */}
+                                    {isOutbound &&
+                                      isLastMessage &&
+                                      isUploading &&
+                                      uploadProgress > 0 && (
+                                        <View
+                                          style={styles.uploadProgressInline}
+                                        >
+                                          <View
+                                            style={
+                                              styles.uploadProgressBarInline
+                                            }
+                                          >
+                                            <View
+                                              style={[
+                                                styles.uploadProgressFill,
+                                                {
+                                                  width: `${uploadProgress}%`,
+                                                  backgroundColor:
+                                                    colors.primary,
+                                                },
+                                              ]}
+                                            />
+                                          </View>
+                                          <ThemedText
+                                            type="caption"
+                                            style={{
+                                              color: colors.textSecondary,
+                                              marginLeft: 6,
+                                              fontSize: 10,
+                                            }}
+                                          >
+                                            {Math.round(uploadProgress)}%
+                                          </ThemedText>
+                                        </View>
+                                      )}
+                                  </View>
+
+                                  {/* Menú contextual - dentro del bubble para posicionamiento relativo a la flecha */}
+                                  {showMenu && (
+                                    <Animated.View
+                                      style={[
+                                        styles.messageContextMenu,
+                                        {
+                                          backgroundColor:
+                                            colors.filterInputBackground,
+                                          borderColor: colors.border,
+                                          shadowColor: colors.shadow,
+                                        },
+                                      ]}
+                                      data-message-menu={
+                                        Platform.OS === "web" ? true : undefined
                                       }
-                                      activeOpacity={0.7}
                                     >
-                                      <Ionicons
-                                        name="arrow-undo-outline"
-                                        size={20}
-                                        color={colors.text}
-                                      />
-                                      <ThemedText
-                                        type="body2"
-                                        style={{
-                                          color: colors.text,
-                                          marginLeft: 12,
-                                        }}
-                                      >
-                                        Responder
-                                      </ThemedText>
-                                    </TouchableOpacity>
-
-                                    {/* Copiar */}
-                                    {message.content && (
+                                      {/* Responder */}
                                       <TouchableOpacity
                                         style={styles.messageContextMenuItem}
                                         onPress={() =>
-                                          handleCopyMessage(message.content)
+                                          handleReplyToMessage(message)
                                         }
                                         activeOpacity={0.7}
                                       >
                                         <Ionicons
-                                          name="copy-outline"
+                                          name="arrow-undo-outline"
                                           size={20}
                                           color={colors.text}
                                         />
@@ -3425,140 +3495,169 @@ export default function ChatIAScreen() {
                                             marginLeft: 12,
                                           }}
                                         >
-                                          Copiar
+                                          Responder
                                         </ThemedText>
                                       </TouchableOpacity>
-                                    )}
 
-                                    {/* Editar (solo outbound) */}
-                                    {isOutbound && (
-                                      <TouchableOpacity
-                                        style={styles.messageContextMenuItem}
-                                        onPress={() =>
-                                          startEditingMessage(message)
-                                        }
-                                        activeOpacity={0.7}
-                                      >
-                                        <Ionicons
-                                          name="create-outline"
-                                          size={20}
-                                          color={colors.text}
-                                        />
-                                        <ThemedText
-                                          type="body2"
-                                          style={{
-                                            color: colors.text,
-                                            marginLeft: 12,
-                                          }}
+                                      {/* Copiar */}
+                                      {message.content && (
+                                        <TouchableOpacity
+                                          style={styles.messageContextMenuItem}
+                                          onPress={() =>
+                                            handleCopyMessage(message.content)
+                                          }
+                                          activeOpacity={0.7}
                                         >
-                                          Editar
-                                        </ThemedText>
-                                      </TouchableOpacity>
-                                    )}
-
-                                    {/* Eliminar (solo outbound) */}
-                                    {isOutbound && (
-                                      <TouchableOpacity
-                                        style={styles.messageContextMenuItem}
-                                        onPress={() =>
-                                          confirmDeleteMessage(message.id)
-                                        }
-                                        activeOpacity={0.7}
-                                        disabled={
-                                          deletingMessageId === message.id
-                                        }
-                                      >
-                                        {deletingMessageId === message.id ? (
-                                          <ActivityIndicator
-                                            size="small"
-                                            color={colors.error}
-                                          />
-                                        ) : (
                                           <Ionicons
-                                            name="trash-outline"
+                                            name="copy-outline"
                                             size={20}
-                                            color={colors.error}
+                                            color={colors.text}
                                           />
-                                        )}
-                                        <ThemedText
-                                          type="body2"
-                                          style={{
-                                            color:
-                                              deletingMessageId === message.id
-                                                ? colors.textSecondary
-                                                : colors.error,
-                                            marginLeft: 12,
-                                          }}
-                                        >
-                                          Eliminar
-                                        </ThemedText>
-                                      </TouchableOpacity>
-                                    )}
-                                  </Animated.View>
-                                )}
-                              </View>
-                            </View>
-                          );
-                        })}
+                                          <ThemedText
+                                            type="body2"
+                                            style={{
+                                              color: colors.text,
+                                              marginLeft: 12,
+                                            }}
+                                          >
+                                            Copiar
+                                          </ThemedText>
+                                        </TouchableOpacity>
+                                      )}
 
-                        {/* Indicador de progreso para mensajes sin contenido aún (solo archivos) */}
-                        {isUploading &&
-                          uploadProgress > 0 &&
-                          filteredMessages.length === 0 && (
-                            <View
-                              style={[
-                                styles.messageContainer,
-                                styles.messageOutbound,
-                              ]}
-                            >
-                              <View
-                                style={[
-                                  styles.messageBubble,
-                                  {
-                                    backgroundColor: colors.surfaceVariant,
-                                    borderColor: colors.border,
-                                  },
-                                ]}
-                              >
-                                <ThemedText
-                                  type="body2"
-                                  style={{ color: colors.textSecondary }}
-                                >
-                                  Enviando...
-                                </ThemedText>
-                              </View>
-                              <View
-                                style={[
-                                  styles.uploadProgressContainerMessage,
-                                  { backgroundColor: colors.surfaceVariant },
-                                ]}
-                              >
-                                <View style={styles.uploadProgressBar}>
-                                  <View
-                                    style={[
-                                      styles.uploadProgressFill,
-                                      {
-                                        width: `${uploadProgress}%`,
-                                        backgroundColor: colors.primary,
-                                      },
-                                    ]}
-                                  />
+                                      {/* Editar (solo outbound) */}
+                                      {isOutbound && (
+                                        <TouchableOpacity
+                                          style={styles.messageContextMenuItem}
+                                          onPress={() =>
+                                            startEditingMessage(message)
+                                          }
+                                          activeOpacity={0.7}
+                                        >
+                                          <Ionicons
+                                            name="create-outline"
+                                            size={20}
+                                            color={colors.text}
+                                          />
+                                          <ThemedText
+                                            type="body2"
+                                            style={{
+                                              color: colors.text,
+                                              marginLeft: 12,
+                                            }}
+                                          >
+                                            Editar
+                                          </ThemedText>
+                                        </TouchableOpacity>
+                                      )}
+
+                                      {/* Eliminar (solo outbound) */}
+                                      {isOutbound && (
+                                        <TouchableOpacity
+                                          style={styles.messageContextMenuItem}
+                                          onPress={() =>
+                                            confirmDeleteMessage(message.id)
+                                          }
+                                          activeOpacity={0.7}
+                                          disabled={
+                                            deletingMessageId === message.id
+                                          }
+                                        >
+                                          {deletingMessageId === message.id ? (
+                                            <ActivityIndicator
+                                              size="small"
+                                              color={colors.error}
+                                            />
+                                          ) : (
+                                            <Ionicons
+                                              name="trash-outline"
+                                              size={20}
+                                              color={colors.error}
+                                            />
+                                          )}
+                                          <ThemedText
+                                            type="body2"
+                                            style={{
+                                              color:
+                                                deletingMessageId === message.id
+                                                  ? colors.textSecondary
+                                                  : colors.error,
+                                              marginLeft: 12,
+                                            }}
+                                          >
+                                            Eliminar
+                                          </ThemedText>
+                                        </TouchableOpacity>
+                                      )}
+                                    </Animated.View>
+                                  )}
                                 </View>
-                                <ThemedText
-                                  type="caption"
-                                  style={{
-                                    color: colors.textSecondary,
-                                    marginTop: 4,
-                                    fontSize: 10,
-                                  }}
-                                >
-                                  {Math.round(uploadProgress)}%
-                                </ThemedText>
                               </View>
-                            </View>
-                          )}
-                      </>
-                    )}
+                            );
+                          })}
+
+                          {/* Indicador de progreso para mensajes sin contenido aún (solo archivos) */}
+                          {isUploading &&
+                            uploadProgress > 0 &&
+                            filteredMessages.length === 0 && (
+                              <View
+                                style={[
+                                  styles.messageContainer,
+                                  styles.messageOutbound,
+                                ]}
+                              >
+                                <View
+                                  style={[
+                                    styles.messageBubble,
+                                    {
+                                      backgroundColor:
+                                        colors.chatOutboundBackground,
+                                      borderColor: colors.border,
+                                    },
+                                  ]}
+                                >
+                                  <ThemedText
+                                    type="body2"
+                                    style={{ color: colors.textSecondary }}
+                                  >
+                                    Enviando...
+                                  </ThemedText>
+                                </View>
+                                <View
+                                  style={[
+                                    styles.uploadProgressContainerMessage,
+                                    {
+                                      backgroundColor:
+                                        colors.chatOutboundBackground,
+                                    },
+                                  ]}
+                                >
+                                  <View style={styles.uploadProgressBar}>
+                                    <View
+                                      style={[
+                                        styles.uploadProgressFill,
+                                        {
+                                          width: `${uploadProgress}%`,
+                                          backgroundColor: colors.primary,
+                                        },
+                                      ]}
+                                    />
+                                  </View>
+                                  <ThemedText
+                                    type="caption"
+                                    style={{
+                                      color: colors.textSecondary,
+                                      marginTop: 4,
+                                      fontSize: 10,
+                                    }}
+                                  >
+                                    {Math.round(uploadProgress)}%
+                                  </ThemedText>
+                                </View>
+                              </View>
+                            )}
+                        </>
+                      )}
                     </ScrollView>
                   )}
                 </ImageBackground>
@@ -4848,6 +4947,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     position: "relative",
     overflow: "visible",
+    zIndex: 2000,
+    elevation: 20,
   },
   mobileSearchBar: {
     borderBottomWidth: 1,
@@ -4877,7 +4978,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesAreaBackgroundImage: {
-    opacity: 0.5,
+    opacity: 0.1,
   },
   messagesArea: {
     flex: 1,
@@ -5120,6 +5221,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    position: "relative",
+    zIndex: 2100,
   },
   chatIAToggle: {
     padding: 8,

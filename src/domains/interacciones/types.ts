@@ -28,6 +28,7 @@ export interface Contact {
   phoneNumber: string;
   email?: string;
   type: ContactType;
+  botEnabled?: boolean;
   notes?: string;
   tags?: string[];
   createdAt: string;
@@ -40,6 +41,7 @@ export interface ContactPayload {
   phoneNumber: string;
   email?: string;
   type?: ContactType;
+  botEnabled?: boolean;
   notes?: string;
   tags?: string[];
 }
