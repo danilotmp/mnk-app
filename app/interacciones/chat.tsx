@@ -42,7 +42,6 @@ import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { Socket } from "socket.io-client";
 import {
   ActivityIndicator,
   Animated,
@@ -56,6 +55,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import type { Socket } from "socket.io-client";
 
 const CHAT_BACKGROUND_URI =
   "https://static.whatsapp.net/rsrc.php/v4/y1/r/m5BEg2K4OR4.png";
@@ -257,6 +257,8 @@ export default function ChatIAScreen() {
   const [showQuickMessages, setShowQuickMessages] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const activeContactIdRef = useRef<string | null>(null);
+  const silentContactsSyncingRef = useRef(false);
+  const silentMessagesSyncingRef = useRef(false);
 
   // Lista de mensajes rápidos desde catálogo (detalles completos)
   const [quickMessages, setQuickMessages] = useState<CatalogEntry[]>([]);
@@ -1344,9 +1346,84 @@ export default function ChatIAScreen() {
     }
   }, [company?.id, sortContactsByLastMessage]);
 
+  // Refresco silencioso e incremental para evitar parpadeos (polling fallback)
+  const refreshContactsSilent = useCallback(async () => {
+    if (!company?.id || silentContactsSyncingRef.current) return;
+
+    try {
+      silentContactsSyncingRef.current = true;
+      const contactsList = await InteraccionesService.getContacts(company.id);
+
+      setContacts((prev) => {
+        const prevById = new Map(prev.map((c) => [c.id, c]));
+        const merged = contactsList.map((contact) => {
+          const existing = prevById.get(contact.id);
+          if (!existing) {
+            return {
+              ...contact,
+              lastMessage: undefined,
+              unreadCount: undefined,
+            } as ContactWithLastMessage;
+          }
+          return {
+            ...existing,
+            ...contact,
+            // Mantener datos de preview para no resetear visualmente la lista
+            lastMessage: existing.lastMessage,
+            unreadCount: existing.unreadCount,
+          } as ContactWithLastMessage;
+        });
+
+        const sorted = sortContactsByLastMessage(merged);
+        const unchanged =
+          prev.length === sorted.length &&
+          prev.every((item, index) => {
+            const next = sorted[index];
+            return (
+              item.id === next.id &&
+              item.name === next.name &&
+              item.phoneNumber === next.phoneNumber &&
+              item.botEnabled === next.botEnabled &&
+              item.unreadCount === next.unreadCount &&
+              item.lastMessage?.id === next.lastMessage?.id &&
+              item.lastMessage?.updatedAt === next.lastMessage?.updatedAt
+            );
+          });
+
+        return unchanged ? prev : sorted;
+      });
+    } catch {
+      // Silencioso por diseño (fallback de resiliencia)
+    } finally {
+      silentContactsSyncingRef.current = false;
+    }
+  }, [company?.id, sortContactsByLastMessage]);
+
   useEffect(() => {
     activeContactIdRef.current = selectedContact?.id ?? null;
   }, [selectedContact?.id]);
+
+  // Ocultar scrollbar visual solo del input de mensaje en web (manteniendo scroll funcional)
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+
+    const styleId = "chat-message-input-scrollbar-hidden";
+    if (document.getElementById(styleId)) return;
+
+    const styleElement = document.createElement("style");
+    styleElement.id = styleId;
+    styleElement.textContent = `
+      #chat-message-input {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      #chat-message-input::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+      }
+    `;
+    document.head.appendChild(styleElement);
+  }, []);
 
   // Fallback resiliente: polling suave de contactos
   useEffect(() => {
@@ -1354,11 +1431,11 @@ export default function ChatIAScreen() {
 
     const intervalId = setInterval(() => {
       if (!isViewVisible()) return;
-      loadContacts();
+      refreshContactsSilent();
     }, 45000);
 
     return () => clearInterval(intervalId);
-  }, [company?.id, isViewVisible, loadContacts]);
+  }, [company?.id, isViewVisible, refreshContactsSilent]);
 
   useEffect(() => {
     let disposed = false;
@@ -1367,7 +1444,9 @@ export default function ChatIAScreen() {
       if (!company?.id) return;
 
       const storage = getStorageAdapter();
-      const rawToken = await storage.getItem(API_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
+      const rawToken = await storage.getItem(
+        API_CONFIG.STORAGE_KEYS.ACCESS_TOKEN,
+      );
       if (disposed) return;
 
       const token = rawToken ? String(rawToken).replace(/^Bearer\s+/i, "") : "";
@@ -1385,7 +1464,9 @@ export default function ChatIAScreen() {
       socket.on("connect", () => {
         socket.emit("join.company", { companyId: company.id });
         if (activeContactIdRef.current) {
-          socket.emit("join.contact", { contactId: activeContactIdRef.current });
+          socket.emit("join.contact", {
+            contactId: activeContactIdRef.current,
+          });
         }
       });
 
@@ -1419,7 +1500,10 @@ export default function ChatIAScreen() {
 
             return {
               ...contact,
-              unreadCount: Math.max(0, (contact.unreadCount || 0) + unreadDelta),
+              unreadCount: Math.max(
+                0,
+                (contact.unreadCount || 0) + unreadDelta,
+              ),
               lastMessage: mappedMessage,
             };
           });
@@ -1432,7 +1516,8 @@ export default function ChatIAScreen() {
             const merged = [...prev, mappedMessage];
             merged.sort(
               (a, b) =>
-                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime(),
             );
             return merged;
           });
@@ -1494,7 +1579,9 @@ export default function ChatIAScreen() {
       const socket = socketRef.current;
       if (socket) {
         if (activeContactIdRef.current) {
-          socket.emit("leave.contact", { contactId: activeContactIdRef.current });
+          socket.emit("leave.contact", {
+            contactId: activeContactIdRef.current,
+          });
         }
         socket.disconnect();
       }
@@ -1509,10 +1596,18 @@ export default function ChatIAScreen() {
     const previousContactId = activeContactIdRef.current;
     const currentContactId = selectedContact?.id ?? null;
 
-    if (socket.connected && previousContactId && previousContactId !== currentContactId) {
+    if (
+      socket.connected &&
+      previousContactId &&
+      previousContactId !== currentContactId
+    ) {
       socket.emit("leave.contact", { contactId: previousContactId });
     }
-    if (socket.connected && currentContactId && previousContactId !== currentContactId) {
+    if (
+      socket.connected &&
+      currentContactId &&
+      previousContactId !== currentContactId
+    ) {
       socket.emit("join.contact", { contactId: currentContactId });
     }
 
@@ -1559,17 +1654,61 @@ export default function ChatIAScreen() {
     }
   }, []);
 
+  // Refresco silencioso del chat activo (merge incremental, sin loaders)
+  const refreshMessagesSilent = useCallback(async (contactId: string) => {
+    if (silentMessagesSyncingRef.current) return;
+
+    try {
+      silentMessagesSyncingRef.current = true;
+      const messagesList =
+        await InteraccionesService.getMessagesByContact(contactId);
+
+      messagesList.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+
+      let hasNewMessages = false;
+      setMessages((prev) => {
+        const prevById = new Map(prev.map((m) => [m.id, m]));
+        hasNewMessages = messagesList.some((m) => !prevById.has(m.id));
+
+        const unchanged =
+          prev.length === messagesList.length &&
+          prev.every((item, index) => {
+            const next = messagesList[index];
+            return (
+              item.id === next.id &&
+              item.updatedAt === next.updatedAt &&
+              item.content === next.content &&
+              item.status === next.status
+            );
+          });
+
+        return unchanged ? prev : messagesList;
+      });
+
+      if (hasNewMessages) {
+        setShouldScrollToEnd(true);
+      }
+    } catch {
+      // Silencioso por diseño (fallback de resiliencia)
+    } finally {
+      silentMessagesSyncingRef.current = false;
+    }
+  }, []);
+
   // Fallback resiliente: polling del chat activo
   useEffect(() => {
     if (!selectedContact?.id) return;
 
     const intervalId = setInterval(() => {
       if (!isViewVisible()) return;
-      loadMessages(selectedContact.id);
+      refreshMessagesSilent(selectedContact.id);
     }, 12000);
 
     return () => clearInterval(intervalId);
-  }, [isViewVisible, loadMessages, selectedContact?.id]);
+  }, [isViewVisible, refreshMessagesSilent, selectedContact?.id]);
 
   // Editar mensaje
   const handleEditMessage = useCallback(
@@ -1737,6 +1876,37 @@ export default function ChatIAScreen() {
     // Por ahora, el menú se cerrará al seleccionar una opción
   }, [messageMenuVisible]);
 
+  // Cerrar menú de adjuntos al hacer clic fuera
+  useEffect(() => {
+    if (!showAttachmentMenu) return;
+
+    const handleClickOutsideAttachmentMenu = (event: any) => {
+      if (Platform.OS === "web") {
+        const target = event.target as HTMLElement;
+        if (target) {
+          const isClickInMenu = target.closest("[data-attachment-menu]");
+          const isClickInButton = target.closest(
+            "[data-attachment-menu-button]",
+          );
+
+          if (!isClickInMenu && !isClickInButton) {
+            setShowAttachmentMenu(false);
+          }
+        }
+      }
+    };
+
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      setTimeout(() => {
+        document.addEventListener("click", handleClickOutsideAttachmentMenu);
+      }, 0);
+
+      return () => {
+        document.removeEventListener("click", handleClickOutsideAttachmentMenu);
+      };
+    }
+  }, [showAttachmentMenu]);
+
   // Seleccionar contacto
   const handleSelectContact = useCallback(
     async (contact: Contact) => {
@@ -1792,9 +1962,12 @@ export default function ChatIAScreen() {
 
     try {
       setUpdatingBotEnabled(true);
-      const updatedContact = await InteraccionesService.updateContact(contactId, {
-        botEnabled: nextValue,
-      });
+      const updatedContact = await InteraccionesService.updateContact(
+        contactId,
+        {
+          botEnabled: nextValue,
+        },
+      );
 
       // Sincronizar con respuesta real del backend
       setSelectedContact((prev) =>
@@ -1831,7 +2004,10 @@ export default function ChatIAScreen() {
             : contact,
         ),
       );
-      alert.showError("No se pudo actualizar el estado del bot", error?.message);
+      alert.showError(
+        "No se pudo actualizar el estado del bot",
+        error?.message,
+      );
     } finally {
       setUpdatingBotEnabled(false);
     }
@@ -2675,8 +2851,9 @@ export default function ChatIAScreen() {
                   {filteredContacts.map((contact) => {
                     const isSelected = selectedContact?.id === contact.id;
                     const isLastInbound =
-                      String(contact.lastMessage?.direction || "").toUpperCase() ===
-                      "INBOUND";
+                      String(
+                        contact.lastMessage?.direction || "",
+                      ).toUpperCase() === "INBOUND";
                     const showBotStatusDot = isLastInbound;
                     const botStatusDotColor =
                       contact.botEnabled === false
@@ -2715,7 +2892,10 @@ export default function ChatIAScreen() {
                             <View style={styles.contactNameRow}>
                               <ThemedText
                                 type="body2"
-                                style={{ fontWeight: "600", color: colors.text }}
+                                style={{
+                                  fontWeight: "600",
+                                  color: colors.text,
+                                }}
                                 numberOfLines={1}
                               >
                                 {contact.name}
@@ -3603,7 +3783,10 @@ export default function ChatIAScreen() {
                                     >
                                       <ThemedText
                                         type="body2"
-                                        style={{ color: colors.text }}
+                                        style={{
+                                          color: colors.text,
+                                          paddingRight: 12
+                                        }}
                                       >
                                         {message.content}
                                       </ThemedText>
@@ -3733,8 +3916,9 @@ export default function ChatIAScreen() {
                                       style={[
                                         styles.messageContextMenu,
                                         {
-                                          backgroundColor:
-                                            colors.filterInputBackground,
+                                          backgroundColor: isDark
+                                            ? colors.surfaceVariant
+                                            : colors.filterInputBackground,
                                           borderColor: colors.border,
                                           shadowColor: colors.shadow,
                                         },
@@ -4315,6 +4499,9 @@ export default function ChatIAScreen() {
                       onPress={() => {
                         setShowAttachmentMenu(!showAttachmentMenu);
                       }}
+                      data-attachment-menu-button={
+                        Platform.OS === "web" ? true : undefined
+                      }
                     >
                       <Ionicons
                         name="add"
@@ -4330,10 +4517,16 @@ export default function ChatIAScreen() {
                       style={[
                         styles.attachmentMenu,
                         {
-                          backgroundColor: colors.filterInputBackground,
+                          backgroundColor: isDark
+                            ? colors.surfaceVariant
+                            : colors.filterInputBackground,
                           borderColor: colors.border,
+                          shadowColor: colors.shadow,
                         },
                       ]}
+                      data-attachment-menu={
+                        Platform.OS === "web" ? true : undefined
+                      }
                     >
                       <ScrollView
                         style={styles.attachmentMenuScroll}
@@ -4666,10 +4859,12 @@ export default function ChatIAScreen() {
                     style={[
                       styles.messageInputWrapper,
                       {
-                        backgroundColor: colors.filterInputBackground,
+                        backgroundColor: isDark
+                          ? colors.chatInboundBackground
+                          : "#FFFFFF",
                         borderColor: isMessageInputFocused
                           ? colors.primary
-                          : colors.border,
+                          : "transparent",
                         height: Math.min(
                           Math.max(messageInputHeight, minHeight),
                           maxHeight,
@@ -4678,6 +4873,9 @@ export default function ChatIAScreen() {
                     ]}
                   >
                     <TextInput
+                      nativeID={
+                        Platform.OS === "web" ? "chat-message-input" : undefined
+                      }
                       style={[
                         styles.messageInput,
                         {
@@ -5388,9 +5586,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 12,
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 12,
+    marginBottom: 20,
     borderTopWidth: 1,
     gap: 8,
+    overflow: "visible",
   },
   messageInputWrapper: {
     flex: 1,
