@@ -10,8 +10,11 @@ export const createTooltipStyles = () =>
       position: "relative",
       zIndex: 9999, // Z-index muy alto para contenedor
     },
-    /** Centra el trigger en web (evita que iconos queden “flotando” arriba en filas altas) */
-    webTriggerWrap: {
+    /**
+     * Centra el trigger en el eje vertical (web y nativo) cuando la fila del header
+     * es más alta que el icono.
+     */
+    triggerWrap: {
       alignItems: "center",
       justifyContent: "center",
     },

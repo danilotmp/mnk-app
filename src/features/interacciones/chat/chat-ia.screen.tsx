@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { Tooltip } from "@/components/ui/tooltip";
+import { BREAKPOINTS } from "@/constants/breakpoints";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CatalogService } from "@/src/domains/catalog/services/catalog.service";
@@ -25,6 +26,7 @@ import {
   MessageDirection,
 } from "@/src/domains/interacciones";
 import { useCompany } from "@/src/domains/shared";
+import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
 import { DynamicIcon } from "@/src/domains/shared/components";
 import { ContactInfoPanel } from "@/src/features/interacciones/chat/components/contact-info-panel/contact-info-panel";
 import { EmojiPickerPanel } from "@/src/features/interacciones/chat/components/emoji-picker-panel/emoji-picker-panel";
@@ -37,7 +39,7 @@ import {
   renderWhatsAppFormattedText,
   renderWhatsAppFormattedTextSingleLine,
 } from "@/src/features/interacciones/chat/utils/render-whatsapp-formatted-text";
-import { API_CONFIG } from "@/src/infrastructure/api/config";
+import { API_CONFIG, ApiConfig } from "@/src/infrastructure/api/config";
 import { getStorageAdapter } from "@/src/infrastructure/api/storage.adapter";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
@@ -45,25 +47,35 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AccessibilityInfo,
   ActivityIndicator,
   Animated,
   Image,
   ImageBackground,
+  LayoutChangeEvent,
   Modal,
   Platform,
   ScrollView,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import type { Socket } from "socket.io-client";
 import { CHAT_BACKGROUND_URI } from "./chat-ia.constants";
-import { ContactSpecialistAvatarRing } from "./components/contact-specialist-avatar-ring/contact-specialist-avatar-ring";
 import {
+  CHAT_COMPOSER_BAR_MIN_HEIGHT,
+  CHAT_HEADER_SPECIALIST_RING_RADIUS,
   createChatIaScreenStyles,
+  getChatContactRowDividerColor,
   SPECIALIST_RING_RADIUS,
 } from "./chat-ia.screen.styles";
 import type {
@@ -71,23 +83,83 @@ import type {
   WsContactUpdatedPayload,
   WsMessageCreatedPayload,
 } from "./chat-ia.screen.types";
+import { ContactSpecialistAvatarRing } from "./components/contact-specialist-avatar-ring/contact-specialist-avatar-ring";
+import {
+  contactsListsVisuallyEquivalent,
+  getContactListActivityTimestamp,
+  isInboundDirection,
+} from "./utils/chat-contact-list.utils";
 import {
   buildImageViewerDocumentContext,
   formatMediaContextKey,
   getMediaDataUrl,
 } from "./utils/chat-media.utils";
 import {
-  contactsListsVisuallyEquivalent,
-  getContactListActivityTimestamp,
-  isInboundDirection,
-} from "./utils/chat-contact-list.utils";
+  compareMessagesByCreatedAtAsc,
+  sortMessagesChronologically,
+} from "./utils/chat-message-order.utils";
 import { mergeContactWithWsUpdatePayload } from "./utils/chat-ws-merge.utils";
 
 const { io } = require("socket.io-client/dist/socket.io.js") as {
   io: (uri: string, opts?: Record<string, unknown>) => Socket;
 };
 
+type ChatIaWhatsappInstanceRow = {
+  whatsapp: string;
+  label: string;
+  id?: string;
+  isActive?: boolean;
+};
 
+/** Normaliza instancias desde GET /interacciones/context/:companyCode (o perfil equivalente). */
+function parseWhatsappInstancesFromContextProfile(
+  profile: Record<string, unknown>,
+): ChatIaWhatsappInstanceRow[] {
+  const raw =
+    (profile.whatsapp_instances as unknown[] | undefined) ??
+    (profile.whatsappInstances as unknown[] | undefined) ??
+    [];
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((row: unknown) => {
+      const x =
+        row && typeof row === "object"
+          ? (row as Record<string, unknown>)
+          : {};
+      const w = x.whatsapp ?? x.whatsApp;
+      const whatsapp = w != null ? String(w).trim() : "";
+      const labelRaw =
+        x.label ?? x.name ?? x.phoneNumber ?? x.phone ?? whatsapp;
+      const label =
+        labelRaw != null && String(labelRaw).trim() !== ""
+          ? String(labelRaw)
+          : whatsapp;
+      const idRaw = x.id;
+      const id =
+        idRaw != null && String(idRaw).trim() !== ""
+          ? String(idRaw)
+          : undefined;
+      const ac = x.isActive ?? x.is_active;
+      let isActive: boolean | undefined;
+      if (ac === false) isActive = false;
+      else if (ac === true) isActive = true;
+      else isActive = undefined;
+      return { whatsapp, label, id, isActive };
+    })
+    .filter((i) => i.whatsapp.length > 0);
+}
+
+/** Si el ancho del área de lista de mensajes es menor que esto (px), imagen + detalle van en columna (como smartphone). */
+const MESSAGES_AREA_SIDE_BY_SIDE_MIN_WIDTH = 650;
+
+/**
+ * Si el área de mensajes mide menos que esto (px), medkit/correo pasan a fila compacta
+ * (horizontal, iconos y toques más pequeños). No se apilan en columna.
+ */
+const MESSAGES_AREA_HEADER_PRIMARY_ICONS_COLUMN_MAX = 500;
+
+/** Tamaño de iconos del header en smartphone (tablet/web usan 24 donde aplique). */
+const CHAT_HEADER_MOBILE_ICON_SIZE = 18;
 
 export default function ChatIAScreen() {
   const { colors, isDark } = useTheme();
@@ -96,7 +168,38 @@ export default function ChatIAScreen() {
     [colors, isDark],
   );
 
-  const { isMobile } = useResponsive();
+  /** Referencia estable: un objeto nuevo en cada render dispara setOptions en bucle (web / expo-router). */
+  const chatStackScreenOptions = useMemo(
+    () => ({
+      title: "",
+      headerShown: false,
+    }),
+    [],
+  );
+
+  const { isMobile, width: responsiveWindowWidth } = useResponsive();
+  /** Ancho del bloque donde se listan los mensajes (fondo + ScrollView), no todo el chatPanel. */
+  const [messagesAreaWidth, setMessagesAreaWidth] = useState<number | null>(
+    null,
+  );
+  /** Móvil, o web/tablet con área de mensajes más estrecha que MESSAGES_AREA_SIDE_BY_SIDE_MIN_WIDTH. */
+  const useCompactDocumentDetailLayout =
+    isMobile ||
+    (messagesAreaWidth !== null &&
+      messagesAreaWidth < MESSAGES_AREA_SIDE_BY_SIDE_MIN_WIDTH);
+  const useChatHeaderPrimaryIconsNarrow =
+    messagesAreaWidth !== null &&
+    messagesAreaWidth < MESSAGES_AREA_HEADER_PRIMARY_ICONS_COLUMN_MAX;
+  /** Medkit/correo: compactos en móvil o con área de mensajes estrecha. */
+  const chatHeaderPrimaryPairIconSize =
+    isMobile || useChatHeaderPrimaryIconsNarrow
+      ? CHAT_HEADER_MOBILE_ICON_SIZE
+      : 24;
+  /** Resto del header (atrás, búsqueda, robot, perfil): 18 solo en smartphone. */
+  const chatHeaderIconSize = isMobile ? CHAT_HEADER_MOBILE_ICON_SIZE : 24;
+  /** Modal a pantalla completa: solo viewport (no usar ancho del chat). */
+  const imageViewerDetailUseStackedLayout =
+    isMobile || responsiveWindowWidth < BREAKPOINTS.tablet;
   const { t, interpolate, language } = useTranslation();
   const imageViewerDocLabels = useMemo(
     () => ({
@@ -107,10 +210,20 @@ export default function ChatIAScreen() {
   );
   const router = useRouter();
   const alert = useAlert();
+  /** useAlert() devuelve un objeto nuevo cada render; si va en deps de useCallback dispara bucles (p. ej. loadContacts → useEffect reset). */
+  const alertRef = useRef(alert);
+  alertRef.current = alert;
   const { company } = useCompany();
 
   const [contacts, setContacts] = useState<ContactWithLastMessage[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+
+  useEffect(() => {
+    if (!selectedContact) {
+      setMessagesAreaWidth(null);
+    }
+  }, [selectedContact]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [shouldScrollToEnd, setShouldScrollToEnd] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -231,7 +344,7 @@ export default function ChatIAScreen() {
     specialistHelpIconOpacity.stopAnimation();
     specialistHelpIconOpacity.setValue(1);
 
-    if (!active) {
+    if (!active || isMobile) {
       return;
     }
 
@@ -255,7 +368,12 @@ export default function ChatIAScreen() {
       loop.stop();
       specialistHelpIconOpacity.setValue(1);
     };
-  }, [selectedContact?.id, selectedContact?.specialistAssignment, specialistHelpIconOpacity]);
+  }, [
+    isMobile,
+    selectedContact?.id,
+    selectedContact?.specialistAssignment,
+    specialistHelpIconOpacity,
+  ]);
 
   // Estado del selector de emojis
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -266,6 +384,32 @@ export default function ChatIAScreen() {
   const activeContactIdRef = useRef<string | null>(null);
   const silentContactsSyncingRef = useRef(false);
   const silentMessagesSyncingRef = useRef(false);
+  const selectedChannelInstanceRef = useRef<string>("");
+  /** Instancias WhatsApp del perfil comercial (`whatsapp` = valor para API) */
+  const [whatsappInstances, setWhatsappInstances] = useState<
+    ChatIaWhatsappInstanceRow[]
+  >([]);
+  const [selectedChannelInstance, setSelectedChannelInstance] =
+    useState<string>("");
+  const [channelProfileLoading, setChannelProfileLoading] = useState(false);
+  /** Menú de instancias WhatsApp (solo si hay varias); se abre hacia arriba */
+  const [channelInstanceMenuOpen, setChannelInstanceMenuOpen] = useState(false);
+  /** Menú de tres puntos: dashboard, interruptor, etc. */
+  const [channelInstanceOptionsOpen, setChannelInstanceOptionsOpen] =
+    useState(false);
+  const [channelInstanceConnectionEnabled, setChannelInstanceConnectionEnabled] =
+    useState(true);
+  const [channelInstanceActiveToggleLoading, setChannelInstanceActiveToggleLoading] =
+    useState(false);
+  const [channelPickerBlockHeight, setChannelPickerBlockHeight] = useState(
+    CHAT_COMPOSER_BAR_MIN_HEIGHT,
+  );
+  /** Altura de la fila del compositor (multiline); paneles emoji/rápidos se anclan encima sin desplazar el layout. */
+  const [composerInputRowHeight, setComposerInputRowHeight] = useState(
+    CHAT_COMPOSER_BAR_MIN_HEIGHT,
+  );
+  const channelInstancePickerRef = useRef<View>(null);
+  const whatsappChannelIconOpacity = useRef(new Animated.Value(1)).current;
   const [expandedMediaContextMessageId, setExpandedMediaContextMessageId] =
     useState<string | null>(null);
 
@@ -289,6 +433,76 @@ export default function ChatIAScreen() {
       ),
     [],
   );
+
+  useEffect(() => {
+    selectedChannelInstanceRef.current = selectedChannelInstance;
+  }, [selectedChannelInstance]);
+
+  const selectedWhatsappChannelLabel = useMemo(() => {
+    const inst = whatsappInstances.find(
+      (i) => i.whatsapp === selectedChannelInstance,
+    );
+    if (!inst) return selectedChannelInstance || "";
+    return inst.label || inst.whatsapp;
+  }, [whatsappInstances, selectedChannelInstance]);
+
+  /** `isActive` del JSON del contexto; solo `false` explícito = inactivo (gris, sin pulso). */
+  const selectedWhatsappInstanceIsActive = useMemo(() => {
+    const inst = whatsappInstances.find(
+      (i) => i.whatsapp === selectedChannelInstance,
+    );
+    if (!inst) return true;
+    return inst.isActive !== false;
+  }, [whatsappInstances, selectedChannelInstance]);
+
+  useEffect(() => {
+    const inst = whatsappInstances.find(
+      (i) => i.whatsapp === selectedChannelInstance,
+    );
+    if (!inst) {
+      setChannelInstanceConnectionEnabled(true);
+      return;
+    }
+    setChannelInstanceConnectionEnabled(inst.isActive !== false);
+  }, [whatsappInstances, selectedChannelInstance]);
+
+  useEffect(() => {
+    if (channelProfileLoading) setChannelInstanceMenuOpen(false);
+  }, [channelProfileLoading]);
+
+  useEffect(() => {
+    setChannelInstanceMenuOpen(false);
+    setChannelInstanceOptionsOpen(false);
+  }, [company?.id]);
+
+  useEffect(() => {
+    if (
+      (!channelInstanceMenuOpen && !channelInstanceOptionsOpen) ||
+      Platform.OS !== "web"
+    )
+      return;
+    const doc =
+      typeof globalThis !== "undefined" ? globalThis.document : undefined;
+    if (!doc) return;
+    const onMouseDown = (e: MouseEvent) => {
+      const node = channelInstancePickerRef.current as unknown as
+        | HTMLElement
+        | null
+        | undefined;
+      const target = e.target as Node | null;
+      if (
+        node &&
+        target &&
+        typeof node.contains === "function" &&
+        !node.contains(target)
+      ) {
+        setChannelInstanceMenuOpen(false);
+        setChannelInstanceOptionsOpen(false);
+      }
+    };
+    doc.addEventListener("mousedown", onMouseDown);
+    return () => doc.removeEventListener("mousedown", onMouseDown);
+  }, [channelInstanceMenuOpen, channelInstanceOptionsOpen]);
 
   const isViewVisible = useCallback(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return true;
@@ -1288,14 +1502,180 @@ export default function ChatIAScreen() {
     { id: "5", label: "Resonancia Magnética", color: "#FFEAA7" },
   ];
 
+  // Instancias WhatsApp vía GET /interacciones/context/:companyCode (no usar context/profile con companyId)
+  useEffect(() => {
+    if (!company?.id) {
+      setWhatsappInstances([]);
+      setSelectedChannelInstance("");
+      setChannelProfileLoading(false);
+      setLoading(false);
+      return;
+    }
+    const ctx = ApiConfig.getInstance().getUserContext();
+    const companyCode =
+      (company.code && String(company.code).trim()) ||
+      (ctx?.companyCode && String(ctx.companyCode).trim()) ||
+      "";
+
+    if (!companyCode) {
+      setWhatsappInstances([]);
+      setSelectedChannelInstance("");
+      setChannelProfileLoading(false);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setChannelProfileLoading(true);
+    void InteraccionesService.getInstitutionalContextByCompanyCode(companyCode)
+      .then((profile) => {
+        if (cancelled) return;
+        const instances = parseWhatsappInstancesFromContextProfile(
+          profile as Record<string, unknown>,
+        );
+        setWhatsappInstances(instances);
+        setSelectedChannelInstance((prev) => {
+          if (instances.length === 0) return "";
+          if (prev && instances.some((i) => i.whatsapp === prev)) return prev;
+          return instances[0].whatsapp;
+        });
+        if (instances.length === 0) {
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWhatsappInstances([]);
+          setSelectedChannelInstance("");
+          setLoading(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChannelProfileLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [company?.id, company?.code]);
+
+  const handleChannelInstanceActiveChange = useCallback(
+    (next: boolean) => {
+      if (!company?.id || !selectedChannelInstance) return;
+      const inst = whatsappInstances.find(
+        (i) => i.whatsapp === selectedChannelInstance,
+      );
+      if (!inst?.id) {
+        alert.showError(t.pages.chatIa.whatsappChannelToggleMissingInstanceId);
+        return;
+      }
+      const companyId = company.id;
+      const instanceId = inst.id;
+
+      const reloadInstancesFromContext = async () => {
+        const ctx = ApiConfig.getInstance().getUserContext();
+        const companyCode =
+          (company.code && String(company.code).trim()) ||
+          (ctx?.companyCode && String(ctx.companyCode).trim()) ||
+          "";
+        if (!companyCode) return;
+        try {
+          const profile =
+            await InteraccionesService.getInstitutionalContextByCompanyCode(
+              companyCode,
+            );
+          const instances = parseWhatsappInstancesFromContextProfile(
+            profile as Record<string, unknown>,
+          );
+          setWhatsappInstances(instances);
+          setSelectedChannelInstance((prev) => {
+            if (instances.length === 0) return "";
+            if (prev && instances.some((i) => i.whatsapp === prev)) {
+              return prev;
+            }
+            return instances[0].whatsapp;
+          });
+          if (instances.length === 0) {
+            setLoading(false);
+          }
+        } catch {
+          /* el toggle ya persistió; la lista se alineará en la próxima carga */
+        }
+      };
+
+      const persist = (active: boolean) => {
+        void (async () => {
+          setChannelInstanceActiveToggleLoading(true);
+          try {
+            await CommercialService.toggleWhatsAppInstanceStatus(
+              companyId,
+              instanceId,
+              active,
+            );
+            setChannelInstanceConnectionEnabled(active);
+            await reloadInstancesFromContext();
+            if (active) {
+              alert.showSuccess(t.pages.chatIa.whatsappChannelToggleSuccessActive);
+            } else {
+              alert.showSuccess(
+                t.pages.chatIa.whatsappChannelToggleSuccessInactive,
+              );
+            }
+          } catch (error) {
+            alert.showError(
+              t.pages.chatIa.whatsappChannelToggleError,
+              false,
+              undefined,
+              undefined,
+              error,
+            );
+          } finally {
+            setChannelInstanceActiveToggleLoading(false);
+          }
+        })();
+      };
+
+      if (!next) {
+        alert.showConfirmDirect(
+          t.pages.chatIa.whatsappChannelDeactivateConfirmTitle,
+          t.pages.chatIa.whatsappChannelDeactivateConfirmMessage,
+          () => {
+            persist(false);
+          },
+          {
+            confirmText: t.pages.chatIa.whatsappChannelDeactivateConfirmButton,
+            cancelText: t.common.cancel,
+            destructive: true,
+          },
+        );
+        return;
+      }
+
+      persist(true);
+    },
+    [
+      alert,
+      company?.code,
+      company?.id,
+      selectedChannelInstance,
+      t,
+      whatsappInstances,
+    ],
+  );
+
+  const contactsLoadSeqRef = useRef(0);
+
   // Cargar contactos
   const loadContacts = useCallback(async () => {
-    if (!company?.id || isLoadingContacts) return;
+    if (!company?.id || !selectedChannelInstance) return;
+    const seq = ++contactsLoadSeqRef.current;
 
     try {
       setIsLoadingContacts(true);
       setLoading(true);
-      const contactsList = await InteraccionesService.getContacts(company.id);
+      const contactsList = await InteraccionesService.getContacts(
+        company.id,
+        selectedChannelInstance,
+      );
 
       // Para cada contacto, obtener solo el último mensaje (optimizado)
       const contactsWithMessages = await Promise.all(
@@ -1303,7 +1683,11 @@ export default function ChatIAScreen() {
           try {
             // Solo obtener el último mensaje, no todos los mensajes
             const contactMessages =
-              await InteraccionesService.getMessagesByContact(contact.id, 1);
+              await InteraccionesService.getMessagesByContact(
+                contact.id,
+                1,
+                selectedChannelInstance,
+              );
             const lastMessage = contactMessages[0] || undefined;
 
             // Contar mensajes no leídos solo si hay último mensaje y es inbound no leído
@@ -1319,7 +1703,11 @@ export default function ChatIAScreen() {
               // En producción, esto debería venir del backend
               try {
                 const allMessages =
-                  await InteraccionesService.getMessagesByContact(contact.id);
+                  await InteraccionesService.getMessagesByContact(
+                    contact.id,
+                    undefined,
+                    selectedChannelInstance,
+                  );
                 const count = allMessages.filter(
                   (m) => m.direction === "INBOUND" && m.status !== "READ",
                 ).length;
@@ -1345,28 +1733,45 @@ export default function ChatIAScreen() {
         }),
       );
 
-      setContacts(sortContactsByLastMessage(contactsWithMessages));
+      // Mantener el orden del GET /contacts (backend: más reciente primero)
+      setContacts(contactsWithMessages);
     } catch (error: any) {
       console.error("Error al cargar contactos:", error);
-      alert.showError(t.pages.chatIa.errorLoadContacts, error?.message);
+      alertRef.current.showError(
+        t.pages.chatIa.errorLoadContacts,
+        error?.message,
+      );
     } finally {
-      setLoading(false);
-      setIsLoadingContacts(false);
+      if (contactsLoadSeqRef.current === seq) {
+        setLoading(false);
+        setIsLoadingContacts(false);
+      }
     }
-  }, [company?.id, sortContactsByLastMessage, alert, t, isLoadingContacts]);
+  }, [company?.id, selectedChannelInstance, t]);
+
+  const loadContactsRef = useRef(loadContacts);
+  loadContactsRef.current = loadContacts;
 
   // Refresco silencioso e incremental para evitar parpadeos (polling fallback)
   const refreshContactsSilent = useCallback(async () => {
-    if (!company?.id || silentContactsSyncingRef.current) return;
+    if (
+      !company?.id ||
+      !selectedChannelInstance ||
+      silentContactsSyncingRef.current
+    )
+      return;
 
     try {
       silentContactsSyncingRef.current = true;
-      const contactsList = await InteraccionesService.getContacts(company.id);
+      const contactsList = await InteraccionesService.getContacts(
+        company.id,
+        selectedChannelInstance,
+      );
 
       setContacts((prev) => {
         const prevById = new Map(prev.map((c) => [c.id, c]));
-        /** Orden de getContacts (backend); no reordenar con lastMessage posiblemente obsoleto en cliente. */
-        const merged = contactsList.map((contact) => {
+        /** Merge con API; se conservan lastMessage/unread del cliente (más frescos vía WS). */
+        const mergedUnsorted = contactsList.map((contact) => {
           const existing = prevById.get(contact.id);
           if (!existing) {
             return {
@@ -1382,20 +1787,20 @@ export default function ChatIAScreen() {
             unreadCount: existing.unreadCount,
           } as ContactWithLastMessage;
         });
+        /** Mismo criterio que los handlers WS; si no, el diff por índice falla siempre y cada poll sustituye toda la lista (lag). */
+        const merged = sortContactsByLastMessage(mergedUnsorted);
 
-        /** Mismo criterio que carga inicial / WS: orden por actividad, no por respuesta cruda de getContacts */
-        const sorted = sortContactsByLastMessage(merged);
-        if (contactsListsVisuallyEquivalent(prev, sorted)) {
+        if (contactsListsVisuallyEquivalent(prev, merged)) {
           return prev;
         }
-        return sorted;
+        return merged;
       });
     } catch {
       // Silencioso por diseño (fallback de resiliencia)
     } finally {
       silentContactsSyncingRef.current = false;
     }
-  }, [company?.id, sortContactsByLastMessage]);
+  }, [company?.id, selectedChannelInstance, sortContactsByLastMessage]);
 
   useEffect(() => {
     activeContactIdRef.current = selectedContact?.id ?? null;
@@ -1470,6 +1875,17 @@ export default function ChatIAScreen() {
       });
 
       socket.on("message.created", (payload: WsMessageCreatedPayload) => {
+        const activeCh = selectedChannelInstanceRef.current;
+        const evCh = payload.channelInstance;
+        if (
+          evCh != null &&
+          evCh !== "" &&
+          activeCh !== "" &&
+          evCh !== activeCh
+        ) {
+          return;
+        }
+
         const mappedMessage: Message = {
           id: payload.id,
           contactId: payload.contactId,
@@ -1486,6 +1902,7 @@ export default function ChatIAScreen() {
           editedAt: payload.editedAt ?? undefined,
           createdAt: payload.createdAt,
           updatedAt: payload.updatedAt || payload.createdAt,
+          channelInstance: payload.channelInstance,
         };
 
         let contactMissingFromList = false;
@@ -1562,11 +1979,7 @@ export default function ChatIAScreen() {
           setMessages((prev) => {
             if (prev.some((msg) => msg.id === mappedMessage.id)) return prev;
             const merged = [...prev, mappedMessage];
-            merged.sort(
-              (a, b) =>
-                new Date(a.createdAt).getTime() -
-                new Date(b.createdAt).getTime(),
-            );
+            merged.sort(compareMessagesByCreatedAtAsc);
             return merged;
           });
           setShouldScrollToEnd(true);
@@ -1574,6 +1987,17 @@ export default function ChatIAScreen() {
       });
 
       socket.on("contact.updated", (payload: WsContactUpdatedPayload) => {
+        const activeCh = selectedChannelInstanceRef.current;
+        const lmCh = payload.lastMessage?.channelInstance;
+        if (
+          lmCh != null &&
+          lmCh !== "" &&
+          activeCh !== "" &&
+          lmCh !== activeCh
+        ) {
+          return;
+        }
+
         let contactMissingFromList = false;
         setContacts((prev) => {
           if (!prev.some((c) => c.id === payload.id)) {
@@ -1711,71 +2135,75 @@ export default function ChatIAScreen() {
   }, []);
 
   // Cargar mensajes de un contacto
-  const loadMessages = useCallback(async (contactId: string) => {
-    if (loadingMessages) return; // Evitar llamadas duplicadas
+  const loadMessages = useCallback(
+    async (contactId: string) => {
+      if (loadingMessages || !selectedChannelInstance) return; // Evitar llamadas duplicadas
 
-    try {
-      setLoadingMessages(true);
-      const messagesList =
-        await InteraccionesService.getMessagesByContact(contactId);
-      // Ordenar por fecha (más antiguo primero)
-      messagesList.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-      setMessages(messagesList);
-      setShouldScrollToEnd(true);
-    } catch (error: any) {
-      console.error("Error al cargar mensajes:", error);
-      alert.showError(t.pages.chatIa.errorLoadMessages, error?.message);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, [alert, loadingMessages, t]);
+      try {
+        setLoadingMessages(true);
+        const messagesList = await InteraccionesService.getMessagesByContact(
+          contactId,
+          undefined,
+          selectedChannelInstance,
+        );
+        setMessages(sortMessagesChronologically(messagesList));
+        setShouldScrollToEnd(true);
+      } catch (error: any) {
+        console.error("Error al cargar mensajes:", error);
+        alert.showError(t.pages.chatIa.errorLoadMessages, error?.message);
+      } finally {
+        setLoadingMessages(false);
+      }
+    },
+    [alert, loadingMessages, t, selectedChannelInstance],
+  );
 
   // Refresco silencioso del chat activo (merge incremental, sin loaders)
-  const refreshMessagesSilent = useCallback(async (contactId: string) => {
-    if (silentMessagesSyncingRef.current) return;
+  const refreshMessagesSilent = useCallback(
+    async (contactId: string) => {
+      if (silentMessagesSyncingRef.current || !selectedChannelInstance) return;
 
-    try {
-      silentMessagesSyncingRef.current = true;
-      const messagesList =
-        await InteraccionesService.getMessagesByContact(contactId);
+      try {
+        silentMessagesSyncingRef.current = true;
+        const messagesList = await InteraccionesService.getMessagesByContact(
+          contactId,
+          undefined,
+          selectedChannelInstance,
+        );
 
-      messagesList.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
+        const ordered = sortMessagesChronologically(messagesList);
 
-      let hasNewMessages = false;
-      setMessages((prev) => {
-        const prevById = new Map(prev.map((m) => [m.id, m]));
-        hasNewMessages = messagesList.some((m) => !prevById.has(m.id));
+        let hasNewMessages = false;
+        setMessages((prev) => {
+          const prevById = new Map(prev.map((m) => [m.id, m]));
+          hasNewMessages = ordered.some((m) => !prevById.has(m.id));
 
-        const unchanged =
-          prev.length === messagesList.length &&
-          prev.every((item, index) => {
-            const next = messagesList[index];
-            return (
-              item.id === next.id &&
-              item.updatedAt === next.updatedAt &&
-              item.content === next.content &&
-              item.status === next.status
-            );
-          });
+          const unchanged =
+            prev.length === ordered.length &&
+            prev.every((item, index) => {
+              const next = ordered[index];
+              return (
+                item.id === next.id &&
+                item.updatedAt === next.updatedAt &&
+                item.content === next.content &&
+                item.status === next.status
+              );
+            });
 
-        return unchanged ? prev : messagesList;
-      });
+          return unchanged ? prev : ordered;
+        });
 
-      if (hasNewMessages) {
-        setShouldScrollToEnd(true);
+        if (hasNewMessages) {
+          setShouldScrollToEnd(true);
+        }
+      } catch {
+        // Silencioso por diseño (fallback de resiliencia)
+      } finally {
+        silentMessagesSyncingRef.current = false;
       }
-    } catch {
-      // Silencioso por diseño (fallback de resiliencia)
-    } finally {
-      silentMessagesSyncingRef.current = false;
-    }
-  }, []);
+    },
+    [selectedChannelInstance],
+  );
 
   // Fallback resiliente: polling del chat activo
   useEffect(() => {
@@ -1801,6 +2229,7 @@ export default function ChatIAScreen() {
         const updatedMessage = await InteraccionesService.updateMessage(
           messageId,
           newContent.trim(),
+          selectedChannelInstance,
         );
 
         // Actualizar el mensaje en la lista
@@ -1820,7 +2249,7 @@ export default function ChatIAScreen() {
         alert.showError(t.pages.chatIa.errorEditMessage, errorMessage);
       }
     },
-    [alert, t],
+    [alert, t, selectedChannelInstance],
   );
 
   // Eliminar mensaje
@@ -1989,6 +2418,7 @@ export default function ChatIAScreen() {
   // Seleccionar contacto
   const handleSelectContact = useCallback(
     async (contact: Contact) => {
+      if (!selectedChannelInstance) return;
       setSelectedContact(contact);
       // En móvil, el panel NO se abre automáticamente. En web, sí se abre.
       // En móvil, el panel solo se abre manualmente con el icono
@@ -2002,12 +2432,10 @@ export default function ChatIAScreen() {
         setLoadingMessages(true);
         const messagesList = await InteraccionesService.getMessagesByContact(
           contact.id,
+          undefined,
+          selectedChannelInstance,
         );
-        messagesList.sort(
-          (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-        );
-        setMessages(messagesList);
+        setMessages(sortMessagesChronologically(messagesList));
         setShouldScrollToEnd(true);
       } catch (error: any) {
         console.error("Error al cargar mensajes:", error);
@@ -2018,9 +2446,13 @@ export default function ChatIAScreen() {
 
       if (contact.lastMessagePendingRead === true) {
         try {
-          const updated = await InteraccionesService.updateContact(contact.id, {
-            lastMessagePendingRead: false,
-          });
+          const updated = await InteraccionesService.updateContact(
+            contact.id,
+            {
+              lastMessagePendingRead: false,
+            },
+            selectedChannelInstance,
+          );
           setContacts((prev) =>
             prev.map((c) =>
               c.id === contact.id
@@ -2051,7 +2483,7 @@ export default function ChatIAScreen() {
         }
       }
     },
-    [isMobile, alert, t],
+    [isMobile, alert, t, selectedChannelInstance],
   );
 
   const handleToggleBotEnabled = useCallback(async () => {
@@ -2081,6 +2513,7 @@ export default function ChatIAScreen() {
         {
           botEnabled: nextValue,
         },
+        selectedChannelInstance,
       );
 
       // Sincronizar con respuesta real del backend
@@ -2122,7 +2555,7 @@ export default function ChatIAScreen() {
     } finally {
       setUpdatingBotEnabled(false);
     }
-  }, [alert, selectedContact, updatingBotEnabled, t]);
+  }, [alert, selectedContact, updatingBotEnabled, t, selectedChannelInstance]);
 
   const handleToggleLastMessagePendingRead = useCallback(async () => {
     if (!selectedContact?.id || updatingLastMessagePendingRead) return;
@@ -2149,6 +2582,7 @@ export default function ChatIAScreen() {
       const updatedContact = await InteraccionesService.updateContact(
         contactId,
         { lastMessagePendingRead: nextValue },
+        selectedChannelInstance,
       );
 
       setSelectedContact((prev) =>
@@ -2190,7 +2624,13 @@ export default function ChatIAScreen() {
     } finally {
       setUpdatingLastMessagePendingRead(false);
     }
-  }, [alert, selectedContact, updatingLastMessagePendingRead, t]);
+  }, [
+    alert,
+    selectedContact,
+    updatingLastMessagePendingRead,
+    t,
+    selectedChannelInstance,
+  ]);
 
   const handleToggleSpecialistAssignment = useCallback(() => {
     if (!selectedContact?.id || updatingSpecialistAssignment) return;
@@ -2219,6 +2659,7 @@ export default function ChatIAScreen() {
           const updatedContact = await InteraccionesService.updateContact(
             contactId,
             { specialistAssignment: nextValue },
+            selectedChannelInstance,
           );
 
           setSelectedContact((prev) =>
@@ -2256,10 +2697,7 @@ export default function ChatIAScreen() {
                 : contact,
             ),
           );
-          alert.showError(
-            t.pages.chatIa.errorUpdateSpecialist,
-            error?.message,
-          );
+          alert.showError(t.pages.chatIa.errorUpdateSpecialist, error?.message);
         } finally {
           setUpdatingSpecialistAssignment(false);
         }
@@ -2281,7 +2719,13 @@ export default function ChatIAScreen() {
     }
 
     runUpdate();
-  }, [alert, selectedContact, updatingSpecialistAssignment, t]);
+  }, [
+    alert,
+    selectedContact,
+    updatingSpecialistAssignment,
+    t,
+    selectedChannelInstance,
+  ]);
 
   // Solicitar permisos para expo-image-picker
   useEffect(() => {
@@ -2418,6 +2862,9 @@ export default function ChatIAScreen() {
         formData.append("contactId", payload.contactId);
         formData.append("content", payload.content || "");
         formData.append("direction", payload.direction);
+        if (payload.channelInstance) {
+          formData.append("channelInstance", payload.channelInstance);
+        }
         if (payload.status) {
           formData.append("status", payload.status);
         }
@@ -2645,6 +3092,7 @@ export default function ChatIAScreen() {
     // Permitir enviar si hay texto O archivos adjuntos
     if (
       !selectedContact ||
+      !selectedChannelInstance ||
       (!messageText.trim() && attachedFiles.length === 0) ||
       !company?.id ||
       sendingMessage
@@ -2709,6 +3157,8 @@ export default function ChatIAScreen() {
             content: messageText.trim() || "",
             status: "SENT" as any,
             parentMessageId: replyingToMessage?.id,
+            channelInstance: selectedChannelInstance,
+            isFromBot: false,
           },
           filesToSend,
           (progress) => {
@@ -2721,6 +3171,7 @@ export default function ChatIAScreen() {
           contactId: selectedContact.id,
           direction: MessageDirection.OUTBOUND,
           content: messageText.trim(),
+          channelInstance: selectedChannelInstance,
           status: "SENT" as any,
           parentMessageId: replyingToMessage?.id,
           isFromBot: false,
@@ -2744,12 +3195,10 @@ export default function ChatIAScreen() {
           setLoadingMessages(true);
           const messagesList = await InteraccionesService.getMessagesByContact(
             selectedContact.id,
+            undefined,
+            selectedChannelInstance,
           );
-          messagesList.sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-          );
-          setMessages(messagesList);
+          setMessages(sortMessagesChronologically(messagesList));
           setShouldScrollToEnd(true);
         } catch (error) {
           console.error("Error al recargar mensajes:", error);
@@ -2765,6 +3214,7 @@ export default function ChatIAScreen() {
           setIsLoadingContacts(true);
           const contactsList = await InteraccionesService.getContacts(
             company.id,
+            selectedChannelInstance,
           );
           const contactsWithMessages = await Promise.all(
             contactsList.map(async (contact) => {
@@ -2773,6 +3223,7 @@ export default function ChatIAScreen() {
                   await InteraccionesService.getMessagesByContact(
                     contact.id,
                     1,
+                    selectedChannelInstance,
                   );
                 const lastMessage = contactMessages[0] || undefined;
                 return {
@@ -2789,7 +3240,7 @@ export default function ChatIAScreen() {
               }
             }),
           );
-          setContacts(sortContactsByLastMessage(contactsWithMessages));
+          setContacts(contactsWithMessages);
           const selId = selectedContact.id;
           const refreshed = contactsWithMessages.find((c) => c.id === selId);
           if (refreshed) {
@@ -2830,17 +3281,20 @@ export default function ChatIAScreen() {
     sendMessageWithProgress,
     minHeight,
     alert,
-    sortContactsByLastMessage,
     t,
+    selectedChannelInstance,
   ]);
 
-  // Efecto inicial - solo cargar una vez cuando se monta el componente
+  // Al cambiar empresa, instancia WhatsApp o al terminar de cargar el perfil: limpiar chat y recargar lista
   useEffect(() => {
-    if (company?.id && !isLoadingContacts && contacts.length === 0) {
-      loadContacts();
+    if (!company?.id || !selectedChannelInstance || channelProfileLoading) {
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company?.id]);
+    setSelectedContact(null);
+    setMessages([]);
+    setContacts([]);
+    void loadContactsRef.current();
+  }, [company?.id, selectedChannelInstance, channelProfileLoading]);
 
   // Filtrar contactos por búsqueda y filtros
   const filteredContacts = contacts.filter((contact) => {
@@ -2875,6 +3329,323 @@ export default function ChatIAScreen() {
         msg.content.toLowerCase().includes(messageSearchQuery.toLowerCase()),
       )
     : messages;
+
+  /** Mismo tono que las líneas entre contactos (`contactItem.borderBottomColor`) */
+  const channelInstanceDividerLineColor = useMemo(
+    () => getChatContactRowDividerColor(isDark),
+    [isDark],
+  );
+
+  useEffect(() => {
+    whatsappChannelIconOpacity.stopAnimation();
+    whatsappChannelIconOpacity.setValue(1);
+    if (whatsappInstances.length <= 1 || !selectedWhatsappInstanceIsActive) {
+      return;
+    }
+
+    let cancelled = false;
+    let loop: Animated.CompositeAnimation | null = null;
+
+    const start = () => {
+      if (cancelled) return;
+      loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(whatsappChannelIconOpacity, {
+            toValue: 0.72,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+          Animated.timing(whatsappChannelIconOpacity, {
+            toValue: 1,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      loop.start();
+    };
+
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduce) => {
+        if (!cancelled && !reduce) start();
+      })
+      .catch(() => {
+        if (!cancelled) start();
+      });
+
+    return () => {
+      cancelled = true;
+      loop?.stop();
+      whatsappChannelIconOpacity.setValue(1);
+    };
+  }, [
+    whatsappInstances.length,
+    selectedWhatsappInstanceIsActive,
+    whatsappChannelIconOpacity,
+  ]);
+
+  const renderChannelInstancePicker = useCallback(() => {
+    if (whatsappInstances.length <= 1 || channelProfileLoading) {
+      return null;
+    }
+
+    return (
+      <View
+        ref={channelInstancePickerRef}
+        style={styles.channelInstancePickerRoot}
+        collapsable={false}
+      >
+        {channelInstanceMenuOpen ? (
+          <View
+            style={[
+              styles.channelInstanceMenuPanel,
+              {
+                bottom: channelPickerBlockHeight + 8,
+                backgroundColor: colors.filterInputBackground,
+                borderColor: colors.border,
+              },
+              Platform.OS === "web"
+                ? ({
+                    boxShadow: "0 -8px 28px rgba(0,0,0,0.16)",
+                  } as object)
+                : null,
+            ]}
+          >
+            <ScrollView
+              style={styles.channelInstanceMenuScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              {whatsappInstances.map((inst) => {
+                const value = inst.whatsapp;
+                const selected = selectedChannelInstance === value;
+                const label = inst.label || value;
+                const rowChannelActive = inst.isActive !== false;
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.channelInstanceMenuItem,
+                      selected && [
+                        styles.channelInstanceMenuItemSelected,
+                        {
+                          backgroundColor: `${colors.primary}28`,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      setSelectedChannelInstance(value);
+                      setChannelInstanceMenuOpen(false);
+                      setChannelInstanceOptionsOpen(false);
+                    }}
+                  >
+                    <Ionicons
+                      name="logo-whatsapp"
+                      size={18}
+                      color={
+                        rowChannelActive ? "#25D366" : colors.textSecondary
+                      }
+                      style={{ marginRight: 10 }}
+                    />
+                    <ThemedText
+                      type="body2"
+                      numberOfLines={1}
+                      style={{
+                        flex: 1,
+                        color: selected ? colors.primary : colors.text,
+                        fontWeight: selected ? "600" : "400",
+                      }}
+                    >
+                      {label}
+                    </ThemedText>
+                    {selected ? (
+                      <Ionicons
+                        name="checkmark"
+                        size={20}
+                        color={colors.primary}
+                      />
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+        {channelInstanceOptionsOpen ? (
+          <View
+            style={[
+              styles.channelInstanceOptionsMenuPanel,
+              {
+                bottom: channelPickerBlockHeight + 8,
+                backgroundColor: colors.filterInputBackground,
+                borderColor: colors.border,
+              },
+              Platform.OS === "web"
+                ? ({
+                    boxShadow: "0 -8px 28px rgba(0,0,0,0.16)",
+                  } as object)
+                : null,
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.channelInstanceOptionsMenuItemPressable}
+              activeOpacity={0.7}
+              onPress={() => {
+                setChannelInstanceOptionsOpen(false);
+                /* TODO: acción Dashboard (definir navegación o pantalla) */
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t.pages.chatIa.whatsappChannelOptionDashboard}
+            >
+              <Ionicons
+                name="speedometer-outline"
+                size={22}
+                color={colors.primary}
+                style={{ marginRight: 10 }}
+              />
+              <ThemedText type="body2" style={{ color: colors.text }}>
+                {t.pages.chatIa.whatsappChannelOptionDashboard}
+              </ThemedText>
+            </TouchableOpacity>
+            <View
+              style={[
+                styles.channelInstanceOptionsMenuItem,
+                {
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  borderTopColor: colors.border,
+                },
+              ]}
+            >
+              <View style={styles.channelInstanceOptionsMenuLabelGroup}>
+                <Ionicons
+                  name="pulse-outline"
+                  size={22}
+                  color={colors.primary}
+                />
+                <ThemedText
+                  type="body2"
+                  numberOfLines={2}
+                  style={{ flex: 1, minWidth: 0, color: colors.text }}
+                >
+                  {t.pages.chatIa.whatsappChannelOptionToggleLabel}
+                </ThemedText>
+              </View>
+              <CustomSwitch
+                value={channelInstanceConnectionEnabled}
+                disabled={
+                  channelInstanceActiveToggleLoading || channelProfileLoading
+                }
+                onValueChange={handleChannelInstanceActiveChange}
+              />
+            </View>
+          </View>
+        ) : null}
+        <View
+          style={styles.channelInstancePickerMeasuredBlock}
+          onLayout={(e: LayoutChangeEvent) => {
+            setChannelPickerBlockHeight(e.nativeEvent.layout.height);
+          }}
+        >
+          <View style={styles.channelInstanceDividerTrack}>
+            <View
+              style={[
+                styles.channelInstanceDividerLine,
+                { backgroundColor: channelInstanceDividerLineColor },
+              ]}
+            />
+          </View>
+          <View style={styles.channelInstanceTriggerRow}>
+            <View style={styles.channelInstanceTriggerRowSideSpacer} />
+            <View style={styles.channelInstanceTriggerCenter}>
+              <TouchableOpacity
+                style={styles.channelInstanceTriggerMain}
+                activeOpacity={0.75}
+                onPress={() => {
+                  setChannelInstanceOptionsOpen(false);
+                  setChannelInstanceMenuOpen((open) => !open);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t.pages.chatIa.whatsappChannelPickerA11y}
+                accessibilityState={{
+                  expanded: channelInstanceMenuOpen,
+                }}
+              >
+                <Animated.View
+                  style={[
+                    styles.channelInstanceTriggerIconWrap,
+                    selectedWhatsappInstanceIsActive
+                      ? { opacity: whatsappChannelIconOpacity }
+                      : null,
+                  ]}
+                >
+                  <Ionicons
+                    name="logo-whatsapp"
+                    size={22}
+                    color={
+                      selectedWhatsappInstanceIsActive
+                        ? "#25D366"
+                        : colors.textSecondary
+                    }
+                  />
+                </Animated.View>
+                <View style={styles.channelInstanceTriggerLabelWrap}>
+                  <ThemedText
+                    type="body2"
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[
+                      styles.channelInstanceTriggerLabel,
+                      { color: colors.text },
+                    ]}
+                  >
+                    {selectedWhatsappChannelLabel}
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.channelInstanceEllipsisButton}
+              activeOpacity={0.7}
+              onPress={() => {
+                setChannelInstanceMenuOpen(false);
+                setChannelInstanceOptionsOpen((open) => !open);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t.pages.chatIa.whatsappChannelOptionsMenuA11y}
+              accessibilityState={{
+                expanded: channelInstanceOptionsOpen,
+              }}
+            >
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={22}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }, [
+    whatsappInstances,
+    channelProfileLoading,
+    channelInstanceMenuOpen,
+    channelInstanceOptionsOpen,
+    channelInstanceConnectionEnabled,
+    selectedChannelInstance,
+    selectedWhatsappChannelLabel,
+    channelPickerBlockHeight,
+    channelInstanceDividerLineColor,
+    colors,
+    styles,
+    t,
+    whatsappChannelIconOpacity,
+    handleChannelInstanceActiveChange,
+    channelInstanceActiveToggleLoading,
+    selectedWhatsappInstanceIsActive,
+  ]);
 
   // Animación del buscador de mensajes
   useEffect(() => {
@@ -2923,12 +3694,7 @@ export default function ChatIAScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: "",
-          headerShown: false,
-        }}
-      />
+      <Stack.Screen options={chatStackScreenOptions} />
       <ThemedView style={styles.container}>
         <View
           style={[
@@ -2945,7 +3711,12 @@ export default function ChatIAScreen() {
               style={[
                 styles.contactsPanel,
                 { backgroundColor: colors.filterInputBackground },
-                isMobile && { width: "100%", borderRightWidth: 0 },
+                isMobile && {
+                  width: "100%",
+                  borderRightWidth: 0,
+                  flex: 1,
+                  minHeight: 0,
+                },
               ]}
             >
               {/* Barra de búsqueda */}
@@ -3103,229 +3874,235 @@ export default function ChatIAScreen() {
                 </View>
               </View>
 
-              {/* Lista de contactos */}
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={colors.primary} />
-                  <ThemedText
-                    type="body2"
-                    style={{ marginTop: 16, color: colors.textSecondary }}
+              <View style={styles.contactsListColumn}>
+                {/* Lista de contactos */}
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ThemedText
+                      type="body2"
+                      style={{ marginTop: 16, color: colors.textSecondary }}
+                    >
+                      {t.pages.chatIa.loadingContacts}
+                    </ThemedText>
+                  </View>
+                ) : filteredContacts.length === 0 ? (
+                  <View
+                    style={[
+                      styles.emptyContainer,
+                      { backgroundColor: "transparent" },
+                    ]}
                   >
-                    {t.pages.chatIa.loadingContacts}
-                  </ThemedText>
-                </View>
-              ) : filteredContacts.length === 0 ? (
-                <View
-                  style={[
-                    styles.emptyContainer,
-                    { backgroundColor: "transparent" },
-                  ]}
-                >
-                  <Ionicons
-                    name="chatbubbles-outline"
-                    size={48}
-                    color={colors.textSecondary}
-                  />
-                  <ThemedText
-                    type="body2"
-                    style={{
-                      marginTop: 16,
-                      color: colors.textSecondary,
-                      textAlign: "center",
-                    }}
+                    <Ionicons
+                      name="chatbubbles-outline"
+                      size={48}
+                      color={colors.textSecondary}
+                    />
+                    <ThemedText
+                      type="body2"
+                      style={{
+                        marginTop: 16,
+                        color: colors.textSecondary,
+                        textAlign: "center",
+                      }}
+                    >
+                      {searchQuery
+                        ? t.pages.chatIa.emptyNoContactsFound
+                        : t.pages.chatIa.emptyNoContactsYet}
+                    </ThemedText>
+                  </View>
+                ) : (
+                  <ScrollView
+                    style={styles.contactsList}
+                    showsVerticalScrollIndicator={false}
                   >
-                    {searchQuery
-                      ? t.pages.chatIa.emptyNoContactsFound
-                      : t.pages.chatIa.emptyNoContactsYet}
-                  </ThemedText>
-                </View>
-              ) : (
-                <ScrollView
-                  style={styles.contactsList}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {filteredContacts.map((contact) => {
-                    const isSelected = selectedContact?.id === contact.id;
-                    /** Colores: pending + botEnabled (azul / verde / gris). Visibilidad: solo si el último mensaje es inbound */
-                    const pendingRead = contact.lastMessagePendingRead === true;
-                    const botEnabledTrue = contact.botEnabled === true;
-                    const botEnabledFalse = contact.botEnabled === false;
-                    const isLastMessageInbound = isInboundDirection(
-                      contact.lastMessage?.direction,
-                    );
-                    let botStatusDotColor: string;
-                    if (pendingRead && botEnabledTrue) {
-                      botStatusDotColor = colors.primary;
-                    } else if (pendingRead && botEnabledFalse) {
-                      botStatusDotColor = colors.secondary;
-                    } else {
-                      botStatusDotColor = isDark
-                        ? colors.textSecondary
-                        : colors.chatOutboundBackground;
-                    }
-                    const showBotStatusDot = isLastMessageInbound;
-                    return (
-                      <TouchableOpacity
-                        key={contact.id}
-                        style={[
-                          styles.contactItem,
-                          {
-                            backgroundColor: isSelected
-                              ? colors.primary + "20"
-                              : "transparent",
-                            borderLeftColor: isSelected
-                              ? colors.primary
-                              : "transparent",
-                          },
-                        ]}
-                        onPress={() => handleSelectContact(contact)}
-                      >
-                        {contact.specialistAssignment === true ? (
-                          <ContactSpecialistAvatarRing
-                            wrapStyle={styles.contactAvatarSpecialistWrap}
-                            ringAnimatedBaseStyle={
-                              styles.contactAvatarSpecialistRingAnimated
-                            }
-                            borderColor={colors.secondary}
-                            borderRadius={SPECIALIST_RING_RADIUS}
-                          >
-                            <View
-                              style={[
-                                styles.contactAvatar,
-                                {
-                                  backgroundColor: colors.primary,
-                                  marginRight: 0,
-                                },
-                              ]}
+                    {filteredContacts.map((contact) => {
+                      const isSelected = selectedContact?.id === contact.id;
+                      /** Colores: pending + botEnabled (azul / verde / gris). Visibilidad: solo si el último mensaje es inbound */
+                      const pendingRead =
+                        contact.lastMessagePendingRead === true;
+                      const botEnabledTrue = contact.botEnabled === true;
+                      const botEnabledFalse = contact.botEnabled === false;
+                      const isLastMessageInbound = isInboundDirection(
+                        contact.lastMessage?.direction,
+                      );
+                      let botStatusDotColor: string;
+                      if (pendingRead && botEnabledTrue) {
+                        botStatusDotColor = colors.primary;
+                      } else if (pendingRead && botEnabledFalse) {
+                        botStatusDotColor = colors.secondary;
+                      } else {
+                        botStatusDotColor = isDark
+                          ? colors.textSecondary
+                          : colors.chatOutboundBackground;
+                      }
+                      const showBotStatusDot = isLastMessageInbound;
+                      return (
+                        <TouchableOpacity
+                          key={contact.id}
+                          style={[
+                            styles.contactItem,
+                            {
+                              backgroundColor: isSelected
+                                ? colors.primary + "20"
+                                : "transparent",
+                              borderLeftColor: isSelected
+                                ? colors.primary
+                                : "transparent",
+                            },
+                          ]}
+                          onPress={() => handleSelectContact(contact)}
+                        >
+                          {contact.specialistAssignment === true ? (
+                            <ContactSpecialistAvatarRing
+                              wrapStyle={styles.contactAvatarSpecialistWrap}
+                              ringAnimatedBaseStyle={
+                                styles.contactAvatarSpecialistRingAnimated
+                              }
+                              borderColor={colors.secondary}
+                              borderRadius={SPECIALIST_RING_RADIUS}
                             >
-                              <ThemedText
-                                type="h4"
-                                style={{ color: "#FFFFFF" }}
-                              >
-                                {contact.name.charAt(0).toUpperCase()}
-                              </ThemedText>
-                            </View>
-                          </ContactSpecialistAvatarRing>
-                        ) : (
-                          <View style={styles.contactAvatarSpecialistWrap}>
-                            <View
-                              style={[
-                                styles.contactAvatar,
-                                {
-                                  backgroundColor: colors.primary,
-                                  marginRight: 0,
-                                },
-                              ]}
-                            >
-                              <ThemedText
-                                type="h4"
-                                style={{ color: "#FFFFFF" }}
-                              >
-                                {contact.name.charAt(0).toUpperCase()}
-                              </ThemedText>
-                            </View>
-                            <View
-                              pointerEvents="none"
-                              style={[
-                                styles.contactAvatarSpecialistRingAnimated,
-                                {
-                                  borderColor: "transparent",
-                                  borderRadius: SPECIALIST_RING_RADIUS,
-                                },
-                              ]}
-                            />
-                          </View>
-                        )}
-                        <View style={styles.contactInfo}>
-                          <View style={styles.contactHeader}>
-                            <View style={styles.contactNameRow}>
-                              <ThemedText
-                                type="body2"
-                                style={{
-                                  fontWeight: "600",
-                                  color: colors.text,
-                                }}
-                                numberOfLines={1}
-                              >
-                                {contact.name}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.contactHeaderRight}>
-                              <View style={styles.contactRobotSlot}>
-                                {contact.botEnabled === true && (
-                                  <DynamicIcon
-                                    name="FontAwesome5:robot"
-                                    size={12}
-                                    color={colors.textSecondary}
-                                  />
-                                )}
-                              </View>
-                              {contact.lastMessage && (
-                                <ThemedText
-                                  type="caption"
-                                  style={[
-                                    styles.contactTimeText,
-                                    { color: colors.textSecondary },
-                                  ]}
-                                >
-                                  {formatRelativeTime(
-                                    contact.lastMessage.createdAt,
-                                  )}
-                                </ThemedText>
-                              )}
-                            </View>
-                          </View>
-                          <View style={styles.contactFooter}>
-                            <ThemedText
-                              type="caption"
-                              style={{ color: colors.textSecondary, flex: 1 }}
-                              numberOfLines={1}
-                            >
-                              {contact.lastMessage?.content
-                                ? renderWhatsAppFormattedTextSingleLine(
-                                    contact.lastMessage.content,
-                                    {
-                                      textColor: colors.textSecondary,
-                                      fontSize: 12,
-                                    },
-                                  )
-                                : contact.phoneNumber}
-                            </ThemedText>
-                            {showBotStatusDot && (
                               <View
                                 style={[
-                                  styles.botStatusDot,
-                                  { backgroundColor: botStatusDotColor },
+                                  styles.contactAvatar,
+                                  {
+                                    backgroundColor: colors.primary,
+                                    marginRight: 0,
+                                  },
+                                ]}
+                              >
+                                <ThemedText
+                                  type="h4"
+                                  style={{ color: "#FFFFFF" }}
+                                >
+                                  {contact.name.charAt(0).toUpperCase()}
+                                </ThemedText>
+                              </View>
+                            </ContactSpecialistAvatarRing>
+                          ) : (
+                            <View style={styles.contactAvatarSpecialistWrap}>
+                              <View
+                                style={[
+                                  styles.contactAvatar,
+                                  {
+                                    backgroundColor: colors.primary,
+                                    marginRight: 0,
+                                  },
+                                ]}
+                              >
+                                <ThemedText
+                                  type="h4"
+                                  style={{ color: "#FFFFFF" }}
+                                >
+                                  {contact.name.charAt(0).toUpperCase()}
+                                </ThemedText>
+                              </View>
+                              <View
+                                pointerEvents="none"
+                                style={[
+                                  styles.contactAvatarSpecialistRingAnimated,
+                                  {
+                                    borderColor: "transparent",
+                                    borderRadius: SPECIALIST_RING_RADIUS,
+                                  },
                                 ]}
                               />
-                            )}
-                            {contact.unreadCount && contact.unreadCount > 0 && (
-                              <View
-                                style={[
-                                  styles.unreadBadge,
-                                  { backgroundColor: colors.primary },
-                                ]}
-                              >
+                            </View>
+                          )}
+                          <View style={styles.contactInfo}>
+                            <View style={styles.contactHeader}>
+                              <View style={styles.contactNameRow}>
                                 <ThemedText
-                                  type="caption"
+                                  type="body2"
                                   style={{
-                                    color: "#FFFFFF",
                                     fontWeight: "600",
+                                    color: colors.text,
                                   }}
+                                  numberOfLines={1}
                                 >
-                                  {contact.unreadCount > 99
-                                    ? "99+"
-                                    : contact.unreadCount}
+                                  {contact.name}
                                 </ThemedText>
                               </View>
-                            )}
+                              <View style={styles.contactHeaderRight}>
+                                <View style={styles.contactRobotSlot}>
+                                  {contact.botEnabled === true && (
+                                    <DynamicIcon
+                                      name="FontAwesome5:robot"
+                                      size={12}
+                                      color={colors.textSecondary}
+                                    />
+                                  )}
+                                </View>
+                                {contact.lastMessage && (
+                                  <ThemedText
+                                    type="caption"
+                                    style={[
+                                      styles.contactTimeText,
+                                      { color: colors.textSecondary },
+                                    ]}
+                                  >
+                                    {formatRelativeTime(
+                                      contact.lastMessage.createdAt,
+                                    )}
+                                  </ThemedText>
+                                )}
+                              </View>
+                            </View>
+                            <View style={styles.contactFooter}>
+                              <ThemedText
+                                type="caption"
+                                style={{ color: colors.textSecondary, flex: 1 }}
+                                numberOfLines={1}
+                              >
+                                {contact.lastMessage?.content
+                                  ? renderWhatsAppFormattedTextSingleLine(
+                                      contact.lastMessage.content,
+                                      {
+                                        textColor: colors.textSecondary,
+                                        fontSize: 12,
+                                      },
+                                    )
+                                  : contact.phoneNumber}
+                              </ThemedText>
+                              {showBotStatusDot && (
+                                <View
+                                  style={[
+                                    styles.botStatusDot,
+                                    { backgroundColor: botStatusDotColor },
+                                  ]}
+                                />
+                              )}
+                              {contact.unreadCount &&
+                                contact.unreadCount > 0 && (
+                                  <View
+                                    style={[
+                                      styles.unreadBadge,
+                                      { backgroundColor: colors.primary },
+                                    ]}
+                                  >
+                                    <ThemedText
+                                      type="caption"
+                                      style={{
+                                        color: "#FFFFFF",
+                                        fontWeight: "600",
+                                      }}
+                                    >
+                                      {contact.unreadCount > 99
+                                        ? "99+"
+                                        : contact.unreadCount}
+                                    </ThemedText>
+                                  </View>
+                                )}
+                            </View>
                           </View>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+
+                {renderChannelInstancePicker()}
+              </View>
             </View>
           )}
 
@@ -3342,41 +4119,147 @@ export default function ChatIAScreen() {
                 <View
                   style={[
                     styles.chatHeader,
+                    isMobile && {
+                      paddingLeft: 5,
+                      paddingRight: 15,
+                    },
                     {
                       backgroundColor: colors.filterInputBackground,
                       borderBottomColor: colors.border,
                     },
                   ]}
                 >
-                  <View style={styles.chatHeaderInfo}>
-                    {/* Botón de regresar - Solo en móvil */}
+                  <View
+                    style={[
+                      styles.chatHeaderInfo,
+                      isMobile && styles.chatHeaderInfoMobile,
+                    ]}
+                  >
                     {isMobile && (
                       <TouchableOpacity
                         onPress={() => setSelectedContact(null)}
-                        style={styles.backButton}
+                        style={[styles.backButton, styles.backButtonMobile]}
                         activeOpacity={0.7}
                       >
                         <Ionicons
                           name="arrow-back"
-                          size={24}
+                          size={chatHeaderIconSize}
                           color={colors.text}
                         />
                       </TouchableOpacity>
                     )}
-                    <View
-                      style={[
-                        styles.chatAvatar,
-                        { backgroundColor: colors.primary },
-                      ]}
-                    >
-                      <ThemedText type="h4" style={{ color: "#FFFFFF" }}>
-                        {selectedContact.name.charAt(0).toUpperCase()}
-                      </ThemedText>
-                    </View>
-                    <View style={{ flex: 1 }}>
+                    {isMobile ? (
+                      <Tooltip
+                        text={
+                          selectedContact?.specialistAssignment === true
+                            ? t.pages.chatIa.tooltipSpecialistRemove
+                            : t.pages.chatIa.tooltipSpecialistAdd
+                        }
+                        position="bottom"
+                      >
+                        <TouchableOpacity
+                          onPress={handleToggleSpecialistAssignment}
+                          disabled={
+                            updatingSpecialistAssignment ||
+                            !selectedContact?.id
+                          }
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            selectedContact?.specialistAssignment === true
+                              ? t.pages.chatIa.tooltipSpecialistRemove
+                              : t.pages.chatIa.tooltipSpecialistAdd
+                          }
+                        >
+                          {selectedContact.specialistAssignment === true ? (
+                            <ContactSpecialistAvatarRing
+                              wrapStyle={StyleSheet.flatten([
+                                styles.chatHeaderAvatarSpecialistWrap,
+                                styles.chatHeaderAvatarSpecialistWrapMobile,
+                              ])}
+                              ringAnimatedBaseStyle={
+                                styles.chatHeaderAvatarSpecialistRingAnimated
+                              }
+                              borderColor={colors.secondary}
+                              borderRadius={CHAT_HEADER_SPECIALIST_RING_RADIUS}
+                            >
+                              <View
+                                style={[
+                                  styles.chatAvatar,
+                                  {
+                                    backgroundColor: colors.primary,
+                                    marginRight: 0,
+                                  },
+                                ]}
+                              >
+                                <ThemedText
+                                  type="h4"
+                                  style={{ color: "#FFFFFF" }}
+                                >
+                                  {selectedContact.name
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                </ThemedText>
+                              </View>
+                            </ContactSpecialistAvatarRing>
+                          ) : (
+                            <View
+                              style={[
+                                styles.chatHeaderAvatarSpecialistWrap,
+                                styles.chatHeaderAvatarSpecialistWrapMobile,
+                              ]}
+                            >
+                              <View
+                                style={[
+                                  styles.chatAvatar,
+                                  {
+                                    backgroundColor: colors.primary,
+                                    marginRight: 0,
+                                  },
+                                ]}
+                              >
+                                <ThemedText
+                                  type="h4"
+                                  style={{ color: "#FFFFFF" }}
+                                >
+                                  {selectedContact.name
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                </ThemedText>
+                              </View>
+                              <View
+                                pointerEvents="none"
+                                style={[
+                                  styles.chatHeaderAvatarSpecialistRingAnimated,
+                                  {
+                                    borderColor: "transparent",
+                                    borderRadius:
+                                      CHAT_HEADER_SPECIALIST_RING_RADIUS,
+                                  },
+                                ]}
+                              />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      </Tooltip>
+                    ) : (
+                      <View
+                        style={[
+                          styles.chatAvatar,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      >
+                        <ThemedText type="h4" style={{ color: "#FFFFFF" }}>
+                          {selectedContact.name.charAt(0).toUpperCase()}
+                        </ThemedText>
+                      </View>
+                    )}
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <ThemedText
                         type="body2"
                         style={{ fontWeight: "600", color: colors.text }}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
                       >
                         {selectedContact.name}
                       </ThemedText>
@@ -3386,7 +4269,6 @@ export default function ChatIAScreen() {
                       >
                         {selectedContact.phoneNumber}
                       </ThemedText>
-                      {/* Etiquetas del contacto */}
                       {selectedContact.tags &&
                         selectedContact.tags.length > 0 && (
                           <View style={styles.contactTagsRow}>
@@ -3405,7 +4287,10 @@ export default function ChatIAScreen() {
                                 >
                                   <ThemedText
                                     type="caption"
-                                    style={{ color: "#FFFFFF", fontSize: 10 }}
+                                    style={{
+                                      color: "#FFFFFF",
+                                      fontSize: 10,
+                                    }}
                                   >
                                     {tag.label}
                                   </ThemedText>
@@ -3417,92 +4302,139 @@ export default function ChatIAScreen() {
                     </View>
                   </View>
                   <View style={styles.chatHeaderActions}>
-                    {/* Asignación a especialista (mismo servicio que bot; true→false con confirmación) */}
-                    <Tooltip
-                      text={
-                        selectedContact?.specialistAssignment === true
-                          ? t.pages.chatIa.tooltipSpecialistRemove
-                          : t.pages.chatIa.tooltipSpecialistAdd
-                      }
-                      position="bottom"
-                    >
-                      <TouchableOpacity
-                        onPress={handleToggleSpecialistAssignment}
-                        style={styles.chatIAToggle}
-                        disabled={
-                          updatingSpecialistAssignment || !selectedContact?.id
-                        }
-                      >
-                        <Animated.View
-                          style={{
-                            opacity: specialistHelpIconOpacity,
-                          }}
-                        >
-                          <Ionicons
-                            name="medkit"
-                            size={24}
-                            color={
+                    {useChatHeaderPrimaryIconsNarrow ? (
+                      <View style={styles.chatHeaderPrimaryActionsRowCompact}>
+                        {!isMobile && (
+                          <Tooltip
+                            text={
                               selectedContact?.specialistAssignment === true
-                                ? colors.secondary
-                                : colors.textSecondary
+                                ? t.pages.chatIa.tooltipSpecialistRemove
+                                : t.pages.chatIa.tooltipSpecialistAdd
                             }
-                          />
-                        </Animated.View>
-                      </TouchableOpacity>
-                    </Tooltip>
-                    {/* Botón de activar/desactivar Marcar como no Leido */}
-                    <Tooltip
-                      text={
-                        selectedContact?.lastMessagePendingRead === true
-                          ? t.pages.chatIa.tooltipMarkRead
-                          : t.pages.chatIa.tooltipMarkUnread
-                      }
-                      position="bottom"
-                    >
-                      <TouchableOpacity
-                        onPress={handleToggleLastMessagePendingRead}
-                        style={styles.chatIAToggle}
-                        disabled={
-                          updatingLastMessagePendingRead || !selectedContact?.id
-                        }
-                      >
-                        <Ionicons
-                          name="mail-unread"
-                          size={24}
-                          color={
+                            position="bottom"
+                          >
+                            <TouchableOpacity
+                              onPress={handleToggleSpecialistAssignment}
+                              style={styles.chatHeaderPrimaryIconToggleCompact}
+                              disabled={
+                                updatingSpecialistAssignment ||
+                                !selectedContact?.id
+                              }
+                            >
+                              <Animated.View
+                                style={{
+                                  opacity: specialistHelpIconOpacity,
+                                }}
+                              >
+                                <Ionicons
+                                  name="medkit"
+                                  size={chatHeaderPrimaryPairIconSize}
+                                  color={
+                                    selectedContact?.specialistAssignment ===
+                                    true
+                                      ? colors.secondary
+                                      : colors.textSecondary
+                                  }
+                                />
+                              </Animated.View>
+                            </TouchableOpacity>
+                          </Tooltip>
+                        )}
+                        <Tooltip
+                          text={
                             selectedContact?.lastMessagePendingRead === true
-                              ? colors.primary
-                              : colors.textSecondary
+                              ? t.pages.chatIa.tooltipMarkRead
+                              : t.pages.chatIa.tooltipMarkUnread
                           }
-                        />
-                      </TouchableOpacity>
-                    </Tooltip>
-                    {/* Botón de activar/desactivar Chat IA */}
-                    <Tooltip
-                      text={
-                        (selectedContact?.botEnabled ?? true)
-                          ? t.pages.chatIa.tooltipDisableBot
-                          : t.pages.chatIa.tooltipEnableBot
-                      }
-                      position="bottom"
-                    >
-                      <TouchableOpacity
-                        onPress={handleToggleBotEnabled}
-                        style={styles.chatIAToggle}
-                        disabled={updatingBotEnabled}
-                      >
-                        <DynamicIcon
-                          name="FontAwesome5:robot"
-                          size={24}
-                          color={
-                            (selectedContact?.botEnabled ?? true)
-                              ? colors.primary
-                              : colors.textSecondary
+                          position="bottom"
+                        >
+                          <TouchableOpacity
+                            onPress={handleToggleLastMessagePendingRead}
+                            style={styles.chatHeaderPrimaryIconToggleCompact}
+                            disabled={
+                              updatingLastMessagePendingRead ||
+                              !selectedContact?.id
+                            }
+                          >
+                            <Ionicons
+                              name="mail-unread"
+                              size={chatHeaderPrimaryPairIconSize}
+                              color={
+                                selectedContact?.lastMessagePendingRead === true
+                                  ? colors.primary
+                                  : colors.textSecondary
+                              }
+                            />
+                          </TouchableOpacity>
+                        </Tooltip>
+                      </View>
+                    ) : (
+                      <>
+                        {!isMobile && (
+                          <Tooltip
+                            text={
+                              selectedContact?.specialistAssignment === true
+                                ? t.pages.chatIa.tooltipSpecialistRemove
+                                : t.pages.chatIa.tooltipSpecialistAdd
+                            }
+                            position="bottom"
+                          >
+                            <TouchableOpacity
+                              onPress={handleToggleSpecialistAssignment}
+                              style={styles.chatIAToggle}
+                              disabled={
+                                updatingSpecialistAssignment ||
+                                !selectedContact?.id
+                              }
+                            >
+                              <Animated.View
+                                style={{
+                                  opacity: specialistHelpIconOpacity,
+                                }}
+                              >
+                                <Ionicons
+                                  name="medkit"
+                                  size={chatHeaderPrimaryPairIconSize}
+                                  color={
+                                    selectedContact?.specialistAssignment ===
+                                    true
+                                      ? colors.secondary
+                                      : colors.textSecondary
+                                  }
+                                />
+                              </Animated.View>
+                            </TouchableOpacity>
+                          </Tooltip>
+                        )}
+                        <Tooltip
+                          text={
+                            selectedContact?.lastMessagePendingRead === true
+                              ? t.pages.chatIa.tooltipMarkRead
+                              : t.pages.chatIa.tooltipMarkUnread
                           }
-                        />
-                      </TouchableOpacity>
-                    </Tooltip>
-                    {/* Búsqueda en mensajes (expandible horizontalmente en web, solo icono en móvil) */}
+                          position="bottom"
+                        >
+                          <TouchableOpacity
+                            onPress={handleToggleLastMessagePendingRead}
+                            style={styles.chatIAToggle}
+                            disabled={
+                              updatingLastMessagePendingRead ||
+                              !selectedContact?.id
+                            }
+                          >
+                            <Ionicons
+                              name="mail-unread"
+                              size={chatHeaderPrimaryPairIconSize}
+                              color={
+                                selectedContact?.lastMessagePendingRead === true
+                                  ? colors.primary
+                                  : colors.textSecondary
+                              }
+                            />
+                          </TouchableOpacity>
+                        </Tooltip>
+                      </>
+                    )}
                     {!isMobile ? (
                       <Animated.View
                         style={{
@@ -3571,7 +4503,9 @@ export default function ChatIAScreen() {
                               primaryColor={colors.primary}
                             >
                               <TextInput
-                                placeholder={t.pages.chatIa.searchMessagesPlaceholder}
+                                placeholder={
+                                  t.pages.chatIa.searchMessagesPlaceholder
+                                }
                                 value={messageSearchQuery}
                                 onChangeText={setMessageSearchQuery}
                                 style={{
@@ -3622,7 +4556,6 @@ export default function ChatIAScreen() {
                         )}
                       </Animated.View>
                     ) : (
-                      // En móvil, solo mostrar el icono de búsqueda
                       <TouchableOpacity
                         onPress={() => {
                           if (showMessageSearch) {
@@ -3637,12 +4570,11 @@ export default function ChatIAScreen() {
                           height: 40,
                           alignItems: "center",
                           justifyContent: "center",
-                          marginLeft: 8,
                         }}
                       >
                         <Ionicons
                           name="search"
-                          size={20}
+                          size={chatHeaderIconSize}
                           color={
                             showMessageSearch
                               ? colors.primary
@@ -3651,16 +4583,42 @@ export default function ChatIAScreen() {
                         />
                       </TouchableOpacity>
                     )}
-                    {/* Botón de información del cliente - Solo visible cuando el panel está cerrado */}
+                    <Tooltip
+                      text={
+                        (selectedContact?.botEnabled ?? true)
+                          ? t.pages.chatIa.tooltipDisableBot
+                          : t.pages.chatIa.tooltipEnableBot
+                      }
+                      position="bottom"
+                    >
+                      <TouchableOpacity
+                        onPress={handleToggleBotEnabled}
+                        style={styles.chatIAToggle}
+                        disabled={updatingBotEnabled}
+                      >
+                        <DynamicIcon
+                          name="FontAwesome5:robot"
+                          size={chatHeaderIconSize}
+                          color={
+                            (selectedContact?.botEnabled ?? true)
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
                     {!showContactInfoPanel && (
-                      <Tooltip text={t.pages.chatIa.tooltipClientInfo} position="bottom">
+                      <Tooltip
+                        text={t.pages.chatIa.tooltipClientInfo}
+                        position="bottom"
+                      >
                         <TouchableOpacity
                           onPress={() => setShowContactInfoPanel(true)}
                           style={styles.chatIAToggle}
                         >
                           <Ionicons
                             name="person"
-                            size={24}
+                            size={chatHeaderIconSize}
                             color={colors.textSecondary}
                           />
                         </TouchableOpacity>
@@ -3697,7 +4655,7 @@ export default function ChatIAScreen() {
                     >
                       <Ionicons
                         name="search"
-                        size={18}
+                        size={chatHeaderIconSize}
                         color={colors.textSecondary}
                         style={{
                           position: "absolute",
@@ -3720,7 +4678,7 @@ export default function ChatIAScreen() {
                         >
                           <Ionicons
                             name="close-circle"
-                            size={18}
+                            size={chatHeaderIconSize}
                             color={colors.textSecondary}
                           />
                         </TouchableOpacity>
@@ -3766,7 +4724,7 @@ export default function ChatIAScreen() {
                       >
                         <Ionicons
                           name="close"
-                          size={20}
+                          size={chatHeaderIconSize}
                           color={colors.textSecondary}
                         />
                       </TouchableOpacity>
@@ -3780,6 +4738,9 @@ export default function ChatIAScreen() {
                   style={styles.messagesAreaBackground}
                   imageStyle={styles.messagesAreaBackgroundImage}
                   resizeMode="repeat"
+                  onLayout={(e: LayoutChangeEvent) => {
+                    setMessagesAreaWidth(e.nativeEvent.layout.width);
+                  }}
                 >
                   {loadingMessages ? (
                     <View style={styles.loadingContainer}>
@@ -4192,6 +5153,9 @@ export default function ChatIAScreen() {
                                         : message.mediaIdentifier ||
                                           "Detalle documental";
 
+                                    const showDocumentDetailStacked =
+                                      useCompactDocumentDetailLayout;
+
                                     const imageBlock = (
                                       <TouchableOpacity
                                         style={[
@@ -4199,14 +5163,18 @@ export default function ChatIAScreen() {
                                           {
                                             borderColor: colors.border,
                                           },
-                                          isMobile &&
+                                          (isMobile ||
+                                            (canShowDocumentCard &&
+                                              isContextExpanded &&
+                                              showDocumentDetailStacked)) &&
                                             styles.messageAttachmentMobile,
                                           canShowDocumentCard &&
                                             isContextExpanded &&
-                                            !isMobile &&
+                                            !showDocumentDetailStacked &&
                                             styles.documentAttachmentExpandedDesktop,
                                           canShowDocumentCard &&
-                                            isMobile &&
+                                            isContextExpanded &&
+                                            showDocumentDetailStacked &&
                                             styles.documentAttachmentMobile,
                                         ]}
                                         onPress={() => {
@@ -4261,7 +5229,7 @@ export default function ChatIAScreen() {
                                         style={[
                                           styles.documentMediaContainer,
                                           isContextExpanded &&
-                                            (isMobile
+                                            (showDocumentDetailStacked
                                               ? styles.documentMediaExpandedMobile
                                               : styles.documentMediaExpandedDesktop),
                                           {
@@ -4276,9 +5244,11 @@ export default function ChatIAScreen() {
                                           style={[
                                             styles.documentMediaCard,
                                             isContextExpanded &&
-                                              !isMobile &&
+                                              !showDocumentDetailStacked &&
                                               styles.documentMediaCardExpandedDesktop,
-                                            isMobile &&
+                                            (isMobile ||
+                                              (isContextExpanded &&
+                                                showDocumentDetailStacked)) &&
                                               styles.documentMediaCardMobile,
                                           ]}
                                         >
@@ -4340,7 +5310,7 @@ export default function ChatIAScreen() {
                                                 >
                                                   <Ionicons
                                                     name={
-                                                      isMobile
+                                                      showDocumentDetailStacked
                                                         ? "chevron-down"
                                                         : "chevron-forward"
                                                     }
@@ -4399,7 +5369,7 @@ export default function ChatIAScreen() {
                                             <View
                                               style={[
                                                 styles.documentContextPanel,
-                                                isMobile
+                                                showDocumentDetailStacked
                                                   ? {
                                                       borderTopWidth: 1,
                                                       borderTopColor:
@@ -4500,7 +5470,7 @@ export default function ChatIAScreen() {
                                                         key={key}
                                                         style={[
                                                           styles.documentContextItem,
-                                                          !isMobile &&
+                                                          !showDocumentDetailStacked &&
                                                             styles.documentContextItemDesktop,
                                                         ]}
                                                       >
@@ -4512,7 +5482,7 @@ export default function ChatIAScreen() {
                                                                 colors.textSecondary,
                                                               fontWeight: "600",
                                                             },
-                                                            !isMobile &&
+                                                            !showDocumentDetailStacked &&
                                                               styles.documentContextLabelDesktop,
                                                           ]}
                                                         >
@@ -4527,11 +5497,11 @@ export default function ChatIAScreen() {
                                                               color:
                                                                 colors.text,
                                                               marginTop:
-                                                                isMobile
+                                                                showDocumentDetailStacked
                                                                   ? 2
                                                                   : 0,
                                                             },
-                                                            !isMobile &&
+                                                            !showDocumentDetailStacked &&
                                                               styles.documentContextValueDesktop,
                                                           ]}
                                                         >
@@ -5029,16 +5999,13 @@ export default function ChatIAScreen() {
                                   prev.filter((_, i) => i !== index),
                                 );
                               }}
-                              style={[
-                                styles.attachedFileRemoveButton,
-                                { backgroundColor: colors.error + "E6" },
-                              ]}
+                              style={styles.attachedFileRemoveButton}
                               activeOpacity={0.7}
                             >
                               <Ionicons
                                 name="close"
-                                size={16}
-                                color="#FFFFFF"
+                                size={14}
+                                color="rgba(255, 255, 255, 0.92)"
                               />
                             </TouchableOpacity>
                           </View>
@@ -5172,343 +6139,253 @@ export default function ChatIAScreen() {
                   </View>
                 )}
 
-                {/* Input de mensaje */}
-                <View
-                  style={[
-                    styles.messageInputContainer,
-                    {
-                      backgroundColor: colors.filterInputBackground,
-                      borderTopColor: colors.border,
-                    },
-                    { position: "relative" },
-                  ]}
-                >
-                  {/* Inputs de archivo ocultos (solo web) */}
-                  {Platform.OS === "web" && (
-                    <>
-                      {/* Input para documentos (todos los archivos) */}
-                      <input
-                        ref={documentInputRef}
-                        type="file"
-                        multiple
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          const validFiles: Array<{
-                            name: string;
-                            size: number;
-                            type: string;
-                            uri?: string;
-                            file?: File;
-                          }> = [];
-                          const maxSize = 10 * 1024 * 1024; // 10MB
-
-                          files.forEach((file) => {
-                            if (file.size > maxSize) {
-                              alert.showError(
-                                interpolate(t.pages.chatIa.errorFileTooLarge, {
-                                  name: file.name,
-                                }),
-                              );
-                              return;
-                            }
-
-                            validFiles.push({
-                              name: file.name,
-                              size: file.size,
-                              type: file.type,
-                              uri: URL.createObjectURL(file),
-                              file: file, // Guardar el File original para poder convertirlo a base64
-                            });
-                          });
-
-                          if (validFiles.length > 0) {
-                            setAttachedFiles((prev) => [
-                              ...prev,
-                              ...validFiles,
-                            ]);
-                          }
-
-                          if (documentInputRef.current) {
-                            documentInputRef.current.value = "";
-                          }
-                          setShowAttachmentMenu(false);
-                        }}
-                      />
-
-                      {/* Input para fotos y videos */}
-                      <input
-                        ref={mediaInputRef}
-                        type="file"
-                        accept="image/*,video/*"
-                        multiple
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          const validFiles: Array<{
-                            name: string;
-                            size: number;
-                            type: string;
-                            uri?: string;
-                            file?: File;
-                          }> = [];
-                          const maxSize = 10 * 1024 * 1024; // 10MB
-
-                          files.forEach((file) => {
-                            const isMedia =
-                              file.type.startsWith("image/") ||
-                              file.type.startsWith("video/");
-
-                            if (!isMedia) {
-                              alert.showError(
-                                interpolate(
-                                  t.pages.chatIa.errorFileInvalidMedia,
-                                  { name: file.name },
-                                ),
-                              );
-                              return;
-                            }
-
-                            if (file.size > maxSize) {
-                              alert.showError(
-                                interpolate(t.pages.chatIa.errorFileTooLarge, {
-                                  name: file.name,
-                                }),
-                              );
-                              return;
-                            }
-
-                            validFiles.push({
-                              name: file.name,
-                              size: file.size,
-                              type: file.type,
-                              uri: URL.createObjectURL(file),
-                              file: file, // Guardar el File original para poder convertirlo a base64
-                            });
-                          });
-
-                          if (validFiles.length > 0) {
-                            setAttachedFiles((prev) => [
-                              ...prev,
-                              ...validFiles,
-                            ]);
-                          }
-
-                          if (mediaInputRef.current) {
-                            mediaInputRef.current.value = "";
-                          }
-                          setShowAttachmentMenu(false);
-                        }}
-                      />
-                    </>
+                {/* Input de mensaje (pie fijo); emoji / mensajes rápidos en overlay para no mover el hilo ni desalinear el panel izquierdo */}
+                <View style={styles.chatComposerFooter}>
+                  {(showEmojiPicker || showQuickMessages) && (
+                    <View
+                      pointerEvents="box-none"
+                      style={[
+                        styles.chatComposerOverlayDock,
+                        { bottom: composerInputRowHeight },
+                      ]}
+                    >
+                      {showQuickMessages ? (
+                        <QuickMessagesPanel
+                          quickMessages={quickMessages}
+                          recommendations={recommendations}
+                          loadingRecommendations={loadingRecommendations}
+                          onQuickMessageSelect={handleQuickMessageSelect}
+                          onRecommendationSelect={handleRecommendationSelect}
+                          onClose={() => setShowQuickMessages(false)}
+                          onRefresh={loadQuickMessages}
+                          catalogId={quickMessagesCatalogId}
+                          companyId={company?.id || null}
+                          companyCode={company?.code || null}
+                          isMobile={isMobile}
+                          colors={colors}
+                        />
+                      ) : null}
+                      {showEmojiPicker ? (
+                        <EmojiPickerPanel
+                          emojisWithKeywords={emojisWithKeywords}
+                          onEmojiSelect={handleEmojiSelect}
+                          onClose={() => setShowEmojiPicker(false)}
+                          isMobile={isMobile}
+                          colors={colors}
+                        />
+                      ) : null}
+                    </View>
                   )}
+                  <View
+                    style={[
+                      styles.messageInputContainer,
+                      {
+                        backgroundColor: colors.filterInputBackground,
+                        borderTopColor: colors.border,
+                      },
+                      { position: "relative" },
+                    ]}
+                    onLayout={(e: LayoutChangeEvent) => {
+                      setComposerInputRowHeight(e.nativeEvent.layout.height);
+                    }}
+                  >
+                    {/* Inputs de archivo ocultos (solo web) */}
+                    {Platform.OS === "web" && (
+                      <>
+                        {/* Input para documentos (todos los archivos) */}
+                        <input
+                          ref={documentInputRef}
+                          type="file"
+                          multiple
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            const validFiles: Array<{
+                              name: string;
+                              size: number;
+                              type: string;
+                              uri?: string;
+                              file?: File;
+                            }> = [];
+                            const maxSize = 10 * 1024 * 1024; // 10MB
 
-                  {/* Botón adjuntar */}
-                  <Tooltip text={t.pages.chatIa.tooltipAttach} position="top">
-                    <TouchableOpacity
-                      style={[
-                        styles.inputActionButton,
-                        { backgroundColor: colors.surface },
-                      ]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        setShowAttachmentMenu(!showAttachmentMenu);
-                      }}
-                      data-attachment-menu-button={
-                        Platform.OS === "web" ? true : undefined
-                      }
-                    >
-                      <Ionicons
-                        name="add"
-                        size={22}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  </Tooltip>
+                            files.forEach((file) => {
+                              if (file.size > maxSize) {
+                                alert.showError(
+                                  interpolate(
+                                    t.pages.chatIa.errorFileTooLarge,
+                                    {
+                                      name: file.name,
+                                    },
+                                  ),
+                                );
+                                return;
+                              }
 
-                  {/* Menú de adjuntar */}
-                  {showAttachmentMenu && (
-                    <Animated.View
-                      style={[
-                        styles.attachmentMenu,
-                        {
-                          backgroundColor: isDark
-                            ? colors.surfaceVariant
-                            : colors.filterInputBackground,
-                          borderColor: colors.border,
-                          shadowColor: colors.shadow,
-                        },
-                      ]}
-                      data-attachment-menu={
-                        Platform.OS === "web" ? true : undefined
-                      }
-                    >
-                      <ScrollView
-                        style={styles.attachmentMenuScroll}
-                        showsVerticalScrollIndicator={false}
+                              validFiles.push({
+                                name: file.name,
+                                size: file.size,
+                                type: file.type,
+                                uri: URL.createObjectURL(file),
+                                file: file, // Guardar el File original para poder convertirlo a base64
+                              });
+                            });
+
+                            if (validFiles.length > 0) {
+                              setAttachedFiles((prev) => [
+                                ...prev,
+                                ...validFiles,
+                              ]);
+                            }
+
+                            if (documentInputRef.current) {
+                              documentInputRef.current.value = "";
+                            }
+                            setShowAttachmentMenu(false);
+                          }}
+                        />
+
+                        {/* Input para fotos y videos */}
+                        <input
+                          ref={mediaInputRef}
+                          type="file"
+                          accept="image/*,video/*"
+                          multiple
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            const validFiles: Array<{
+                              name: string;
+                              size: number;
+                              type: string;
+                              uri?: string;
+                              file?: File;
+                            }> = [];
+                            const maxSize = 10 * 1024 * 1024; // 10MB
+
+                            files.forEach((file) => {
+                              const isMedia =
+                                file.type.startsWith("image/") ||
+                                file.type.startsWith("video/");
+
+                              if (!isMedia) {
+                                alert.showError(
+                                  interpolate(
+                                    t.pages.chatIa.errorFileInvalidMedia,
+                                    { name: file.name },
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (file.size > maxSize) {
+                                alert.showError(
+                                  interpolate(
+                                    t.pages.chatIa.errorFileTooLarge,
+                                    {
+                                      name: file.name,
+                                    },
+                                  ),
+                                );
+                                return;
+                              }
+
+                              validFiles.push({
+                                name: file.name,
+                                size: file.size,
+                                type: file.type,
+                                uri: URL.createObjectURL(file),
+                                file: file, // Guardar el File original para poder convertirlo a base64
+                              });
+                            });
+
+                            if (validFiles.length > 0) {
+                              setAttachedFiles((prev) => [
+                                ...prev,
+                                ...validFiles,
+                              ]);
+                            }
+
+                            if (mediaInputRef.current) {
+                              mediaInputRef.current.value = "";
+                            }
+                            setShowAttachmentMenu(false);
+                          }}
+                        />
+                      </>
+                    )}
+
+                    {/* Botón adjuntar */}
+                    <Tooltip text={t.pages.chatIa.tooltipAttach} position="top">
+                      <TouchableOpacity
+                        style={[
+                          styles.inputActionButton,
+                          { backgroundColor: colors.surface },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          setShowAttachmentMenu(!showAttachmentMenu);
+                        }}
+                        data-attachment-menu-button={
+                          Platform.OS === "web" ? true : undefined
+                        }
                       >
-                        {/* Documento */}
-                        <TouchableOpacity
-                          style={styles.attachmentMenuItem}
-                          activeOpacity={0.7}
-                          onPress={() => {
-                            if (
-                              Platform.OS === "web" &&
-                              documentInputRef.current
-                            ) {
-                              documentInputRef.current.click();
-                            } else {
-                              alert.showError(
-                                t.pages.chatIa.errorDocumentPickerMobile,
-                              );
-                            }
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.attachmentMenuIcon,
-                              { backgroundColor: "#9C27B0" + "20" },
-                            ]}
-                          >
-                            <Ionicons
-                              name="document"
-                              size={24}
-                              color="#9C27B0"
-                            />
-                          </View>
-                          <View style={styles.attachmentMenuText}>
-                            <ThemedText
-                              type="body2"
-                              style={{ color: colors.text, fontWeight: "500" }}
-                            >
-                              {t.pages.chatIa.attachDocument}
-                            </ThemedText>
-                            <ThemedText
-                              type="caption"
-                              style={{ color: colors.textSecondary }}
-                            >
-                              {t.pages.chatIa.attachDocumentSubtitle}
-                            </ThemedText>
-                          </View>
-                        </TouchableOpacity>
+                        <Ionicons
+                          name="add"
+                          size={22}
+                          color={colors.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
 
-                        {/* Fotos y Videos */}
-                        <TouchableOpacity
-                          style={styles.attachmentMenuItem}
-                          activeOpacity={0.7}
-                          onPress={async () => {
-                            if (
-                              Platform.OS === "web" &&
-                              mediaInputRef.current
-                            ) {
-                              mediaInputRef.current.click();
-                            } else {
-                              await pickImagesRN();
-                              setShowAttachmentMenu(false);
-                            }
-                          }}
+                    {/* Menú de adjuntar */}
+                    {showAttachmentMenu && (
+                      <Animated.View
+                        style={[
+                          styles.attachmentMenu,
+                          {
+                            backgroundColor: isDark
+                              ? colors.surfaceVariant
+                              : colors.filterInputBackground,
+                            borderColor: colors.border,
+                            shadowColor: colors.shadow,
+                          },
+                        ]}
+                        data-attachment-menu={
+                          Platform.OS === "web" ? true : undefined
+                        }
+                      >
+                        <ScrollView
+                          style={styles.attachmentMenuScroll}
+                          showsVerticalScrollIndicator={false}
                         >
-                          <View
-                            style={[
-                              styles.attachmentMenuIcon,
-                              { backgroundColor: colors.primary + "20" },
-                            ]}
-                          >
-                            <Ionicons
-                              name="images"
-                              size={24}
-                              color={colors.primary}
-                            />
-                          </View>
-                          <View style={styles.attachmentMenuText}>
-                            <ThemedText
-                              type="body2"
-                              style={{ color: colors.text, fontWeight: "500" }}
-                            >
-                              {t.pages.chatIa.attachPhotosVideos}
-                            </ThemedText>
-                            <ThemedText
-                              type="caption"
-                              style={{ color: colors.textSecondary }}
-                            >
-                              {t.pages.chatIa.attachPhotosVideosSubtitle}
-                            </ThemedText>
-                          </View>
-                        </TouchableOpacity>
-
-                        {/* Cámara - Solo en versión responsive móvil de web, no en dispositivos móviles físicos */}
-                        {Platform.OS === "web" && isMobile && (
+                          {/* Documento */}
                           <TouchableOpacity
                             style={styles.attachmentMenuItem}
                             activeOpacity={0.7}
                             onPress={() => {
-                              // En web móvil, usar input de tipo file con capture
-                              if (mediaInputRef.current) {
-                                // Crear un input temporal con capture para cámara
-                                const cameraInput =
-                                  document.createElement("input");
-                                cameraInput.type = "file";
-                                cameraInput.accept = "image/*";
-                                cameraInput.capture = "environment"; // Cámara trasera por defecto
-                                cameraInput.style.display = "none";
-                                cameraInput.onchange = (e) => {
-                                  const files = Array.from(
-                                    (e.target as HTMLInputElement).files || [],
-                                  );
-                                  const validFiles: Array<{
-                                    name: string;
-                                    size: number;
-                                    type: string;
-                                    uri?: string;
-                                    file?: File;
-                                  }> = [];
-                                  const maxSize = 10 * 1024 * 1024; // 10MB
-
-                                  files.forEach((file) => {
-                                    if (file.size > maxSize) {
-                                      alert.showError(
-                                        interpolate(
-                                          t.pages.chatIa.errorFileTooLarge,
-                                          { name: file.name },
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    validFiles.push({
-                                      name: file.name,
-                                      size: file.size,
-                                      type: file.type,
-                                      uri: URL.createObjectURL(file),
-                                      file: file,
-                                    });
-                                  });
-
-                                  if (validFiles.length > 0) {
-                                    setAttachedFiles((prev) => [
-                                      ...prev,
-                                      ...validFiles,
-                                    ]);
-                                  }
-
-                                  document.body.removeChild(cameraInput);
-                                };
-                                document.body.appendChild(cameraInput);
-                                cameraInput.click();
+                              if (
+                                Platform.OS === "web" &&
+                                documentInputRef.current
+                              ) {
+                                documentInputRef.current.click();
+                              } else {
+                                alert.showError(
+                                  t.pages.chatIa.errorDocumentPickerMobile,
+                                );
                               }
-                              setShowAttachmentMenu(false);
                             }}
                           >
                             <View
                               style={[
                                 styles.attachmentMenuIcon,
-                                { backgroundColor: "#E91E63" + "20" },
+                                { backgroundColor: "#9C27B0" + "20" },
                               ]}
                             >
                               <Ionicons
-                                name="camera"
+                                name="document"
                                 size={24}
-                                color="#E91E63"
+                                color="#9C27B0"
                               />
                             </View>
                             <View style={styles.attachmentMenuText}>
@@ -5519,279 +6396,409 @@ export default function ChatIAScreen() {
                                   fontWeight: "500",
                                 }}
                               >
-                                Cámara
+                                {t.pages.chatIa.attachDocument}
                               </ThemedText>
                               <ThemedText
                                 type="caption"
                                 style={{ color: colors.textSecondary }}
                               >
-                                Tomar foto
+                                {t.pages.chatIa.attachDocumentSubtitle}
                               </ThemedText>
                             </View>
                           </TouchableOpacity>
-                        )}
 
-                        {/* Calendario */}
-                        <TouchableOpacity
-                          style={styles.attachmentMenuItem}
-                          activeOpacity={0.7}
-                          onPress={() => {
-                            alert.showInfo(
-                              "Funcionalidad de calendario en desarrollo",
-                            );
-                            setShowAttachmentMenu(false);
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.attachmentMenuIcon,
-                              { backgroundColor: "#FF9800" + "20" },
-                            ]}
+                          {/* Fotos y Videos */}
+                          <TouchableOpacity
+                            style={styles.attachmentMenuItem}
+                            activeOpacity={0.7}
+                            onPress={async () => {
+                              if (
+                                Platform.OS === "web" &&
+                                mediaInputRef.current
+                              ) {
+                                mediaInputRef.current.click();
+                              } else {
+                                await pickImagesRN();
+                                setShowAttachmentMenu(false);
+                              }
+                            }}
                           >
-                            <Ionicons
-                              name="calendar"
-                              size={24}
-                              color="#FF9800"
-                            />
-                          </View>
-                          <View style={styles.attachmentMenuText}>
-                            <ThemedText
-                              type="body2"
-                              style={{ color: colors.text, fontWeight: "500" }}
+                            <View
+                              style={[
+                                styles.attachmentMenuIcon,
+                                { backgroundColor: colors.primary + "20" },
+                              ]}
                             >
-                              Calendario
-                            </ThemedText>
-                            <ThemedText
-                              type="caption"
-                              style={{ color: colors.textSecondary }}
-                            >
-                              Agendar evento
-                            </ThemedText>
-                          </View>
-                        </TouchableOpacity>
+                              <Ionicons
+                                name="images"
+                                size={24}
+                                color={colors.primary}
+                              />
+                            </View>
+                            <View style={styles.attachmentMenuText}>
+                              <ThemedText
+                                type="body2"
+                                style={{
+                                  color: colors.text,
+                                  fontWeight: "500",
+                                }}
+                              >
+                                {t.pages.chatIa.attachPhotosVideos}
+                              </ThemedText>
+                              <ThemedText
+                                type="caption"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                {t.pages.chatIa.attachPhotosVideosSubtitle}
+                              </ThemedText>
+                            </View>
+                          </TouchableOpacity>
 
-                        {/* Catálogo */}
-                        <TouchableOpacity
-                          style={styles.attachmentMenuItem}
-                          activeOpacity={0.7}
-                          onPress={() => {
-                            alert.showInfo(
-                              "Funcionalidad de catálogo en desarrollo",
-                            );
-                            setShowAttachmentMenu(false);
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.attachmentMenuIcon,
-                              { backgroundColor: "#757575" + "20" },
-                            ]}
+                          {/* Cámara - Solo en versión responsive móvil de web, no en dispositivos móviles físicos */}
+                          {Platform.OS === "web" && isMobile && (
+                            <TouchableOpacity
+                              style={styles.attachmentMenuItem}
+                              activeOpacity={0.7}
+                              onPress={() => {
+                                // En web móvil, usar input de tipo file con capture
+                                if (mediaInputRef.current) {
+                                  // Crear un input temporal con capture para cámara
+                                  const cameraInput =
+                                    document.createElement("input");
+                                  cameraInput.type = "file";
+                                  cameraInput.accept = "image/*";
+                                  cameraInput.capture = "environment"; // Cámara trasera por defecto
+                                  cameraInput.style.display = "none";
+                                  cameraInput.onchange = (e) => {
+                                    const files = Array.from(
+                                      (e.target as HTMLInputElement).files ||
+                                        [],
+                                    );
+                                    const validFiles: Array<{
+                                      name: string;
+                                      size: number;
+                                      type: string;
+                                      uri?: string;
+                                      file?: File;
+                                    }> = [];
+                                    const maxSize = 10 * 1024 * 1024; // 10MB
+
+                                    files.forEach((file) => {
+                                      if (file.size > maxSize) {
+                                        alert.showError(
+                                          interpolate(
+                                            t.pages.chatIa.errorFileTooLarge,
+                                            { name: file.name },
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      validFiles.push({
+                                        name: file.name,
+                                        size: file.size,
+                                        type: file.type,
+                                        uri: URL.createObjectURL(file),
+                                        file: file,
+                                      });
+                                    });
+
+                                    if (validFiles.length > 0) {
+                                      setAttachedFiles((prev) => [
+                                        ...prev,
+                                        ...validFiles,
+                                      ]);
+                                    }
+
+                                    document.body.removeChild(cameraInput);
+                                  };
+                                  document.body.appendChild(cameraInput);
+                                  cameraInput.click();
+                                }
+                                setShowAttachmentMenu(false);
+                              }}
+                            >
+                              <View
+                                style={[
+                                  styles.attachmentMenuIcon,
+                                  { backgroundColor: "#E91E63" + "20" },
+                                ]}
+                              >
+                                <Ionicons
+                                  name="camera"
+                                  size={24}
+                                  color="#E91E63"
+                                />
+                              </View>
+                              <View style={styles.attachmentMenuText}>
+                                <ThemedText
+                                  type="body2"
+                                  style={{
+                                    color: colors.text,
+                                    fontWeight: "500",
+                                  }}
+                                >
+                                  Cámara
+                                </ThemedText>
+                                <ThemedText
+                                  type="caption"
+                                  style={{ color: colors.textSecondary }}
+                                >
+                                  Tomar foto
+                                </ThemedText>
+                              </View>
+                            </TouchableOpacity>
+                          )}
+
+                          {/* Calendario */}
+                          <TouchableOpacity
+                            style={styles.attachmentMenuItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              alert.showInfo(
+                                "Funcionalidad de calendario en desarrollo",
+                              );
+                              setShowAttachmentMenu(false);
+                            }}
                           >
-                            <Ionicons name="grid" size={24} color="#757575" />
-                          </View>
-                          <View style={styles.attachmentMenuText}>
-                            <ThemedText
-                              type="body2"
-                              style={{ color: colors.text, fontWeight: "500" }}
+                            <View
+                              style={[
+                                styles.attachmentMenuIcon,
+                                { backgroundColor: "#FF9800" + "20" },
+                              ]}
                             >
-                              Catálogo
-                            </ThemedText>
-                            <ThemedText
-                              type="caption"
-                              style={{ color: colors.textSecondary }}
+                              <Ionicons
+                                name="calendar"
+                                size={24}
+                                color="#FF9800"
+                              />
+                            </View>
+                            <View style={styles.attachmentMenuText}>
+                              <ThemedText
+                                type="body2"
+                                style={{
+                                  color: colors.text,
+                                  fontWeight: "500",
+                                }}
+                              >
+                                Calendario
+                              </ThemedText>
+                              <ThemedText
+                                type="caption"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                Agendar evento
+                              </ThemedText>
+                            </View>
+                          </TouchableOpacity>
+
+                          {/* Catálogo */}
+                          <TouchableOpacity
+                            style={styles.attachmentMenuItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              alert.showInfo(
+                                "Funcionalidad de catálogo en desarrollo",
+                              );
+                              setShowAttachmentMenu(false);
+                            }}
+                          >
+                            <View
+                              style={[
+                                styles.attachmentMenuIcon,
+                                { backgroundColor: "#757575" + "20" },
+                              ]}
                             >
-                              Ver productos
-                            </ThemedText>
-                          </View>
-                        </TouchableOpacity>
-                      </ScrollView>
-                    </Animated.View>
-                  )}
+                              <Ionicons name="grid" size={24} color="#757575" />
+                            </View>
+                            <View style={styles.attachmentMenuText}>
+                              <ThemedText
+                                type="body2"
+                                style={{
+                                  color: colors.text,
+                                  fontWeight: "500",
+                                }}
+                              >
+                                Catálogo
+                              </ThemedText>
+                              <ThemedText
+                                type="caption"
+                                style={{ color: colors.textSecondary }}
+                              >
+                                Ver productos
+                              </ThemedText>
+                            </View>
+                          </TouchableOpacity>
+                        </ScrollView>
+                      </Animated.View>
+                    )}
 
-                  {/* Botón emoji */}
-                  <Tooltip text={t.pages.chatIa.tooltipEmojis} position="top">
-                    <TouchableOpacity
-                      style={[
-                        styles.inputActionButton,
-                        {
-                          backgroundColor: showEmojiPicker
-                            ? colors.primary + "20"
-                            : colors.filterInputBackground,
-                        },
-                      ]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        setShowEmojiPicker(!showEmojiPicker);
-                        if (showQuickMessages) setShowQuickMessages(false);
-                      }}
-                    >
-                      <Ionicons
-                        name={showEmojiPicker ? "happy" : "happy-outline"}
-                        size={22}
-                        color={
-                          showEmojiPicker
-                            ? colors.primary
-                            : colors.textSecondary
-                        }
-                      />
-                    </TouchableOpacity>
-                  </Tooltip>
-
-                  {/* Botón mensajes rápidos - se oculta en smartphone cuando hay texto */}
-                  {(!isMobile || messageText.trim().length === 0) && (
-                    <Tooltip text={t.pages.chatIa.tooltipQuickMessages} position="top">
+                    {/* Botón emoji */}
+                    <Tooltip text={t.pages.chatIa.tooltipEmojis} position="top">
                       <TouchableOpacity
                         style={[
                           styles.inputActionButton,
                           {
-                            backgroundColor: showQuickMessages
+                            backgroundColor: showEmojiPicker
                               ? colors.primary + "20"
                               : colors.filterInputBackground,
                           },
                         ]}
                         activeOpacity={0.7}
                         onPress={() => {
-                          setShowQuickMessages(!showQuickMessages);
-                          if (showEmojiPicker) setShowEmojiPicker(false);
+                          setShowEmojiPicker(!showEmojiPicker);
+                          if (showQuickMessages) setShowQuickMessages(false);
                         }}
                       >
                         <Ionicons
-                          name={
-                            showQuickMessages
-                              ? "chatbubbles"
-                              : "chatbubbles-outline"
-                          }
+                          name={showEmojiPicker ? "happy" : "happy-outline"}
                           size={22}
                           color={
-                            showQuickMessages
+                            showEmojiPicker
                               ? colors.primary
                               : colors.textSecondary
                           }
                         />
                       </TouchableOpacity>
                     </Tooltip>
-                  )}
 
-                  {/* Contenedor del input con crecimiento dinámico */}
-                  <View
-                    style={[
-                      styles.messageInputWrapper,
-                      {
-                        backgroundColor: isDark
-                          ? colors.chatInboundBackground
-                          : "#FFFFFF",
-                        borderColor: isMessageInputFocused
-                          ? colors.primary
-                          : "transparent",
-                        height: Math.min(
-                          Math.max(messageInputHeight, minHeight),
-                          maxHeight,
-                        ),
-                      },
-                    ]}
-                  >
-                    <TextInput
-                      nativeID={
-                        Platform.OS === "web" ? "chat-message-input" : undefined
-                      }
+                    {/* Botón mensajes rápidos - se oculta en smartphone cuando hay texto */}
+                    {(!isMobile || messageText.trim().length === 0) && (
+                      <Tooltip
+                        text={t.pages.chatIa.tooltipQuickMessages}
+                        position="top"
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.inputActionButton,
+                            {
+                              backgroundColor: showQuickMessages
+                                ? colors.primary + "20"
+                                : colors.filterInputBackground,
+                            },
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() => {
+                            setShowQuickMessages(!showQuickMessages);
+                            if (showEmojiPicker) setShowEmojiPicker(false);
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              showQuickMessages
+                                ? "chatbubbles"
+                                : "chatbubbles-outline"
+                            }
+                            size={22}
+                            color={
+                              showQuickMessages
+                                ? colors.primary
+                                : colors.textSecondary
+                            }
+                          />
+                        </TouchableOpacity>
+                      </Tooltip>
+                    )}
+
+                    {/* Contenedor del input con crecimiento dinámico */}
+                    <View
                       style={[
-                        styles.messageInput,
+                        styles.messageInputWrapper,
                         {
-                          color: colors.text,
-                          height: "100%",
-                          borderWidth: 0,
-                          borderColor: "transparent",
+                          backgroundColor: isDark
+                            ? colors.chatInboundBackground
+                            : "#FFFFFF",
+                          borderColor: isMessageInputFocused
+                            ? colors.primary
+                            : "transparent",
+                          height: Math.min(
+                            Math.max(messageInputHeight, minHeight),
+                            maxHeight,
+                          ),
                         },
                       ]}
-                      placeholder={t.pages.chatIa.messageInputPlaceholder}
-                      placeholderTextColor={colors.textSecondary}
-                      value={messageText}
-                      onChangeText={(text) => {
-                        setMessageText(text);
-                        // Calcular altura basada en saltos de línea
-                        const newHeight = calculateInputHeight(text);
-                        setMessageInputHeight(newHeight);
-                      }}
-                      onFocus={() => setIsMessageInputFocused(true)}
-                      onBlur={() => setIsMessageInputFocused(false)}
-                      multiline
-                      maxLength={1000}
-                      editable={!sendingMessage}
-                      scrollEnabled={
-                        messageInputHeight >= maxHeight ||
-                        (messageText.match(/\n/g) || []).length + 1 >= maxLines
-                      }
-                      textAlignVertical="top"
-                      underlineColorAndroid="transparent"
-                    />
-                  </View>
-
-                  {/* Botón enviar */}
-                  <TouchableOpacity
-                    style={[
-                      styles.sendButton,
-                      {
-                        backgroundColor:
-                          messageText.trim() || attachedFiles.length > 0
-                            ? colors.primary
-                            : colors.filterInputBackground,
-                        shadowColor: colors.shadow,
-                      },
-                      ((!messageText.trim() && attachedFiles.length === 0) ||
-                        sendingMessage) &&
-                        styles.sendButtonDisabled,
-                    ]}
-                    onPress={handleSendMessage}
-                    disabled={
-                      (!messageText.trim() && attachedFiles.length === 0) ||
-                      sendingMessage
-                    }
-                    activeOpacity={0.8}
-                  >
-                    {sendingMessage ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Ionicons
-                        name="arrow-forward"
-                        size={20}
-                        color={
-                          messageText.trim() || attachedFiles.length > 0
-                            ? "#FFFFFF"
-                            : colors.textSecondary
+                    >
+                      <TextInput
+                        nativeID={
+                          Platform.OS === "web"
+                            ? "chat-message-input"
+                            : undefined
                         }
+                        style={[
+                          styles.messageInput,
+                          {
+                            color: colors.text,
+                            height: "100%",
+                            borderWidth: 0,
+                            borderColor: "transparent",
+                          },
+                        ]}
+                        placeholder={t.pages.chatIa.messageInputPlaceholder}
+                        placeholderTextColor={colors.textSecondary}
+                        value={messageText}
+                        onChangeText={(text) => {
+                          setMessageText(text);
+                          // Calcular altura basada en saltos de línea
+                          const newHeight = calculateInputHeight(text);
+                          setMessageInputHeight(newHeight);
+                        }}
+                        onFocus={() => setIsMessageInputFocused(true)}
+                        onBlur={() => setIsMessageInputFocused(false)}
+                        multiline
+                        maxLength={1000}
+                        editable={!sendingMessage}
+                        scrollEnabled={
+                          messageInputHeight >= maxHeight ||
+                          (messageText.match(/\n/g) || []).length + 1 >=
+                            maxLines
+                        }
+                        textAlignVertical="top"
+                        underlineColorAndroid="transparent"
                       />
-                    )}
-                  </TouchableOpacity>
+                    </View>
+
+                    {/* Botón enviar */}
+                    <TouchableOpacity
+                      style={[
+                        styles.sendButton,
+                        {
+                          backgroundColor:
+                            (messageText.trim() || attachedFiles.length > 0) &&
+                            selectedChannelInstance
+                              ? colors.primary
+                              : colors.filterInputBackground,
+                          shadowColor: colors.shadow,
+                        },
+                        ((!messageText.trim() && attachedFiles.length === 0) ||
+                          sendingMessage ||
+                          !selectedChannelInstance) &&
+                          styles.sendButtonDisabled,
+                      ]}
+                      onPress={handleSendMessage}
+                      disabled={
+                        (!messageText.trim() && attachedFiles.length === 0) ||
+                        sendingMessage ||
+                        !selectedChannelInstance
+                      }
+                      activeOpacity={0.8}
+                    >
+                      {sendingMessage ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons
+                          name="arrow-forward"
+                          size={20}
+                          color={
+                            (messageText.trim() || attachedFiles.length > 0) &&
+                            selectedChannelInstance
+                              ? "#FFFFFF"
+                              : colors.textSecondary
+                          }
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-
-                {/* Panel de emojis - Renderizado después del input */}
-                {showEmojiPicker && (
-                  <EmojiPickerPanel
-                    emojisWithKeywords={emojisWithKeywords}
-                    onEmojiSelect={handleEmojiSelect}
-                    onClose={() => setShowEmojiPicker(false)}
-                    isMobile={isMobile}
-                    colors={colors}
-                  />
-                )}
-
-                {/* Panel de mensajes rápidos - Renderizado después del input */}
-                {showQuickMessages && (
-                  <QuickMessagesPanel
-                    quickMessages={quickMessages}
-                    recommendations={recommendations}
-                    loadingRecommendations={loadingRecommendations}
-                    onQuickMessageSelect={handleQuickMessageSelect}
-                    onRecommendationSelect={handleRecommendationSelect}
-                    onClose={() => setShowQuickMessages(false)}
-                    onRefresh={loadQuickMessages}
-                    catalogId={quickMessagesCatalogId}
-                    companyId={company?.id || null}
-                    companyCode={company?.code || null}
-                    isMobile={isMobile}
-                    colors={colors}
-                  />
-                )}
               </View>
             ) : (
               <View
@@ -5970,7 +6977,10 @@ export default function ChatIAScreen() {
               style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
             >
               {!isViewingLocalFiles && (
-                <Tooltip text={t.pages.chatIa.tooltipDownloadImage} position="bottom">
+                <Tooltip
+                  text={t.pages.chatIa.tooltipDownloadImage}
+                  position="bottom"
+                >
                   <TouchableOpacity
                     onPress={() =>
                       handleDownloadImage(
@@ -6008,7 +7018,7 @@ export default function ChatIAScreen() {
                 style={[
                   styles.imageViewerBody,
                   imageViewerDocumentContext &&
-                    (isMobile
+                    (imageViewerDetailUseStackedLayout
                       ? styles.imageViewerBodyStack
                       : styles.imageViewerBodyRow),
                 ]}
@@ -6092,7 +7102,7 @@ export default function ChatIAScreen() {
                   <ScrollView
                     style={[
                       styles.imageViewerDetailPanel,
-                      isMobile
+                      imageViewerDetailUseStackedLayout
                         ? styles.imageViewerDetailPanelMobile
                         : styles.imageViewerDetailPanelDesktop,
                     ]}
@@ -6121,14 +7131,16 @@ export default function ChatIAScreen() {
                         key={`${row.label}-${idx}`}
                         style={[
                           styles.documentContextItem,
-                          !isMobile && styles.documentContextItemDesktop,
+                          !imageViewerDetailUseStackedLayout &&
+                            styles.documentContextItemDesktop,
                         ]}
                       >
                         <ThemedText
                           type="caption"
                           style={[
                             styles.imageViewerDetailFieldLabel,
-                            !isMobile && styles.documentContextLabelDesktop,
+                            !imageViewerDetailUseStackedLayout &&
+                              styles.documentContextLabelDesktop,
                           ]}
                         >
                           {row.label}
@@ -6137,8 +7149,13 @@ export default function ChatIAScreen() {
                           type="body2"
                           style={[
                             styles.imageViewerDetailFieldValue,
-                            { marginTop: isMobile ? 2 : 0 },
-                            !isMobile && styles.documentContextValueDesktop,
+                            {
+                              marginTop: imageViewerDetailUseStackedLayout
+                                ? 2
+                                : 0,
+                            },
+                            !imageViewerDetailUseStackedLayout &&
+                              styles.documentContextValueDesktop,
                           ]}
                         >
                           {row.value}

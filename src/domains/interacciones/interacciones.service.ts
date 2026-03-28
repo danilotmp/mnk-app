@@ -12,6 +12,9 @@ import type {
   ContactWithLastMessage,
   ContextSummary,
   ContextSummaryPayload,
+  InteraccionesContextProfile,
+  InteraccionesInstitutionalContextBody,
+  InteraccionesWhatsappInstance,
   Message,
   MessageAttachment,
   MessagePayload,
@@ -30,9 +33,65 @@ const buildQuery = (base: string, params?: Record<string, any>): string => {
 };
 
 export const InteraccionesService = {
+  /**
+   * Perfil comercial por UUID de perfil (no confundir con companyId).
+   * GET /interacciones/context/profile/:commercialProfileId
+   */
+  async getContextProfile(
+    commercialProfileId: string,
+    admin = true,
+  ): Promise<InteraccionesContextProfile> {
+    const endpoint = buildQuery(
+      `${BASE_INTERACCIONES}/context/profile/${commercialProfileId}`,
+      { admin: admin ? "true" : undefined },
+    );
+    const res = await apiClient.get<InteraccionesContextProfile>(endpoint);
+    return (res.data as InteraccionesContextProfile) ?? {};
+  },
+
+  /**
+   * Contexto institucional simplificado por código de empresa (AIB-COMPANY-CODE).
+   * GET /interacciones/context/:companyCode — incluye `commercial.whatsappInstances`.
+   */
+  async getInstitutionalContextByCompanyCode(
+    companyCode: string,
+  ): Promise<InteraccionesContextProfile> {
+    const code = companyCode.trim();
+    if (!code) {
+      return {};
+    }
+    const res = await apiClient.get<InteraccionesInstitutionalContextBody>(
+      `${BASE_INTERACCIONES}/context/${encodeURIComponent(code)}`,
+    );
+    const payload = res.data as InteraccionesInstitutionalContextBody | undefined;
+    const commercial = payload?.institutional?.data?.commercial;
+    const raw =
+      commercial?.whatsappInstances ?? commercial?.whatsapp_instances ?? [];
+    const list = Array.isArray(raw) ? raw : [];
+    const whatsappInstances: InteraccionesWhatsappInstance[] = list
+      .filter((row) => row?.isActive !== false)
+      .map((x) => ({
+        id: x.id,
+        whatsapp: String(x.whatsapp ?? "").trim(),
+        isActive: x.isActive,
+        name: x.name,
+        label: x.label,
+        phoneNumber: x.phoneNumber,
+        phone: x.phone,
+      }))
+      .filter((i) => i.whatsapp.length > 0);
+    return { whatsappInstances };
+  },
+
   // ===== Contacts =====
-  async getContacts(companyId: string): Promise<Contact[]> {
-    const endpoint = buildQuery(`${BASE_INTERACCIONES}/contacts`, { companyId });
+  async getContacts(
+    companyId: string,
+    channelInstance?: string,
+  ): Promise<Contact[]> {
+    const endpoint = buildQuery(`${BASE_INTERACCIONES}/contacts`, {
+      companyId,
+      channelInstance,
+    });
     const res = await apiClient.get<Contact[]>(endpoint);
     return res.data || [];
   },
@@ -61,14 +120,32 @@ export const InteraccionesService = {
     return res.data;
   },
 
-  async updateContact(id: string, payload: Partial<ContactPayload>): Promise<Contact> {
-    const res = await apiClient.put<Contact>(`${BASE_INTERACCIONES}/contacts/${id}`, payload);
+  /**
+   * PUT contacto: `channelInstance` es obligatorio en API (se envía siempre en body).
+   */
+  async updateContact(
+    id: string,
+    payload: Partial<Omit<ContactPayload, "channelInstance">>,
+    channelInstance: string,
+  ): Promise<Contact> {
+    const body = { ...payload, channelInstance };
+    const res = await apiClient.put<Contact>(
+      `${BASE_INTERACCIONES}/contacts/${id}`,
+      body,
+    );
     return res.data;
   },
 
   // ===== Messages =====
-  async getMessagesByContact(contactId: string, limit?: number): Promise<Message[]> {
-    const endpoint = buildQuery(`${BASE_INTERACCIONES}/messages/contact/${contactId}`, { limit });
+  async getMessagesByContact(
+    contactId: string,
+    limit?: number,
+    channelInstance?: string,
+  ): Promise<Message[]> {
+    const endpoint = buildQuery(
+      `${BASE_INTERACCIONES}/messages/contact/${contactId}`,
+      { limit, channelInstance },
+    );
     const res = await apiClient.get<Message[]>(endpoint);
     return res.data || [];
   },
@@ -97,6 +174,7 @@ export const InteraccionesService = {
       formData.append('contactId', payload.contactId);
       formData.append('content', payload.content || '');
       formData.append('direction', payload.direction);
+      formData.append('channelInstance', payload.channelInstance);
       if (payload.status) {
         formData.append('status', payload.status);
       }
@@ -164,8 +242,15 @@ export const InteraccionesService = {
    * @param content - Nuevo contenido del mensaje
    * @returns Mensaje actualizado
    */
-  async updateMessage(messageId: string, content: string): Promise<Message> {
-    const res = await apiClient.put<Message>(`${BASE_INTERACCIONES}/messages/${messageId}`, { content });
+  async updateMessage(
+    messageId: string,
+    content: string,
+    channelInstance: string,
+  ): Promise<Message> {
+    const res = await apiClient.put<Message>(
+      `${BASE_INTERACCIONES}/messages/${messageId}`,
+      { content, channelInstance },
+    );
     return res.data;
   },
 

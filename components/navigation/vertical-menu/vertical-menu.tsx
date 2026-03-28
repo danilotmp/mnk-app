@@ -22,7 +22,6 @@ import {
     ScrollView,
     TextInput,
     TouchableOpacity,
-    useWindowDimensions,
     View,
 } from "react-native";
 import type {
@@ -42,13 +41,7 @@ export function VerticalMenu({
   const { colors } = useTheme();
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { height: windowHeight } = useWindowDimensions();
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
-
-  // Calcular altura disponible: altura de ventana - header (~60px) - botón (40px)
-  const HEADER_HEIGHT = 80; // Altura aproximada del header (padding + contenido)
-  const TOGGLE_BUTTON_HEIGHT = 40;
-  const availableHeight = windowHeight - HEADER_HEIGHT - TOGGLE_BUTTON_HEIGHT;
 
   // Obtener el color para items activos desde el tema cuando sea el azul primario
   // Unifica: 'blue', '#0087FF', '#007AFF' → colors.primary (del tema Light/Dark)
@@ -644,13 +637,8 @@ export function VerticalMenu({
         </View>
       </View>
 
-      {/* Contenedor con altura fija y scroll para todo el menú */}
-      <View
-        style={[
-          additionalStyles.scrollContainerWithHeight,
-          { height: shouldShowText ? availableHeight - 60 : availableHeight },
-        ]}
-      >
+      {/* Ocupa el resto de la columna (misma altura que el contenido principal en web). */}
+      <View style={additionalStyles.scrollContainerWithHeight}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}

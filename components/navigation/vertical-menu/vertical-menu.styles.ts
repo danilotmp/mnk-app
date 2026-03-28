@@ -12,6 +12,7 @@ export const createVerticalMenuAdditionalStyles = (
   StyleSheet.create({
     // Estilos para el contenedor del buscador y bloqueo
     searchContainer: {
+      flexShrink: 0,
       padding: 12,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
@@ -54,6 +55,8 @@ export const createVerticalMenuAdditionalStyles = (
       fontSize: 14,
     },
     scrollContainerWithHeight: {
+      flex: 1,
+      minHeight: 0,
       overflow: "hidden",
     },
     submenuMargin: {

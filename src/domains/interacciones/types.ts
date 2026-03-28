@@ -26,6 +26,8 @@ export interface Contact {
   companyId: string;
   name: string;
   phoneNumber: string;
+  /** Instancia Evolution / canal WhatsApp (mismo valor que en perfil comercial) */
+  channelInstance?: string;
   email?: string;
   type: ContactType;
   botEnabled?: boolean;
@@ -45,6 +47,8 @@ export interface ContactPayload {
   companyId: string;
   name: string;
   phoneNumber: string;
+  /** Obligatorio en POST/PUT según API de interacciones */
+  channelInstance: string;
   email?: string;
   type?: ContactType;
   botEnabled?: boolean;
@@ -76,6 +80,8 @@ export interface Message {
   direction: MessageDirection;
   content: string;
   status: MessageStatus;
+  /** Instancia WhatsApp del mensaje */
+  channelInstance?: string;
   isFromBot?: boolean;
   metadata?: Record<string, any>;
   /** Imagen inline en buffer (viene del backend para mensajes tipo imagen sin attachment) */
@@ -99,15 +105,56 @@ export interface MessagePayload {
   contactId: string;
   direction: MessageDirection;
   content: string;
+  /** Obligatorio: valor `whatsapp` de la instancia activa (máx. 50 en API) */
+  channelInstance: string;
   status?: MessageStatus;
   /** Nombre del contacto en el canal (ej. pushName de WhatsApp). Opcional; el backend lo documenta en Swagger. */
   contactName?: string;
   metadata?: Record<string, any>;
   parentMessageId?: string;
+  /** false = humano (p. ej. limpia specialistAssignment en servidor) */
   isFromBot?: boolean;
   aiContext?: Record<string, any>;
   // NOTA: Los campos media, mediaType, mediaFilename ya no se usan
   // Se envían archivos mediante FormData con el campo 'files[]'
+}
+
+/**
+ * Instancia WhatsApp en respuestas de contexto (perfil comercial o contexto por código).
+ * GET /interacciones/context/:companyCode devuelve además `id` e `isActive`.
+ */
+export interface InteraccionesWhatsappInstance {
+  id?: string;
+  whatsapp: string;
+  name?: string;
+  label?: string;
+  phoneNumber?: string;
+  phone?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Normalizado en front a partir de:
+ * - GET /interacciones/context/profile/:commercialProfileId?admin= (wizard / admin)
+ * - GET /interacciones/context/:companyCode (contexto institucional simplificado para IA)
+ */
+export interface InteraccionesContextProfile {
+  whatsapp_instances?: InteraccionesWhatsappInstance[];
+  whatsappInstances?: InteraccionesWhatsappInstance[];
+  [key: string]: unknown;
+}
+
+/** Cuerpo `data` de GET /interacciones/context/:companyCode (getFullContextSimplified) */
+export interface InteraccionesInstitutionalContextBody {
+  institutional?: {
+    available?: boolean;
+    data?: {
+      commercial?: {
+        whatsappInstances?: InteraccionesWhatsappInstance[];
+        whatsapp_instances?: InteraccionesWhatsappInstance[];
+      };
+    };
+  };
 }
 
 export interface ContextSummary {

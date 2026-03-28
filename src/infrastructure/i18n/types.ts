@@ -209,6 +209,24 @@ export interface Translations {
       tooltipQuickMessages: string;
       tooltipDownloadImage: string;
       documentContextTitleFieldFallback: string;
+      /** Selector de instancia Evolution / WhatsApp cuando hay varias */
+      whatsappChannelLabel: string;
+      /** A11y: abrir menú de instancias WhatsApp */
+      whatsappChannelPickerA11y: string;
+      /** A11y: menú de opciones (tres puntos) junto al selector de canal */
+      whatsappChannelOptionsMenuA11y: string;
+      /** Opción placeholder: ir al dashboard del canal (acción pendiente) */
+      whatsappChannelOptionDashboard: string;
+      /** Etiqueta del interruptor activar/desactivar instancia (comportamiento pendiente) */
+      whatsappChannelOptionToggleLabel: string;
+      /** Diálogo antes de desactivar el canal desde Chat IA */
+      whatsappChannelDeactivateConfirmTitle: string;
+      whatsappChannelDeactivateConfirmMessage: string;
+      whatsappChannelDeactivateConfirmButton: string;
+      whatsappChannelToggleSuccessActive: string;
+      whatsappChannelToggleSuccessInactive: string;
+      whatsappChannelToggleError: string;
+      whatsappChannelToggleMissingInstanceId: string;
     };
   };
 

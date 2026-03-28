@@ -14,6 +14,8 @@ export interface WsMessageCreatedPayload {
   updatedAt?: string | null;
   editedAt?: string | null;
   isEdited?: boolean;
+  /** Instancia WhatsApp; si no coincide con el canal seleccionado en UI, se ignora el evento */
+  channelInstance?: string;
 }
 
 /** Payload WebSocket: contacto actualizado */
@@ -32,6 +34,7 @@ export interface WsContactUpdatedPayload {
     content: string;
     direction: "inbound" | "outbound";
     createdAt: string;
+    channelInstance?: string;
   };
 }
 

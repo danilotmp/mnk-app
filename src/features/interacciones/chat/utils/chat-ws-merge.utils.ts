@@ -48,6 +48,7 @@ export function mergeContactWithWsUpdatePayload(
           status: contact.lastMessage?.status || ("SENT" as Message["status"]),
           createdAt: payload.lastMessage.createdAt,
           updatedAt: payload.lastMessage.createdAt,
+          channelInstance: payload.lastMessage.channelInstance,
         } as Message)
       : contact.lastMessage,
   } as ContactWithLastMessage;

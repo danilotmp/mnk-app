@@ -80,7 +80,8 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
   const pendingItemIdRef = useRef<string | null>(null); // Para rastrear el itemId que estamos navegando
   const justClickedRef = useRef<boolean>(false); // Flag para indicar que acabamos de hacer click
   const pendingSubmenuItemRef = useRef<string | null>(null); // Para almacenar el itemId del submenú que debe activarse después del render
-  const hasInitializedExpandedState = useRef<boolean>(false); // Flag para rastrear si ya se inicializó el estado expandido
+  /** `true` = ya no auto-expandir primer submenú; evita ReferenceError si HMR dejó un efecto viejo en caché. */
+  const hasInitializedExpandedState = useRef<boolean>(true);
 
   // Función para cerrar el menú con animación
   const closeMobileMenu = () => {
@@ -497,37 +498,8 @@ export function HorizontalMenu({ items, onItemPress }: HorizontalMenuProps) {
     }
   }, [activeSubmenu, items, pathname]); // Se ejecuta cuando activeSubmenu, items o pathname cambian
 
-  // Expandir automáticamente el primer item con submenu o columns cuando el menú se carga
-  useEffect(() => {
-    // Solo ejecutar si:
-    // 1. Ya no se ha inicializado el estado expandido
-    // 2. Hay items disponibles
-    // 3. No hay un submenú activo ya establecido (para no interferir con la detección de rutas activas)
-    // 4. No hay una ruta pendiente (para no interferir con la navegación)
-    // 5. No hay un item activo ya establecido (para no interferir con la detección de rutas activas)
-    if (
-      !hasInitializedExpandedState.current &&
-      items &&
-      items.length > 0 &&
-      !activeSubmenu &&
-      !activeMenuItem &&
-      !pendingRouteRef.current
-    ) {
-      // Buscar el primer item que tenga submenu o columns
-      const firstItemWithSubmenu = items.find(
-        (item) =>
-          (item.submenu && item.submenu.length > 0) ||
-          (item.columns && item.columns.length > 0),
-      );
-
-      if (firstItemWithSubmenu) {
-        // Expandir el primer item con submenu o columns
-        setActiveSubmenu(firstItemWithSubmenu.id);
-        setActiveMenuItem(firstItemWithSubmenu.id);
-        hasInitializedExpandedState.current = true;
-      }
-    }
-  }, [items]); // Solo se ejecuta cuando items cambian, para evitar interferir con la detección de rutas
+  // No abrir automáticamente el primer submenú al cargar: en web provoca reflows y confunde el layout
+  // del área de contenido (p. ej. chat); el usuario abre el menú explícitamente.
 
   const handleItemPress = (item: MenuItem) => {
     if (item.submenu && item.submenu.length > 0) {

@@ -123,10 +123,10 @@ export function Tooltip({
   return (
     <View ref={containerRef} style={styles.container} {...webProps}>
       {Platform.OS === "web" ? (
-        <View style={styles.webTriggerWrap}>{children}</View>
+        <View style={styles.triggerWrap}>{children}</View>
       ) : (
         <TouchableOpacitySafe activeOpacity={1} {...mobileProps}>
-          {children}
+          <View style={styles.triggerWrap}>{children}</View>
         </TouchableOpacitySafe>
       )}
       {visible && (

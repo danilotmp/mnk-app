@@ -3,12 +3,20 @@
  */
 
 import { BaseTheme } from "@/constants/theme";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 
 export const createMainLayoutStyles = (colors: BaseTheme["colors"]) =>
   StyleSheet.create({
     container: {
       flex: 1,
+      minHeight: 0,
+      ...Platform.select({
+        web: {
+          // Shell a altura de viewport: el área bajo el header no debe variar al cambiar solo el ancho del menú
+          minHeight: "100vh" as unknown as number,
+        },
+        default: {},
+      }),
     },
     unifiedHeader: {
       flexDirection: "row",
@@ -80,11 +88,15 @@ export const createMainLayoutStyles = (colors: BaseTheme["colors"]) =>
     },
     content: {
       flex: 1,
+      /** Encaje flex en web: sin esto el Stack puede forzar altura > viewport y “empujar” el pie. */
+      minHeight: 0,
     },
     // Contenedor del body: menú vertical + contenido
     bodyContainer: {
       flex: 1,
       flexDirection: "row",
+      minHeight: 0,
+      alignItems: "stretch",
     },
     bodyContainerWithVerticalMenu: {
       // El menú vertical está dentro de este contenedor

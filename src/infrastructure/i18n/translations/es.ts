@@ -227,6 +227,21 @@ export const es: Translations = {
       tooltipQuickMessages: "Mensajes rápidos",
       tooltipDownloadImage: "Descargar imagen",
       documentContextTitleFieldFallback: "Campo de título",
+      whatsappChannelLabel: "WhatsApp / instancia",
+      whatsappChannelPickerA11y:
+        "Elegir número o instancia de WhatsApp conectada",
+      whatsappChannelOptionsMenuA11y: "Opciones del canal WhatsApp",
+      whatsappChannelOptionDashboard: "Dashboard",
+      whatsappChannelOptionToggleLabel: "Canal activo",
+      whatsappChannelDeactivateConfirmTitle: "¿Desactivar canal?",
+      whatsappChannelDeactivateConfirmMessage:
+        "Este canal quedará desactivado y dejará de responder automáticamente por WhatsApp.",
+      whatsappChannelDeactivateConfirmButton: "Desactivar",
+      whatsappChannelToggleSuccessActive: "Canal activado correctamente",
+      whatsappChannelToggleSuccessInactive: "Canal desactivado correctamente",
+      whatsappChannelToggleError: "No se pudo actualizar el estado del canal",
+      whatsappChannelToggleMissingInstanceId:
+        "No se pudo identificar la instancia. Vuelve a cargar la pantalla o usa Configuración comercial.",
     },
     capabilities: {
       title: "Productos del Sistema",

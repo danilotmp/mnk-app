@@ -7,10 +7,14 @@ import { StyleSheet } from 'react-native';
 export function createVerticalMenuStyles(collapsed: boolean = false) {
   return StyleSheet.create({
     container: {
-      height: '100%',
+      alignSelf: 'stretch',
+      flexDirection: 'column',
+      /** Permite que el hijo con flex:1 encaje en la fila del layout (web). */
+      minHeight: 0,
       borderRightWidth: 1,
       position: 'relative',
       overflow: 'hidden',
+      flexShrink: 0,
     },
     scrollContainer: {
       overflow: 'hidden',
@@ -28,7 +32,7 @@ export function createVerticalMenuStyles(collapsed: boolean = false) {
     },
     scrollView: {
       flex: 1,
-      height: '100%',
+      minHeight: 0,
     },
     scrollContent: {
       paddingTop: 8,
