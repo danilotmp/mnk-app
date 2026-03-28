@@ -33,6 +33,10 @@ import { MessageAttachmentItem } from "@/src/features/interacciones/chat/compone
 import { MessageQuoteAttachmentThumbnail } from "@/src/features/interacciones/chat/components/message-quote-attachment-thumbnail/message-quote-attachment-thumbnail";
 import { QuickMessagesPanel } from "@/src/features/interacciones/chat/components/quick-messages-panel/quick-messages-panel";
 import { formatRelativeTime } from "@/src/features/interacciones/chat/utils/format-relative-time";
+import {
+  renderWhatsAppFormattedText,
+  renderWhatsAppFormattedTextSingleLine,
+} from "@/src/features/interacciones/chat/utils/render-whatsapp-formatted-text";
 import { API_CONFIG } from "@/src/infrastructure/api/config";
 import { getStorageAdapter } from "@/src/infrastructure/api/storage.adapter";
 import { useTranslation } from "@/src/infrastructure/i18n";
@@ -3426,8 +3430,15 @@ export default function ChatIAScreen() {
                               style={{ color: colors.textSecondary, flex: 1 }}
                               numberOfLines={1}
                             >
-                              {contact.lastMessage?.content ||
-                                contact.phoneNumber}
+                              {contact.lastMessage?.content
+                                ? renderWhatsAppFormattedTextSingleLine(
+                                    contact.lastMessage.content,
+                                    {
+                                      textColor: colors.textSecondary,
+                                      fontSize: 12,
+                                    },
+                                  )
+                                : contact.phoneNumber}
                             </ThemedText>
                             {showBotStatusDot && (
                               <View
@@ -4153,9 +4164,16 @@ export default function ChatIAScreen() {
                                                 }}
                                                 numberOfLines={1}
                                               >
-                                                {/* Mostrar contenido si existe, si no mostrar "Archivo adjunto" */}
-                                                {parentMessageToUse.content ||
-                                                  "Archivo adjunto"}
+                                                {parentMessageToUse.content
+                                                  ? renderWhatsAppFormattedTextSingleLine(
+                                                      parentMessageToUse.content,
+                                                      {
+                                                        textColor:
+                                                          colors.textSecondary,
+                                                        fontSize: 12,
+                                                      },
+                                                    )
+                                                  : "Archivo adjunto"}
                                               </ThemedText>
                                             </View>
                                             {/* Mostrar miniatura de adjunto a la derecha si hay attachments */}
@@ -4626,7 +4644,15 @@ export default function ChatIAScreen() {
                                           paddingRight: 32,
                                         }}
                                       >
-                                        {message.content}
+                                        {renderWhatsAppFormattedText(
+                                          message.content,
+                                          {
+                                            textColor: colors.text,
+                                            codeBackgroundColor: isDark
+                                              ? "rgba(255,255,255,0.1)"
+                                              : "rgba(0,0,0,0.06)",
+                                          },
+                                        )}
                                       </ThemedText>
                                     </View>
                                   ) : null}
@@ -5150,7 +5176,13 @@ export default function ChatIAScreen() {
                           numberOfLines={1}
                         >
                           {replyingToMessage.content
-                            ? replyingToMessage.content
+                            ? renderWhatsAppFormattedTextSingleLine(
+                                replyingToMessage.content,
+                                {
+                                  textColor: colors.textSecondary,
+                                  fontSize: 13,
+                                },
+                              )
                             : replyingToMessage.attachments &&
                                 replyingToMessage.attachments.length > 0
                               ? replyingToMessage.attachments[0].fileName ||
