@@ -29,6 +29,12 @@ export interface Contact {
   email?: string;
   type: ContactType;
   botEnabled?: boolean;
+  /** true: mensaje entrante pendiente de lectura humana (bot desactivado) */
+  lastMessagePendingRead?: boolean;
+  /** true: asignación a especialista (p. ej. desde n8n); badge / aviso en UI */
+  specialistAssignment?: boolean;
+  /** Última interacción en el hilo (p. ej. desde WebSocket); útil para ordenar la lista */
+  lastInteractionAt?: string;
   notes?: string;
   tags?: string[];
   createdAt: string;
@@ -42,6 +48,8 @@ export interface ContactPayload {
   email?: string;
   type?: ContactType;
   botEnabled?: boolean;
+  lastMessagePendingRead?: boolean;
+  specialistAssignment?: boolean;
   notes?: string;
   tags?: string[];
 }
@@ -68,11 +76,15 @@ export interface Message {
   direction: MessageDirection;
   content: string;
   status: MessageStatus;
+  isFromBot?: boolean;
   metadata?: Record<string, any>;
   /** Imagen inline en buffer (viene del backend para mensajes tipo imagen sin attachment) */
   media?: SerializedBuffer | Buffer;
   mediaType?: string;
   mediaFilename?: string;
+  mediaIdentifier?: string | null;
+  mediaContextDetails?: Record<string, any> | null;
+  aiContext?: Record<string, any> | null;
   attachments?: MessageAttachment[]; // Nuevo sistema de archivos adjuntos
   isEdited?: boolean; // Indica si el mensaje fue editado
   editedAt?: string; // Fecha de edición

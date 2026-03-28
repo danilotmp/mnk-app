@@ -43,6 +43,7 @@ import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Animated,
   Image,
@@ -59,6 +60,218 @@ import type { Socket } from "socket.io-client";
 
 const CHAT_BACKGROUND_URI =
   "https://static.whatsapp.net/rsrc.php/v4/y1/r/m5BEg2K4OR4.png";
+
+function formatMediaContextKey(rawKey: string): string {
+  if (!rawKey) return "";
+  return rawKey
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (s) => s.toUpperCase());
+}
+
+/** API / WS pueden enviar "inbound" o el enum INBOUND; unificar antes de comparar */
+function isInboundDirection(
+  direction: MessageDirection | string | undefined,
+): boolean {
+  return String(direction ?? "").toLowerCase() === "inbound";
+}
+
+/** Orden de lista: contacto con actividad más reciente primero (preview + WS). */
+function getContactListActivityTimestamp(c: ContactWithLastMessage): number {
+  let t = 0;
+  if (c.lastMessage) {
+    const ca = Date.parse(c.lastMessage.createdAt);
+    if (Number.isFinite(ca)) t = Math.max(t, ca);
+    if (c.lastMessage.updatedAt) {
+      const ua = Date.parse(c.lastMessage.updatedAt);
+      if (Number.isFinite(ua)) t = Math.max(t, ua);
+    }
+  }
+  if (c.lastInteractionAt) {
+    const li = Date.parse(c.lastInteractionAt);
+    if (Number.isFinite(li)) t = Math.max(t, li);
+  }
+  if (c.updatedAt) {
+    const u = Date.parse(c.updatedAt);
+    if (Number.isFinite(u)) t = Math.max(t, u);
+  }
+  if (t === 0 && c.createdAt) {
+    const cr = Date.parse(c.createdAt);
+    if (Number.isFinite(cr)) t = cr;
+  }
+  return t;
+}
+
+/** Evita re-render si el refresco silencioso no cambió datos visibles (incl. orden e ids). */
+function contactRowListDataEqual(
+  a: ContactWithLastMessage,
+  b: ContactWithLastMessage,
+): boolean {
+  return (
+    a.id === b.id &&
+    a.name === b.name &&
+    a.phoneNumber === b.phoneNumber &&
+    a.botEnabled === b.botEnabled &&
+    a.lastMessagePendingRead === b.lastMessagePendingRead &&
+    a.specialistAssignment === b.specialistAssignment &&
+    a.unreadCount === b.unreadCount &&
+    a.updatedAt === b.updatedAt &&
+    a.lastInteractionAt === b.lastInteractionAt &&
+    a.lastMessage?.id === b.lastMessage?.id &&
+    a.lastMessage?.updatedAt === b.lastMessage?.updatedAt &&
+    a.lastMessage?.createdAt === b.lastMessage?.createdAt &&
+    a.lastMessage?.content === b.lastMessage?.content
+  );
+}
+
+function contactsListsVisuallyEquivalent(
+  prev: ContactWithLastMessage[],
+  next: ContactWithLastMessage[],
+): boolean {
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i++) {
+    if (!contactRowListDataEqual(prev[i], next[i])) return false;
+  }
+  return true;
+}
+
+const SPECIALIST_RING_SIZE = 62;
+const SPECIALIST_RING_RADIUS = SPECIALIST_RING_SIZE / 2;
+
+/**
+ * Anillo verde más grueso; titila avatar y borde a la vez (misma opacidad, useNativeDriver).
+ * Sin animación si el usuario tiene “reducir movimiento” activado.
+ */
+function ContactSpecialistAvatarRing({
+  borderColor,
+  children,
+}: {
+  borderColor: string;
+  children: React.ReactNode;
+}) {
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const runLoop = () => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacityAnim, {
+            toValue: 0.58,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      loopRef.current = loop;
+      loop.start();
+    };
+
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduce) => {
+        if (mounted && !reduce) runLoop();
+      })
+      .catch(() => {
+        if (mounted) runLoop();
+      });
+
+    return () => {
+      mounted = false;
+      loopRef.current?.stop();
+      loopRef.current = null;
+    };
+  }, [opacityAnim]);
+
+  return (
+    <View style={styles.contactAvatarSpecialistWrap}>
+      <Animated.View style={{ opacity: opacityAnim }}>
+        {children}
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[
+          styles.contactAvatarSpecialistRingAnimated,
+          {
+            borderColor,
+            borderRadius: SPECIALIST_RING_RADIUS,
+            opacity: opacityAnim,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+/** Contexto documental para el modal de zoom (imagen + detalle lado a lado / apilado) */
+interface ImageViewerDocumentContext {
+  title: string;
+  tooltipTitle?: string;
+  entries: Array<{ label: string; value: string }>;
+}
+
+function buildImageViewerDocumentContext(
+  message: Message | null | undefined,
+): ImageViewerDocumentContext | null {
+  if (!message) return null;
+  // Misma normalización que en la lista de mensajes: API envía "inbound"/"outbound"; el enum usa INBOUND/OUTBOUND
+  if (String(message.direction ?? "").toLowerCase() !== "inbound") {
+    return null;
+  }
+  const mediaContextDetails =
+    message.mediaContextDetails &&
+    typeof message.mediaContextDetails === "object"
+      ? message.mediaContextDetails
+      : null;
+  const hasContextDetails =
+    Boolean(mediaContextDetails) &&
+    Object.keys(mediaContextDetails || {}).length > 0;
+  const hasIdentifier = Boolean(message.mediaIdentifier);
+  if (!hasIdentifier && !hasContextDetails) return null;
+
+  const contextEntries = hasContextDetails
+    ? Object.entries(mediaContextDetails || {})
+    : [];
+  const tipoObjetivoEntry = contextEntries.find(
+    ([key]) => key.replace(/[_-]/g, "").toLowerCase() === "tipoobjetivo",
+  );
+  const detailEntries = contextEntries.filter(
+    ([key]) => key.replace(/[_-]/g, "").toLowerCase() !== "tipoobjetivo",
+  );
+
+  const title =
+    typeof tipoObjetivoEntry?.[1] === "string" &&
+    tipoObjetivoEntry[1].trim().length > 0
+      ? tipoObjetivoEntry[1].trim().toUpperCase()
+      : message.mediaIdentifier?.trim() || "Detalle documental";
+
+  const tooltipTitle = tipoObjetivoEntry
+    ? `Campo: ${formatMediaContextKey(tipoObjetivoEntry[0])}`
+    : undefined;
+
+  const entries: Array<{ label: string; value: string }> = [];
+  for (const [key, value] of detailEntries) {
+    const rawValue =
+      value == null
+        ? ""
+        : typeof value === "string"
+          ? value
+          : JSON.stringify(value, null, 2);
+    if (!rawValue) continue;
+    entries.push({ label: formatMediaContextKey(key), value: rawValue });
+  }
+
+  return { title, tooltipTitle, entries };
+}
 const { io } = require("socket.io-client/dist/socket.io.js") as {
   io: (uri: string, opts?: Record<string, unknown>) => Socket;
 };
@@ -86,13 +299,65 @@ interface WsContactUpdatedPayload {
   phoneNumber: string;
   name: string;
   botEnabled?: boolean;
+  lastMessagePendingRead?: boolean;
+  specialistAssignment?: boolean;
   lastInteractionAt?: string;
+  /** Fecha de actualización del contacto en servidor (para ordenar lista) */
+  updatedAt?: string;
   lastMessage?: {
     id: string;
     content: string;
     direction: "inbound" | "outbound";
     createdAt: string;
   };
+}
+
+function mergeContactWithWsUpdatePayload(
+  contact: ContactWithLastMessage,
+  payload: WsContactUpdatedPayload,
+): ContactWithLastMessage {
+  return {
+    ...contact,
+    name: payload.name ?? contact.name,
+    phoneNumber: payload.phoneNumber ?? contact.phoneNumber,
+    botEnabled:
+      typeof payload.botEnabled === "boolean"
+        ? payload.botEnabled
+        : contact.botEnabled,
+    lastMessagePendingRead:
+      typeof payload.lastMessagePendingRead === "boolean"
+        ? payload.lastMessagePendingRead
+        : contact.lastMessagePendingRead,
+    specialistAssignment:
+      typeof payload.specialistAssignment === "boolean"
+        ? payload.specialistAssignment
+        : contact.specialistAssignment,
+    lastInteractionAt:
+      payload.lastInteractionAt != null && payload.lastInteractionAt !== ""
+        ? payload.lastInteractionAt
+        : contact.lastInteractionAt,
+    updatedAt:
+      payload.updatedAt != null && payload.updatedAt !== ""
+        ? payload.updatedAt
+        : payload.lastMessage
+          ? payload.lastMessage.createdAt
+          : contact.updatedAt,
+    lastMessage: payload.lastMessage
+      ? ({
+          ...(contact.lastMessage ?? {}),
+          id: payload.lastMessage.id,
+          contactId: payload.id,
+          content: payload.lastMessage.content,
+          direction:
+            String(payload.lastMessage.direction).toLowerCase() === "outbound"
+              ? MessageDirection.OUTBOUND
+              : MessageDirection.INBOUND,
+          status: contact.lastMessage?.status || ("SENT" as Message["status"]),
+          createdAt: payload.lastMessage.createdAt,
+          updatedAt: payload.lastMessage.createdAt,
+        } as Message)
+      : contact.lastMessage,
+  } as ContactWithLastMessage;
 }
 
 /** Convierte un buffer serializado del backend a data URL para mostrar imágenes inline */
@@ -186,6 +451,8 @@ export default function ChatIAScreen() {
     }>
   >([]);
   const [isViewingLocalFiles, setIsViewingLocalFiles] = useState(false);
+  const [imageViewerDocumentContext, setImageViewerDocumentContext] =
+    useState<ImageViewerDocumentContext | null>(null);
 
   // Estados para editar/eliminar mensajes
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -235,9 +502,9 @@ export default function ChatIAScreen() {
 
   const [messageInputHeight, setMessageInputHeight] = useState(minHeight);
 
-  // Filtros de contactos
+  // Filtros de contactos; al desactivar un chip (2.º clic) siempre vuelve a "Todos"
   const [contactFilter, setContactFilter] = useState<
-    "all" | "unread" | "favorites"
+    "all" | "unread" | "specialist"
   >("all");
 
   // Búsqueda en mensajes (con animación horizontal)
@@ -249,6 +516,8 @@ export default function ChatIAScreen() {
 
   // Estado de actualización del toggle de bot por contacto
   const [updatingBotEnabled, setUpdatingBotEnabled] = useState(false);
+  const [updatingLastMessagePendingRead, setUpdatingLastMessagePendingRead] =
+    useState(false);
 
   // Estado del selector de emojis
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -259,6 +528,8 @@ export default function ChatIAScreen() {
   const activeContactIdRef = useRef<string | null>(null);
   const silentContactsSyncingRef = useRef(false);
   const silentMessagesSyncingRef = useRef(false);
+  const [expandedMediaContextMessageId, setExpandedMediaContextMessageId] =
+    useState<string | null>(null);
 
   // Lista de mensajes rápidos desde catálogo (detalles completos)
   const [quickMessages, setQuickMessages] = useState<CatalogEntry[]>([]);
@@ -272,17 +543,11 @@ export default function ChatIAScreen() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   const sortContactsByLastMessage = useCallback(
-    (list: ContactWithLastMessage[]) => {
-      return [...list].sort((a, b) => {
-        if (!a.lastMessage && !b.lastMessage) return 0;
-        if (!a.lastMessage) return 1;
-        if (!b.lastMessage) return -1;
-        return (
-          new Date(b.lastMessage.createdAt).getTime() -
-          new Date(a.lastMessage.createdAt).getTime()
-        );
-      });
-    },
+    (list: ContactWithLastMessage[]) =>
+      [...list].sort(
+        (a, b) =>
+          getContactListActivityTimestamp(b) - getContactListActivityTimestamp(a),
+      ),
     [],
   );
 
@@ -1048,6 +1313,7 @@ export default function ChatIAScreen() {
       attachments: MessageAttachment[],
       messageId: string,
       initialIndex: number = 0,
+      documentContext?: ImageViewerDocumentContext | null,
     ) => {
       setImageViewerAttachments(
         attachments.filter((a) => a.fileType.startsWith("image/")),
@@ -1056,6 +1322,7 @@ export default function ChatIAScreen() {
       setImageViewerCurrentIndex(initialIndex);
       setIsViewingLocalFiles(false);
       setImageViewerLocalFiles([]);
+      setImageViewerDocumentContext(documentContext ?? null);
       setImageViewerVisible(true);
     },
     [],
@@ -1071,6 +1338,7 @@ export default function ChatIAScreen() {
         file?: File;
       }>,
       initialIndex: number = 0,
+      documentContext?: ImageViewerDocumentContext | null,
     ) => {
       const imageFiles = files.filter((f) => f.type.startsWith("image/"));
       setImageViewerLocalFiles(imageFiles);
@@ -1078,6 +1346,7 @@ export default function ChatIAScreen() {
       setIsViewingLocalFiles(true);
       setImageViewerAttachments([]);
       setImageViewerMessageId("");
+      setImageViewerDocumentContext(documentContext ?? null);
       setImageViewerVisible(true);
     },
     [],
@@ -1090,6 +1359,7 @@ export default function ChatIAScreen() {
     setImageViewerCurrentIndex(0);
     setImageViewerLocalFiles([]);
     setIsViewingLocalFiles(false);
+    setImageViewerDocumentContext(null);
   }, []);
 
   const handleNextImage = useCallback(() => {
@@ -1356,6 +1626,7 @@ export default function ChatIAScreen() {
 
       setContacts((prev) => {
         const prevById = new Map(prev.map((c) => [c.id, c]));
+        /** Orden de getContacts (backend); no reordenar con lastMessage posiblemente obsoleto en cliente. */
         const merged = contactsList.map((contact) => {
           const existing = prevById.get(contact.id);
           if (!existing) {
@@ -1368,29 +1639,15 @@ export default function ChatIAScreen() {
           return {
             ...existing,
             ...contact,
-            // Mantener datos de preview para no resetear visualmente la lista
             lastMessage: existing.lastMessage,
             unreadCount: existing.unreadCount,
           } as ContactWithLastMessage;
         });
 
-        const sorted = sortContactsByLastMessage(merged);
-        const unchanged =
-          prev.length === sorted.length &&
-          prev.every((item, index) => {
-            const next = sorted[index];
-            return (
-              item.id === next.id &&
-              item.name === next.name &&
-              item.phoneNumber === next.phoneNumber &&
-              item.botEnabled === next.botEnabled &&
-              item.unreadCount === next.unreadCount &&
-              item.lastMessage?.id === next.lastMessage?.id &&
-              item.lastMessage?.updatedAt === next.lastMessage?.updatedAt
-            );
-          });
-
-        return unchanged ? prev : sorted;
+        if (contactsListsVisuallyEquivalent(prev, merged)) {
+          return prev;
+        }
+        return merged;
       });
     } catch {
       // Silencioso por diseño (fallback de resiliencia)
@@ -1468,6 +1725,7 @@ export default function ChatIAScreen() {
             contactId: activeContactIdRef.current,
           });
         }
+        refreshContactsSilent();
       });
 
       socket.on("message.created", (payload: WsMessageCreatedPayload) => {
@@ -1489,7 +1747,12 @@ export default function ChatIAScreen() {
           updatedAt: payload.updatedAt || payload.createdAt,
         };
 
+        let contactMissingFromList = false;
         setContacts((prev) => {
+          if (!prev.some((c) => c.id === payload.contactId)) {
+            contactMissingFromList = true;
+            return prev;
+          }
           const merged = prev.map((contact) => {
             if (contact.id !== payload.contactId) return contact;
             const unreadDelta =
@@ -1505,10 +1768,56 @@ export default function ChatIAScreen() {
                 (contact.unreadCount || 0) + unreadDelta,
               ),
               lastMessage: mappedMessage,
+              updatedAt:
+                mappedMessage.updatedAt || mappedMessage.createdAt,
             };
           });
           return sortContactsByLastMessage(merged);
         });
+
+        if (contactMissingFromList) {
+          void (async () => {
+            try {
+              const fetched = await InteraccionesService.getContactById(
+                payload.contactId,
+              );
+              setContacts((p) => {
+                const unreadDelta =
+                  payload.direction === "inbound" &&
+                  activeContactIdRef.current !== payload.contactId
+                    ? 1
+                    : 0;
+                if (p.some((c) => c.id === fetched.id)) {
+                  return sortContactsByLastMessage(
+                    p.map((c) => {
+                      if (c.id !== fetched.id) return c;
+                      return {
+                        ...c,
+                        unreadCount: Math.max(
+                          0,
+                          (c.unreadCount || 0) + unreadDelta,
+                        ),
+                        lastMessage: mappedMessage,
+                        updatedAt:
+                          mappedMessage.updatedAt || mappedMessage.createdAt,
+                      };
+                    }),
+                  );
+                }
+                const row: ContactWithLastMessage = {
+                  ...fetched,
+                  lastMessage: mappedMessage,
+                  updatedAt:
+                    mappedMessage.updatedAt || mappedMessage.createdAt,
+                  unreadCount: unreadDelta > 0 ? unreadDelta : undefined,
+                };
+                return sortContactsByLastMessage([row, ...p]);
+              });
+            } catch {
+              refreshContactsSilent();
+            }
+          })();
+        }
 
         if (activeContactIdRef.current === payload.contactId) {
           setMessages((prev) => {
@@ -1526,36 +1835,48 @@ export default function ChatIAScreen() {
       });
 
       socket.on("contact.updated", (payload: WsContactUpdatedPayload) => {
+        let contactMissingFromList = false;
         setContacts((prev) => {
-          const merged = prev.map((contact) => {
-            if (contact.id !== payload.id) return contact;
-            return {
-              ...contact,
-              name: payload.name ?? contact.name,
-              phoneNumber: payload.phoneNumber ?? contact.phoneNumber,
-              botEnabled:
-                typeof payload.botEnabled === "boolean"
-                  ? payload.botEnabled
-                  : contact.botEnabled,
-              lastMessage: payload.lastMessage
-                ? {
-                    ...contact.lastMessage,
-                    id: payload.lastMessage.id,
-                    contactId: payload.id,
-                    content: payload.lastMessage.content,
-                    direction:
-                      payload.lastMessage.direction === "outbound"
-                        ? MessageDirection.OUTBOUND
-                        : MessageDirection.INBOUND,
-                    status: contact.lastMessage?.status || "SENT",
-                    createdAt: payload.lastMessage.createdAt,
-                    updatedAt: payload.lastMessage.createdAt,
-                  }
-                : contact.lastMessage,
-            } as ContactWithLastMessage;
-          });
+          if (!prev.some((c) => c.id === payload.id)) {
+            contactMissingFromList = true;
+            return prev;
+          }
+          const merged = prev.map((contact) =>
+            contact.id === payload.id
+              ? mergeContactWithWsUpdatePayload(contact, payload)
+              : contact,
+          );
           return sortContactsByLastMessage(merged);
         });
+
+        if (contactMissingFromList) {
+          void (async () => {
+            try {
+              const fetched = await InteraccionesService.getContactById(
+                payload.id,
+              );
+              setContacts((p) => {
+                if (p.some((c) => c.id === payload.id)) {
+                  return sortContactsByLastMessage(
+                    p.map((c) =>
+                      c.id === payload.id
+                        ? mergeContactWithWsUpdatePayload(c, payload)
+                        : c,
+                    ),
+                  );
+                }
+                const base: ContactWithLastMessage = {
+                  ...fetched,
+                  unreadCount: undefined,
+                };
+                const row = mergeContactWithWsUpdatePayload(base, payload);
+                return sortContactsByLastMessage([row, ...p]);
+              });
+            } catch {
+              refreshContactsSilent();
+            }
+          })();
+        }
 
         setSelectedContact((prev) => {
           if (!prev || prev.id !== payload.id) return prev;
@@ -1567,6 +1888,25 @@ export default function ChatIAScreen() {
               typeof payload.botEnabled === "boolean"
                 ? payload.botEnabled
                 : prev.botEnabled,
+            lastMessagePendingRead:
+              typeof payload.lastMessagePendingRead === "boolean"
+                ? payload.lastMessagePendingRead
+                : prev.lastMessagePendingRead,
+            specialistAssignment:
+              typeof payload.specialistAssignment === "boolean"
+                ? payload.specialistAssignment
+                : prev.specialistAssignment,
+            lastInteractionAt:
+              payload.lastInteractionAt != null &&
+              payload.lastInteractionAt !== ""
+                ? payload.lastInteractionAt
+                : prev.lastInteractionAt,
+            updatedAt:
+              payload.updatedAt != null && payload.updatedAt !== ""
+                ? payload.updatedAt
+                : payload.lastMessage
+                  ? payload.lastMessage.createdAt
+                  : prev.updatedAt,
           };
         });
       });
@@ -1587,7 +1927,7 @@ export default function ChatIAScreen() {
       }
       socketRef.current = null;
     };
-  }, [company?.id, sortContactsByLastMessage]);
+  }, [company?.id, sortContactsByLastMessage, refreshContactsSilent]);
 
   useEffect(() => {
     const socket = socketRef.current;
@@ -1936,6 +2276,41 @@ export default function ChatIAScreen() {
       } finally {
         setLoadingMessages(false);
       }
+
+      if (contact.lastMessagePendingRead === true) {
+        try {
+          const updated = await InteraccionesService.updateContact(contact.id, {
+            lastMessagePendingRead: false,
+          });
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.id === contact.id
+                ? {
+                    ...c,
+                    ...updated,
+                    lastMessage: c.lastMessage,
+                    unreadCount: c.unreadCount,
+                  }
+                : c,
+            ),
+          );
+          setSelectedContact((prev) =>
+            prev && prev.id === contact.id
+              ? {
+                  ...prev,
+                  ...updated,
+                  lastMessagePendingRead:
+                    updated.lastMessagePendingRead ?? false,
+                }
+              : prev,
+          );
+        } catch (err) {
+          console.warn(
+            "No se pudo marcar lastMessagePendingRead como leído:",
+            err,
+          );
+        }
+      }
     },
     [isMobile],
   );
@@ -2012,6 +2387,77 @@ export default function ChatIAScreen() {
       setUpdatingBotEnabled(false);
     }
   }, [alert, selectedContact, updatingBotEnabled]);
+
+  const handleToggleLastMessagePendingRead = useCallback(async () => {
+    if (!selectedContact?.id || updatingLastMessagePendingRead) return;
+
+    const currentValue = selectedContact.lastMessagePendingRead === true;
+    const nextValue = !currentValue;
+    const contactId = selectedContact.id;
+
+    setSelectedContact((prev) =>
+      prev && prev.id === contactId
+        ? { ...prev, lastMessagePendingRead: nextValue }
+        : prev,
+    );
+    setContacts((prev) =>
+      prev.map((contact) =>
+        contact.id === contactId
+          ? { ...contact, lastMessagePendingRead: nextValue }
+          : contact,
+      ),
+    );
+
+    try {
+      setUpdatingLastMessagePendingRead(true);
+      const updatedContact = await InteraccionesService.updateContact(
+        contactId,
+        { lastMessagePendingRead: nextValue },
+      );
+
+      setSelectedContact((prev) =>
+        prev && prev.id === contactId
+          ? {
+              ...prev,
+              ...updatedContact,
+              lastMessagePendingRead:
+                updatedContact.lastMessagePendingRead ?? nextValue,
+            }
+          : prev,
+      );
+      setContacts((prev) =>
+        prev.map((contact) =>
+          contact.id === contactId
+            ? {
+                ...contact,
+                ...updatedContact,
+                lastMessagePendingRead:
+                  updatedContact.lastMessagePendingRead ?? nextValue,
+              }
+            : contact,
+        ),
+      );
+    } catch (error: any) {
+      setSelectedContact((prev) =>
+        prev && prev.id === contactId
+          ? { ...prev, lastMessagePendingRead: currentValue }
+          : prev,
+      );
+      setContacts((prev) =>
+        prev.map((contact) =>
+          contact.id === contactId
+            ? { ...contact, lastMessagePendingRead: currentValue }
+            : contact,
+        ),
+      );
+      alert.showError(
+        "No se pudo actualizar el estado de lectura",
+        error?.message,
+      );
+    } finally {
+      setUpdatingLastMessagePendingRead(false);
+    }
+  }, [alert, selectedContact, updatingLastMessagePendingRead]);
 
   // Solicitar permisos para expo-image-picker
   useEffect(() => {
@@ -2509,16 +2955,7 @@ export default function ChatIAScreen() {
               }
             }),
           );
-          contactsWithMessages.sort((a, b) => {
-            if (!a.lastMessage && !b.lastMessage) return 0;
-            if (!a.lastMessage) return 1;
-            if (!b.lastMessage) return -1;
-            return (
-              new Date(b.lastMessage.createdAt).getTime() -
-              new Date(a.lastMessage.createdAt).getTime()
-            );
-          });
-          setContacts(contactsWithMessages);
+          setContacts(sortContactsByLastMessage(contactsWithMessages));
         } catch (error) {
           console.error("Error al recargar contactos:", error);
         } finally {
@@ -2543,6 +2980,7 @@ export default function ChatIAScreen() {
     sendMessageWithProgress,
     minHeight,
     alert,
+    sortContactsByLastMessage,
   ]);
 
   // Efecto inicial - solo cargar una vez cuando se monta el componente
@@ -2568,10 +3006,12 @@ export default function ChatIAScreen() {
     // Filtros específicos
     switch (contactFilter) {
       case "unread":
-        return (contact.unreadCount && contact.unreadCount > 0) || false;
-      case "favorites":
-        // Mock: asumimos que favoritos tienen un tag especial
-        return contact.tags?.includes("favorite") || false;
+        return (
+          contact.lastMessagePendingRead === true ||
+          (contact.unreadCount ?? 0) > 0
+        );
+      case "specialist":
+        return contact.specialistAssignment === true;
       case "all":
       default:
         return true;
@@ -2728,10 +3168,6 @@ export default function ChatIAScreen() {
                           contactFilter === "all"
                             ? colors.primary
                             : colors.filterInputBackground,
-                        borderColor:
-                          contactFilter === "all"
-                            ? colors.primary
-                            : colors.border,
                       },
                     ]}
                     onPress={() => setContactFilter("all")}
@@ -2755,13 +3191,13 @@ export default function ChatIAScreen() {
                           contactFilter === "unread"
                             ? colors.primary
                             : colors.filterInputBackground,
-                        borderColor:
-                          contactFilter === "unread"
-                            ? colors.primary
-                            : colors.border,
                       },
                     ]}
-                    onPress={() => setContactFilter("unread")}
+                    onPress={() =>
+                      setContactFilter((prev) =>
+                        prev === "unread" ? "all" : "unread",
+                      )
+                    }
                   >
                     <ThemedText
                       type="caption"
@@ -2774,36 +3210,45 @@ export default function ChatIAScreen() {
                       No leídos
                     </ThemedText>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.filterButton,
-                      {
-                        backgroundColor:
-                          contactFilter === "favorites"
-                            ? colors.primary
-                            : colors.filterInputBackground,
-                        borderColor:
-                          contactFilter === "favorites"
-                            ? colors.primary
-                            : colors.border,
-                      },
-                    ]}
-                    onPress={() => setContactFilter("favorites")}
+                  <Tooltip
+                    text="Chats que requieren asistencia de un especialista (asignación activa)."
+                    position="bottom"
                   >
-                    <ThemedText
-                      type="caption"
-                      style={{
-                        color:
-                          contactFilter === "favorites"
-                            ? "#FFFFFF"
-                            : colors.text,
-                        fontWeight:
-                          contactFilter === "favorites" ? "600" : "400",
-                      }}
+                    <TouchableOpacity
+                      style={[
+                        styles.filterButton,
+                        styles.filterButtonSpecialist,
+                        {
+                          backgroundColor:
+                            contactFilter === "specialist"
+                              ? colors.primary
+                              : colors.filterInputBackground,
+                        },
+                      ]}
+                      onPress={() =>
+                        setContactFilter((prev) =>
+                          prev === "specialist" ? "all" : "specialist",
+                        )
+                      }
+                      accessibilityLabel="Filtrar chats que requieren asistencia de un especialista"
                     >
-                      Favoritos
-                    </ThemedText>
-                  </TouchableOpacity>
+                      <ThemedText
+                        type="caption"
+                        style={{
+                          color:
+                            contactFilter === "specialist"
+                              ? "#FFFFFF"
+                              : colors.text,
+                          fontWeight:
+                            contactFilter === "specialist" ? "600" : "400",
+                          textAlign: "center",
+                        }}
+                        numberOfLines={2}
+                      >
+                        Req. especialista
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </Tooltip>
                 </View>
               </View>
 
@@ -2850,17 +3295,25 @@ export default function ChatIAScreen() {
                 >
                   {filteredContacts.map((contact) => {
                     const isSelected = selectedContact?.id === contact.id;
-                    const isLastInbound =
-                      String(
-                        contact.lastMessage?.direction || "",
-                      ).toUpperCase() === "INBOUND";
-                    const showBotStatusDot = isLastInbound;
-                    const botStatusDotColor =
-                      contact.botEnabled === false
-                        ? colors.secondary
-                        : isDark
-                          ? colors.textSecondary
-                          : colors.chatOutboundBackground;
+                    /** Colores: pending + botEnabled (azul / verde / gris). Visibilidad: solo si el último mensaje es inbound */
+                    const pendingRead =
+                      contact.lastMessagePendingRead === true;
+                    const botEnabledTrue = contact.botEnabled === true;
+                    const botEnabledFalse = contact.botEnabled === false;
+                    const isLastMessageInbound = isInboundDirection(
+                      contact.lastMessage?.direction,
+                    );
+                    let botStatusDotColor: string;
+                    if (pendingRead && botEnabledTrue) {
+                      botStatusDotColor = colors.primary;
+                    } else if (pendingRead && botEnabledFalse) {
+                      botStatusDotColor = colors.secondary;
+                    } else {
+                      botStatusDotColor = isDark
+                        ? colors.textSecondary
+                        : colors.chatOutboundBackground;
+                    }
+                    const showBotStatusDot = isLastMessageInbound;
                     return (
                       <TouchableOpacity
                         key={contact.id}
@@ -2877,16 +3330,57 @@ export default function ChatIAScreen() {
                         ]}
                         onPress={() => handleSelectContact(contact)}
                       >
-                        <View
-                          style={[
-                            styles.contactAvatar,
-                            { backgroundColor: colors.primary },
-                          ]}
-                        >
-                          <ThemedText type="h4" style={{ color: "#FFFFFF" }}>
-                            {contact.name.charAt(0).toUpperCase()}
-                          </ThemedText>
-                        </View>
+                        {contact.specialistAssignment === true ? (
+                          <ContactSpecialistAvatarRing
+                            borderColor={colors.secondary}
+                          >
+                            <View
+                              style={[
+                                styles.contactAvatar,
+                                {
+                                  backgroundColor: colors.primary,
+                                  marginRight: 0,
+                                },
+                              ]}
+                            >
+                              <ThemedText
+                                type="h4"
+                                style={{ color: "#FFFFFF" }}
+                              >
+                                {contact.name.charAt(0).toUpperCase()}
+                              </ThemedText>
+                            </View>
+                          </ContactSpecialistAvatarRing>
+                        ) : (
+                          <View style={styles.contactAvatarSpecialistWrap}>
+                            <View
+                              style={[
+                                styles.contactAvatar,
+                                {
+                                  backgroundColor: colors.primary,
+                                  marginRight: 0,
+                                },
+                              ]}
+                            >
+                              <ThemedText
+                                type="h4"
+                                style={{ color: "#FFFFFF" }}
+                              >
+                                {contact.name.charAt(0).toUpperCase()}
+                              </ThemedText>
+                            </View>
+                            <View
+                              pointerEvents="none"
+                              style={[
+                                styles.contactAvatarSpecialistRingAnimated,
+                                {
+                                  borderColor: "transparent",
+                                  borderRadius: SPECIALIST_RING_RADIUS,
+                                },
+                              ]}
+                            />
+                          </View>
+                        )}
                         <View style={styles.contactInfo}>
                           <View style={styles.contactHeader}>
                             <View style={styles.contactNameRow}>
@@ -3061,6 +3555,33 @@ export default function ChatIAScreen() {
                     </View>
                   </View>
                   <View style={styles.chatHeaderActions}>
+                    {/* Botón de activar/desactivar Marcar como no Leido */}
+                    <Tooltip
+                      text={
+                        selectedContact?.lastMessagePendingRead === true
+                          ? "Marcar como leído"
+                          : "Marcar como no leído"
+                      }
+                      position="bottom"
+                    >
+                      <TouchableOpacity
+                        onPress={handleToggleLastMessagePendingRead}
+                        style={styles.chatIAToggle}
+                        disabled={
+                          updatingLastMessagePendingRead || !selectedContact?.id
+                        }
+                      >
+                        <Ionicons
+                          name="mail-unread-outline"
+                          size={24}
+                          color={
+                            selectedContact?.lastMessagePendingRead === true
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
                     {/* Botón de activar/desactivar Chat IA */}
                     <Tooltip
                       text={
@@ -3422,6 +3943,7 @@ export default function ChatIAScreen() {
                               message.direction,
                             ).toLowerCase();
                             const isOutbound = directionStr === "outbound";
+                            const isInbound = !isOutbound;
                             const isLastMessage =
                               message ===
                               filteredMessages[filteredMessages.length - 1];
@@ -3677,6 +4199,9 @@ export default function ChatIAScreen() {
                                                             clickedIndex >= 0
                                                               ? clickedIndex
                                                               : 0,
+                                                            buildImageViewerDocumentContext(
+                                                              parentMessageToUse,
+                                                            ),
                                                           );
                                                         } else {
                                                           // Para otros tipos de archivo, abrir el visor de imágenes con el adjunto
@@ -3715,7 +4240,56 @@ export default function ChatIAScreen() {
                                       mediaType,
                                     );
                                     if (!dataUrl) return null;
-                                    return (
+                                    const hasIdentifier = Boolean(
+                                      message.mediaIdentifier,
+                                    );
+                                    const mediaContextDetails =
+                                      message.mediaContextDetails &&
+                                      typeof message.mediaContextDetails ===
+                                        "object"
+                                        ? message.mediaContextDetails
+                                        : null;
+                                    const hasContextDetails =
+                                      Boolean(mediaContextDetails) &&
+                                      Object.keys(mediaContextDetails || {})
+                                        .length > 0;
+                                    const canShowDocumentCard =
+                                      isInbound &&
+                                      (hasIdentifier || hasContextDetails);
+                                    const isContextExpanded =
+                                      expandedMediaContextMessageId ===
+                                      message.id;
+                                    const documentCardForegroundColor =
+                                      colors.text;
+                                    const contextEntries = hasContextDetails
+                                      ? Object.entries(
+                                          mediaContextDetails || {},
+                                        )
+                                      : [];
+                                    const tipoObjetivoEntry =
+                                      contextEntries.find(
+                                        ([key]) =>
+                                          key
+                                            .replace(/[_-]/g, "")
+                                            .toLowerCase() === "tipoobjetivo",
+                                      );
+                                    const detailEntries = contextEntries.filter(
+                                      ([key]) =>
+                                        key
+                                          .replace(/[_-]/g, "")
+                                          .toLowerCase() !== "tipoobjetivo",
+                                    );
+                                    const documentDetailsTitle =
+                                      typeof tipoObjetivoEntry?.[1] ===
+                                        "string" &&
+                                      tipoObjetivoEntry[1].trim().length > 0
+                                        ? tipoObjetivoEntry[1]
+                                            .trim()
+                                            .toUpperCase()
+                                        : message.mediaIdentifier ||
+                                          "Detalle documental";
+
+                                    const imageBlock = (
                                       <TouchableOpacity
                                         style={[
                                           styles.messageAttachment,
@@ -3724,6 +4298,13 @@ export default function ChatIAScreen() {
                                           },
                                           isMobile &&
                                             styles.messageAttachmentMobile,
+                                          canShowDocumentCard &&
+                                            isContextExpanded &&
+                                            !isMobile &&
+                                            styles.documentAttachmentExpandedDesktop,
+                                          canShowDocumentCard &&
+                                            isMobile &&
+                                            styles.documentAttachmentMobile,
                                         ]}
                                         onPress={() => {
                                           handleOpenLocalFilesViewer(
@@ -3738,6 +4319,9 @@ export default function ChatIAScreen() {
                                               },
                                             ],
                                             0,
+                                            buildImageViewerDocumentContext(
+                                              message,
+                                            ),
                                           );
                                         }}
                                         activeOpacity={0.8}
@@ -3763,6 +4347,260 @@ export default function ChatIAScreen() {
                                         )}
                                       </TouchableOpacity>
                                     );
+
+                                    if (!canShowDocumentCard) {
+                                      return imageBlock;
+                                    }
+
+                                    return (
+                                      <View
+                                        style={[
+                                          styles.documentMediaContainer,
+                                          isContextExpanded &&
+                                            (isMobile
+                                              ? styles.documentMediaExpandedMobile
+                                              : styles.documentMediaExpandedDesktop),
+                                          {
+                                            zIndex: isContextExpanded ? 50 : 1,
+                                            backgroundColor:
+                                              colors.surfaceVariant,
+                                            borderColor: colors.border,
+                                          },
+                                        ]}
+                                      >
+                                        <View
+                                          style={[
+                                            styles.documentMediaCard,
+                                            isContextExpanded &&
+                                              !isMobile &&
+                                              styles.documentMediaCardExpandedDesktop,
+                                            isMobile &&
+                                              styles.documentMediaCardMobile,
+                                          ]}
+                                        >
+                                          {imageBlock}
+
+                                          {!isContextExpanded && (
+                                            <View
+                                              style={[
+                                                styles.documentMediaFooter,
+                                                {
+                                                  borderTopColor: colors.border,
+                                                },
+                                              ]}
+                                            >
+                                              <View
+                                                style={
+                                                  styles.documentIdLeftSlot
+                                                }
+                                              >
+                                                <DynamicIcon
+                                                  name="FontAwesome5:robot"
+                                                  size={11}
+                                                  color={
+                                                    documentCardForegroundColor
+                                                  }
+                                                />
+                                              </View>
+                                              <ThemedText
+                                                type="caption"
+                                                style={[
+                                                  styles.documentIdText,
+                                                  {
+                                                    color:
+                                                      documentCardForegroundColor,
+                                                  },
+                                                ]}
+                                                numberOfLines={1}
+                                              >
+                                                {message.mediaIdentifier
+                                                  ? message.mediaIdentifier
+                                                  : "Detalle del documento"}
+                                              </ThemedText>
+                                              {hasContextDetails && (
+                                                <TouchableOpacity
+                                                  onPress={() =>
+                                                    setExpandedMediaContextMessageId(
+                                                      isContextExpanded
+                                                        ? null
+                                                        : message.id,
+                                                    )
+                                                  }
+                                                  style={
+                                                    styles.documentInfoButton
+                                                  }
+                                                  activeOpacity={0.7}
+                                                >
+                                                  <Ionicons
+                                                    name={
+                                                      isMobile
+                                                        ? isContextExpanded
+                                                          ? "chevron-up"
+                                                          : "chevron-down"
+                                                        : isContextExpanded
+                                                          ? "chevron-back"
+                                                          : "chevron-forward"
+                                                    }
+                                                    size={18}
+                                                    color={
+                                                      documentCardForegroundColor
+                                                    }
+                                                  />
+                                                </TouchableOpacity>
+                                              )}
+                                            </View>
+                                          )}
+                                        </View>
+
+                                        {isContextExpanded &&
+                                          hasContextDetails && (
+                                            <View
+                                              style={[
+                                                styles.documentContextPanel,
+                                                isMobile
+                                                  ? {
+                                                      borderTopWidth: 1,
+                                                      borderTopColor:
+                                                        colors.border,
+                                                    }
+                                                  : {
+                                                      borderLeftWidth: 1,
+                                                      borderLeftColor:
+                                                        colors.border,
+                                                    },
+                                                {
+                                                  backgroundColor:
+                                                    colors.surfaceVariant,
+                                                },
+                                              ]}
+                                            >
+                                              <View
+                                                style={[
+                                                  styles.documentContextHeader,
+                                                  {
+                                                    borderBottomColor:
+                                                      colors.border,
+                                                  },
+                                                ]}
+                                              >
+                                                <View
+                                                  style={
+                                                    styles.documentContextTitleWrap
+                                                  }
+                                                >
+                                                  <Tooltip
+                                                    text={
+                                                      tipoObjetivoEntry
+                                                        ? `${formatMediaContextKey(tipoObjetivoEntry[0])}`
+                                                        : "Campo de título"
+                                                    }
+                                                    position="bottom"
+                                                  >
+                                                    <ThemedText
+                                                      type="body2"
+                                                      style={{
+                                                        color: colors.text,
+                                                        fontWeight: "700",
+                                                        flex: 1,
+                                                      }}
+                                                      numberOfLines={1}
+                                                    >
+                                                      {documentDetailsTitle}
+                                                    </ThemedText>
+                                                  </Tooltip>
+                                                </View>
+                                                <TouchableOpacity
+                                                  onPress={() =>
+                                                    setExpandedMediaContextMessageId(
+                                                      null,
+                                                    )
+                                                  }
+                                                  activeOpacity={0.7}
+                                                  style={
+                                                    styles.documentContextCloseButton
+                                                  }
+                                                >
+                                                  <Ionicons
+                                                    name="close"
+                                                    size={18}
+                                                    color={colors.textSecondary}
+                                                  />
+                                                </TouchableOpacity>
+                                              </View>
+
+                                              <ScrollView
+                                                style={
+                                                  styles.documentContextScroll
+                                                }
+                                                showsVerticalScrollIndicator={
+                                                  false
+                                                }
+                                              >
+                                                {detailEntries.map(
+                                                  ([key, value]) => {
+                                                    const rawValue =
+                                                      value == null
+                                                        ? ""
+                                                        : typeof value ===
+                                                            "string"
+                                                          ? value
+                                                          : JSON.stringify(
+                                                              value,
+                                                              null,
+                                                              2,
+                                                            );
+                                                    if (!rawValue) return null;
+                                                    return (
+                                                      <View
+                                                        key={key}
+                                                        style={[
+                                                          styles.documentContextItem,
+                                                          !isMobile &&
+                                                            styles.documentContextItemDesktop,
+                                                        ]}
+                                                      >
+                                                        <ThemedText
+                                                          type="caption"
+                                                          style={[
+                                                            {
+                                                              color:
+                                                                colors.textSecondary,
+                                                              fontWeight: "600",
+                                                            },
+                                                            !isMobile &&
+                                                              styles.documentContextLabelDesktop,
+                                                          ]}
+                                                        >
+                                                          {formatMediaContextKey(
+                                                            key,
+                                                          )}
+                                                        </ThemedText>
+                                                        <ThemedText
+                                                          type="body2"
+                                                          style={[
+                                                            {
+                                                              color:
+                                                                colors.text,
+                                                              marginTop:
+                                                                isMobile
+                                                                  ? 2
+                                                                  : 0,
+                                                            },
+                                                            !isMobile &&
+                                                              styles.documentContextValueDesktop,
+                                                          ]}
+                                                        >
+                                                          {rawValue}
+                                                        </ThemedText>
+                                                      </View>
+                                                    );
+                                                  },
+                                                )}
+                                              </ScrollView>
+                                            </View>
+                                          )}
+                                      </View>
+                                    );
                                   })()}
 
                                   {/* Contenido del mensaje (no mostrar "[Imagen]" cuando hay media) */}
@@ -3785,7 +4623,7 @@ export default function ChatIAScreen() {
                                         type="body2"
                                         style={{
                                           color: colors.text,
-                                          paddingRight: 12
+                                          paddingRight: 32,
                                         }}
                                       >
                                         {message.content}
@@ -3826,6 +4664,9 @@ export default function ChatIAScreen() {
                                                       imageIndex >= 0
                                                         ? imageIndex
                                                         : 0,
+                                                      buildImageViewerDocumentContext(
+                                                        message,
+                                                      ),
                                                     );
                                                   }
                                                 }}
@@ -3915,6 +4756,9 @@ export default function ChatIAScreen() {
                                     <Animated.View
                                       style={[
                                         styles.messageContextMenu,
+                                        isInbound
+                                          ? styles.messageContextMenuInbound
+                                          : styles.messageContextMenuOutbound,
                                         {
                                           backgroundColor: isDark
                                             ? colors.surfaceVariant
@@ -4344,6 +5188,9 @@ export default function ChatIAScreen() {
                                   imageAttachments,
                                   replyingToMessage.id,
                                   Math.max(0, imageIndex),
+                                  buildImageViewerDocumentContext(
+                                    replyingToMessage,
+                                  ),
                                 );
                               }
                             }}
@@ -5178,7 +6025,7 @@ export default function ChatIAScreen() {
             </View>
           </View>
 
-          {/* Imagen principal */}
+          {/* Imagen principal (+ detalle documental en el modal si aplica) */}
           <View style={styles.imageViewerContent}>
             {((isViewingLocalFiles &&
               imageViewerLocalFiles.length > 0 &&
@@ -5186,80 +6033,150 @@ export default function ChatIAScreen() {
               (!isViewingLocalFiles &&
                 imageViewerAttachments.length > 0 &&
                 imageViewerAttachments[imageViewerCurrentIndex])) && (
-              <>
-                {imageViewerCurrentIndex > 0 && (
-                  <TouchableOpacity
-                    style={styles.imageViewerNavButton}
-                    onPress={handlePrevImage}
-                  >
-                    <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
-                  </TouchableOpacity>
-                )}
+              <View
+                style={[
+                  styles.imageViewerBody,
+                  imageViewerDocumentContext &&
+                    (isMobile
+                      ? styles.imageViewerBodyStack
+                      : styles.imageViewerBodyRow),
+                ]}
+              >
+                <View style={styles.imageViewerImageColumn}>
+                  {imageViewerCurrentIndex > 0 && (
+                    <TouchableOpacity
+                      style={styles.imageViewerNavButton}
+                      onPress={handlePrevImage}
+                    >
+                      <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  )}
 
-                <View style={styles.imageViewerImageContainer}>
-                  {(() => {
-                    if (isViewingLocalFiles) {
-                      const currentFile =
-                        imageViewerLocalFiles[imageViewerCurrentIndex];
-                      if (!currentFile || !currentFile.uri) return null;
+                  <View style={styles.imageViewerImageContainer}>
+                    {(() => {
+                      if (isViewingLocalFiles) {
+                        const currentFile =
+                          imageViewerLocalFiles[imageViewerCurrentIndex];
+                        if (!currentFile || !currentFile.uri) return null;
 
-                      return (
-                        <Image
-                          source={{ uri: currentFile.uri }}
-                          style={styles.imageViewerImage}
-                          resizeMode="contain"
-                        />
-                      );
-                    } else {
-                      const currentAttachment =
-                        imageViewerAttachments[imageViewerCurrentIndex];
-                      if (!currentAttachment) return null;
-
-                      const imageUrl = InteraccionesService.getAttachmentUrl(
-                        imageViewerMessageId,
-                        currentAttachment.id,
-                      );
-
-                      if (Platform.OS === "web") {
                         return (
                           <Image
-                            source={{ uri: imageUrl }}
+                            source={{ uri: currentFile.uri }}
                             style={styles.imageViewerImage}
                             resizeMode="contain"
                           />
                         );
                       } else {
-                        return (
-                          <ImageWithToken
-                            uri={imageUrl}
-                            style={styles.imageViewerImage}
-                          />
+                        const currentAttachment =
+                          imageViewerAttachments[imageViewerCurrentIndex];
+                        if (!currentAttachment) return null;
+
+                        const imageUrl = InteraccionesService.getAttachmentUrl(
+                          imageViewerMessageId,
+                          currentAttachment.id,
                         );
+
+                        if (Platform.OS === "web") {
+                          return (
+                            <Image
+                              source={{ uri: imageUrl }}
+                              style={styles.imageViewerImage}
+                              resizeMode="contain"
+                            />
+                          );
+                        } else {
+                          return (
+                            <ImageWithToken
+                              uri={imageUrl}
+                              style={styles.imageViewerImage}
+                            />
+                          );
+                        }
                       }
-                    }
-                  })()}
+                    })()}
+                  </View>
+
+                  {imageViewerCurrentIndex <
+                    (isViewingLocalFiles
+                      ? imageViewerLocalFiles.length
+                      : imageViewerAttachments.length) -
+                      1 && (
+                    <TouchableOpacity
+                      style={[
+                        styles.imageViewerNavButton,
+                        styles.imageViewerNavButtonRight,
+                      ]}
+                      onPress={handleNextImage}
+                    >
+                      <Ionicons
+                        name="chevron-forward"
+                        size={32}
+                        color="#FFFFFF"
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
-                {imageViewerCurrentIndex <
-                  (isViewingLocalFiles
-                    ? imageViewerLocalFiles.length
-                    : imageViewerAttachments.length) -
-                    1 && (
-                  <TouchableOpacity
+                {imageViewerDocumentContext && (
+                  <ScrollView
                     style={[
-                      styles.imageViewerNavButton,
-                      styles.imageViewerNavButtonRight,
+                      styles.imageViewerDetailPanel,
+                      isMobile
+                        ? styles.imageViewerDetailPanelMobile
+                        : styles.imageViewerDetailPanelDesktop,
                     ]}
-                    onPress={handleNextImage}
+                    contentContainerStyle={styles.imageViewerDetailPanelContent}
+                    showsVerticalScrollIndicator
                   >
-                    <Ionicons
-                      name="chevron-forward"
-                      size={32}
-                      color="#FFFFFF"
-                    />
-                  </TouchableOpacity>
+                    <View style={styles.imageViewerDetailHeader}>
+                      <Tooltip
+                        text={
+                          imageViewerDocumentContext.tooltipTitle ??
+                          "Campo de título"
+                        }
+                        position="bottom"
+                      >
+                        <ThemedText
+                          type="body1"
+                          style={styles.imageViewerDetailTitle}
+                          numberOfLines={2}
+                        >
+                          {imageViewerDocumentContext.title}
+                        </ThemedText>
+                      </Tooltip>
+                    </View>
+                    {imageViewerDocumentContext.entries.map((row, idx) => (
+                      <View
+                        key={`${row.label}-${idx}`}
+                        style={[
+                          styles.documentContextItem,
+                          !isMobile && styles.documentContextItemDesktop,
+                        ]}
+                      >
+                        <ThemedText
+                          type="caption"
+                          style={[
+                            styles.imageViewerDetailFieldLabel,
+                            !isMobile && styles.documentContextLabelDesktop,
+                          ]}
+                        >
+                          {row.label}
+                        </ThemedText>
+                        <ThemedText
+                          type="body2"
+                          style={[
+                            styles.imageViewerDetailFieldValue,
+                            { marginTop: isMobile ? 2 : 0 },
+                            !isMobile && styles.documentContextValueDesktop,
+                          ]}
+                        >
+                          {row.value}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </ScrollView>
                 )}
-              </>
+              </View>
             )}
           </View>
 
@@ -5368,6 +6285,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0, 0, 0, 0.05)",
   },
+  /** Contenedor del avatar con anillo animado encima (ver ContactSpecialistAvatarRing) */
+  contactAvatarSpecialistWrap: {
+    width: SPECIALIST_RING_SIZE,
+    height: SPECIALIST_RING_SIZE,
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  contactAvatarSpecialistRingAnimated: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 4,
+    backgroundColor: "transparent",
+  },
   contactAvatar: {
     width: 48,
     height: 48,
@@ -5429,8 +6359,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   botStatusDot: {
-    width: 13,
-    height: 13,
+    width: 11,
+    height: 11,
     borderRadius: 99,
     marginLeft: 8,
     marginRight: 2,
@@ -5457,6 +6387,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   chatHeaderInfo: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -5709,7 +6641,9 @@ const styles = StyleSheet.create({
   },
   filtersScroll: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
+    rowGap: 8,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -5717,19 +6651,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
-    borderWidth: 1,
     minWidth: 80,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  filterButtonSpecialist: {
+    minWidth: 96,
+    maxWidth: 120,
+    paddingHorizontal: 10,
   },
   chatHeaderActions: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: 8,
     position: "relative",
     zIndex: 2100,
+    alignSelf: "center",
+    minHeight: 40,
   },
   chatIAToggle: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchMessageButton: {
     padding: 8,
@@ -6001,6 +6946,65 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
   },
+  imageViewerBody: {
+    flex: 1,
+    width: "100%",
+  },
+  imageViewerBodyRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  imageViewerBodyStack: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
+  imageViewerImageColumn: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 0,
+    position: "relative",
+    justifyContent: "center",
+  },
+  imageViewerDetailPanel: {
+    backgroundColor: "rgba(28, 28, 32, 0.96)",
+    borderColor: "rgba(255, 255, 255, 0.14)",
+  },
+  imageViewerDetailPanelDesktop: {
+    width: 520,
+    maxWidth: "55%",
+    flexGrow: 0,
+    flexShrink: 0,
+    borderLeftWidth: 1,
+    maxHeight: "100%",
+  },
+  imageViewerDetailPanelMobile: {
+    width: "100%",
+    maxHeight: 280,
+    flexGrow: 0,
+    borderTopWidth: 1,
+  },
+  imageViewerDetailPanelContent: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  imageViewerDetailHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  imageViewerDetailTitle: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  imageViewerDetailFieldLabel: {
+    color: "rgba(255, 255, 255, 0.72)",
+    fontWeight: "600",
+  },
+  imageViewerDetailFieldValue: {
+    color: "#F3F4F6",
+  },
   imageViewerNavButton: {
     position: "absolute",
     left: 16,
@@ -6071,7 +7075,6 @@ const styles = StyleSheet.create({
   messageContextMenu: {
     position: "absolute",
     top: 28, // Justo debajo de la flecha (top: 8 + icono ~16px + padding)
-    right: 8, // Alineado con la flecha (mismo right que el botón)
     minWidth: 180,
     borderRadius: 8,
     borderWidth: 1,
@@ -6081,6 +7084,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 20,
+  },
+  /** outbound: menú hacia la izquierda, alineado con la flecha */
+  messageContextMenuOutbound: {
+    right: 8,
+  },
+  /** inbound: a la derecha del bubble; -8 px alinea con el botón de la flecha (también right: 8) */
+  messageContextMenuInbound: {
+    left: "100%",
+    marginLeft: -10,
   },
   messageContextMenuItem: {
     flexDirection: "row",
@@ -6201,5 +7213,121 @@ const styles = StyleSheet.create({
   messageQuoteFileIcon: {
     width: 24,
     height: 24,
+  },
+  documentMediaContainer: {
+    flexDirection: "column",
+    gap: 0,
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  documentMediaExpandedDesktop: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  documentMediaExpandedMobile: {
+    flexDirection: "column",
+  },
+  documentMediaCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    overflow: "hidden",
+    alignSelf: "flex-start",
+  },
+  documentMediaCardExpandedDesktop: {
+    width: 180,
+    minWidth: 180,
+    alignSelf: "stretch",
+  },
+  documentMediaCardMobile: {
+    alignSelf: "center",
+    width: 180,
+  },
+  documentAttachmentExpandedDesktop: {
+    width: "100%",
+    height: "100%",
+  },
+  documentAttachmentMobile: {
+    width: 180,
+    height: 180,
+    alignSelf: "center",
+  },
+  documentMediaFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+  },
+  documentIdLeftSlot: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  documentIdText: {
+    flex: 1,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  documentInfoButton: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 11,
+  },
+  documentContextPanel: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: "100%",
+    maxHeight: 220,
+    borderWidth: 0,
+    borderRadius: 0,
+    overflow: "hidden",
+  },
+  documentContextHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  documentContextTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  documentContextCloseButton: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  documentContextScroll: {
+    maxHeight: 170,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  documentContextItem: {
+    marginBottom: 10,
+  },
+  documentContextItemDesktop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  documentContextLabelDesktop: {
+    width: 140,
+    flexShrink: 0,
+    paddingTop: 1,
+  },
+  documentContextValueDesktop: {
+    flex: 1,
   },
 });

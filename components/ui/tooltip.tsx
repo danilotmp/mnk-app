@@ -64,13 +64,15 @@ export function Tooltip({
 
   // Estilos para posicionamiento
   const getTooltipStyle = (): ViewStyle => {
-    // Usar un color de fondo sólido y opaco
+    // Fondo sólido opaco para que siempre sea visible
     const backgroundColor = colors.surfaceVariant ?? colors.surface;
 
     const baseStyle: ViewStyle = {
       ...styles.tooltip,
       backgroundColor, // Fondo sólido y opaco
       shadowColor: colors.shadow,
+      borderColor: colors.border,
+      borderWidth: 1,
     };
 
     switch (position) {
@@ -121,7 +123,7 @@ export function Tooltip({
   return (
     <View ref={containerRef} style={styles.container} {...webProps}>
       {Platform.OS === "web" ? (
-        <View>{children}</View>
+        <View style={styles.webTriggerWrap}>{children}</View>
       ) : (
         <TouchableOpacitySafe activeOpacity={1} {...mobileProps}>
           {children}
