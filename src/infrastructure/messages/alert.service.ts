@@ -290,5 +290,50 @@ export function useAlert() {
 
       alertService.showConfirm(title, message, onConfirm, onCancel);
     },
+
+    /**
+     * Confirmación con textos ya resueltos (sin claves i18n).
+     * En web usa `window.confirm` porque `Alert.alert` no es fiable en react-native-web.
+     */
+    showConfirmDirect: (
+      title: string,
+      message: string,
+      onConfirm: () => void,
+      options?: {
+        onCancel?: () => void;
+        confirmText?: string;
+        cancelText?: string;
+        destructive?: boolean;
+      },
+    ) => {
+      const confirmText = options?.confirmText ?? "OK";
+      const cancelText = options?.cancelText ?? "Cancelar";
+      const onCancel = options?.onCancel;
+      const destructive = options?.destructive ?? false;
+
+      if (Platform.OS === "web") {
+        const fullMessage = title ? `${title}\n\n${message}` : message;
+        if (typeof window !== "undefined") {
+          const confirmed = window.confirm(fullMessage);
+          if (confirmed) {
+            onConfirm();
+          } else {
+            onCancel?.();
+          }
+        } else {
+          onConfirm();
+        }
+        return;
+      }
+
+      Alert.alert(title, message, [
+        { text: cancelText, style: "cancel", onPress: onCancel },
+        {
+          text: confirmText,
+          style: destructive ? "destructive" : "default",
+          onPress: onConfirm,
+        },
+      ]);
+    },
   };
 }

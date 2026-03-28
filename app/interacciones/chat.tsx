@@ -196,9 +196,7 @@ function ContactSpecialistAvatarRing({
 
   return (
     <View style={styles.contactAvatarSpecialistWrap}>
-      <Animated.View style={{ opacity: opacityAnim }}>
-        {children}
-      </Animated.View>
+      <Animated.View style={{ opacity: opacityAnim }}>{children}</Animated.View>
       <Animated.View
         pointerEvents="none"
         accessibilityElementsHidden
@@ -522,6 +520,40 @@ export default function ChatIAScreen() {
   const [updatingBotEnabled, setUpdatingBotEnabled] = useState(false);
   const [updatingLastMessagePendingRead, setUpdatingLastMessagePendingRead] =
     useState(false);
+  const [updatingSpecialistAssignment, setUpdatingSpecialistAssignment] =
+    useState(false);
+  const specialistHelpIconOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const active = selectedContact?.specialistAssignment === true;
+    specialistHelpIconOpacity.stopAnimation();
+    specialistHelpIconOpacity.setValue(1);
+
+    if (!active) {
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(specialistHelpIconOpacity, {
+          toValue: 0.35,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(specialistHelpIconOpacity, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+
+    return () => {
+      loop.stop();
+      specialistHelpIconOpacity.setValue(1);
+    };
+  }, [selectedContact?.id, selectedContact?.specialistAssignment, specialistHelpIconOpacity]);
 
   // Estado del selector de emojis
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -550,7 +582,8 @@ export default function ChatIAScreen() {
     (list: ContactWithLastMessage[]) =>
       [...list].sort(
         (a, b) =>
-          getContactListActivityTimestamp(b) - getContactListActivityTimestamp(a),
+          getContactListActivityTimestamp(b) -
+          getContactListActivityTimestamp(a),
       ),
     [],
   );
@@ -1772,8 +1805,7 @@ export default function ChatIAScreen() {
                 (contact.unreadCount || 0) + unreadDelta,
               ),
               lastMessage: mappedMessage,
-              updatedAt:
-                mappedMessage.updatedAt || mappedMessage.createdAt,
+              updatedAt: mappedMessage.updatedAt || mappedMessage.createdAt,
             };
           });
           return sortContactsByLastMessage(merged);
@@ -1811,8 +1843,7 @@ export default function ChatIAScreen() {
                 const row: ContactWithLastMessage = {
                   ...fetched,
                   lastMessage: mappedMessage,
-                  updatedAt:
-                    mappedMessage.updatedAt || mappedMessage.createdAt,
+                  updatedAt: mappedMessage.updatedAt || mappedMessage.createdAt,
                   unreadCount: unreadDelta > 0 ? unreadDelta : undefined,
                 };
                 return sortContactsByLastMessage([row, ...p]);
@@ -2463,6 +2494,97 @@ export default function ChatIAScreen() {
     }
   }, [alert, selectedContact, updatingLastMessagePendingRead]);
 
+  const handleToggleSpecialistAssignment = useCallback(() => {
+    if (!selectedContact?.id || updatingSpecialistAssignment) return;
+
+    const contactId = selectedContact.id;
+    const currentValue = selectedContact.specialistAssignment === true;
+    const nextValue = !currentValue;
+
+    const runUpdate = () => {
+      void (async () => {
+        setSelectedContact((prev) =>
+          prev && prev.id === contactId
+            ? { ...prev, specialistAssignment: nextValue }
+            : prev,
+        );
+        setContacts((prev) =>
+          prev.map((contact) =>
+            contact.id === contactId
+              ? { ...contact, specialistAssignment: nextValue }
+              : contact,
+          ),
+        );
+
+        try {
+          setUpdatingSpecialistAssignment(true);
+          const updatedContact = await InteraccionesService.updateContact(
+            contactId,
+            { specialistAssignment: nextValue },
+          );
+
+          setSelectedContact((prev) =>
+            prev && prev.id === contactId
+              ? {
+                  ...prev,
+                  ...updatedContact,
+                  specialistAssignment:
+                    updatedContact.specialistAssignment ?? nextValue,
+                }
+              : prev,
+          );
+          setContacts((prev) =>
+            prev.map((contact) =>
+              contact.id === contactId
+                ? {
+                    ...contact,
+                    ...updatedContact,
+                    specialistAssignment:
+                      updatedContact.specialistAssignment ?? nextValue,
+                  }
+                : contact,
+            ),
+          );
+        } catch (error: any) {
+          setSelectedContact((prev) =>
+            prev && prev.id === contactId
+              ? { ...prev, specialistAssignment: currentValue }
+              : prev,
+          );
+          setContacts((prev) =>
+            prev.map((contact) =>
+              contact.id === contactId
+                ? { ...contact, specialistAssignment: currentValue }
+                : contact,
+            ),
+          );
+          alert.showError(
+            "No se pudo actualizar la asignación a especialista",
+            error?.message,
+          );
+        } finally {
+          setUpdatingSpecialistAssignment(false);
+        }
+      })();
+    };
+
+    if (currentValue && !nextValue) {
+      alert.showConfirmDirect(
+        "Quitar asignación",
+        "¿Seguro? Si aún no respondiste al usuario, el seguimiento del caso puede perderse.",
+        runUpdate,
+        {
+          cancelText: "Cancelar",
+          confirmText: "Quitar asignación",
+          destructive: true,
+        },
+      );
+      return;
+    }
+
+    runUpdate();
+  }, [alert, selectedContact, updatingSpecialistAssignment]);
+
   // Solicitar permisos para expo-image-picker
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -2600,6 +2722,13 @@ export default function ChatIAScreen() {
         formData.append("direction", payload.direction);
         if (payload.status) {
           formData.append("status", payload.status);
+        }
+        formData.append(
+          "isFromBot",
+          String(payload.isFromBot !== undefined ? payload.isFromBot : false),
+        );
+        if (payload.parentMessageId) {
+          formData.append("parentMessageId", payload.parentMessageId);
         }
 
         // Agregar archivos según la plataforma
@@ -2894,6 +3023,7 @@ export default function ChatIAScreen() {
           content: messageText.trim(),
           status: "SENT" as any,
           parentMessageId: replyingToMessage?.id,
+          isFromBot: false,
         });
       } else {
         // Sin archivos ni texto: no debería llegar aquí, pero por seguridad
@@ -2960,6 +3090,22 @@ export default function ChatIAScreen() {
             }),
           );
           setContacts(sortContactsByLastMessage(contactsWithMessages));
+          const selId = selectedContact.id;
+          const refreshed = contactsWithMessages.find((c) => c.id === selId);
+          if (refreshed) {
+            setSelectedContact((prev) =>
+              prev && prev.id === selId
+                ? {
+                    ...prev,
+                    specialistAssignment: refreshed.specialistAssignment,
+                    botEnabled: refreshed.botEnabled,
+                    lastMessagePendingRead: refreshed.lastMessagePendingRead,
+                    updatedAt: refreshed.updatedAt,
+                    lastInteractionAt: refreshed.lastInteractionAt,
+                  }
+                : prev,
+            );
+          }
         } catch (error) {
           console.error("Error al recargar contactos:", error);
         } finally {
@@ -3300,8 +3446,7 @@ export default function ChatIAScreen() {
                   {filteredContacts.map((contact) => {
                     const isSelected = selectedContact?.id === contact.id;
                     /** Colores: pending + botEnabled (azul / verde / gris). Visibilidad: solo si el último mensaje es inbound */
-                    const pendingRead =
-                      contact.lastMessagePendingRead === true;
+                    const pendingRead = contact.lastMessagePendingRead === true;
                     const botEnabledTrue = contact.botEnabled === true;
                     const botEnabledFalse = contact.botEnabled === false;
                     const isLastMessageInbound = isInboundDirection(
@@ -3566,6 +3711,39 @@ export default function ChatIAScreen() {
                     </View>
                   </View>
                   <View style={styles.chatHeaderActions}>
+                    {/* Asignación a especialista (mismo servicio que bot; true→false con confirmación) */}
+                    <Tooltip
+                      text={
+                        selectedContact?.specialistAssignment === true
+                          ? "Quitar ayuda especializada"
+                          : "Activar ayuda especialista"
+                      }
+                      position="bottom"
+                    >
+                      <TouchableOpacity
+                        onPress={handleToggleSpecialistAssignment}
+                        style={styles.chatIAToggle}
+                        disabled={
+                          updatingSpecialistAssignment || !selectedContact?.id
+                        }
+                      >
+                        <Animated.View
+                          style={{
+                            opacity: specialistHelpIconOpacity,
+                          }}
+                        >
+                          <Ionicons
+                            name="medkit"
+                            size={24}
+                            color={
+                              selectedContact?.specialistAssignment === true
+                                ? colors.secondary
+                                : colors.textSecondary
+                            }
+                          />
+                        </Animated.View>
+                      </TouchableOpacity>
+                    </Tooltip>
                     {/* Botón de activar/desactivar Marcar como no Leido */}
                     <Tooltip
                       text={
@@ -3583,7 +3761,7 @@ export default function ChatIAScreen() {
                         }
                       >
                         <Ionicons
-                          name="mail-unread-outline"
+                          name="mail-unread"
                           size={24}
                           color={
                             selectedContact?.lastMessagePendingRead === true
@@ -3775,7 +3953,7 @@ export default function ChatIAScreen() {
                           style={styles.chatIAToggle}
                         >
                           <Ionicons
-                            name="person-outline"
+                            name="person"
                             size={24}
                             color={colors.textSecondary}
                           />
@@ -4398,76 +4576,114 @@ export default function ChatIAScreen() {
                                         >
                                           {imageBlock}
 
-                                          {!isContextExpanded && (
-                                            <View
-                                              style={[
-                                                styles.documentMediaFooter,
-                                                {
-                                                  borderTopColor: colors.border,
-                                                },
-                                              ]}
-                                            >
-                                              <View
-                                                style={
-                                                  styles.documentIdLeftSlot
-                                                }
-                                              >
-                                                <DynamicIcon
-                                                  name="FontAwesome5:robot"
-                                                  size={11}
-                                                  color={
-                                                    documentCardForegroundColor
-                                                  }
-                                                />
-                                              </View>
-                                              <ThemedText
-                                                type="caption"
+                                          {!isContextExpanded &&
+                                            (hasContextDetails ? (
+                                              <TouchableOpacity
                                                 style={[
-                                                  styles.documentIdText,
+                                                  styles.documentMediaFooter,
                                                   {
-                                                    color:
-                                                      documentCardForegroundColor,
+                                                    borderTopColor:
+                                                      colors.border,
                                                   },
                                                 ]}
-                                                numberOfLines={1}
+                                                onPress={() =>
+                                                  setExpandedMediaContextMessageId(
+                                                    message.id,
+                                                  )
+                                                }
+                                                activeOpacity={0.88}
                                               >
-                                                {message.mediaIdentifier
-                                                  ? message.mediaIdentifier
-                                                  : "Detalle del documento"}
-                                              </ThemedText>
-                                              {hasContextDetails && (
-                                                <TouchableOpacity
-                                                  onPress={() =>
-                                                    setExpandedMediaContextMessageId(
-                                                      isContextExpanded
-                                                        ? null
-                                                        : message.id,
-                                                    )
-                                                  }
-                                                  style={
-                                                    styles.documentInfoButton
-                                                  }
-                                                  activeOpacity={0.7}
+                                                <View
+                                                  style={[
+                                                    styles.documentIdLeftSlot,
+                                                    {
+                                                      opacity: 0.28,
+                                                    },
+                                                  ]}
+                                                >
+                                                  <DynamicIcon
+                                                    name="FontAwesome5:robot"
+                                                    size={11}
+                                                    color={
+                                                      documentCardForegroundColor
+                                                    }
+                                                  />
+                                                </View>
+                                                <ThemedText
+                                                  type="caption"
+                                                  style={[
+                                                    styles.documentIdText,
+                                                    {
+                                                      color:
+                                                        documentCardForegroundColor,
+                                                    },
+                                                  ]}
+                                                  numberOfLines={1}
+                                                >
+                                                  {message.mediaIdentifier
+                                                    ? message.mediaIdentifier
+                                                    : "Detalle del documento"}
+                                                </ThemedText>
+                                                <View
+                                                  style={[
+                                                    styles.documentInfoButton,
+                                                    { opacity: 0.28 },
+                                                  ]}
                                                 >
                                                   <Ionicons
                                                     name={
                                                       isMobile
-                                                        ? isContextExpanded
-                                                          ? "chevron-up"
-                                                          : "chevron-down"
-                                                        : isContextExpanded
-                                                          ? "chevron-back"
-                                                          : "chevron-forward"
+                                                        ? "chevron-down"
+                                                        : "chevron-forward"
                                                     }
                                                     size={18}
                                                     color={
                                                       documentCardForegroundColor
                                                     }
                                                   />
-                                                </TouchableOpacity>
-                                              )}
-                                            </View>
-                                          )}
+                                                </View>
+                                              </TouchableOpacity>
+                                            ) : (
+                                              <View
+                                                style={[
+                                                  styles.documentMediaFooter,
+                                                  {
+                                                    borderTopColor:
+                                                      colors.border,
+                                                  },
+                                                ]}
+                                              >
+                                                <View
+                                                  style={[
+                                                    styles.documentIdLeftSlot,
+                                                    { opacity: 0.28 },
+                                                  ]}
+                                                >
+                                                  <DynamicIcon
+                                                    name="FontAwesome5:robot"
+                                                    size={11}
+                                                    color={
+                                                      documentCardForegroundColor
+                                                    }
+                                                  />
+                                                </View>
+                                                <ThemedText
+                                                  type="caption"
+                                                  style={[
+                                                    styles.documentIdText,
+                                                    {
+                                                      color:
+                                                        documentCardForegroundColor,
+                                                    },
+                                                  ]}
+                                                  numberOfLines={1}
+                                                >
+                                                  {message.mediaIdentifier
+                                                    ? message.mediaIdentifier
+                                                    : "Detalle del documento"}
+                                                </ThemedText>
+                                              </View>
+                                            ))}
                                         </View>
 
                                         {isContextExpanded &&

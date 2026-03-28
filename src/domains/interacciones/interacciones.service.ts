@@ -103,9 +103,7 @@ export const InteraccionesService = {
       if (payload.parentMessageId) {
         formData.append('parentMessageId', payload.parentMessageId);
       }
-      if (payload.isFromBot !== undefined) {
-        formData.append('isFromBot', String(payload.isFromBot));
-      }
+      formData.append('isFromBot', String(payload.isFromBot ?? false));
       if (payload.aiContext) {
         formData.append('aiContext', JSON.stringify(payload.aiContext));
       }
