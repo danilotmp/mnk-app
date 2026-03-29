@@ -15,6 +15,7 @@ import React, { useCallback, useMemo } from "react";
 import {
     ActivityIndicator,
     ScrollView,
+    StyleSheet,
     TouchableOpacity,
     View,
     useWindowDimensions,
@@ -43,6 +44,8 @@ export function DataTable<T = any>({
   actionsColumnLabel,
   enableRowClick = false,
   showRowNumber = true,
+  footerSpannedRow,
+  embeddedInWizard = false,
 }: DataTableProps<T>) {
   const { colors, isDark, shadows } = useTheme();
   const { isMobile } = useResponsive();
@@ -271,22 +274,172 @@ export function DataTable<T = any>({
     onRowPress,
   ]);
 
+  const footerSpannedRowValid =
+    footerSpannedRow &&
+    footerSpannedRow.reduce((acc, c) => acc + c.colSpan, 0) ===
+      finalColumns.length;
+
+  /**
+   * Celdas que abarcan varias columnas (solo pie de tabla).
+   */
+  const renderSpannedColumnsRow = (
+    cells: NonNullable<DataTableProps<T>["footerSpannedRow"]>,
+    rowWrapperStyle: object,
+    useHeaderCellStyle: boolean,
+  ) => {
+    let colIndex = 0;
+    return (
+      <View style={rowWrapperStyle}>
+        {cells.map((cell, i) => {
+          let flexSum = 0;
+          let minWidthSum = 0;
+          let maxWidthSum: number | undefined;
+          let allFixed = true;
+
+          for (let j = 0; j < cell.colSpan; j++) {
+            const column = finalColumns[colIndex + j];
+            if (!column) continue;
+            const idx = colIndex + j;
+            const columnFlex = getColumnFlex(column, idx);
+            const columnMinWidth = getColumnMinWidth(column);
+            const isActionsColumn =
+              column.key === "actions" || column.key === "acciones";
+            const isRowNumberColumn = column.key === "rowNumber";
+            flexSum += columnFlex;
+            minWidthSum += columnMinWidth;
+            if (!isActionsColumn && !isRowNumberColumn) {
+              allFixed = false;
+            }
+          }
+
+          if (allFixed && cell.colSpan > 0) {
+            maxWidthSum = minWidthSum;
+          }
+
+          const isFirst = i === 0;
+          const isLast = i === cells.length - 1;
+          const spanStartCol = colIndex;
+          const firstSpannedColumn = finalColumns[spanStartCol];
+          colIndex += cell.colSpan;
+
+          const CellWrapper = useHeaderCellStyle ? styles.headerCell : styles.cell;
+          const InnerWrapper = useHeaderCellStyle
+            ? styles.headerCellInner
+            : styles.cellInner;
+
+          /** Misma lógica flex que `renderRow` para que el pie alinee con cada columna. */
+          let cellOuterFlexStyle: Record<string, number | undefined>;
+          if (cell.colSpan === 1 && firstSpannedColumn) {
+            const column = firstSpannedColumn;
+            const idx = spanStartCol;
+            const columnFlex = getColumnFlex(column, idx);
+            const columnMinWidth = getColumnMinWidth(column);
+            const isCriticalColumn =
+              column.key === "email" ||
+              column.key === "phone" ||
+              column.key === "teléfono" ||
+              column.key === "name" ||
+              column.key === "nombre";
+            const isActionsColumn =
+              column.key === "actions" || column.key === "acciones";
+            const isRowNumberColumn = column.key === "rowNumber";
+            const isCompactCol = isCompactColumn(column);
+            cellOuterFlexStyle = {
+              flex: columnFlex,
+              minWidth: columnMinWidth,
+              maxWidth:
+                isActionsColumn || isRowNumberColumn
+                  ? columnMinWidth
+                  : undefined,
+              flexShrink:
+                isActionsColumn || isRowNumberColumn
+                  ? 0
+                  : isCompactCol
+                    ? 1.5
+                    : isCriticalColumn
+                      ? 0.5
+                      : 1,
+              flexGrow:
+                isActionsColumn || isRowNumberColumn
+                  ? 0
+                  : isCompactCol
+                    ? 0
+                    : 1,
+              flexBasis: undefined,
+            };
+          } else {
+            cellOuterFlexStyle = {
+              flex: flexSum,
+              minWidth: minWidthSum,
+              maxWidth: maxWidthSum,
+              flexShrink: maxWidthSum != null ? 0 : undefined,
+              flexGrow: maxWidthSum != null ? 0 : undefined,
+              flexBasis: undefined,
+            };
+          }
+
+          return (
+            <View
+              key={`spanned-${i}`}
+              style={[
+                CellWrapper,
+                cellOuterFlexStyle,
+                cell.align === "center" &&
+                  (useHeaderCellStyle
+                    ? styles.headerCellCenter
+                    : styles.cellCenter),
+                cell.align === "right" &&
+                  (useHeaderCellStyle
+                    ? styles.headerCellRight
+                    : styles.cellRight),
+                isFirst && styles.cellFirst,
+                isLast && styles.cellLast,
+              ]}
+            >
+              <View
+                style={[
+                  InnerWrapper,
+                  cell.align === "right" && {
+                    alignItems: "flex-end" as const,
+                    width: "100%",
+                  },
+                ]}
+              >
+                {cell.content}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   // Calcular altura máxima para el DataTable
-  // Restamos espacio para header de la app, header de la página, búsqueda, padding, y paginación
+  // Restamos espacio para header de la app, header de la página, búsqueda, padding, y paginación (si aplica)
   const appHeaderHeight = isMobile ? 60 : 80; // Header principal de la app
   const pageHeaderHeight = isMobile ? 100 : 120; // Header de la página (título, botón)
   const searchBarHeight = isMobile ? 80 : 100; // Barra de búsqueda y filtros
   const pagePadding = isMobile ? 24 : 24; // Padding superior e inferior de la página (reducido)
   const paginationHeight = isMobile ? 120 : 80; // Altura de la paginación
+  /** Solo reservar hueco de paginación cuando se muestra (evita inflar el card en tablas sin paginación). */
+  const paginationReserve = showPagination ? paginationHeight : 0;
+  /**
+   * Wizard comercial: stepper, card con título/descripción, fila de botones y paddings del ScrollView padre.
+   * Sin esto, `maxTableHeight` casi llena la ventana y la tabla + chrome desbordan el viewport.
+   */
+  const wizardChromeReserve = embeddedInWizard ? (isMobile ? 300 : 360) : 0;
   const availableHeight =
     windowHeight -
     appHeaderHeight -
     pageHeaderHeight -
     searchBarHeight -
     pagePadding -
-    paginationHeight;
-  // Usar 95% del espacio disponible para maximizar el tamaño de la tabla
-  const maxTableHeight = Math.max(300, availableHeight * 0.95); // 95% del espacio disponible, mínimo 300px
+    paginationReserve -
+    wizardChromeReserve;
+  const heightRatio = embeddedInWizard ? 0.88 : 0.95;
+  const minTableBody = embeddedInWizard ? 200 : 300;
+  const maxTableHeight = Math.max(minTableBody, availableHeight * heightRatio);
+  const cardMaxHeight = maxTableHeight + (showPagination ? paginationHeight : 0);
 
   /**
    * Lista estándar de nombres de columnas que deben tener comportamiento compacto
@@ -320,6 +473,10 @@ export function DataTable<T = any>({
   const isCompactColumn = (column: TableColumn<T>): boolean => {
     const key = column.key?.toLowerCase() || "";
     const label = column.label?.toLowerCase() || "";
+    if (column.key === "chatIAFlow") {
+      return true;
+    }
+    /** Contadores mensuales: no compactos — mismo flex y minWidth fijo para anchos iguales. */
     return compactColumnKeys.some(
       (compactKey) =>
         key === compactKey.toLowerCase() ||
@@ -375,6 +532,15 @@ export function DataTable<T = any>({
     // Columna de contador: tamaño fijo pequeño
     if (column.key === "rowNumber") {
       return isMobile ? 40 : 50;
+    }
+
+    // Contadores mensuales: mismo mínimo para todas (valores alineados)
+    if (/^month.*count$/i.test(column.key || "")) {
+      return isMobile ? 110 : 128;
+    }
+
+    if (column.key === "chatIAFlow") {
+      return isMobile ? 108 : 128;
     }
 
     // Calcular ancho estimado del label
@@ -539,7 +705,7 @@ export function DataTable<T = any>({
                   maxWidth:
                     isActionsColumn || isRowNumberColumn
                       ? columnMinWidth
-                      : undefined, // Acciones y contador: tamaño fijo
+                      : undefined,
                   flexShrink:
                     isActionsColumn || isRowNumberColumn
                       ? 0
@@ -547,13 +713,14 @@ export function DataTable<T = any>({
                         ? 1.5
                         : isCriticalColumn
                           ? 0.5
-                          : 1, // Columnas compactas se comprimen más
+                          : 1,
                   flexGrow:
                     isActionsColumn || isRowNumberColumn
                       ? 0
                       : isCompactCol
                         ? 0
-                        : 1, // Columnas compactas, acciones y contador no crecen
+                        : 1,
+                  flexBasis: undefined,
                 },
                 column.align === "center" && styles.cellCenter,
                 column.align === "right" && styles.cellRight,
@@ -561,7 +728,15 @@ export function DataTable<T = any>({
                 isLastColumn && styles.cellLast,
               ]}
             >
-              <View style={styles.cellInner}>
+              <View
+                style={[
+                  styles.cellInner,
+                  column.align === "right" && {
+                    alignItems: "flex-end" as const,
+                    width: "100%",
+                  },
+                ]}
+              >
                 {renderCell(item, column, index)}
               </View>
             </View>
@@ -989,7 +1164,8 @@ export function DataTable<T = any>({
       style={
         [
           styles.container,
-          { maxHeight: maxTableHeight + paginationHeight },
+          embeddedInWizard && { minHeight: 0 },
+          { maxHeight: cardMaxHeight },
         ] as any
       }
     >
@@ -1002,29 +1178,34 @@ export function DataTable<T = any>({
       >
         {/* Contenedor interno con ancho mínimo */}
         <View
-          style={{ ...styles.tableWrapper, maxHeight: maxTableHeight } as any}
+          style={
+            [
+              styles.tableWrapper,
+              {
+                maxHeight: maxTableHeight,
+                height: maxTableHeight,
+                flexDirection: "column",
+              },
+            ] as any
+          }
         >
           {/* Encabezado de la tabla */}
-          <View style={styles.header}>
+          <View style={[styles.header, { flexShrink: 0 }]}>
             <View style={styles.headerRow}>
               {finalColumns.map((column, colIndex) => {
                 const columnFlex = getColumnFlex(column, colIndex);
                 const columnMinWidth = getColumnMinWidth(column);
                 const isLastColumn = colIndex === finalColumns.length - 1;
                 const isFirstColumn = colIndex === 0;
-                // Columnas críticas no deben comprimirse tanto
                 const isCriticalColumn =
                   column.key === "email" ||
                   column.key === "phone" ||
                   column.key === "teléfono" ||
                   column.key === "name" ||
                   column.key === "nombre";
-                // Columna de acciones: tamaño fijo, no crece ni se comprime
                 const isActionsColumn =
                   column.key === "actions" || column.key === "acciones";
-                // Columna de contador: tamaño fijo, no crece ni se comprime
                 const isRowNumberColumn = column.key === "rowNumber";
-                // Columnas compactas: más pequeñas, se comprimen más
                 const isCompactCol = isCompactColumn(column);
                 return (
                   <View
@@ -1037,7 +1218,7 @@ export function DataTable<T = any>({
                         maxWidth:
                           isActionsColumn || isRowNumberColumn
                             ? columnMinWidth
-                            : undefined, // Acciones y contador: tamaño fijo
+                            : undefined,
                         flexShrink:
                           isActionsColumn || isRowNumberColumn
                             ? 0
@@ -1045,13 +1226,13 @@ export function DataTable<T = any>({
                               ? 1.5
                               : isCriticalColumn
                                 ? 0.5
-                                : 1, // Columnas compactas se comprimen más
+                                : 1,
                         flexGrow:
                           isActionsColumn || isRowNumberColumn
                             ? 0
                             : isCompactCol
                               ? 0
-                              : 1, // Columnas compactas, acciones y contador no crecen
+                              : 1,
                       },
                       column.align === "center" && styles.headerCellCenter,
                       column.align === "right" && styles.headerCellRight,
@@ -1073,14 +1254,21 @@ export function DataTable<T = any>({
             </View>
           </View>
 
-          {/* Cuerpo de la tabla con scroll vertical interno */}
           <ScrollView
             style={styles.body}
             showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ flexGrow: 1 }}
+            contentContainerStyle={{ flexGrow: 0 }}
           >
             {data.map((item, index) => renderRow(item, index))}
           </ScrollView>
+          {footerSpannedRowValid &&
+            renderSpannedColumnsRow(
+              footerSpannedRow as NonNullable<
+                DataTableProps<T>["footerSpannedRow"]
+              >,
+              [styles.row, styles.footerSpannedRow, { flexShrink: 0 }],
+              false,
+            )}
         </View>
       </ScrollView>
 

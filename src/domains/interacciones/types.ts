@@ -179,3 +179,50 @@ export interface ContactWithLastMessage extends Contact {
   unreadCount?: number;
 }
 
+/** Query GET /interacciones/dashboard/period */
+export interface InteraccionesDashboardPeriodParams {
+  companyId: string;
+  /**
+   * Opcional: sin enviar → el backend devuelve todas las instancias con datos en el mes.
+   * Con valor → `data.instances` suele tener un solo elemento (misma forma).
+   */
+  channelInstance?: string;
+  /** Si se usa uno, deben enviarse juntos (mes 1–12 UTC). Sin ambos → mes actual UTC. */
+  year?: number;
+  month?: number;
+  /**
+   * Solo afecta transacciones/documentos (mensajes). Por defecto en backend: true (solo outbound).
+   */
+  onlyOutbound?: boolean;
+}
+
+/** Una fila de `data.instances` (agrupación por channel_instance). */
+export interface InteraccionesDashboardPeriodInstanceRow {
+  channelInstance: string;
+  /** Mensajes del mes que cumplen messageCountCriteria */
+  transactionsCount: number;
+  countDocuments: number;
+  /** Órdenes del mes (chat_order_records vinculadas al mensaje) */
+  operationsCount: number;
+  paymentsCount: number;
+  /** Alineado con ejecuciones en backend; suele coincidir con paymentsCount */
+  executionsCount: number;
+}
+
+/**
+ * Payload `data` de GET /interacciones/dashboard/period (envelope estándar con `data`).
+ */
+export interface InteraccionesDashboardPeriodData {
+  companyId?: string;
+  product?: string;
+  periodYear?: number;
+  periodMonth?: number;
+  timezoneNote?: string;
+  /** null = se listaron todas las instancias */
+  channelInstanceFilter?: string | null;
+  /** Textos en español para tooltips / ayuda */
+  metricDefinitions?: Record<string, unknown>;
+  messageCountCriteria?: Record<string, unknown>;
+  instances: InteraccionesDashboardPeriodInstanceRow[];
+}
+

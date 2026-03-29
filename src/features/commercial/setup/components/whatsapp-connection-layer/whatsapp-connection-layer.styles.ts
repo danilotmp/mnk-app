@@ -38,6 +38,27 @@ export const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
+  n8nCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+  },
+  /** Icono + etiqueta compacta; padding suficiente para área táctil */
+  flowDownloadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxWidth: "100%",
+  },
+  flowDownloadButtonLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   modalContent: {
     padding: 20,
     gap: 20,

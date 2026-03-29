@@ -547,7 +547,15 @@ export interface Translations {
         instanceDeactivated: string;
         errorTogglingStatus: string;
         columnWhatsApp: string;
-        columnQRCode: string;
+        columnMonthTransactions: string;
+        columnMonthDocuments: string;
+        columnMonthOperations: string;
+        columnMonthPayments: string;
+        columnMonthExecutions: string;
+        footerTotalLabel: string;
+        columnChatIAFlow: string;
+        downloadChatIAFlowTooltip: string;
+        downloadChatIAFlowButton: string;
         viewQR: string;
         noQR: string;
         columnStatus: string;

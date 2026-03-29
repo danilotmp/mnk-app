@@ -118,4 +118,20 @@ export interface DataTableProps<T = any> {
   // Opciones adicionales
   enableRowClick?: boolean; // Opcional: habilita click en fila para abrir edición (default: false)
   showRowNumber?: boolean; // Opcional: muestra columna de contador al inicio (default: false)
+
+  /**
+   * Fila de pie: la suma de `colSpan` debe coincidir con el número de columnas finales.
+   */
+  footerSpannedRow?: Array<{
+    colSpan: number;
+    content: React.ReactNode;
+    align?: "left" | "center" | "right";
+  }>;
+
+  /**
+   * Cuando la tabla vive dentro de un wizard / ScrollView padre con mucho chrome (stepper, títulos),
+   * el cálculo por defecto de altura asume pantalla de listado completa y queda demasiado alto.
+   * Activa reserva extra y evita minHeight grande del card para que quepa en el viewport útil.
+   */
+  embeddedInWizard?: boolean;
 }

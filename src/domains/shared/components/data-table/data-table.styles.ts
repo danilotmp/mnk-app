@@ -6,6 +6,18 @@
 import { StyleSheet } from "react-native";
 import type { DataTableTheme } from "./data-table.types";
 
+/** #RRGGBB → rgba(..., a). Si el formato no es hex de 6 dígitos, devuelve el valor original. */
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.trim().replace(/^#/, "");
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return hex;
+  }
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const CONTAINER_BASE = {
   flex: 1,
   borderRadius: 10,
@@ -90,6 +102,17 @@ export const createDataTableStyles = (
       minWidth: "100%",
       width: "100%",
     },
+    footerSpannedRow: {
+      flexShrink: 0,
+      minHeight: 48,
+      borderTopWidth: 1,
+      borderTopColor: theme?.colors.border ?? "transparent",
+      ...(theme && {
+        backgroundColor: theme.isDark
+          ? hexToRgba(theme.colors.surfaceVariant, 0.38)
+          : theme.colors.surfaceVariant,
+      }),
+    },
     headerCell: {
       paddingVertical: 12,
       paddingHorizontal: isMobile ? 12 : 16,
@@ -100,7 +123,7 @@ export const createDataTableStyles = (
     headerCellInner: {
       flex: 1,
       marginVertical: 6,
-      paddingHorizontal: 8,
+      paddingHorizontal: isMobile ? 10 : 12,
       minHeight: 0,
       justifyContent: "center",
     },
@@ -137,7 +160,7 @@ export const createDataTableStyles = (
     cellInner: {
       flex: 1,
       marginVertical: 6,
-      paddingHorizontal: 8,
+      paddingHorizontal: isMobile ? 10 : 12,
       minHeight: 0,
       justifyContent: "center",
     },

@@ -13,6 +13,9 @@ import type {
   ContextSummary,
   ContextSummaryPayload,
   InteraccionesContextProfile,
+  InteraccionesDashboardPeriodData,
+  InteraccionesDashboardPeriodInstanceRow,
+  InteraccionesDashboardPeriodParams,
   InteraccionesInstitutionalContextBody,
   InteraccionesWhatsappInstance,
   Message,
@@ -31,6 +34,74 @@ const buildQuery = (base: string, params?: Record<string, any>): string => {
     .join('&');
   return qs ? `${base}?${qs}` : base;
 };
+
+function parseNonNegativeInt(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return Math.max(0, Math.floor(n));
+  }
+  return 0;
+}
+
+function normalizeDashboardPeriodInstanceRow(
+  raw: Record<string, any>,
+): InteraccionesDashboardPeriodInstanceRow {
+  const operationsRaw =
+    raw.operationsCount ??
+    raw.operations_count ??
+    raw.executionsCount ??
+    raw.executions_count;
+  const paymentsRaw = raw.paymentsCount ?? raw.payments_count;
+  const execRaw = raw.executionsCount ?? raw.executions_count ?? paymentsRaw;
+  return {
+    channelInstance: String(
+      raw.channelInstance ?? raw.channel_instance ?? "",
+    ).trim(),
+    transactionsCount: parseNonNegativeInt(
+      raw.transactionsCount ?? raw.transactions_count,
+    ),
+    countDocuments: parseNonNegativeInt(
+      raw.countDocuments ?? raw.count_documents,
+    ),
+    operationsCount: parseNonNegativeInt(operationsRaw),
+    paymentsCount: parseNonNegativeInt(paymentsRaw),
+    executionsCount: parseNonNegativeInt(execRaw),
+  };
+}
+
+function emptyDashboardPeriodData(): InteraccionesDashboardPeriodData {
+  return { instances: [] };
+}
+
+function normalizeDashboardPeriodPayload(
+  raw: Record<string, any> | null | undefined,
+): InteraccionesDashboardPeriodData {
+  if (!raw || typeof raw !== "object") {
+    return emptyDashboardPeriodData();
+  }
+  const listRaw = raw.instances ?? raw.instance_rows;
+  const list = Array.isArray(listRaw) ? listRaw : [];
+  const instances = list
+    .filter((row) => row && typeof row === "object")
+    .map((row) => normalizeDashboardPeriodInstanceRow(row as Record<string, any>));
+  return {
+    companyId: raw.companyId ?? raw.company_id,
+    product: raw.product,
+    periodYear: raw.periodYear ?? raw.period_year,
+    periodMonth: raw.periodMonth ?? raw.period_month,
+    timezoneNote: raw.timezoneNote ?? raw.timezone_note,
+    channelInstanceFilter:
+      raw.channelInstanceFilter ?? raw.channel_instance_filter ?? null,
+    metricDefinitions:
+      raw.metricDefinitions ?? raw.metric_definitions ?? undefined,
+    messageCountCriteria:
+      raw.messageCountCriteria ?? raw.message_count_criteria,
+    instances,
+  };
+}
 
 export const InteraccionesService = {
   /**
@@ -81,6 +152,44 @@ export const InteraccionesService = {
       }))
       .filter((i) => i.whatsapp.length > 0);
     return { whatsappInstances };
+  },
+
+  /**
+   * Dashboard por mes e instancias (mes calendario UTC si no se envían year/month).
+   * GET /interacciones/dashboard/period?companyId=… [&channelInstance=…] [&year=&month=] [&onlyOutbound=]
+   * Sin `channelInstance` → todas las instancias con datos en el mes (`data.instances`).
+   */
+  async getDashboardPeriod(
+    params: InteraccionesDashboardPeriodParams,
+  ): Promise<InteraccionesDashboardPeriodData> {
+    const { companyId, channelInstance, year, month, onlyOutbound } = params;
+    const cid = companyId.trim();
+    if (!cid) {
+      return emptyDashboardPeriodData();
+    }
+    const q: Record<string, string | number | boolean> = { companyId: cid };
+    const ch = channelInstance?.trim();
+    if (ch) {
+      q.channelInstance = ch;
+    }
+    if (year !== undefined && month !== undefined) {
+      q.year = year;
+      q.month = month;
+    }
+    if (onlyOutbound !== undefined) {
+      q.onlyOutbound = onlyOutbound;
+    }
+    const endpoint = buildQuery(
+      `${BASE_INTERACCIONES}/dashboard/period`,
+      q,
+    );
+    const res = await apiClient.get<Record<string, any>>(endpoint);
+    const root = res.data as Record<string, any> | undefined;
+    const payload =
+      root?.data !== undefined && typeof root.data === "object"
+        ? (root.data as Record<string, any>)
+        : root;
+    return normalizeDashboardPeriodPayload(payload);
   },
 
   // ===== Contacts =====

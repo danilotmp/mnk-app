@@ -63,6 +63,17 @@ const buildQuery = (base: string, params?: Record<string, any>): string => {
   return qs ? `${base}?${qs}` : base;
 };
 
+function parseNonNegativeInt(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    if (Number.isFinite(n)) return Math.max(0, Math.floor(n));
+  }
+  return 0;
+}
+
 /** Normaliza una instancia de WhatsApp de la API (snake_case o camelCase) a WhatsAppInstance. */
 function normalizeWhatsAppInstance(raw: Record<string, any>): WhatsAppInstance {
   const isActive = raw.isActive ?? raw.is_active;
@@ -73,6 +84,21 @@ function normalizeWhatsAppInstance(raw: Record<string, any>): WhatsAppInstance {
     isActive: typeof isActive === 'boolean' ? isActive : true,
     chatIAFlow: raw.chatIAFlow ?? raw.chat_ia_flow ?? null,
     chatIAFlowFilename: raw.chatIAFlowFilename ?? raw.chat_ia_flow_filename ?? null,
+    monthTransactionsCount: parseNonNegativeInt(
+      raw.monthTransactionsCount ?? raw.month_transactions_count,
+    ),
+    monthDocumentsCount: parseNonNegativeInt(
+      raw.monthDocumentsCount ?? raw.month_documents_count,
+    ),
+    monthOperationsCount: parseNonNegativeInt(
+      raw.monthOperationsCount ?? raw.month_operations_count,
+    ),
+    monthPaymentsCount: parseNonNegativeInt(
+      raw.monthPaymentsCount ?? raw.month_payments_count,
+    ),
+    monthExecutionsCount: parseNonNegativeInt(
+      raw.monthExecutionsCount ?? raw.month_executions_count,
+    ),
   };
 }
 
@@ -126,6 +152,8 @@ export const CommercialService = {
    * GET /api/interacciones/context/profile/:commercialProfileId
    * Incluye whatsappInstances con chatIAFlow y chatIAFlowFilename solo si el usuario es super administrador.
    * Con admin=true incluye instancias WhatsApp inactivas (para wizard/admin).
+   * Los contadores del mes en la UI de conexión WhatsApp vienen de GET interacciones/dashboard/period
+   * (una petición sin channelInstance; el front cruza `data.instances` con cada `whatsapp`).
    */
   async getProfileContext(commercialProfileId: string, admin = false): Promise<{
     whatsappInstances: WhatsAppInstance[];
@@ -135,9 +163,17 @@ export const CommercialService = {
       admin ? { admin: 'true' } : undefined
     );
     const res = await apiClient.get<any>(endpoint);
-    const data = res.data?.data ?? res.data;
+    const root = res.data?.data ?? res.data;
+    const commercialProfile =
+      root?.commercial_profile ??
+      root?.commercialProfile ??
+      root;
     const rawInstances =
-      data?.whatsappInstances ?? data?.whatsapp_instances ?? [];
+      commercialProfile?.whatsappInstances ??
+      commercialProfile?.whatsapp_instances ??
+      root?.whatsappInstances ??
+      root?.whatsapp_instances ??
+      [];
     const whatsappInstances = (Array.isArray(rawInstances)
       ? rawInstances
       : []

@@ -47,6 +47,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import React, {
   useCallback,
   useEffect,
@@ -508,6 +509,13 @@ export default function ChatIAScreen() {
     if (Platform.OS !== "web" || typeof document === "undefined") return true;
     return document.visibilityState === "visible";
   }, []);
+
+  /** Evita GET /contacts y WS cuando el usuario no está en esta pantalla (solo tab visible ≠ ruta activa). */
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(isFocused);
+  useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
 
   // Lista de emojis populares con palabras clave para búsqueda
   const emojisWithKeywords: Array<{ emoji: string; keywords: string[] }> = [
@@ -1667,6 +1675,7 @@ export default function ChatIAScreen() {
   // Cargar contactos
   const loadContacts = useCallback(async () => {
     if (!company?.id || !selectedChannelInstance) return;
+    if (!isFocusedRef.current) return;
     const seq = ++contactsLoadSeqRef.current;
 
     try {
@@ -1760,6 +1769,7 @@ export default function ChatIAScreen() {
       silentContactsSyncingRef.current
     )
       return;
+    if (!isFocusedRef.current) return;
 
     try {
       silentContactsSyncingRef.current = true;
@@ -1828,19 +1838,37 @@ export default function ChatIAScreen() {
     document.head.appendChild(styleElement);
   }, []);
 
-  // Fallback resiliente: polling suave de contactos
+  // Fallback resiliente: polling suave de contactos (solo con la pantalla de chat enfocada)
   useEffect(() => {
-    if (!company?.id) return;
+    if (!company?.id || !isFocused) return;
 
     const intervalId = setInterval(() => {
-      if (!isViewVisible()) return;
+      if (!isFocusedRef.current || !isViewVisible()) return;
       refreshContactsSilent();
     }, 45000);
 
     return () => clearInterval(intervalId);
-  }, [company?.id, isViewVisible, refreshContactsSilent]);
+  }, [company?.id, isFocused, isViewVisible, refreshContactsSilent]);
 
   useEffect(() => {
+    if (!company?.id || !isFocused) {
+      const existing = socketRef.current;
+      if (existing) {
+        try {
+          if (activeContactIdRef.current) {
+            existing.emit("leave.contact", {
+              contactId: activeContactIdRef.current,
+            });
+          }
+        } catch {
+          // noop
+        }
+        existing.disconnect();
+        socketRef.current = null;
+      }
+      return;
+    }
+
     let disposed = false;
 
     const connectSocket = async () => {
@@ -1871,7 +1899,9 @@ export default function ChatIAScreen() {
             contactId: activeContactIdRef.current,
           });
         }
-        refreshContactsSilent();
+        if (isFocusedRef.current) {
+          refreshContactsSilent();
+        }
       });
 
       socket.on("message.created", (payload: WsMessageCreatedPayload) => {
@@ -1970,7 +2000,9 @@ export default function ChatIAScreen() {
                 return sortContactsByLastMessage([row, ...p]);
               });
             } catch {
-              refreshContactsSilent();
+              if (isFocusedRef.current) {
+                refreshContactsSilent();
+              }
             }
           })();
         }
@@ -2036,7 +2068,9 @@ export default function ChatIAScreen() {
                 return sortContactsByLastMessage([row, ...p]);
               });
             } catch {
-              refreshContactsSilent();
+              if (isFocusedRef.current) {
+                refreshContactsSilent();
+              }
             }
           })();
         }
@@ -2090,7 +2124,7 @@ export default function ChatIAScreen() {
       }
       socketRef.current = null;
     };
-  }, [company?.id, sortContactsByLastMessage, refreshContactsSilent]);
+  }, [company?.id, isFocused, sortContactsByLastMessage, refreshContactsSilent]);
 
   useEffect(() => {
     const socket = socketRef.current;
@@ -3290,11 +3324,12 @@ export default function ChatIAScreen() {
     if (!company?.id || !selectedChannelInstance || channelProfileLoading) {
       return;
     }
+    if (!isFocused) return;
     setSelectedContact(null);
     setMessages([]);
     setContacts([]);
     void loadContactsRef.current();
-  }, [company?.id, selectedChannelInstance, channelProfileLoading]);
+  }, [company?.id, selectedChannelInstance, channelProfileLoading, isFocused]);
 
   // Filtrar contactos por búsqueda y filtros
   const filteredContacts = contacts.filter((contact) => {

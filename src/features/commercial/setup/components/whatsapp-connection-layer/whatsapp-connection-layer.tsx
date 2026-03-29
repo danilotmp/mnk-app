@@ -13,6 +13,7 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import type { WhatsAppInstance } from "@/src/domains/commercial/types";
+import { InteraccionesService } from "@/src/domains/interacciones";
 import { useCompany } from "@/src/domains/shared";
 import { PhoneInput } from "@/src/domains/shared/components";
 import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
@@ -24,20 +25,21 @@ import { extractErrorDetail } from "@/src/infrastructure/messages/error-utils";
 import { formatCode } from "@/src/infrastructure/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
-    forwardRef,
-    useEffect,
-    useImperativeHandle,
-    useRef,
-    useState,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Platform,
-    ScrollView,
-    Share,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Platform,
+  ScrollView,
+  Share,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { styles } from "./whatsapp-connection-layer.styles";
@@ -65,7 +67,7 @@ export const WhatsAppConnectionLayer = forwardRef<
 >(({ onProgressUpdate, onDataChange }, ref) => {
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const L = t.wizard?.layers?.whatsappConnection;
   const alert = useAlert();
   const { company } = useCompany();
@@ -80,7 +82,9 @@ export const WhatsAppConnectionLayer = forwardRef<
   const [selectedInstance, setSelectedInstance] =
     useState<WhatsAppInstance | null>(null);
   const [generatingQR, setGeneratingQR] = useState(false);
-  const [reconnectingWhatsapp, setReconnectingWhatsapp] = useState<string | null>(null);
+  const [reconnectingWhatsapp, setReconnectingWhatsapp] = useState<
+    string | null
+  >(null);
   const [formData, setFormData] = useState<WhatsAppInstanceFormData>({
     whatsapp: "",
     isActive: true,
@@ -119,22 +123,65 @@ export const WhatsAppConnectionLayer = forwardRef<
           if (contextInstances.length > 0) {
             loadedInstances = loadedInstances.map((inst) => {
               const enriched = contextInstances.find(
-                (c) => c.id === inst.id || c.whatsapp === inst.whatsapp
+                (c) => c.id === inst.id || c.whatsapp === inst.whatsapp,
               );
-              if (enriched?.chatIAFlow && enriched?.chatIAFlowFilename) {
-                return {
-                  ...inst,
-                  chatIAFlow: enriched.chatIAFlow,
-                  chatIAFlowFilename: enriched.chatIAFlowFilename,
-                };
-              }
-              return inst;
+              if (!enriched) return inst;
+              return {
+                ...inst,
+                ...(enriched.chatIAFlow && enriched.chatIAFlowFilename
+                  ? {
+                      chatIAFlow: enriched.chatIAFlow,
+                      chatIAFlowFilename: enriched.chatIAFlowFilename,
+                    }
+                  : {}),
+              };
             });
           }
         } catch {
           // Si falla el contexto (ej. no super admin), usar instancias base
         }
       }
+
+      const companyId = company.id;
+      type MonthMetrics = {
+        tx: number;
+        docs: number;
+        ops: number;
+        pay: number;
+        exec: number;
+      };
+      let metricsByChannel = new Map<string, MonthMetrics>();
+      try {
+        const period = await InteraccionesService.getDashboardPeriod({
+          companyId,
+        });
+        metricsByChannel = new Map(
+          period.instances.map((row) => [
+            row.channelInstance,
+            {
+              tx: row.transactionsCount,
+              docs: row.countDocuments,
+              ops: row.operationsCount,
+              pay: row.paymentsCount,
+              exec: row.executionsCount,
+            },
+          ]),
+        );
+      } catch {
+        metricsByChannel = new Map();
+      }
+      loadedInstances = loadedInstances.map((inst) => {
+        const ch = inst.whatsapp?.trim() ?? "";
+        const m = metricsByChannel.get(ch);
+        return {
+          ...inst,
+          monthTransactionsCount: m?.tx ?? 0,
+          monthDocumentsCount: m?.docs ?? 0,
+          monthOperationsCount: m?.ops ?? 0,
+          monthPaymentsCount: m?.pay ?? 0,
+          monthExecutionsCount: m?.exec ?? 0,
+        };
+      });
 
       setInstances(loadedInstances);
 
@@ -312,14 +359,14 @@ export const WhatsAppConnectionLayer = forwardRef<
       if (!createResponse.success) {
         setModalAlert({
           message:
-            L?.errorCreatingInstance ?? "Error al crear la instancia de WhatsApp",
+            L?.errorCreatingInstance ??
+            "Error al crear la instancia de WhatsApp",
           type: "error",
         });
         return;
       }
 
-      let qrImage: string | null =
-        createResponse.data?.qrcode?.base64 ?? null;
+      let qrImage: string | null = createResponse.data?.qrcode?.base64 ?? null;
       if (!qrImage) {
         const qrResponse =
           await CommercialService.getWhatsAppQRCode(whatsappValue);
@@ -385,8 +432,7 @@ export const WhatsAppConnectionLayer = forwardRef<
 
         handleCloseModal();
         alert.showSuccess(
-          L?.instanceCreated ??
-            "Instancia de WhatsApp creada correctamente",
+          L?.instanceCreated ?? "Instancia de WhatsApp creada correctamente",
         );
       } else if (modalMode === "edit" && selectedInstance) {
         // Actualizar instancia existente
@@ -501,7 +547,9 @@ export const WhatsAppConnectionLayer = forwardRef<
           );
           const newQR = qrcode?.base64 ?? null;
           if (!newQR) {
-            throw new Error(L?.errorReconnecting ?? "Error al reconectar la instancia");
+            throw new Error(
+              L?.errorReconnecting ?? "Error al reconectar la instancia",
+            );
           }
           const updatedInstances = instances.map((inst) =>
             inst.whatsapp === instance.whatsapp
@@ -515,17 +563,21 @@ export const WhatsAppConnectionLayer = forwardRef<
             );
           }
           setModalAlert({
-            message: L?.reconnectSuccess ?? "Reconexión correcta. Escanea el nuevo código QR.",
+            message:
+              L?.reconnectSuccess ??
+              "Reconexión correcta. Escanea el nuevo código QR.",
             type: "info",
           });
           alert.showSuccess(
-            L?.reconnectSuccess ?? "Reconexión correcta. Escanea el nuevo código QR.",
+            L?.reconnectSuccess ??
+              "Reconexión correcta. Escanea el nuevo código QR.",
           );
         } catch (error: any) {
           const description =
             error?.result?.description ??
             error?.message ??
-            (L?.errorReconnecting ?? "Error al reconectar la instancia");
+            L?.errorReconnecting ??
+            "Error al reconectar la instancia";
           const detail =
             error?.details != null
               ? typeof error.details === "object"
@@ -582,104 +634,249 @@ export const WhatsAppConnectionLayer = forwardRef<
     }
   };
 
+  const statsTotals = useMemo(
+    () => ({
+      transactions: instances.reduce(
+        (s, i) => s + (i.monthTransactionsCount ?? 0),
+        0,
+      ),
+      documents: instances.reduce(
+        (s, i) => s + (i.monthDocumentsCount ?? 0),
+        0,
+      ),
+      operations: instances.reduce(
+        (s, i) => s + (i.monthOperationsCount ?? 0),
+        0,
+      ),
+      payments: instances.reduce((s, i) => s + (i.monthPaymentsCount ?? 0), 0),
+      executions: instances.reduce(
+        (s, i) => s + (i.monthExecutionsCount ?? 0),
+        0,
+      ),
+    }),
+    [instances],
+  );
+
+  /** Pie primera celda: periodo del mes, p. ej. "mar - 2026" (UTC, alineado con métricas). */
+  const footerMonthYearLabel = useMemo(() => {
+    const locale = language === "en" ? "en-US" : "es-ES";
+    const now = new Date();
+    const shortMonth = new Intl.DateTimeFormat(locale, {
+      month: "short",
+      timeZone: "UTC",
+    })
+      .format(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 15)))
+      .replaceAll(".", "")
+      .trim()
+      .toLowerCase();
+    const year = now.getUTCFullYear();
+    return `${shortMonth} - ${year}`;
+  }, [language]);
+
+  const tableFooterSpannedRow = useMemo(() => {
+    if (instances.length === 0) return undefined;
+    const footMetric = (n: number) => (
+      <ThemedText
+        type="defaultSemiBold"
+        style={{
+          color: colors.text,
+          fontVariant: ["tabular-nums" as const],
+          textAlign: "right",
+          width: "100%",
+        }}
+      >
+        {n}
+      </ThemedText>
+    );
+    const footEmpty = (
+      <ThemedText type="caption" style={{ color: colors.text }}>
+        {" "}
+      </ThemedText>
+    );
+    /** Una celda por columna: WhatsApp + 5 métricas + N8N + estado + acciones = 9 */
+    return [
+      {
+        colSpan: 1,
+        content: (
+          <ThemedText type="defaultSemiBold" style={{ color: colors.text }}>
+            {footerMonthYearLabel}
+          </ThemedText>
+        ),
+      },
+      {
+        colSpan: 1,
+        align: "right" as const,
+        content: footMetric(statsTotals.transactions),
+      },
+      {
+        colSpan: 1,
+        align: "right" as const,
+        content: footMetric(statsTotals.documents),
+      },
+      {
+        colSpan: 1,
+        align: "right" as const,
+        content: footMetric(statsTotals.operations),
+      },
+      {
+        colSpan: 1,
+        align: "right" as const,
+        content: footMetric(statsTotals.payments),
+      },
+      {
+        colSpan: 1,
+        align: "right" as const,
+        content: footMetric(statsTotals.executions),
+      },
+      { colSpan: 1, content: footEmpty },
+      { colSpan: 1, content: footEmpty },
+      { colSpan: 1, content: footEmpty },
+    ];
+  }, [colors.text, footerMonthYearLabel, instances.length, statsTotals]);
+
+  const metricCellTextStyle = useMemo(
+    () => ({
+      color: colors.text,
+      fontVariant: ["tabular-nums" as const],
+      textAlign: "right" as const,
+      width: "100%" as const,
+    }),
+    [colors.text],
+  );
+
   // Columnas de la tabla
   const columns: TableColumn<WhatsAppInstance>[] = [
     {
       key: "whatsapp",
-      label: "WhatsApp",
-      width: "25%",
+      label: L?.columnWhatsApp ?? "WhatsApp",
+      width: "25px",
     },
     {
-      key: "whatsappQR",
-      label: "QR Code",
-      width: "20%",
-      render: (instance) =>
-        instance.whatsappQR ? (
-          <TouchableOpacity onPress={() => handleViewQR(instance)}>
-            <View
-              style={[
-                styles.qrBadge,
-                {
-                  backgroundColor: colors.primary + "20",
-                  borderColor: colors.primary,
-                },
-              ]}
+      key: "monthTransactionsCount",
+      label: L?.columnMonthTransactions ?? "Transacciones",
+      width: "7%",
+      align: "right",
+      render: (instance) => (
+        <ThemedText type="body2" style={metricCellTextStyle}>
+          {instance.monthTransactionsCount ?? 0}
+        </ThemedText>
+      ),
+    },
+    {
+      key: "monthDocumentsCount",
+      label: L?.columnMonthDocuments ?? "Documentos",
+      width: "7%",
+      align: "right",
+      render: (instance) => (
+        <ThemedText type="body2" style={metricCellTextStyle}>
+          {instance.monthDocumentsCount ?? 0}
+        </ThemedText>
+      ),
+    },
+    {
+      key: "monthOperationsCount",
+      label: L?.columnMonthOperations ?? "Órdenes",
+      width: "7%",
+      align: "right",
+      render: (instance) => (
+        <ThemedText type="body2" style={metricCellTextStyle}>
+          {instance.monthOperationsCount ?? 0}
+        </ThemedText>
+      ),
+    },
+    {
+      key: "monthPaymentsCount",
+      label: L?.columnMonthPayments ?? "Pagos",
+      width: "7%",
+      align: "right",
+      render: (instance) => (
+        <ThemedText type="body2" style={metricCellTextStyle}>
+          {instance.monthPaymentsCount ?? 0}
+        </ThemedText>
+      ),
+    },
+    {
+      key: "monthExecutionsCount",
+      label: L?.columnMonthExecutions ?? "Ejecuciones",
+      width: "7%",
+      align: "right",
+      render: (instance) => (
+        <ThemedText type="body2" style={metricCellTextStyle}>
+          {instance.monthExecutionsCount ?? 0}
+        </ThemedText>
+      ),
+    },
+    {
+      key: "chatIAFlow",
+      label: L?.columnChatIAFlow ?? "N8N",
+      width: "12%",
+      align: "center",
+      render: (instance: WhatsAppInstance) =>
+        instance.chatIAFlow && instance.chatIAFlowFilename ? (
+          <View style={styles.n8nCell}>
+            <Tooltip
+              text={L?.downloadChatIAFlowTooltip ?? "Descargar flujo ChatIA"}
+              position="left"
             >
-              <Ionicons name="qr-code" size={16} color={colors.primary} />
-              <ThemedText
-                type="caption"
-                style={{ color: colors.primary, marginLeft: 4 }}
+              <TouchableOpacity
+                onPress={() => handleDownloadFlow(instance)}
+                style={[
+                  styles.flowDownloadButton,
+                  {
+                    backgroundColor: colors.primary + "20",
+                    borderColor: colors.primary,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  L?.downloadChatIAFlowTooltip ?? "Descargar flujo ChatIA"
+                }
               >
-                Ver QR
-              </ThemedText>
-            </View>
-          </TouchableOpacity>
+                <Ionicons
+                  name="download-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={[
+                    styles.flowDownloadButtonLabel,
+                    { color: colors.primary },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {L?.downloadChatIAFlowButton ?? "Descargar"}
+                </ThemedText>
+              </TouchableOpacity>
+            </Tooltip>
+          </View>
         ) : (
           <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-            Sin QR
+            —
           </ThemedText>
         ),
     },
-    ...(instances.some(
-      (i) => i.chatIAFlow && i.chatIAFlowFilename,
-    )
-      ? [
-          {
-            key: "chatIAFlow",
-            label: "Flujo ChatIA",
-            width: "18%",
-            render: (instance: WhatsAppInstance) =>
-              instance.chatIAFlow && instance.chatIAFlowFilename ? (
-                <TouchableOpacity
-                  onPress={() => handleDownloadFlow(instance)}
-                  style={[
-                    styles.qrBadge,
-                    {
-                      backgroundColor: colors.primary + "20",
-                      borderColor: colors.primary,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="download-outline"
-                    size={16}
-                    color={colors.primary}
-                  />
-                  <ThemedText
-                    type="caption"
-                    style={{ color: colors.primary, marginLeft: 4 }}
-                  >
-                    Descargar
-                  </ThemedText>
-                </TouchableOpacity>
-              ) : (
-                <ThemedText
-                  type="caption"
-                  style={{ color: colors.textSecondary }}
-                >
-                  —
-                </ThemedText>
-              ),
-          } as TableColumn<WhatsAppInstance>,
-        ]
-      : []),
     {
       key: "isActive",
-      label: "Estado",
-      width: "15%",
+      label: L?.columnStatus ?? "Estado",
+      width: "9%",
       align: "center",
       render: (instance) => (
         <StatusBadge
           status={instance.isActive ? 1 : 0}
-          statusDescription={instance.isActive ? "Activa" : "Inactiva"}
+          statusDescription={
+            instance.isActive
+              ? (L?.activeStatus ?? "Activa")
+              : (L?.inactiveStatus ?? "Inactiva")
+          }
           size="small"
         />
       ),
     },
     {
       key: "actions",
-      label: "Acciones",
-      width: "40%",
+      label: L?.columnActions ?? "Acciones",
+      width: "23%",
       align: "center",
       render: (instance) => (
         <View style={styles.actionsContainer}>
@@ -748,9 +945,9 @@ export const WhatsAppConnectionLayer = forwardRef<
   ];
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.formContainer}>
-        {/* Tabla de instancias */}
+        {/* Tabla de instancias — sin ScrollView propio: el wizard ya hace scroll; evita doble scroll */}
         <View style={styles.tableContainer}>
           <DataTable
             data={instances}
@@ -762,6 +959,9 @@ export const WhatsAppConnectionLayer = forwardRef<
             }
             keyExtractor={(instance) => instance.id}
             showPagination={false}
+            showRowNumber={false}
+            footerSpannedRow={tableFooterSpannedRow}
+            embeddedInWizard
           />
         </View>
 
@@ -801,7 +1001,8 @@ export const WhatsAppConnectionLayer = forwardRef<
                     selectedInstance?.chatIAFlowFilename && (
                       <Button
                         onPress={() =>
-                          selectedInstance && handleDownloadFlow(selectedInstance)
+                          selectedInstance &&
+                          handleDownloadFlow(selectedInstance)
                         }
                         variant="ghost"
                         size="md"
@@ -856,7 +1057,8 @@ export const WhatsAppConnectionLayer = forwardRef<
                       )}
                     </Button>
                   )}
-                  {(modalMode === "edit" || (modalMode === "create" && generatedQR)) && (
+                  {(modalMode === "edit" ||
+                    (modalMode === "create" && generatedQR)) && (
                     <Button
                       title={
                         saving
@@ -938,7 +1140,11 @@ export const WhatsAppConnectionLayer = forwardRef<
                 {modalMode === "edit" && (
                   <ThemedText
                     type="caption"
-                    style={{ color: colors.textSecondary, marginTop: -8, marginBottom: 8 }}
+                    style={{
+                      color: colors.textSecondary,
+                      marginTop: -8,
+                      marginBottom: 8,
+                    }}
                   >
                     {formData.isActive
                       ? (L?.instanceActiveCaption ??
@@ -949,58 +1155,65 @@ export const WhatsAppConnectionLayer = forwardRef<
                 )}
 
                 {/* Mostrar QR generado + pasos de conexión (solo en creación); el botón Generar está en el footer */}
-                {modalMode === "create" && generatedQR && toQRImageUri(generatedQR) && (
-                  <View style={styles.inputGroup}>
-                    <ThemedText
-                      type="body2"
-                      style={[styles.label, { color: colors.text }]}
-                    >
-                      {L?.qrGeneratedLabel ?? "Código QR Generado"}
-                    </ThemedText>
-                    <View
-                      style={[
-                        styles.qrImageContainer,
-                        {
-                          backgroundColor: colors.filterInputBackground,
-                          borderColor: colors.border,
-                        },
-                      ]}
-                    >
-                      <Image
-                        source={{ uri: toQRImageUri(generatedQR)! }}
-                        style={styles.qrImage}
-                        resizeMode="contain"
-                      />
+                {modalMode === "create" &&
+                  generatedQR &&
+                  toQRImageUri(generatedQR) && (
+                    <View style={styles.inputGroup}>
+                      <ThemedText
+                        type="body2"
+                        style={[styles.label, { color: colors.text }]}
+                      >
+                        {L?.qrGeneratedLabel ?? "Código QR Generado"}
+                      </ThemedText>
+                      <View
+                        style={[
+                          styles.qrImageContainer,
+                          {
+                            backgroundColor: colors.filterInputBackground,
+                            borderColor: colors.border,
+                          },
+                        ]}
+                      >
+                        <Image
+                          source={{ uri: toQRImageUri(generatedQR)! }}
+                          style={styles.qrImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      {/* Pasos de conexión debajo del QR (mismo contenido que en el modal ver QR) */}
+                      <ThemedText
+                        type="body2"
+                        style={[
+                          styles.label,
+                          {
+                            color: colors.text,
+                            marginTop: 16,
+                            marginBottom: 8,
+                          },
+                        ]}
+                      >
+                        {L?.qrModalSubtitle ??
+                          "Escanea este código con WhatsApp para conectar"}
+                      </ThemedText>
+                      <ThemedText
+                        type="body2"
+                        style={[
+                          styles.qrInstructions,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {L?.qrInstructions ??
+                          '1. Abre WhatsApp en tu teléfono\n2. Ve a Configuración → Dispositivos vinculados\n3. Toca "Vincular un dispositivo"\n4. Escanea este código QR'}
+                      </ThemedText>
                     </View>
-                    {/* Pasos de conexión debajo del QR (mismo contenido que en el modal ver QR) */}
-                    <ThemedText
-                      type="body2"
-                      style={[
-                        styles.label,
-                        { color: colors.text, marginTop: 16, marginBottom: 8 },
-                      ]}
-                    >
-                      {L?.qrModalSubtitle ??
-                        "Escanea este código con WhatsApp para conectar"}
-                    </ThemedText>
-                    <ThemedText
-                      type="body2"
-                      style={[
-                        styles.qrInstructions,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {L?.qrInstructions ??
-                        '1. Abre WhatsApp en tu teléfono\n2. Ve a Configuración → Dispositivos vinculados\n3. Toca "Vincular un dispositivo"\n4. Escanea este código QR'}
-                    </ThemedText>
-                  </View>
-                )}
+                  )}
               </View>
 
               {/* En modo edición: sin QR → solo Regenerar; con QR → mostrar imagen y solo Reconectar */}
               {modalMode === "edit" && selectedInstance && (
                 <View style={styles.inputGroup}>
-                  {selectedInstance.whatsappQR && toQRImageUri(selectedInstance.whatsappQR) ? (
+                  {selectedInstance.whatsappQR &&
+                  toQRImageUri(selectedInstance.whatsappQR) ? (
                     <>
                       <ThemedText
                         type="body2"
@@ -1018,7 +1231,9 @@ export const WhatsAppConnectionLayer = forwardRef<
                         ]}
                       >
                         <Image
-                          source={{ uri: toQRImageUri(selectedInstance.whatsappQR)! }}
+                          source={{
+                            uri: toQRImageUri(selectedInstance.whatsappQR)!,
+                          }}
                           style={styles.qrImage}
                           resizeMode="contain"
                         />
@@ -1035,7 +1250,8 @@ export const WhatsAppConnectionLayer = forwardRef<
                           size="md"
                           disabled={reconnectingWhatsapp !== null}
                         >
-                          {reconnectingWhatsapp === selectedInstance.whatsapp ? (
+                          {reconnectingWhatsapp ===
+                          selectedInstance.whatsapp ? (
                             <ActivityIndicator
                               size="small"
                               color={colors.primary}
@@ -1043,9 +1259,9 @@ export const WhatsAppConnectionLayer = forwardRef<
                             />
                           ) : (
                             <Ionicons
-name="link"
-                          size={18}
-                          color={colors.primary}
+                              name="link"
+                              size={18}
+                              color={colors.primary}
                               style={{ marginRight: 8 }}
                             />
                           )}
@@ -1119,22 +1335,20 @@ name="link"
                 />
                 {selectedInstance?.chatIAFlow &&
                   selectedInstance?.chatIAFlowFilename && (
-                  <Button
-                    title="Descargar flujo"
-                    onPress={() =>
-                      handleDownloadFlow(selectedInstance)
-                    }
-                    variant="outlined"
-                    size="md"
-                  >
-                    <Ionicons
-                      name="download-outline"
-                      size={18}
-                      color={colors.contrastText}
-                      style={{ marginRight: 8 }}
-                    />
-                  </Button>
-                )}
+                    <Button
+                      title="Descargar flujo"
+                      onPress={() => handleDownloadFlow(selectedInstance)}
+                      variant="outlined"
+                      size="md"
+                    >
+                      <Ionicons
+                        name="download-outline"
+                        size={18}
+                        color={colors.contrastText}
+                        style={{ marginRight: 8 }}
+                      />
+                    </Button>
+                  )}
                 <Button
                   title={
                     generatingQR
@@ -1197,7 +1411,7 @@ name="link"
           </SideModal>
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 });
 

@@ -13,6 +13,16 @@ export interface WhatsAppInstance {
   chatIAFlow?: string | null;
   /** Nombre del archivo del flujo para descarga. Solo para super admin. */
   chatIAFlowFilename?: string | null;
+  /**
+   * Contadores del mes en curso (UTC) desde dashboard de chat; mismo total de empresa por instancia.
+   * Solo vienen con GET context/profile/:id?admin=true (mapeados desde commercial_profile.whatsappInstances).
+   */
+  monthTransactionsCount?: number;
+  /** Mensajes con documento (media_context_details) en el mes UTC */
+  monthDocumentsCount?: number;
+  monthOperationsCount?: number;
+  monthPaymentsCount?: number;
+  monthExecutionsCount?: number;
 }
 
 export interface WhatsAppInstancePayload {
