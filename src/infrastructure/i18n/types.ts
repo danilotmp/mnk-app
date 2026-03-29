@@ -375,6 +375,10 @@ export interface Translations {
         loadingInfo: string;
         infoBoxText: string;
         infoUpdated: string;
+        planSectionTitle: string;
+        planQuotaLabel: string;
+        planRestrictiveLabel: string;
+        planPickQuotaTitle: string;
       };
       offerings?: {
         sectionTitle: string;

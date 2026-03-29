@@ -8,6 +8,7 @@ export type { AttributesEditorProps } from './attributes-editor/attributes-edito
 export type { AccessGuardProps } from './access-guard/access-guard.types';
 export { BranchSelector } from './branch-selector/branch-selector';
 export type { BranchSelectorProps } from './branch-selector/branch-selector.types';
+export { CustomSwitch } from './custom-switch/custom-switch';
 export { CurrencyInput } from './currency-input/currency-input';
 export type { CurrencyInputProps } from './currency-input/currency-input.types';
 export { DataTable } from './data-table/data-table';

@@ -74,6 +74,49 @@ function parseNonNegativeInt(value: unknown): number {
   return 0;
 }
 
+/** Paso entre cupos consecutivos (selector plan de mensajes / DTO profile). */
+export const MAX_MESSAGES_PER_MONTH_STEP = 500;
+/** Cantidad fija de cupos en el selector (500, 1.000, … hasta el techo). */
+export const MAX_MESSAGES_PER_MONTH_OPTION_COUNT = 6;
+/** Último valor: 6 × 500 = 3.000 */
+export const MAX_MESSAGES_PER_MONTH_CEILING =
+  MAX_MESSAGES_PER_MONTH_STEP * MAX_MESSAGES_PER_MONTH_OPTION_COUNT;
+
+/**
+ * Seis opciones: 500, 1.000, 1.500, 2.000, 2.500, 3.000 — wizard y GET profile.
+ */
+export const MAX_MESSAGES_PER_MONTH_OPTIONS: readonly number[] = Array.from(
+  { length: MAX_MESSAGES_PER_MONTH_OPTION_COUNT },
+  (_, i) => (i + 1) * MAX_MESSAGES_PER_MONTH_STEP,
+);
+
+function parseMaxMessagesPerMonth(raw: unknown): number {
+  const step = MAX_MESSAGES_PER_MONTH_STEP;
+  const min = step;
+  const max = MAX_MESSAGES_PER_MONTH_CEILING;
+  if (raw === null || raw === undefined || raw === "") {
+    return min;
+  }
+  let n = min;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    n = Math.floor(raw);
+  } else if (typeof raw === "string" && raw.trim() !== "") {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) n = Math.floor(parsed);
+  }
+  const rounded = Math.round(n / step) * step;
+  if (rounded < min) return min;
+  if (rounded > max) return max;
+  return rounded;
+}
+
+function parsePlanIsRestrictive(raw: unknown): boolean {
+  if (typeof raw === 'boolean') return raw;
+  if (raw === 1 || raw === '1') return true;
+  if (typeof raw === 'string' && raw.toLowerCase() === 'true') return true;
+  return false;
+}
+
 /** Normaliza una instancia de WhatsApp de la API (snake_case o camelCase) a WhatsAppInstance. */
 function normalizeWhatsAppInstance(raw: Record<string, any>): WhatsAppInstance {
   const isActive = raw.isActive ?? raw.is_active;
@@ -136,6 +179,12 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
+      maxMessagesPerMonth: parseMaxMessagesPerMonth(
+        commercialData?.maxMessagesPerMonth ?? commercialData?.max_messages_per_month,
+      ),
+      planIsRestrictive: parsePlanIsRestrictive(
+        commercialData?.planIsRestrictive ?? commercialData?.plan_is_restrictive,
+      ),
       // Mapear whatsappInstances: normalizar is_active → isActive para que la UI muestre el estado correcto
       whatsappInstances: (commercialData?.whatsappInstances || commercialData?.whatsapp_instances || []).map(normalizeWhatsAppInstance),
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
@@ -213,6 +262,12 @@ export const CommercialService = {
       is24_7: commercialData?.is_24_7 ?? commercialData?.is24_7 ?? null,
       defaultTaxMode: commercialData?.default_tax_mode || commercialData?.defaultTaxMode || null,
       allowsBranchPricing: commercialData?.allows_branch_pricing ?? commercialData?.allowsBranchPricing ?? null,
+      maxMessagesPerMonth: parseMaxMessagesPerMonth(
+        commercialData?.maxMessagesPerMonth ?? commercialData?.max_messages_per_month,
+      ),
+      planIsRestrictive: parsePlanIsRestrictive(
+        commercialData?.planIsRestrictive ?? commercialData?.plan_is_restrictive,
+      ),
       whatsappInstances: (commercialData?.whatsappInstances || commercialData?.whatsapp_instances || []).map(normalizeWhatsAppInstance),
       createdAt: commercialData?.createdAt || commercialData?.created_at || null,
       updatedAt: commercialData?.updatedAt || commercialData?.updated_at || null,

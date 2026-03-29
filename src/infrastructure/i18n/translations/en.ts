@@ -430,6 +430,10 @@ export const en: Translations = {
         infoBoxText:
           "With this information, the AI will be able to answer questions about your business, location and basic operation.",
         infoUpdated: "Information updated successfully",
+        planSectionTitle: "Messaging plan",
+        planQuotaLabel: "Message quota",
+        planRestrictiveLabel: "Restrictive mode?",
+        planPickQuotaTitle: "Choose message quota",
       },
       offerings: {
         sectionTitle: "Offerings",

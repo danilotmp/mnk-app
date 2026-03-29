@@ -435,6 +435,10 @@ export const es: Translations = {
         infoBoxText:
           "Con esta información, la IA podrá responder preguntas sobre tu negocio, ubicación y operación básica.",
         infoUpdated: "Información actualizada correctamente",
+        planSectionTitle: "Plan de mensajería",
+        planQuotaLabel: "Cupo de mensajes",
+        planRestrictiveLabel: "¿Modo restrictivo?",
+        planPickQuotaTitle: "Elegir cupo de mensajes",
       },
       offerings: {
         sectionTitle: "Ofertas",

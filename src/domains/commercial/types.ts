@@ -54,6 +54,10 @@ export interface CommercialProfile {
   is24_7?: boolean | null;
   defaultTaxMode?: 'included' | 'excluded' | null;
   allowsBranchPricing?: boolean | null;
+  /** Cupo mensual de mensajes (API interacciones/profile, camelCase). */
+  maxMessagesPerMonth?: number | null;
+  /** Si el límite de mensajes se aplica de forma estricta. */
+  planIsRestrictive?: boolean | null;
   whatsappInstances?: WhatsAppInstance[];
   createdAt?: string;
   updatedAt?: string;
@@ -71,6 +75,8 @@ export interface CommercialProfilePayload {
   is24_7?: boolean;
   defaultTaxMode?: 'included' | 'excluded';
   allowsBranchPricing?: boolean;
+  maxMessagesPerMonth?: number;
+  planIsRestrictive?: boolean;
   whatsappInstances?: WhatsAppInstancePayload[];
 }
 

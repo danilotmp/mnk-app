@@ -13,7 +13,10 @@ import {
     CatalogService,
     catalogDetailsToSelectOptions,
 } from "@/src/domains/catalog";
-import { CommercialService } from "@/src/domains/commercial";
+import {
+  CommercialService,
+  MAX_MESSAGES_PER_MONTH_OPTIONS,
+} from "@/src/domains/commercial";
 import {
     CommercialProfile,
     CommercialProfilePayload,
@@ -26,6 +29,10 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    FlatList,
+    Modal,
+    Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -87,12 +94,23 @@ export function InstitutionalLayer({
     is24_7: false,
     defaultTaxMode: "included" as "included" | "excluded",
     allowsBranchPricing: false,
+    maxMessagesPerMonth: 500,
+    planIsRestrictive: false,
   });
   // Guardar los datos originales para comparar cambios
   const [originalFormData, setOriginalFormData] = useState<
     typeof formData | null
   >(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [planQuotaModalVisible, setPlanQuotaModalVisible] = useState(false);
+
+  const formatPlanQuota = useCallback(
+    (n: number) =>
+      new Intl.NumberFormat(
+        currentLanguage === "es" ? "es" : "en-US",
+      ).format(n),
+    [currentLanguage],
+  );
 
   // Los valores de currency, timezone y language vienen del perfil, no del contexto
 
@@ -226,6 +244,8 @@ export function InstitutionalLayer({
       is24_7: false,
       defaultTaxMode: "included" as "included" | "excluded",
       allowsBranchPricing: false,
+      maxMessagesPerMonth: 500,
+      planIsRestrictive: false,
     };
     setFormData(defaultFormData);
     setOriginalFormData(defaultFormData);
@@ -271,6 +291,9 @@ export function InstitutionalLayer({
             | "included"
             | "excluded",
           allowsBranchPricing: existingProfile.allowsBranchPricing ?? false,
+          maxMessagesPerMonth:
+            existingProfile.maxMessagesPerMonth ?? 500,
+          planIsRestrictive: existingProfile.planIsRestrictive ?? false,
         };
 
         setFormData(newFormData);
@@ -300,6 +323,8 @@ export function InstitutionalLayer({
             is24_7: false,
             defaultTaxMode: "included" as "included" | "excluded",
             allowsBranchPricing: false,
+            maxMessagesPerMonth: 500,
+            planIsRestrictive: false,
           };
           setFormData(defaultFormData);
           // Guardar los datos originales (vacíos en este caso)
@@ -356,12 +381,15 @@ export function InstitutionalLayer({
     onDataChange?.(completedFields > 0);
   }, [formData, company?.id, onProgressUpdate, onDataChange]);
 
-  const handleChange = (field: string, value: string | boolean) => {
+  const handleChange = <K extends keyof typeof formData>(
+    field: K,
+    value: (typeof formData)[K],
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (errors[field as string]) {
       setErrors((prev) => {
         const next = { ...prev };
-        delete next[field];
+        delete next[field as string];
         return next;
       });
     }
@@ -379,7 +407,9 @@ export function InstitutionalLayer({
       formData.timezone.trim() !== (originalFormData.timezone || "").trim() ||
       formData.is24_7 !== originalFormData.is24_7 ||
       formData.defaultTaxMode !== originalFormData.defaultTaxMode ||
-      formData.allowsBranchPricing !== originalFormData.allowsBranchPricing
+      formData.allowsBranchPricing !== originalFormData.allowsBranchPricing ||
+      formData.maxMessagesPerMonth !== originalFormData.maxMessagesPerMonth ||
+      formData.planIsRestrictive !== originalFormData.planIsRestrictive
     );
   };
 
@@ -419,6 +449,8 @@ export function InstitutionalLayer({
         is24_7: formData.is24_7,
         defaultTaxMode: formData.defaultTaxMode,
         allowsBranchPricing: formData.allowsBranchPricing,
+        maxMessagesPerMonth: formData.maxMessagesPerMonth,
+        planIsRestrictive: formData.planIsRestrictive,
       };
 
       // Usar UPSERT unificado - el backend decide si crear o actualizar
@@ -448,6 +480,8 @@ export function InstitutionalLayer({
             | "included"
             | "excluded",
           allowsBranchPricing: updated.allowsBranchPricing || false,
+          maxMessagesPerMonth: updated.maxMessagesPerMonth ?? 500,
+          planIsRestrictive: updated.planIsRestrictive ?? false,
         };
         setFormData(newFormData);
         // Actualizar los datos originales después de guardar
@@ -504,6 +538,7 @@ export function InstitutionalLayer({
   }
 
   return (
+    <>
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       <View style={styles.formContainer}>
         {/* Industria */}
@@ -603,102 +638,176 @@ export function InstitutionalLayer({
           </View>
         </View>
 
-        {/* Modo de impuestos por defecto */}
+        {/* Impuestos por defecto + Plan (mensajes) en la misma fila en escritorio */}
         <View style={styles.inputGroup}>
-          <ThemedText
-            type="body2"
-            style={[styles.label, { color: colors.text }]}
+          <View
+            style={[
+              styles.taxAndPlanRow,
+              isMobile && styles.taxAndPlanRowMobile,
+            ]}
           >
-            {L?.taxQuestion ?? "¿Los precios incluyen impuestos por defecto?"}
-          </ThemedText>
-          <View style={styles.radioGroup}>
-            <TouchableOpacity
-              style={[
-                styles.radioOption,
-                {
-                  borderColor:
-                    formData.defaultTaxMode === "included"
-                      ? colors.primary
-                      : colors.border,
-                  backgroundColor:
-                    formData.defaultTaxMode === "included"
-                      ? colors.primary + "20"
-                      : "transparent",
-                },
-              ]}
-              onPress={() => handleChange("defaultTaxMode", "included")}
+            <View
+              style={[styles.taxColumn, isMobile && styles.taxColumnMobile]}
             >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    borderColor:
-                      formData.defaultTaxMode === "included"
-                        ? colors.primary
-                        : colors.border,
-                  },
-                ]}
-              >
-                {formData.defaultTaxMode === "included" && (
-                  <View
-                    style={[
-                      styles.radioDot,
-                      { backgroundColor: colors.primary },
-                    ]}
-                  />
-                )}
-              </View>
               <ThemedText
                 type="body2"
-                style={{ color: colors.text, marginLeft: 12 }}
+                style={[styles.label, { color: colors.text }]}
               >
-                {L?.taxIncludedLabel ?? "Sí, los precios incluyen impuestos"}
+                {L?.taxQuestion ??
+                  "¿Los precios incluyen impuestos por defecto?"}
               </ThemedText>
-            </TouchableOpacity>
+              <View style={styles.radioGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    {
+                      borderColor:
+                        formData.defaultTaxMode === "included"
+                          ? colors.primary
+                          : colors.border,
+                      backgroundColor:
+                        formData.defaultTaxMode === "included"
+                          ? colors.primary + "20"
+                          : "transparent",
+                    },
+                  ]}
+                  onPress={() => handleChange("defaultTaxMode", "included")}
+                >
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      {
+                        borderColor:
+                          formData.defaultTaxMode === "included"
+                            ? colors.primary
+                            : colors.border,
+                      },
+                    ]}
+                  >
+                    {formData.defaultTaxMode === "included" && (
+                      <View
+                        style={[
+                          styles.radioDot,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      />
+                    )}
+                  </View>
+                  <ThemedText
+                    type="body2"
+                    style={{ color: colors.text, marginLeft: 12 }}
+                  >
+                    {L?.taxIncludedLabel ??
+                      "Sí, los precios incluyen impuestos"}
+                  </ThemedText>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.radioOption,
-                {
-                  borderColor:
-                    formData.defaultTaxMode === "excluded"
-                      ? colors.primary
-                      : colors.border,
-                  backgroundColor:
-                    formData.defaultTaxMode === "excluded"
-                      ? colors.primary + "20"
-                      : "transparent",
-                },
-              ]}
-              onPress={() => handleChange("defaultTaxMode", "excluded")}
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    borderColor:
-                      formData.defaultTaxMode === "excluded"
-                        ? colors.primary
-                        : colors.border,
-                  },
-                ]}
-              >
-                {formData.defaultTaxMode === "excluded" && (
+                <TouchableOpacity
+                  style={[
+                    styles.radioOption,
+                    {
+                      borderColor:
+                        formData.defaultTaxMode === "excluded"
+                          ? colors.primary
+                          : colors.border,
+                      backgroundColor:
+                        formData.defaultTaxMode === "excluded"
+                          ? colors.primary + "20"
+                          : "transparent",
+                    },
+                  ]}
+                  onPress={() => handleChange("defaultTaxMode", "excluded")}
+                >
                   <View
                     style={[
-                      styles.radioDot,
-                      { backgroundColor: colors.primary },
+                      styles.radioCircle,
+                      {
+                        borderColor:
+                          formData.defaultTaxMode === "excluded"
+                            ? colors.primary
+                            : colors.border,
+                      },
                     ]}
-                  />
-                )}
+                  >
+                    {formData.defaultTaxMode === "excluded" && (
+                      <View
+                        style={[
+                          styles.radioDot,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      />
+                    )}
+                  </View>
+                  <ThemedText
+                    type="body2"
+                    style={{ color: colors.text, marginLeft: 12 }}
+                  >
+                    {L?.taxExcludedLabel ??
+                      "No, los impuestos se agregan aparte"}
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
+            </View>
+
+            <View
+              style={[styles.planColumn, isMobile && styles.planColumnMobile]}
+            >
               <ThemedText
                 type="body2"
-                style={{ color: colors.text, marginLeft: 12 }}
+                style={[styles.planSectionTitle, { color: colors.text }]}
               >
-                {L?.taxExcludedLabel ?? "No, los impuestos se agregan aparte"}
+                {L?.planSectionTitle ?? "Plan de mensajería"}
               </ThemedText>
-            </TouchableOpacity>
+              <View style={styles.planControlRow}>
+                <ThemedText
+                  type="body2"
+                  style={[styles.planRowLabel, { color: colors.text }]}
+                >
+                  {L?.planQuotaLabel ?? "Cupo de mensajes"}
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => setPlanQuotaModalVisible(true)}
+                  style={[
+                    styles.planQuotaTrigger,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.filterInputBackground,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    L?.planPickQuotaTitle ?? "Elegir cupo de mensajes"
+                  }
+                >
+                  <ThemedText
+                    type="body2"
+                    style={{ color: colors.text, fontWeight: "600" }}
+                  >
+                    {formatPlanQuota(formData.maxMessagesPerMonth)}
+                  </ThemedText>
+                  <Ionicons
+                    name="chevron-down"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.planControlRow}>
+                <ThemedText
+                  type="body2"
+                  style={[styles.planRowLabel, { color: colors.text }]}
+                >
+                  {L?.planRestrictiveLabel ?? "¿Modo restrictivo?"}
+                </ThemedText>
+                <CustomSwitch
+                  value={formData.planIsRestrictive}
+                  onValueChange={(val) =>
+                    handleChange("planIsRestrictive", val)
+                  }
+                  label=""
+                />
+              </View>
+            </View>
           </View>
         </View>
 
@@ -822,6 +931,109 @@ export function InstitutionalLayer({
         </View>
       </View>
     </ScrollView>
+
+    <Modal
+      visible={planQuotaModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setPlanQuotaModalVisible(false)}
+    >
+      {/* Mismo patrón que components/ui/select.tsx: overlay centrado + hoja acotada (no ancho completo). */}
+      <Pressable
+        style={styles.quotaModalOverlay}
+        onPress={() => setPlanQuotaModalVisible(false)}
+      >
+        <Pressable
+          onPress={(e) => {
+            // Evitar cerrar al tocar dentro del panel (web / RN)
+            e?.stopPropagation?.();
+          }}
+          style={[
+            styles.quotaModalSheet,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+              ...Platform.select({
+                web: {
+                  boxShadow: `0px 4px 16px rgba(0,0,0,0.35)`,
+                },
+                default: {
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 8,
+                },
+              }),
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.quotaModalHeader,
+              { borderBottomColor: colors.border },
+            ]}
+          >
+            <ThemedText
+              type="h4"
+              style={[styles.quotaModalTitle, { color: colors.text }]}
+            >
+              {L?.planPickQuotaTitle ?? "Elegir cupo de mensajes"}
+            </ThemedText>
+            <TouchableOpacity
+              onPress={() => setPlanQuotaModalVisible(false)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.quotaModalCloseHit}
+            >
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={[...MAX_MESSAGES_PER_MONTH_OPTIONS]}
+            keyExtractor={String}
+            style={styles.quotaModalList}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const selected = item === formData.maxMessagesPerMonth;
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.quotaModalOption,
+                    {
+                      borderBottomColor: colors.border,
+                      backgroundColor: selected
+                        ? colors.primary
+                        : "transparent",
+                    },
+                  ]}
+                  onPress={() => {
+                    handleChange("maxMessagesPerMonth", item);
+                    setPlanQuotaModalVisible(false);
+                  }}
+                >
+                  <ThemedText
+                    type="body2"
+                    style={[
+                      styles.quotaModalOptionText,
+                      {
+                        color: selected ? "#FFFFFF" : colors.text,
+                        fontWeight: selected ? "600" : "500",
+                      },
+                    ]}
+                  >
+                    {formatPlanQuota(item)}
+                  </ThemedText>
+                  {selected ? (
+                    <Ionicons name="checkmark" size={22} color="#FFFFFF" />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 }
 
@@ -878,6 +1090,123 @@ const styles = StyleSheet.create({
   },
   halfWidth: {
     marginBottom: 20,
+    flex: 1,
+  },
+  taxAndPlanRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 20,
+    width: "100%",
+    alignSelf: "stretch",
+  },
+  taxAndPlanRowMobile: {
+    flexDirection: "column",
+    gap: 0,
+    width: "100%",
+  },
+  /** Mitad del ancho disponible (junto con planColumn reparte ~50% / ~50%). */
+  taxColumn: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
+  },
+  taxColumnMobile: {
+    width: "100%",
+    alignSelf: "stretch",
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
+  },
+  planColumn: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    gap: 8,
+    paddingTop: 0,
+  },
+  planColumnMobile: {
+    width: "100%",
+    alignSelf: "stretch",
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
+    marginTop: 20,
+    paddingTop: 0,
+  },
+  planSectionTitle: {
+    fontWeight: "600",
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  planControlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    minHeight: 40,
+  },
+  planRowLabel: {
+    flex: 1,
+    fontWeight: "600",
+    paddingRight: 8,
+  },
+  planQuotaTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 104,
+    justifyContent: "space-between",
+  },
+  /** Igual idea que `modalOverlay` / `modalContent` en components/ui/select.tsx */
+  quotaModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  quotaModalSheet: {
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "80%",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  quotaModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  quotaModalTitle: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  quotaModalCloseHit: {
+    padding: 4,
+  },
+  quotaModalList: {
+    maxHeight: 400,
+  },
+  quotaModalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  quotaModalOptionText: {
     flex: 1,
   },
   radioGroup: {
