@@ -270,6 +270,8 @@ export const en: Translations = {
       documentContextTitleFieldFallback: "Title field",
       whatsappChannelLabel: "WhatsApp / instance",
       whatsappChannelPickerA11y: "Choose connected WhatsApp number or instance",
+      whatsappChannelPickerSingleA11y:
+        "WhatsApp channel in use. Only one instance; there is no list to switch.",
       whatsappChannelOptionsMenuA11y: "WhatsApp channel options",
       whatsappChannelOptionDashboard: "Dashboard",
       whatsappChannelOptionToggleLabel: "Channel active",
@@ -664,7 +666,7 @@ export const en: Translations = {
         columnMonthExecutions: "Executions",
         footerTotalLabel: "Total",
         columnChatIAFlow: "N8N",
-        downloadChatIAFlowTooltip: "Download ChatIA flow",
+        downloadChatIAFlowTooltip: "Download N8N",
         downloadChatIAFlowButton: "Download",
         viewQR: "View QR",
         noQR: "No QR",

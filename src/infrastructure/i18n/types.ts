@@ -252,6 +252,8 @@ export interface Translations {
       whatsappChannelLabel: string;
       /** A11y: abrir menú de instancias WhatsApp */
       whatsappChannelPickerA11y: string;
+      /** A11y: una sola instancia (sin lista para cambiar) */
+      whatsappChannelPickerSingleA11y: string;
       /** A11y: menú de opciones (tres puntos) junto al selector de canal */
       whatsappChannelOptionsMenuA11y: string;
       /** Opción placeholder: ir al dashboard del canal (acción pendiente) */

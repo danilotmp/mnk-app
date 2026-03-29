@@ -274,6 +274,8 @@ export const es: Translations = {
       whatsappChannelLabel: "WhatsApp / instancia",
       whatsappChannelPickerA11y:
         "Elegir número o instancia de WhatsApp conectada",
+      whatsappChannelPickerSingleA11y:
+        "Canal de WhatsApp en uso. Solo hay una instancia; no hay lista para cambiar.",
       whatsappChannelOptionsMenuA11y: "Opciones del canal WhatsApp",
       whatsappChannelOptionDashboard: "Dashboard",
       whatsappChannelOptionToggleLabel: "Canal activo",
@@ -674,7 +676,7 @@ export const es: Translations = {
         columnMonthExecutions: "Ejecuciones",
         footerTotalLabel: "Total",
         columnChatIAFlow: "N8N",
-        downloadChatIAFlowTooltip: "Descargar flujo ChatIA",
+        downloadChatIAFlowTooltip: "Descarga N8N",
         downloadChatIAFlowButton: "Descargar",
         viewQR: "Ver QR",
         noQR: "Sin QR",

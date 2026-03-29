@@ -474,6 +474,13 @@ export default function ChatIAScreen() {
     if (channelProfileLoading) setChannelInstanceMenuOpen(false);
   }, [channelProfileLoading]);
 
+  /** Con una sola instancia no debe quedar abierto el menú de cambio de canal. */
+  useEffect(() => {
+    if (whatsappInstances.length <= 1) {
+      setChannelInstanceMenuOpen(false);
+    }
+  }, [whatsappInstances.length]);
+
   useEffect(() => {
     setChannelInstanceMenuOpen(false);
     setChannelInstanceOptionsOpen(false);
@@ -3603,7 +3610,7 @@ export default function ChatIAScreen() {
             <View style={styles.channelInstanceTriggerCenter}>
               <TouchableOpacity
                 style={styles.channelInstanceTriggerMain}
-                activeOpacity={0.75}
+                activeOpacity={multiInstance ? 0.75 : 1}
                 onPress={() => {
                   setChannelInstanceOptionsOpen(false);
                   if (multiInstance) {
@@ -3611,7 +3618,11 @@ export default function ChatIAScreen() {
                   }
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={t.pages.chatIa.whatsappChannelPickerA11y}
+                accessibilityLabel={
+                  multiInstance
+                    ? t.pages.chatIa.whatsappChannelPickerA11y
+                    : t.pages.chatIa.whatsappChannelPickerSingleA11y
+                }
                 accessibilityState={{
                   expanded: multiInstance && channelInstanceMenuOpen,
                 }}

@@ -815,7 +815,7 @@ export const WhatsAppConnectionLayer = forwardRef<
         instance.chatIAFlow && instance.chatIAFlowFilename ? (
           <View style={styles.n8nCell}>
             <Tooltip
-              text={L?.downloadChatIAFlowTooltip ?? "Descargar flujo ChatIA"}
+              text={L?.downloadChatIAFlowTooltip ?? "Descarga N8N"}
               position="left"
             >
               <TouchableOpacity
@@ -829,7 +829,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  L?.downloadChatIAFlowTooltip ?? "Descargar flujo ChatIA"
+                  L?.downloadChatIAFlowTooltip ?? "Descarga N8N"
                 }
               >
                 <Ionicons
@@ -1336,7 +1336,9 @@ export const WhatsAppConnectionLayer = forwardRef<
                 {selectedInstance?.chatIAFlow &&
                   selectedInstance?.chatIAFlowFilename && (
                     <Button
-                      title="Descargar flujo"
+                      title={
+                        L?.downloadChatIAFlowTooltip ?? "Descarga N8N"
+                      }
                       onPress={() => handleDownloadFlow(selectedInstance)}
                       variant="outlined"
                       size="md"
