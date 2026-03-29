@@ -46,7 +46,7 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, type Href } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import React, {
   useCallback,
@@ -149,6 +149,9 @@ function parseWhatsappInstancesFromContextProfile(
     })
     .filter((i) => i.whatsapp.length > 0);
 }
+
+/** Ruta tipada para el dashboard de interacciones (Expo Router). */
+const INTERACCIONES_DASHBOARD_HREF = "/interacciones/dashboard" as Href;
 
 /** Si el ancho del área de lista de mensajes es menor que esto (px), imagen + detalle van en columna (como smartphone). */
 const MESSAGES_AREA_SIDE_BY_SIDE_MIN_WIDTH = 650;
@@ -3420,9 +3423,11 @@ export default function ChatIAScreen() {
   ]);
 
   const renderChannelInstancePicker = useCallback(() => {
-    if (whatsappInstances.length <= 1 || channelProfileLoading) {
+    if (whatsappInstances.length === 0 || channelProfileLoading) {
       return null;
     }
+
+    const multiInstance = whatsappInstances.length > 1;
 
     return (
       <View
@@ -3430,7 +3435,7 @@ export default function ChatIAScreen() {
         style={styles.channelInstancePickerRoot}
         collapsable={false}
       >
-        {channelInstanceMenuOpen ? (
+        {channelInstanceMenuOpen && multiInstance ? (
           <View
             style={[
               styles.channelInstanceMenuPanel,
@@ -3529,7 +3534,9 @@ export default function ChatIAScreen() {
               activeOpacity={0.7}
               onPress={() => {
                 setChannelInstanceOptionsOpen(false);
-                /* TODO: acción Dashboard (definir navegación o pantalla) */
+                requestAnimationFrame(() => {
+                  router.push(INTERACCIONES_DASHBOARD_HREF);
+                });
               }}
               accessibilityRole="button"
               accessibilityLabel={t.pages.chatIa.whatsappChannelOptionDashboard}
@@ -3599,12 +3606,14 @@ export default function ChatIAScreen() {
                 activeOpacity={0.75}
                 onPress={() => {
                   setChannelInstanceOptionsOpen(false);
-                  setChannelInstanceMenuOpen((open) => !open);
+                  if (multiInstance) {
+                    setChannelInstanceMenuOpen((open) => !open);
+                  }
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={t.pages.chatIa.whatsappChannelPickerA11y}
                 accessibilityState={{
-                  expanded: channelInstanceMenuOpen,
+                  expanded: multiInstance && channelInstanceMenuOpen,
                 }}
               >
                 <Animated.View
@@ -3680,6 +3689,7 @@ export default function ChatIAScreen() {
     handleChannelInstanceActiveChange,
     channelInstanceActiveToggleLoading,
     selectedWhatsappInstanceIsActive,
+    router,
   ]);
 
   // Animación del buscador de mensajes

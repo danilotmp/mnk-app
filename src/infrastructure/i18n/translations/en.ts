@@ -158,12 +158,57 @@ export const en: Translations = {
     },
     downloads: {
       title: "Downloads",
-      subtitle: "Download the AIBox app for your device. Here you will find all available installers.",
+      subtitle:
+        "Download the AIBox app for your device. Here you will find all available installers.",
       android: "Android",
       ios: "iOS",
       installers: "Installers",
       downloadButton: "Download",
       comingSoon: "Coming soon",
+    },
+    interaccionesDashboard: {
+      title: "Interactions dashboard",
+      subtitle:
+        "Monthly metrics per WhatsApp instance (messages, documents, orders, payments, executions).",
+      periodLabel: "Month (UTC, last 12)",
+      periodModeByMonth: "By month",
+      periodYearFull: "Full year",
+      periodYearDropdownA11y: "Choose month view or full calendar year",
+      yearPickerTitle: "Period",
+      annualDataHint:
+        "Sum of January–December {year} (UTC), all instances matching the filter.",
+      annualChipsPlaceholder: "Annual view · {year}",
+      annualUtcNote:
+        "Totals accumulated January–December {year} (UTC calendar).",
+      periodSummaryFootnoteMonth:
+        "What you’re seeing: only the month you picked. Dates use the UTC calendar (universal time), not your local time zone.",
+      periodSummaryFootnoteYear:
+        "What you’re seeing: the full {year} calendar year (1 Jan–31 Dec) on UTC (universal time).",
+      monthRangeHint:
+        "Defaults to the current month. Pick any month from the last year.",
+      monthCarouselPrevA11y: "Scroll to earlier months",
+      monthCarouselNextA11y: "Scroll to later months",
+      filterInstanceLabel: "Instance",
+      filterInstanceAll: "All",
+      loading: "Loading metrics…",
+      errorLoad: "Could not load dashboard metrics.",
+      emptyNoData: "No data for this period or filters.",
+      emptyNoCompany: "Select a company to view the dashboard.",
+      kpiTransactions: "Transactions",
+      kpiDocuments: "Documents",
+      kpiOperations: "Orders",
+      kpiPayments: "Payments",
+      kpiExecutions: "Executions",
+      kpiInstances: "Instances in period",
+      sectionDistribution: "Distribution by instance",
+      sectionDistributionHint:
+        "Each instance’s share of total transactions in the period.",
+      sectionByInstance: "Breakdown by instance",
+      metricTransactions: "Transactions",
+      metricDocuments: "Documents",
+      metricOperations: "Orders",
+      metricPayments: "Payments",
+      metricExecutions: "Executions",
     },
     chatIa: {
       documentDetailFallback: "Document details",
@@ -211,10 +256,8 @@ export const en: Translations = {
         "Could not process attachments. Please try again.",
       errorSendEmpty: "Nothing to send",
       errorSendMessage: "Could not send message",
-      errorFileTooLarge:
-        'File "{name}" is too large. Maximum size is 10MB.',
-      errorFileInvalidMedia:
-        'File "{name}" is not a valid media type.',
+      errorFileTooLarge: 'File "{name}" is too large. Maximum size is 10MB.',
+      errorFileInvalidMedia: 'File "{name}" is not a valid media type.',
       errorDocumentPickerMobile:
         "Attaching documents on mobile requires expo-document-picker.",
       attachDocument: "Document",
@@ -402,7 +445,7 @@ export const en: Translations = {
         propertiesPlaceholder:
           '{"valorMinimo": 50, "valorPorPersona": 15, "maxPersonas": 4}',
         propertiesJsonInvalid:
-          "Attributes: Invalid JSON. Use format { \"key\": value }",
+          'Attributes: Invalid JSON. Use format { "key": value }',
         cancel: "Cancel",
         accept: "Accept",
         addOffering: "Add Offering",

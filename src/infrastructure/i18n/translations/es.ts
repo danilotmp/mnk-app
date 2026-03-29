@@ -165,6 +165,50 @@ export const es: Translations = {
       downloadButton: "Descargar",
       comingSoon: "Próximamente",
     },
+    interaccionesDashboard: {
+      title: "Dashboard de interacciones",
+      subtitle:
+        "Métricas mensuales por instancia WhatsApp (mensajes, documentos, órdenes, pagos y ejecuciones).",
+      periodLabel: "Mes (UTC, últimos 12)",
+      periodModeByMonth: "Por mes",
+      periodYearFull: "Año completo",
+      periodYearDropdownA11y: "Elegir vista por mes o año completo",
+      yearPickerTitle: "Periodo",
+      annualDataHint:
+        "Suma de enero a diciembre {year} (UTC), todas las instancias del filtro.",
+      annualChipsPlaceholder: "Vista anual · {year}",
+      annualUtcNote:
+        "Totales acumulados enero–diciembre {year} (calendario UTC).",
+      periodSummaryFootnoteMonth:
+        "Qué ves aquí: solo el mes que elegiste. Las fechas siguen el calendario UTC (tiempo universal), no la hora local de tu país.",
+      periodSummaryFootnoteYear:
+        "Qué ves aquí: todo el año {year}, del 1 de enero al 31 de diciembre, en calendario UTC (tiempo universal).",
+      monthRangeHint:
+        "Por defecto el mes actual. Elige cualquier mes del último año.",
+      monthCarouselPrevA11y: "Ver meses anteriores",
+      monthCarouselNextA11y: "Ver meses siguientes",
+      filterInstanceLabel: "Instancia",
+      filterInstanceAll: "Todas",
+      loading: "Cargando métricas…",
+      errorLoad: "No se pudieron cargar las métricas del dashboard.",
+      emptyNoData: "No hay datos para este periodo o filtros.",
+      emptyNoCompany: "Selecciona una empresa para ver el dashboard.",
+      kpiTransactions: "Transacciones",
+      kpiDocuments: "Documentos",
+      kpiOperations: "Órdenes",
+      kpiPayments: "Pagos",
+      kpiExecutions: "Ejecuciones",
+      kpiInstances: "Instancias en el periodo",
+      sectionDistribution: "Distribución por instancia",
+      sectionDistributionHint:
+        "Participación de cada instancia sobre el total de transacciones del periodo.",
+      sectionByInstance: "Detalle por instancia",
+      metricTransactions: "Transacciones",
+      metricDocuments: "Documentos",
+      metricOperations: "Órdenes",
+      metricPayments: "Pagos",
+      metricExecutions: "Ejecuciones",
+    },
     chatIa: {
       documentDetailFallback: "Detalle documental",
       mediaContextFieldPrefix: "Campo: ",

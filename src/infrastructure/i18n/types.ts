@@ -155,6 +155,45 @@ export interface Translations {
       downloadButton: string;
       comingSoon: string;
     };
+    /** Dashboard métricas Chat IA / WhatsApp (periodo mensual) */
+    interaccionesDashboard: {
+      title: string;
+      subtitle: string;
+      periodLabel: string;
+      periodModeByMonth: string;
+      periodYearFull: string;
+      periodYearDropdownA11y: string;
+      yearPickerTitle: string;
+      annualDataHint: string;
+      annualChipsPlaceholder: string;
+      annualUtcNote: string;
+      /** Pie de gráficos: qué periodo cubren los números (lenguaje claro, sin jerga de backend). */
+      periodSummaryFootnoteMonth: string;
+      periodSummaryFootnoteYear: string;
+      monthRangeHint: string;
+      monthCarouselPrevA11y: string;
+      monthCarouselNextA11y: string;
+      filterInstanceLabel: string;
+      filterInstanceAll: string;
+      loading: string;
+      errorLoad: string;
+      emptyNoData: string;
+      emptyNoCompany: string;
+      kpiTransactions: string;
+      kpiDocuments: string;
+      kpiOperations: string;
+      kpiPayments: string;
+      kpiExecutions: string;
+      kpiInstances: string;
+      sectionDistribution: string;
+      sectionDistributionHint: string;
+      sectionByInstance: string;
+      metricTransactions: string;
+      metricDocuments: string;
+      metricOperations: string;
+      metricPayments: string;
+      metricExecutions: string;
+    };
     /** Pantalla Chat IA (interacciones) */
     chatIa: {
       documentDetailFallback: string;
