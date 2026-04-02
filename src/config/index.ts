@@ -125,6 +125,16 @@ export const AppConfig = {
                        Constants.expoConfig?.extra?.iconsDocumentationUrl || 
                        'https://icons.expo.fyi/Index',
   },
+
+  // Configuración del chat
+  chat: {
+    // Intervalo de polling para refrescar la lista de contactos (ms)
+    contactsPollingInterval: 15000,
+    // Intervalo de polling para refrescar los mensajes del chat activo (ms)
+    messagesPollingInterval: 10000,
+    // Habilitar sonido de notificación al recibir mensajes
+    enableNotificationSound: true,
+  },
 };
 
 // Re-export: Nombres predefinidos de directrices del sistema (IA).

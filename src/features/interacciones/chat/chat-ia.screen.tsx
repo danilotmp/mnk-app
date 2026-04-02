@@ -10,6 +10,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { BREAKPOINTS } from "@/constants/breakpoints";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
+import { AppConfig } from "@/src/config";
 import { CatalogService } from "@/src/domains/catalog/services/catalog.service";
 import type { CatalogEntry } from "@/src/domains/catalog/types";
 import { CommercialService } from "@/src/domains/commercial";
@@ -230,6 +231,8 @@ export default function ChatIAScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [shouldScrollToEnd, setShouldScrollToEnd] = useState(false);
+  // true = carga inicial (sin animación), false = mensaje nuevo (con animación)
+  const [scrollAnimated, setScrollAnimated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -1852,7 +1855,7 @@ export default function ChatIAScreen() {
     const intervalId = setInterval(() => {
       if (!isFocusedRef.current || !isViewVisible()) return;
       refreshContactsSilent();
-    }, 45000);
+    }, AppConfig.chat.contactsPollingInterval);
 
     return () => clearInterval(intervalId);
   }, [company?.id, isFocused, isViewVisible, refreshContactsSilent]);
@@ -1945,7 +1948,7 @@ export default function ChatIAScreen() {
         // Sonido de notificación: suena si es inbound y no es el contacto activo
         const isInbound = payload.direction?.toLowerCase() === "inbound";
         const isActiveContact = activeContactIdRef.current === payload.contactId;
-        if (isInbound && !isActiveContact && typeof window !== "undefined") {
+        if (isInbound && !isActiveContact && AppConfig.chat.enableNotificationSound && typeof window !== "undefined") {
           try {
             const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
             const gain = ctx.createGain();
@@ -2052,6 +2055,7 @@ export default function ChatIAScreen() {
             merged.sort(compareMessagesByCreatedAtAsc);
             return merged;
           });
+          setScrollAnimated(true);
           setShouldScrollToEnd(true);
         }
       });
@@ -2219,6 +2223,7 @@ export default function ChatIAScreen() {
           selectedChannelInstance,
         );
         setMessages(sortMessagesChronologically(messagesList));
+        setScrollAnimated(false);
         setShouldScrollToEnd(true);
       } catch (error: any) {
         console.error("Error al cargar mensajes:", error);
@@ -2266,6 +2271,7 @@ export default function ChatIAScreen() {
         });
 
         if (hasNewMessages) {
+          setScrollAnimated(true);
           setShouldScrollToEnd(true);
         }
       } catch {
@@ -2284,7 +2290,7 @@ export default function ChatIAScreen() {
     const intervalId = setInterval(() => {
       if (!isViewVisible()) return;
       refreshMessagesSilent(selectedContact.id);
-    }, 12000);
+    }, AppConfig.chat.messagesPollingInterval);
 
     return () => clearInterval(intervalId);
   }, [isViewVisible, refreshMessagesSilent, selectedContact?.id]);
@@ -2508,6 +2514,7 @@ export default function ChatIAScreen() {
           selectedChannelInstance,
         );
         setMessages(sortMessagesChronologically(messagesList));
+        setScrollAnimated(false);
         setShouldScrollToEnd(true);
       } catch (error: any) {
         console.error("Error al cargar mensajes:", error);
@@ -3271,6 +3278,7 @@ export default function ChatIAScreen() {
             selectedChannelInstance,
           );
           setMessages(sortMessagesChronologically(messagesList));
+          setScrollAnimated(false);
           setShouldScrollToEnd(true);
         } catch (error) {
           console.error("Error al recargar mensajes:", error);
@@ -4851,10 +4859,10 @@ export default function ChatIAScreen() {
                       showsVerticalScrollIndicator={true}
                       onContentSizeChange={() => {
                         if (shouldScrollToEnd && messagesScrollRef.current) {
-                          // Pequeño delay para asegurar que el layout esté listo
+                          const animate = scrollAnimated;
                           setTimeout(() => {
                             messagesScrollRef.current?.scrollToEnd({
-                              animated: true,
+                              animated: animate,
                             });
                             setShouldScrollToEnd(false);
                           }, 100);
