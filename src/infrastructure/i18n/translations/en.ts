@@ -219,6 +219,7 @@ export const en: Translations = {
       editMessagePlaceholder: "Edit message...",
       filterAll: "All",
       filterUnread: "Unread",
+      unreadMessages: "Unread messages",
       filterSpecialist: "Needs specialist",
       filterSpecialistTooltip:
         "Chats that require specialist assistance (assignment active).",
@@ -447,11 +448,11 @@ export const en: Translations = {
         namePlaceholder: "E.g.: Standard room",
         descriptionOptional: "Description (optional)",
         descriptionPlaceholder: "Briefly describe the offering",
-        propertiesLabel: "Attributes (optional JSON)",
+        propertiesLabel: "Attributes",
         propertiesPlaceholder:
-          '{"valorMinimo": 50, "valorPorPersona": 15, "maxPersonas": 4}',
+          "Define custom attributes for this offer",
         propertiesJsonInvalid:
-          'Attributes: Invalid JSON. Use format { "key": value }',
+          "The attributes format is not valid",
         cancel: "Cancel",
         accept: "Accept",
         addOffering: "Add Offering",
@@ -956,6 +957,10 @@ export const en: Translations = {
       emailInvalid: "Invalid email",
       createSuccess: "Company created successfully",
       editSuccess: "Company updated successfully",
+      address: "Address",
+      addressPlaceholder: "No address registered",
+      settings: "Settings",
+      settingsPlaceholder: "No additional settings",
       filters: {
         all: "All",
         status: "Status",

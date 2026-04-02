@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { useTheme } from "@/hooks/use-theme";
 import {
+    AttributesEditor,
     EmailInput,
     PhoneInput,
     StatusSelector,
@@ -60,6 +61,8 @@ export function CompanyEditForm({
     phone: "",
     description: "",
     status: 1,
+    address: null,
+    settings: null,
   });
   const formDataRef = useRef<CompanyFormData>({
     code: "",
@@ -68,6 +71,8 @@ export function CompanyEditForm({
     phone: "",
     description: "",
     status: 1,
+    address: null,
+    settings: null,
   });
   const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<
@@ -158,6 +163,8 @@ export function CompanyEditForm({
         phone: company.phone || "",
         description: company.description || "",
         status: companyStatus,
+        address: company.address ? { ...company.address } as Record<string, unknown> : null,
+        settings: company.settings ? { ...company.settings } as Record<string, unknown> : null,
       };
       formDataRef.current = loadedData;
       setFormData(loadedData);
@@ -196,7 +203,9 @@ export function CompanyEditForm({
         email: currentFormData.email.trim(),
         phone: currentFormData.phone.trim() || undefined,
         description: currentFormData.description.trim() || undefined,
-        status: statusRef.current, // Usar ref para evitar stale closure
+        status: statusRef.current,
+        address: currentFormData.address || undefined,
+        settings: currentFormData.settings || undefined,
       });
 
       alert.showSuccess(
@@ -458,6 +467,46 @@ export function CompanyEditForm({
               editable={!isSubmitting}
             />
           </InputWithFocus>
+        </View>
+
+        {/* Dirección */}
+        <View style={styles.inputGroup}>
+          <AttributesEditor
+            value={formData.address}
+            onChange={(val) => {
+              setFormData((prev) => {
+                const updated = { ...prev, address: val };
+                formDataRef.current = updated;
+                return updated;
+              });
+            }}
+            label={t.security?.companies?.address || "Dirección"}
+            placeholder={t.security?.companies?.addressPlaceholder || "Sin dirección registrada"}
+            disabled={isSubmitting}
+            compact
+            suggestions={["Street", "City", "State", "Country", "Zip Code", "Location"]}
+            showTreeLine
+          />
+        </View>
+
+        {/* Configuración */}
+        <View style={styles.inputGroup}>
+          <AttributesEditor
+            value={formData.settings}
+            onChange={(val) => {
+              setFormData((prev) => {
+                const updated = { ...prev, settings: val };
+                formDataRef.current = updated;
+                return updated;
+              });
+            }}
+            label={t.security?.companies?.settings || "Configuración"}
+            placeholder={t.security?.companies?.settingsPlaceholder || "Sin configuración adicional"}
+            disabled={isSubmitting}
+            compact
+            suggestions={["Currency", "Timezone", "Language", "Date Format"]}
+            showTreeLine
+          />
         </View>
 
         {/* Estado */}

@@ -15,19 +15,19 @@ import type { CatalogEntry } from "@/src/domains/catalog/types";
 import { CommercialService } from "@/src/domains/commercial";
 import type { Recommendation } from "@/src/domains/commercial/types";
 import type {
-  Contact,
-  ContactWithLastMessage,
-  Message,
-  MessageAttachment,
-  SerializedBuffer,
+    Contact,
+    ContactWithLastMessage,
+    Message,
+    MessageAttachment,
+    SerializedBuffer,
 } from "@/src/domains/interacciones";
 import {
-  InteraccionesService,
-  MessageDirection,
+    InteraccionesService,
+    MessageDirection,
 } from "@/src/domains/interacciones";
 import { useCompany } from "@/src/domains/shared";
-import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
 import { DynamicIcon } from "@/src/domains/shared/components";
+import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
 import { ContactInfoPanel } from "@/src/features/interacciones/chat/components/contact-info-panel/contact-info-panel";
 import { EmojiPickerPanel } from "@/src/features/interacciones/chat/components/emoji-picker-panel/emoji-picker-panel";
 import { ImageWithToken } from "@/src/features/interacciones/chat/components/image-with-token/image-with-token";
@@ -36,68 +36,68 @@ import { MessageQuoteAttachmentThumbnail } from "@/src/features/interacciones/ch
 import { QuickMessagesPanel } from "@/src/features/interacciones/chat/components/quick-messages-panel/quick-messages-panel";
 import { formatRelativeTime } from "@/src/features/interacciones/chat/utils/format-relative-time";
 import {
-  renderWhatsAppFormattedText,
-  renderWhatsAppFormattedTextSingleLine,
+    renderWhatsAppFormattedText,
+    renderWhatsAppFormattedTextSingleLine,
 } from "@/src/features/interacciones/chat/utils/render-whatsapp-formatted-text";
 import { API_CONFIG, ApiConfig } from "@/src/infrastructure/api/config";
 import { getStorageAdapter } from "@/src/infrastructure/api/storage.adapter";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter, type Href } from "expo-router";
-import { useIsFocused } from "@react-navigation/native";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Animated,
-  Image,
-  ImageBackground,
-  LayoutChangeEvent,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    AccessibilityInfo,
+    ActivityIndicator,
+    Animated,
+    Image,
+    ImageBackground,
+    LayoutChangeEvent,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import type { Socket } from "socket.io-client";
 import { CHAT_BACKGROUND_URI } from "./chat-ia.constants";
 import {
-  CHAT_COMPOSER_BAR_MIN_HEIGHT,
-  CHAT_HEADER_SPECIALIST_RING_RADIUS,
-  createChatIaScreenStyles,
-  getChatContactRowDividerColor,
-  SPECIALIST_RING_RADIUS,
+    CHAT_COMPOSER_BAR_MIN_HEIGHT,
+    CHAT_HEADER_SPECIALIST_RING_RADIUS,
+    createChatIaScreenStyles,
+    getChatContactRowDividerColor,
+    SPECIALIST_RING_RADIUS,
 } from "./chat-ia.screen.styles";
 import type {
-  ImageViewerDocumentContext,
-  WsContactUpdatedPayload,
-  WsMessageCreatedPayload,
+    ImageViewerDocumentContext,
+    WsContactUpdatedPayload,
+    WsMessageCreatedPayload,
 } from "./chat-ia.screen.types";
 import { ContactSpecialistAvatarRing } from "./components/contact-specialist-avatar-ring/contact-specialist-avatar-ring";
 import {
-  contactsListsVisuallyEquivalent,
-  getContactListActivityTimestamp,
-  isInboundDirection,
+    contactsListsVisuallyEquivalent,
+    getContactListActivityTimestamp,
+    isInboundDirection,
 } from "./utils/chat-contact-list.utils";
 import {
-  buildImageViewerDocumentContext,
-  formatMediaContextKey,
-  getMediaDataUrl,
+    buildImageViewerDocumentContext,
+    formatMediaContextKey,
+    getMediaDataUrl,
 } from "./utils/chat-media.utils";
 import {
-  compareMessagesByCreatedAtAsc,
-  sortMessagesChronologically,
+    compareMessagesByCreatedAtAsc,
+    sortMessagesChronologically,
 } from "./utils/chat-message-order.utils";
 import { mergeContactWithWsUpdatePayload } from "./utils/chat-ws-merge.utils";
 
@@ -1790,7 +1790,7 @@ export default function ChatIAScreen() {
 
       setContacts((prev) => {
         const prevById = new Map(prev.map((c) => [c.id, c]));
-        /** Merge con API; se conservan lastMessage/unread del cliente (más frescos vía WS). */
+        /** Merge con API; se conservan lastMessage/unread del cliente solo si son más recientes. */
         const mergedUnsorted = contactsList.map((contact) => {
           const existing = prevById.get(contact.id);
           if (!existing) {
@@ -1800,10 +1800,14 @@ export default function ChatIAScreen() {
               unreadCount: undefined,
             } as ContactWithLastMessage;
           }
+          // Preservar lastMessage del cliente solo si es más reciente que el del API
+          const existingTs = existing.lastMessage?.createdAt ? Date.parse(existing.lastMessage.createdAt) : 0;
+          const apiTs = (contact as any).lastMessage?.createdAt ? Date.parse((contact as any).lastMessage.createdAt) : 0;
+          const bestLastMessage = existingTs >= apiTs ? existing.lastMessage : ((contact as any).lastMessage || existing.lastMessage);
           return {
             ...existing,
             ...contact,
-            lastMessage: existing.lastMessage,
+            lastMessage: bestLastMessage,
             unreadCount: existing.unreadCount,
           } as ContactWithLastMessage;
         });
@@ -1944,6 +1948,28 @@ export default function ChatIAScreen() {
           updatedAt: payload.updatedAt || payload.createdAt,
           channelInstance: payload.channelInstance,
         };
+
+        // Sonido de notificación: solo si es inbound y no es el contacto activo
+        const isInboundFromOther =
+          payload.direction?.toLowerCase() === "inbound" &&
+          activeContactIdRef.current !== payload.contactId;
+        if (isInboundFromOther && typeof window !== "undefined") {
+          try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = "sine";
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+          } catch {
+            // Silencioso si el navegador bloquea audio
+          }
+        }
 
         let contactMissingFromList = false;
         setContacts((prev) => {
@@ -3374,6 +3400,19 @@ export default function ChatIAScreen() {
         msg.content.toLowerCase().includes(messageSearchQuery.toLowerCase()),
       )
     : messages;
+
+  // ID del primer mensaje inbound no leído para mostrar separador
+  const firstUnreadMessageId = useMemo(() => {
+    for (const msg of filteredMessages) {
+      if (
+        String(msg.direction).toLowerCase() === "inbound" &&
+        msg.status !== "READ"
+      ) {
+        return msg.id;
+      }
+    }
+    return null;
+  }, [filteredMessages]);
 
   /** Mismo tono que las líneas entre contactos (`contactItem.borderBottomColor`) */
   const channelInstanceDividerLineColor = useMemo(
@@ -4807,14 +4846,16 @@ export default function ChatIAScreen() {
                       ref={messagesScrollRef}
                       style={styles.messagesArea}
                       contentContainerStyle={styles.messagesContent}
-                      showsVerticalScrollIndicator={false}
+                      showsVerticalScrollIndicator={true}
                       onContentSizeChange={() => {
-                        // Hacer scroll al final solo cuando se debe (al cargar o enviar mensaje)
                         if (shouldScrollToEnd && messagesScrollRef.current) {
-                          messagesScrollRef.current.scrollToEnd({
-                            animated: false,
-                          });
-                          setShouldScrollToEnd(false);
+                          // Pequeño delay para asegurar que el layout esté listo
+                          setTimeout(() => {
+                            messagesScrollRef.current?.scrollToEnd({
+                              animated: true,
+                            });
+                            setShouldScrollToEnd(false);
+                          }, 100);
                         }
                       }}
                       onScrollBeginDrag={() => {
@@ -4850,6 +4891,8 @@ export default function ChatIAScreen() {
                       ) : (
                         <>
                           {filteredMessages.map((message) => {
+                            // Separador de mensajes no leídos
+                            const showUnreadDivider = message.id === firstUnreadMessageId;
                             // El backend devuelve direction en minúsculas: "inbound" o "outbound"
                             const directionStr = String(
                               message.direction,
@@ -4870,8 +4913,29 @@ export default function ChatIAScreen() {
                             const showMenu = messageMenuVisible === message.id;
 
                             return (
+                              <React.Fragment key={message.id}>
+                                {showUnreadDivider && (
+                                  <View style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    marginVertical: 12,
+                                    paddingHorizontal: 8,
+                                  }}>
+                                    <View style={{ flex: 1, height: 1, backgroundColor: colors.primary + "60" }} />
+                                    <ThemedText
+                                      type="caption"
+                                      style={{
+                                        color: colors.primary,
+                                        paddingHorizontal: 12,
+                                        fontWeight: "600",
+                                      }}
+                                    >
+                                      {t.pages?.chatIa?.unreadMessages ?? "Mensajes no leídos"}
+                                    </ThemedText>
+                                    <View style={{ flex: 1, height: 1, backgroundColor: colors.primary + "60" }} />
+                                  </View>
+                                )}
                               <View
-                                key={message.id}
                                 id={
                                   Platform.OS === "web"
                                     ? `message-${message.id}`
@@ -5869,6 +5933,7 @@ export default function ChatIAScreen() {
                                   )}
                                 </View>
                               </View>
+                              </React.Fragment>
                             );
                           })}
 

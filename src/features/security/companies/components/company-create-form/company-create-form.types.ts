@@ -22,5 +22,7 @@ export interface CompanyFormData {
   phone: string;
   description: string;
   status: number;
+  address: Record<string, unknown> | null;
+  settings: Record<string, unknown> | null;
 }
 

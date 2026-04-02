@@ -16,43 +16,43 @@ import { useTheme } from "@/hooks/use-theme";
 import { CatalogService } from "@/src/domains/catalog";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-  CommercialProfile,
-  Offering,
-  OfferingPrice,
-  OfferingPricePayload,
+    CommercialProfile,
+    Offering,
+    OfferingPrice,
+    OfferingPricePayload,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import {
-  getStatusDescription,
-  RecordStatus,
-} from "@/src/domains/shared/types/status.types";
-import {
-  AttributesEditor,
-  CurrencyInput,
-  DatePicker,
+    AttributesEditor,
+    CurrencyInput,
+    DatePicker,
 } from "@/src/domains/shared/components";
+import {
+    getStatusDescription,
+    RecordStatus,
+} from "@/src/domains/shared/types/status.types";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { TemplateService } from "@/src/infrastructure/templates/template.service";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { styles } from "./operational-layer.styles";
@@ -2615,13 +2615,14 @@ export function OperationalLayer({
                                         }
                                         label={
                                           O?.propertiesLabel ??
-                                          "Atributos (opcional)"
+                                          "Atributos"
                                         }
                                         placeholder={
                                           O?.propertiesPlaceholder ??
                                           "Sin atributos"
                                         }
-                                        addButtonLabel="Agregar atributo"
+                                        addButtonLabel="Agregar"
+                                        suggestions={["Category", "Price", "Unit Price", "Quantity", "Max Quantity", "URL"]}
                                       />
                                     </View>
                                   </View>

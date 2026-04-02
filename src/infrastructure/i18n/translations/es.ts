@@ -218,6 +218,7 @@ export const es: Translations = {
       editMessagePlaceholder: "Editar mensaje...",
       filterAll: "Todos",
       filterUnread: "No leídos",
+      unreadMessages: "Mensajes no leídos",
       filterSpecialist: "Req. especialista",
       filterSpecialistTooltip:
         "Chats que requieren asistencia de un especialista (asignación activa).",
@@ -453,11 +454,11 @@ export const es: Translations = {
         namePlaceholder: "Ej: Habitación estándar",
         descriptionOptional: "Descripción (opcional)",
         descriptionPlaceholder: "Describe brevemente la oferta",
-        propertiesLabel: "Atributos (JSON opcional)",
+        propertiesLabel: "Atributos",
         propertiesPlaceholder:
-          '{"valorMinimo": 50, "valorPorPersona": 15, "maxPersonas": 4}',
+          "Define atributos personalizados para esta oferta",
         propertiesJsonInvalid:
-          "Atributos: JSON inválido. Use formato { \"clave\": valor }",
+          "El formato de atributos no es válido",
         cancel: "Cancelar",
         accept: "Aceptar",
         addOffering: "Agregar Oferta",
@@ -967,6 +968,10 @@ export const es: Translations = {
       emailInvalid: "Email inválido",
       createSuccess: "Empresa creada exitosamente",
       editSuccess: "Empresa actualizada exitosamente",
+      address: "Dirección",
+      addressPlaceholder: "Sin dirección registrada",
+      settings: "Configuración",
+      settingsPlaceholder: "Sin configuración adicional",
       filters: {
         all: "Todas",
         status: "Estado",

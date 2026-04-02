@@ -28,8 +28,21 @@ export interface AttributesEditorProps {
   /** Si el control está deshabilitado */
   disabled?: boolean;
 
+  /** Modo compacto: apila nombre y valor verticalmente (ideal para modales) */
+  compact?: boolean;
+
   /** Si hay error de validación */
   error?: boolean;
+
+  /**
+   * Atributos sugeridos. Se muestran como botones junto a "Agregar".
+   * El orden del array define el orden en que se insertan.
+   * Cuando un atributo sugerido ya existe en la lista, su botón desaparece.
+   */
+  suggestions?: string[];
+
+  /** Muestra una línea jerárquica tipo árbol entre el label y los atributos (ideal para modales) */
+  showTreeLine?: boolean;
 }
 
 /** Tema para los estilos del AttributesEditor */

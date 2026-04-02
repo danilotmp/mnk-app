@@ -10,6 +10,7 @@ import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { Select } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
 import { useCompanyOptions } from "@/src/domains/security/hooks";
+import { AttributesEditor } from "@/src/domains/shared/components";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { extractErrorInfo } from "@/src/infrastructure/messages/error-utils";
@@ -64,6 +65,9 @@ export function BranchEditForm({
     type: "branch",
     description: "",
     status: 1,
+    address: null,
+    contactInfo: null,
+    settings: null,
   });
   const formDataRef = useRef<BranchFormData>({
     companyId: "",
@@ -72,6 +76,9 @@ export function BranchEditForm({
     type: "branch",
     description: "",
     status: 1,
+    address: null,
+    contactInfo: null,
+    settings: null,
   });
   const statusRef = useRef<number>(1);
   const [errors, setErrors] = useState<
@@ -189,6 +196,9 @@ export function BranchEditForm({
         type: branch.type || "branch",
         description: branch.description || "",
         status: branchStatus,
+        address: branch.address ? { ...branch.address } as Record<string, unknown> : null,
+        contactInfo: branch.contactInfo ? { ...branch.contactInfo } as Record<string, unknown> : null,
+        settings: branch.settings ? { ...branch.settings } as Record<string, unknown> : null,
       };
       formDataRef.current = loadedData;
       setFormData(loadedData);
@@ -226,7 +236,10 @@ export function BranchEditForm({
         name: currentFormData.name.trim(),
         type: currentFormData.type,
         description: currentFormData.description.trim() || undefined,
-        status: statusRef.current, // Usar ref para evitar stale closure
+        status: statusRef.current,
+        address: currentFormData.address || undefined,
+        contactInfo: currentFormData.contactInfo || undefined,
+        settings: currentFormData.settings || undefined,
       });
       alert.showSuccess(
         t.security?.branches?.editSuccess ||
@@ -508,6 +521,66 @@ export function BranchEditForm({
               editable={!isSubmitting}
             />
           </InputWithFocus>
+        </View>
+
+        {/* Dirección */}
+        <View style={styles.inputGroup}>
+          <AttributesEditor
+            value={formData.address}
+            onChange={(val) => {
+              setFormData((prev) => {
+                const updated = { ...prev, address: val };
+                formDataRef.current = updated;
+                return updated;
+              });
+            }}
+            label={t.security?.companies?.address || "Dirección"}
+            placeholder="Sin dirección registrada"
+            disabled={isSubmitting}
+            compact
+            suggestions={["Street", "City", "State", "Country", "Zip Code", "Location"]}
+            showTreeLine
+          />
+        </View>
+
+        {/* Contacto */}
+        <View style={styles.inputGroup}>
+          <AttributesEditor
+            value={formData.contactInfo}
+            onChange={(val) => {
+              setFormData((prev) => {
+                const updated = { ...prev, contactInfo: val };
+                formDataRef.current = updated;
+                return updated;
+              });
+            }}
+            label={t.security?.branches?.contactInfo || "Contacto"}
+            placeholder="Sin información de contacto"
+            disabled={isSubmitting}
+            compact
+            suggestions={["Phone", "Email", "Website"]}
+            showTreeLine
+          />
+        </View>
+
+        {/* Configuración */}
+        <View style={styles.inputGroup}>
+          <AttributesEditor
+            value={formData.settings}
+            onChange={(val) => {
+              setFormData((prev) => {
+                const updated = { ...prev, settings: val };
+                formDataRef.current = updated;
+                return updated;
+              });
+            }}
+            label={t.security?.companies?.settings || "Configuración"}
+            placeholder="Sin configuración adicional"
+            disabled={isSubmitting}
+            compact
+            suggestions={["Timezone", "Open Hours", "Max Capacity"]}
+            showTreeLine
+          />
         </View>
 
         {/* Estado */}

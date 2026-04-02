@@ -25,21 +25,21 @@ import { extractErrorDetail } from "@/src/infrastructure/messages/error-utils";
 import { formatCode } from "@/src/infrastructure/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Platform,
-  ScrollView,
-  Share,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Platform,
+    ScrollView,
+    Share,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { styles } from "./whatsapp-connection-layer.styles";
@@ -674,7 +674,7 @@ export const WhatsAppConnectionLayer = forwardRef<
   }, [language]);
 
   const tableFooterSpannedRow = useMemo(() => {
-    if (instances.length === 0) return undefined;
+    if (instances.length <= 1) return undefined;
     const footMetric = (n: number) => (
       <ThemedText
         type="defaultSemiBold"

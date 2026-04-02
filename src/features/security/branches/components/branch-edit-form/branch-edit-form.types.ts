@@ -25,4 +25,7 @@ export interface BranchFormData {
   type: BranchType;
   description: string;
   status: number;
+  address: Record<string, unknown> | null;
+  contactInfo: Record<string, unknown> | null;
+  settings: Record<string, unknown> | null;
 }
