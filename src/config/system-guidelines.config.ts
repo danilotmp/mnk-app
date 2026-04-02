@@ -5,99 +5,79 @@
  */
 export const SYSTEM_GUIDELINE_NAMES = [
   {
-    title: "INICIO_SALUDO",
-    usage: "Mensaje de bienvenida (etapa INICIO / RECEPCIONISTA)",
-    defaultContent:
-      "¡Hola! Te has comunicado con [nombre de la empresa]. ¿En qué podemos ayudarte?",
+    title: "SALUDO",
+    usage: "Mensaje de bienvenida (etapa INICIO)",
+    defaultContent: "¡Hola! Te has comunicado con [nombre de la empresa]. ¿En qué podemos ayudarte?",
   },
   {
     title: "TONO_Y_RESTRICCIONES",
     usage: "Tono, prohibiciones y reglas de disponibilidad (todas las etapas)",
-    defaultContent:
-      'Tono natural, educado, amigable. PROHIBIDO: "no tenemos habitaciones disponibles", "no hay", "no disponemos". Preguntas de disponibilidad: conserva fechas/personas en memoria. Sin fechas pero con personas: muestra productos + "La disponibilidad depende de las fechas. ¿Me indicas fecha de llegada y salida?" Personas obligatorio. Con fechas y personas: muestra opciones, valida disponibilidad.',
+    defaultContent: 'Tono natural, empático, cercano. PROHIBIDO: "no hay disponibles", "no tenemos", "no disponemos". Ante consultas sin info: informar que puede comunicarse por teléfono o indicar más detalle para ayudarle.',
   },
   {
-    title: "AGENDAMIENTO_DATOS",
-    usage:
-      "Datos a solicitar antes de validar reserva/cita (etapa AGENDAMIENTO)",
-    defaultContent:
-      "Para validar reserva: Cédula o pasaporte, Nombres completos, Fecha llegada y salida, Número de personas.",
+    title: "GLOSARIO",
+    usage: "Equivalencias para búsqueda de productos (formato: clave: valor1, valor2, una por línea)",
+    defaultContent: "habitacion: habitación, habitaciones, room, rooms\ndisponibilidad: disponibilidad, fechas, reservar",
   },
   {
-    title: "ETAPA_LISTA_OPCIONES",
-    usage:
-      "Lista de opciones (varios productos). Simple: nombre + descripción, sin precios.",
-    defaultContent:
-      "Cuándo: varias opciones para elegir (búsqueda, nueva consulta, lista). Formato: {opcion}. *{nombre}*_{descripcion corta}_ Sin precios. Solo nombre y descripción.",
+    title: "PLACEHOLDER_LISTA_PRODUCTOS",
+    usage: "Formato para mostrar varias opciones (lista sin precios, etapa DESCUBRIMIENTO)",
+    defaultContent: "{número opción} *{nombre del producto}*\n_{descripción corta}_",
   },
   {
-    title: "ETAPA_DETALLE_PRODUCTO",
-    usage: "Un producto seleccionado (detalle). Nombre + descripción + precio.",
-    defaultContent:
-      "Cuándo: mostrar UN producto (usuario eligió número o resultado único). Formato: *{nombre}*_{descripcion corta}_ *Precio:* {precio} USD. Notas al final si aplica.",
+    title: "PLACEHOLDER_DETALLE_PRODUCTO",
+    usage: "Formato para mostrar UN producto seleccionado (con precio, etapa EVALUACION)",
+    defaultContent: "*{name}*\n_{description}_\n\n*Precio:* {price} USD\n\n*Notas:*\n- {condiciones relevantes}",
   },
   {
-    title: "AGENDAMIENTO_CONFIRMACION",
-    usage: "Proceso para confirmar reserva/cita (abono, confirmación)",
-    defaultContent:
-      "Solicita abono mínimo del 50%. Al recibir (texto o imagen de comprobante), informa al cliente que su reserva está confirmada. Si el mensaje describe comprobante de pago/transferencia, trata como confirmación y agradece.",
+    title: "PLACEHOLDER_DATOS_AGENDAMIENTO",
+    usage: "Datos a solicitar antes de formalizar (etapa REQUISITOS)",
+    defaultContent: "*Cédula:*\n*Nombres Completos:*\n*Fecha y horario:*",
   },
   {
-    title: "VENTA_INFO_PAGO",
-    usage: "Instrucciones al elegir método de pago (etapa VENTA)",
-    defaultContent:
-      "Efectivo: indicar dónde y cuándo. Transferencia: cuenta bancaria, titular, RUC, banco. Indicar enviar comprobante para confirmar.",
+    title: "REQUISITOS_AGENDAMIENTO",
+    usage: "Política de confirmación: anticipo, comprobante, condiciones (etapa REQUISITOS/VALIDACION)",
+    defaultContent: "Antes de agendar:\n1. Recopilar datos de {PLACEHOLDER_DATOS_AGENDAMIENTO}\n2. Solicitar selección de sucursal si hay varias\n3. Informar anticipo del 50% por transferencia\n4. Esperar comprobante del anticipo",
+  },
+  {
+    title: "PLACEHOLDER_CONFIRMACION_AGENDAMIENTO",
+    usage: "Formato del mensaje de confirmación de cita/reserva (etapa CONFIRMACION/CIERRE)",
+    defaultContent: "Tu {tipo_solicitud} ha sido confirmada:\n*Producto:* {nombre_producto}\n*Sucursal:* {sucursal}\n*Fecha:* {fecha}\n*Cliente:* {nombres}",
+  },
+  {
+    title: "PLACEHOLDER_CONFIRMACION_COMPROBANTE",
+    usage: "Formato del mensaje al validar comprobante de pago (etapa CONFIRMACION)",
+    defaultContent: "Hemos recibido tu comprobante:\n*Monto:* {monto}\n*Fecha:* {fecha}\n*Referencia:* {referencia}\n\n¿Los datos son correctos?",
+  },
+  {
+    title: "INFORMACION_VENTA_PAGO",
+    usage: "Métodos de pago disponibles y condiciones (etapa REQUISITOS/VALIDACION)",
+    defaultContent: "Efectivo: en el establecimiento. Transferencia: cuentas configuradas, enviar comprobante para confirmar.",
+  },
+  {
+    title: "POLITICA_PAGO",
+    usage: "Política general de pagos y reservas",
+    defaultContent: "Anticipo del 50% por transferencia para reservar. Resto al momento de la llegada.",
+  },
+  {
+    title: "DATALLE_VENTA_METODOS",
+    usage: "Detalle operativo de cada método de pago",
+    defaultContent: "Efectivo: en establecimiento. Transferencia: cuentas bancarias configuradas. Tarjeta: en establecimiento si aplica.",
   },
   {
     title: "BUSQUEDA_OFERTA_PRECIOS",
-    usage: "Comportamiento con productos y precios (etapa BÚSQUEDA)",
-    defaultContent:
-      'Ofrece productos/precios. Usa lista configurada. NUNCA digas "no tengo" o "no hay".',
+    usage: "Comportamiento al ofrecer productos y precios (etapa DESCUBRIMIENTO)",
+    defaultContent: 'Ofrece productos del catálogo configurado. NUNCA digas "no tengo" o "no hay". Si algo no está, solicita más detalle para ayudarle.',
   },
   {
-    title: "VENTA_POLITICA_PAGO",
-    usage: "Política de pagos y reservas (etapa VENTA)",
-    defaultContent:
-      "Pagos antes de reserva. Mínimo 50% para reservar. Resto al confirmar.",
+    title: "NOTAS_AGENDAMIENTO",
+    usage: "(Opcional) Notas de procedimiento para el cierre (llegada, preparación)",
+    defaultContent: "Recuerda la hora acordada y la dirección del establecimiento. Llegada unos minutos antes si aplica.",
   },
   {
-    title: "VENTA_METODOS_DETALLE",
-    usage: "Detalle operativo de cada método de pago",
-    defaultContent:
-      "Efectivo: en establecimiento. Transferencia: cuentas bancarias configuradas.",
-  },
-  {
-    title: "BUSQUEDA_GLOSARIO",
-    usage:
-      "Palabras clave y equivalencias para búsqueda (formato: clave: valor1, valor2)",
-    defaultContent:
-      "disponibilidad > cliente solicita información de productos/servicios.",
-  },
-  {
-    title: "VENTA_LISTA_BANCOS",
-    usage:
-      "Lista de bancos (solo nombres). Paso 1 al mostrar cuentas para transferencia.",
-    defaultContent:
-      "SOLO lista de bancos. PROHIBIDO dar account_number, titular, RUC, email. *Cuentas Bancarias* - {provider} - {provider}. Selecciona el banco al que deseas hacer el abono.",
-  },
-  {
-    title: "VENTA_DETALLE_CUENTA",
-    usage: "Detalle de cuenta tras elegir banco (datos de transferencia)",
-    defaultContent:
-      "Detalle de cuenta: *{name}* - Cuenta Bancaria: {account_number} - Titular: {account_holder} - RUC: {identification}. Cuando realices la transferencia, envíame el comprobante para confirmar.",
-  },
-  {
-    title: "CONTEXTO_IMAGENES",
-    usage:
-      "Tratamiento de mensajes que son descripción de imagen (comprobante, etc.)",
-    defaultContent:
-      'Cuando el mensaje del cliente es una descripción de imagen (ej. comprobante de pago, documento), procesa como si el cliente hubiera dicho eso. Nunca respondas "no escribiste un mensaje". Si describe pago/transferencia exitosa: confirma reserva.',
-  },
-  {
-    title: "AGENDAMIENTO_NOTAS",
-    usage: "(Opcional) Notas de procedimiento (cita previa, preparación)",
-    defaultContent:
-      "Ejemplo: Todos los exámenes requieren cita previa. Biopsias: consultar disponibilidad.",
+    title: "CONTEXTUALIZADOR_DOCUMENTOS",
+    usage: "Configuración de análisis de documentos/imágenes por etapa (tipo, obligatorio, mnsError) [INICIO, DESCUBRIMIENTO, EVALUACION, REQUISITOS, VALIDACION, CONFIRMACION, CIERRE]",
+    defaultContent: '{"DESCUBRIMIENTO":{"tipo":"RECETAS","obligatorio":false,"mnsError":"No hemos logrado reconocer el documento. Por favor digita su contenido."},"PAGOS":{"tipo":"VALIDACION","obligatorio":false,"mnsError":"No se ha reconocido el comprobante. Un especialista lo revisará."}}',
   },
 ] as const;
 

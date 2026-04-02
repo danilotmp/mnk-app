@@ -37,6 +37,12 @@ export interface Contact {
   specialistAssignment?: boolean;
   /** Última interacción en el hilo (p. ej. desde WebSocket); útil para ordenar la lista */
   lastInteractionAt?: string;
+  /** Fecha del último mensaje (viene del GET /contacts) */
+  lastMessageDate?: string;
+  /** Contenido del último mensaje (viene del GET /contacts) */
+  lastMessageContent?: string;
+  /** Dirección del último mensaje: inbound/outbound (viene del GET /contacts) */
+  lastMessageDirection?: string;
   notes?: string;
   tags?: string[];
   createdAt: string;

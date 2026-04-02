@@ -1696,63 +1696,36 @@ export default function ChatIAScreen() {
         selectedChannelInstance,
       );
 
-      // Para cada contacto, obtener solo el último mensaje (optimizado)
-      const contactsWithMessages = await Promise.all(
-        contactsList.map(async (contact) => {
-          try {
-            // Solo obtener el último mensaje, no todos los mensajes
-            const contactMessages =
-              await InteraccionesService.getMessagesByContact(
-                contact.id,
-                1,
-                selectedChannelInstance,
-              );
-            const lastMessage = contactMessages[0] || undefined;
+      // El backend ya devuelve lastMessageDate, lastMessageContent, lastMessageDirection
+      // No es necesario hacer llamadas individuales por contacto
+      const contactsWithMessages: ContactWithLastMessage[] = contactsList.map(
+        (contact) => {
+          // Construir lastMessage a partir de los campos que vienen en el contacto
+          const lastMessage: Message | undefined =
+            contact.lastMessageContent || contact.lastMessageDate
+              ? ({
+                  id: `last-${contact.id}`,
+                  contactId: contact.id,
+                  content: contact.lastMessageContent ?? "",
+                  direction:
+                    String(contact.lastMessageDirection ?? "").toLowerCase() === "outbound"
+                      ? MessageDirection.OUTBOUND
+                      : MessageDirection.INBOUND,
+                  status: "SENT" as any,
+                  createdAt: contact.lastMessageDate ?? contact.updatedAt,
+                  updatedAt: contact.lastMessageDate ?? contact.updatedAt,
+                } as Message)
+              : undefined;
 
-            // Contar mensajes no leídos solo si hay último mensaje y es inbound no leído
-            // Para optimizar, solo contamos si el último mensaje es inbound y no leído
-            // En una implementación real, el backend debería devolver el count de no leídos
-            let unreadCount: number | undefined = undefined;
-            if (
-              lastMessage &&
-              lastMessage.direction === "INBOUND" &&
-              lastMessage.status !== "READ"
-            ) {
-              // Solo si el último mensaje es no leído, hacemos una llamada adicional para contar
-              // En producción, esto debería venir del backend
-              try {
-                const allMessages =
-                  await InteraccionesService.getMessagesByContact(
-                    contact.id,
-                    undefined,
-                    selectedChannelInstance,
-                  );
-                const count = allMessages.filter(
-                  (m) => m.direction === "INBOUND" && m.status !== "READ",
-                ).length;
-                unreadCount = count > 0 ? count : undefined;
-              } catch {
-                // Si falla, no mostramos contador
-                unreadCount = undefined;
-              }
-            }
-
-            return {
-              ...contact,
-              lastMessage,
-              unreadCount,
-            } as ContactWithLastMessage;
-          } catch (error) {
-            return {
-              ...contact,
-              lastMessage: undefined,
-              unreadCount: undefined,
-            } as ContactWithLastMessage;
-          }
-        }),
+          return {
+            ...contact,
+            lastMessage,
+            unreadCount: undefined,
+          } as ContactWithLastMessage;
+        },
       );
 
-      // Mantener el orden del GET /contacts (backend: más reciente primero)
+      // El backend ya ordena por fecha del último mensaje DESC
       setContacts(contactsWithMessages);
     } catch (error: any) {
       console.error("Error al cargar contactos:", error);
@@ -1790,20 +1763,40 @@ export default function ChatIAScreen() {
 
       setContacts((prev) => {
         const prevById = new Map(prev.map((c) => [c.id, c]));
-        /** Merge con API; se conservan lastMessage/unread del cliente solo si son más recientes. */
+        // El API ahora devuelve lastMessageDate, lastMessageContent, lastMessageDirection
         const mergedUnsorted = contactsList.map((contact) => {
           const existing = prevById.get(contact.id);
+
+          // Construir lastMessage del API a partir de los campos inline
+          const apiLastMessage: Message | undefined =
+            contact.lastMessageContent || contact.lastMessageDate
+              ? ({
+                  id: `last-${contact.id}`,
+                  contactId: contact.id,
+                  content: contact.lastMessageContent ?? "",
+                  direction:
+                    String(contact.lastMessageDirection ?? "").toLowerCase() === "outbound"
+                      ? MessageDirection.OUTBOUND
+                      : MessageDirection.INBOUND,
+                  status: "SENT" as any,
+                  createdAt: contact.lastMessageDate ?? contact.updatedAt,
+                  updatedAt: contact.lastMessageDate ?? contact.updatedAt,
+                } as Message)
+              : undefined;
+
           if (!existing) {
             return {
               ...contact,
-              lastMessage: undefined,
+              lastMessage: apiLastMessage,
               unreadCount: undefined,
             } as ContactWithLastMessage;
           }
-          // Preservar lastMessage del cliente solo si es más reciente que el del API
+
+          // Preservar lastMessage del cliente (WS) solo si es más reciente que el del API
           const existingTs = existing.lastMessage?.createdAt ? Date.parse(existing.lastMessage.createdAt) : 0;
-          const apiTs = (contact as any).lastMessage?.createdAt ? Date.parse((contact as any).lastMessage.createdAt) : 0;
-          const bestLastMessage = existingTs >= apiTs ? existing.lastMessage : ((contact as any).lastMessage || existing.lastMessage);
+          const apiTs = apiLastMessage?.createdAt ? Date.parse(apiLastMessage.createdAt) : 0;
+          const bestLastMessage = existingTs >= apiTs ? existing.lastMessage : (apiLastMessage || existing.lastMessage);
+
           return {
             ...existing,
             ...contact,
@@ -1949,23 +1942,32 @@ export default function ChatIAScreen() {
           channelInstance: payload.channelInstance,
         };
 
-        // Sonido de notificación: solo si es inbound y no es el contacto activo
-        const isInboundFromOther =
-          payload.direction?.toLowerCase() === "inbound" &&
-          activeContactIdRef.current !== payload.contactId;
-        if (isInboundFromOther && typeof window !== "undefined") {
+        // Sonido de notificación: suena si es inbound y no es el contacto activo
+        const isInbound = payload.direction?.toLowerCase() === "inbound";
+        const isActiveContact = activeContactIdRef.current === payload.contactId;
+        if (isInbound && !isActiveContact && typeof window !== "undefined") {
           try {
             const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.connect(gain);
             gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            osc.type = "sine";
-            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            // Primer tono
+            const osc1 = ctx.createOscillator();
+            osc1.connect(gain);
+            osc1.frequency.value = 587; // Re5
+            osc1.type = "sine";
+            osc1.start(ctx.currentTime);
+            osc1.stop(ctx.currentTime + 0.12);
+            // Segundo tono (más alto)
+            const osc2 = ctx.createOscillator();
+            osc2.connect(gain);
+            osc2.frequency.value = 784; // Sol5
+            osc2.type = "sine";
+            osc2.start(ctx.currentTime + 0.14);
+            osc2.stop(ctx.currentTime + 0.26);
+            // Fade out suave
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.setValueAtTime(0.12, ctx.currentTime + 0.24);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.3);
           } catch {
             // Silencioso si el navegador bloquea audio
           }
