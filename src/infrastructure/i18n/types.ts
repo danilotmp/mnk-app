@@ -204,6 +204,7 @@ export interface Translations {
       editMessagePlaceholder: string;
       filterAll: string;
       filterUnread: string;
+      unreadMessages: string;
       filterSpecialist: string;
       filterSpecialistTooltip: string;
       filterSpecialistA11y: string;

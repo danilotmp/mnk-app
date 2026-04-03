@@ -16,15 +16,15 @@ import type { CatalogEntry } from "@/src/domains/catalog/types";
 import { CommercialService } from "@/src/domains/commercial";
 import type { Recommendation } from "@/src/domains/commercial/types";
 import type {
-    Contact,
-    ContactWithLastMessage,
-    Message,
-    MessageAttachment,
-    SerializedBuffer,
+  Contact,
+  ContactWithLastMessage,
+  Message,
+  MessageAttachment,
+  SerializedBuffer,
 } from "@/src/domains/interacciones";
 import {
-    InteraccionesService,
-    MessageDirection,
+  InteraccionesService,
+  MessageDirection,
 } from "@/src/domains/interacciones";
 import { useCompany } from "@/src/domains/shared";
 import { DynamicIcon } from "@/src/domains/shared/components";
@@ -37,8 +37,8 @@ import { MessageQuoteAttachmentThumbnail } from "@/src/features/interacciones/ch
 import { QuickMessagesPanel } from "@/src/features/interacciones/chat/components/quick-messages-panel/quick-messages-panel";
 import { formatRelativeTime } from "@/src/features/interacciones/chat/utils/format-relative-time";
 import {
-    renderWhatsAppFormattedText,
-    renderWhatsAppFormattedTextSingleLine,
+  renderWhatsAppFormattedText,
+  renderWhatsAppFormattedTextSingleLine,
 } from "@/src/features/interacciones/chat/utils/render-whatsapp-formatted-text";
 import { API_CONFIG, ApiConfig } from "@/src/infrastructure/api/config";
 import { getStorageAdapter } from "@/src/infrastructure/api/storage.adapter";
@@ -50,55 +50,55 @@ import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
 import { Stack, useRouter, type Href } from "expo-router";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    AccessibilityInfo,
-    ActivityIndicator,
-    Animated,
-    Image,
-    ImageBackground,
-    LayoutChangeEvent,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  AccessibilityInfo,
+  ActivityIndicator,
+  Animated,
+  Image,
+  ImageBackground,
+  LayoutChangeEvent,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import type { Socket } from "socket.io-client";
 import { CHAT_BACKGROUND_URI } from "./chat-ia.constants";
 import {
-    CHAT_COMPOSER_BAR_MIN_HEIGHT,
-    CHAT_HEADER_SPECIALIST_RING_RADIUS,
-    createChatIaScreenStyles,
-    getChatContactRowDividerColor,
-    SPECIALIST_RING_RADIUS,
+  CHAT_COMPOSER_BAR_MIN_HEIGHT,
+  CHAT_HEADER_SPECIALIST_RING_RADIUS,
+  createChatIaScreenStyles,
+  getChatContactRowDividerColor,
+  SPECIALIST_RING_RADIUS,
 } from "./chat-ia.screen.styles";
 import type {
-    ImageViewerDocumentContext,
-    WsContactUpdatedPayload,
-    WsMessageCreatedPayload,
+  ImageViewerDocumentContext,
+  WsContactUpdatedPayload,
+  WsMessageCreatedPayload,
 } from "./chat-ia.screen.types";
 import { ContactSpecialistAvatarRing } from "./components/contact-specialist-avatar-ring/contact-specialist-avatar-ring";
 import {
-    contactsListsVisuallyEquivalent,
-    getContactListActivityTimestamp,
-    isInboundDirection,
+  contactsListsVisuallyEquivalent,
+  getContactListActivityTimestamp,
+  isInboundDirection,
 } from "./utils/chat-contact-list.utils";
 import {
-    buildImageViewerDocumentContext,
-    formatMediaContextKey,
-    getMediaDataUrl,
+  buildImageViewerDocumentContext,
+  formatMediaContextKey,
+  getMediaDataUrl,
 } from "./utils/chat-media.utils";
 import {
-    compareMessagesByCreatedAtAsc,
-    sortMessagesChronologically,
+  compareMessagesByCreatedAtAsc,
+  sortMessagesChronologically,
 } from "./utils/chat-message-order.utils";
 import { mergeContactWithWsUpdatePayload } from "./utils/chat-ws-merge.utils";
 
@@ -2239,6 +2239,7 @@ export default function ChatIAScreen() {
   const refreshMessagesSilent = useCallback(
     async (contactId: string) => {
       if (silentMessagesSyncingRef.current || !selectedChannelInstance) return;
+      if (!isFocusedRef.current) return;
 
       try {
         silentMessagesSyncingRef.current = true;
@@ -2285,15 +2286,15 @@ export default function ChatIAScreen() {
 
   // Fallback resiliente: polling del chat activo
   useEffect(() => {
-    if (!selectedContact?.id) return;
+    if (!selectedContact?.id || !isFocused) return;
 
     const intervalId = setInterval(() => {
-      if (!isViewVisible()) return;
+      if (!isFocusedRef.current || !isViewVisible()) return;
       refreshMessagesSilent(selectedContact.id);
     }, AppConfig.chat.messagesPollingInterval);
 
     return () => clearInterval(intervalId);
-  }, [isViewVisible, refreshMessagesSilent, selectedContact?.id]);
+  }, [isFocused, isViewVisible, refreshMessagesSilent, selectedContact?.id]);
 
   // Editar mensaje
   const handleEditMessage = useCallback(
@@ -4940,7 +4941,7 @@ export default function ChatIAScreen() {
                                         fontWeight: "600",
                                       }}
                                     >
-                                      {t.pages?.chatIa?.unreadMessages ?? "Mensajes no leídos"}
+                                      {(t.pages?.chatIa as any)?.unreadMessages ?? "Mensajes no leídos"}
                                     </ThemedText>
                                     <View style={{ flex: 1, height: 1, backgroundColor: colors.primary + "60" }} />
                                   </View>
