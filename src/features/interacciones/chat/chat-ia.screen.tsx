@@ -3498,7 +3498,7 @@ export default function ChatIAScreen() {
               styles.channelInstanceMenuPanel,
               {
                 bottom: channelPickerBlockHeight + 8,
-                backgroundColor: colors.filterInputBackground,
+                backgroundColor: colors.surfaceVariant,
                 borderColor: colors.border,
               },
               Platform.OS === "web"
@@ -3576,7 +3576,7 @@ export default function ChatIAScreen() {
               styles.channelInstanceOptionsMenuPanel,
               {
                 bottom: channelPickerBlockHeight + 8,
-                backgroundColor: colors.filterInputBackground,
+                backgroundColor: colors.surfaceVariant,
                 borderColor: colors.border,
               },
               Platform.OS === "web"

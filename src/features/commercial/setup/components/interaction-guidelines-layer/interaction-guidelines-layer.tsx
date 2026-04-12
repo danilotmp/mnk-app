@@ -13,8 +13,8 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-  InteractionGuideline,
-  InteractionGuidelinePayload,
+    InteractionGuideline,
+    InteractionGuidelinePayload,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import { DynamicIcon } from "@/src/domains/shared/components";
@@ -24,14 +24,14 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { SYSTEM_GUIDELINE_NAMES } from "@/src/config/system-guidelines.config";
@@ -89,6 +89,7 @@ export function InteractionGuidelinesLayer({
   });
 
   const [showSystemNamesModal, setShowSystemNamesModal] = useState(false);
+  const [usageModalText, setUsageModalText] = useState<string | null>(null);
 
   // Nombres del sistema que aún no están usados por directrices existentes
   const availableSystemNames = React.useMemo(() => {
@@ -451,33 +452,33 @@ export function InteractionGuidelinesLayer({
                           ]}
                         >
                           {isEditing ? (
-                            <InputWithFocus
-                              containerStyle={[
-                                styles.titleInputContainer,
-                                {
-                                  backgroundColor: colors.filterInputBackground,
-                                  borderColor: colors.border,
-                                  flex: 1,
-                                  width: isMobile ? "100%" : undefined,
-                                },
-                              ]}
-                              primaryColor={colors.primary}
-                            >
-                              <TextInput
-                                style={[
-                                  styles.titleInput,
-                                  { color: colors.text },
+                            <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 8, width: isMobile ? "100%" : undefined }}>
+                              <InputWithFocus
+                                containerStyle={[
+                                  styles.titleInputContainer,
+                                  {
+                                    backgroundColor: colors.filterInputBackground,
+                                    borderColor: colors.border,
+                                    flex: 1,
+                                  },
                                 ]}
-                                placeholder="Título de la directriz"
-                                placeholderTextColor={colors.textSecondary}
-                                value={formData?.title || ""}
-                                onChangeText={(text) =>
-                                  setEditingFormData((prev) => ({
-                                    ...prev,
-                                    [guideline.id]: {
-                                      ...(prev[guideline.id] || {
-                                        title: guideline.title,
-                                        description: guideline.description,
+                                primaryColor={colors.primary}
+                              >
+                                <TextInput
+                                  style={[
+                                    styles.titleInput,
+                                    { color: colors.text },
+                                  ]}
+                                  placeholder="Título de la directriz"
+                                  placeholderTextColor={colors.textSecondary}
+                                  value={formData?.title || ""}
+                                  onChangeText={(text) =>
+                                    setEditingFormData((prev) => ({
+                                      ...prev,
+                                      [guideline.id]: {
+                                        ...(prev[guideline.id] || {
+                                          title: guideline.title,
+                                          description: guideline.description,
                                         status: guideline.status,
                                       }),
                                       title: text,
@@ -487,6 +488,23 @@ export function InteractionGuidelinesLayer({
                                 editable={!saving}
                               />
                             </InputWithFocus>
+                            {(() => {
+                              const match = SYSTEM_GUIDELINE_NAMES.find(
+                                (s) => s.title.toUpperCase() === (formData?.title || "").trim().toUpperCase()
+                              );
+                              if (!match) return null;
+                              return (
+                                <Tooltip text="Ver descripción de uso" position="top">
+                                  <TouchableOpacity
+                                    onPress={() => setUsageModalText(match.usage)}
+                                    style={{ padding: 4 }}
+                                  >
+                                    <Ionicons name="information-circle-outline" size={22} color={actionIconColor} />
+                                  </TouchableOpacity>
+                                </Tooltip>
+                              );
+                            })()}
+                            </View>
                           ) : (
                             <TouchableOpacity
                               style={{
@@ -1217,6 +1235,51 @@ export function InteractionGuidelinesLayer({
                     variant="outlined"
                     size="md"
                     style={{ marginTop: 16 }}
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+
+            {/* Modal: descripción de uso de la directriz */}
+            <Modal
+              visible={usageModalText !== null}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setUsageModalText(null)}
+            >
+              <Pressable
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.overlay,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: 24,
+                }}
+                onPress={() => setUsageModalText(null)}
+              >
+                <Pressable
+                  onPress={(e) => e.stopPropagation()}
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 12,
+                    padding: 24,
+                    maxWidth: 480,
+                    width: "100%",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <Ionicons name="information-circle" size={24} color={colors.primary} />
+                    <ThemedText type="h4">Descripción de uso</ThemedText>
+                  </View>
+                  <ThemedText type="body2" style={{ color: colors.textSecondary, lineHeight: 22 }}>
+                    {usageModalText}
+                  </ThemedText>
+                  <Button
+                    title="Cerrar"
+                    onPress={() => setUsageModalText(null)}
+                    variant="outlined"
+                    size="md"
+                    style={{ marginTop: 20, alignSelf: "flex-end" }}
                   />
                 </Pressable>
               </Pressable>
