@@ -137,6 +137,8 @@ export interface InteraccionesWhatsappInstance {
   phoneNumber?: string;
   phone?: string;
   isActive?: boolean;
+  /** ID del template de flujo asignado a esta instancia */
+  flowTemplateId?: string | null;
 }
 
 /**

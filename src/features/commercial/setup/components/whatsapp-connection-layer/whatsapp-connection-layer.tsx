@@ -6,19 +6,22 @@
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { Select } from "@/components/ui/select";
 import { SideModal } from "@/components/ui/side-modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
-import type { WhatsAppInstance } from "@/src/domains/commercial/types";
+import type { WhatsAppInstance, WhatsAppInstancePayload } from "@/src/domains/commercial/types";
 import { InteraccionesService } from "@/src/domains/interacciones";
 import { useCompany } from "@/src/domains/shared";
 import { PhoneInput } from "@/src/domains/shared/components";
 import { CustomSwitch } from "@/src/domains/shared/components/custom-switch/custom-switch";
 import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
+import { FlowsService } from "@/src/features/interacciones/flows/services";
+import type { FlowTemplate } from "@/src/features/interacciones/flows/types";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { extractErrorDetail } from "@/src/infrastructure/messages/error-utils";
@@ -59,6 +62,7 @@ export interface WhatsAppConnectionLayerRef {
 interface WhatsAppInstanceFormData {
   whatsapp: string;
   isActive?: boolean;
+  flowTemplateId?: string | null;
 }
 
 export const WhatsAppConnectionLayer = forwardRef<
@@ -75,6 +79,7 @@ export const WhatsAppConnectionLayer = forwardRef<
 
   const [loading, setLoading] = useState(true);
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+  const [flowTemplates, setFlowTemplates] = useState<FlowTemplate[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<
     "create" | "edit" | "view-qr" | null
@@ -115,7 +120,7 @@ export const WhatsAppConnectionLayer = forwardRef<
       const profile = await CommercialService.getProfile(company.id, true);
       let loadedInstances = profile.whatsappInstances || [];
 
-      // Si hay commercialProfileId, obtener contexto (incluye chatIAFlow para super admin, instancias inactivas con admin)
+      // Enriquecer instancias con datos del contexto (admin: incluye inactivas)
       if (profile.id) {
         try {
           const { whatsappInstances: contextInstances } =
@@ -128,17 +133,12 @@ export const WhatsAppConnectionLayer = forwardRef<
               if (!enriched) return inst;
               return {
                 ...inst,
-                ...(enriched.chatIAFlow && enriched.chatIAFlowFilename
-                  ? {
-                      chatIAFlow: enriched.chatIAFlow,
-                      chatIAFlowFilename: enriched.chatIAFlowFilename,
-                    }
-                  : {}),
+                flowTemplateId: enriched.flowTemplateId ?? inst.flowTemplateId,
               };
             });
           }
         } catch {
-          // Si falla el contexto (ej. no super admin), usar instancias base
+          // Si falla el contexto, usar instancias base
         }
       }
 
@@ -185,6 +185,14 @@ export const WhatsAppConnectionLayer = forwardRef<
 
       setInstances(loadedInstances);
 
+      // Cargar templates de flujo disponibles
+      try {
+        const templates = await FlowsService.getActiveTemplates();
+        setFlowTemplates(templates);
+      } catch {
+        // Si falla, no bloquear la pantalla
+      }
+
       // Actualizar progreso basado en si hay instancias activas
       const hasActiveInstances = loadedInstances.some((inst) => inst.isActive);
       onProgressUpdate?.(hasActiveInstances ? 100 : 0);
@@ -223,15 +231,18 @@ export const WhatsAppConnectionLayer = forwardRef<
     return new TextDecoder().decode(bytes);
   };
 
-  /** Descargar o compartir el archivo de flujo ChatIA (super admin). chatIAFlow viene en base64. */
+  /** Descargar el archivo de flujo n8n generado bajo demanda desde el backend. */
   const handleDownloadFlow = async (instance: WhatsAppInstance) => {
-    const base64 = instance.chatIAFlow;
-    const filename = instance.chatIAFlowFilename || "chat-ia-flow.json";
-    if (!base64) return;
+    if (!instance.id) return;
     try {
-      const content = base64ToUtf8(base64);
+      const { filename, content } = await FlowsService.downloadFlow(instance.id);
+      if (!content) {
+        alert.showError(L?.errorDownloadingFlow ?? "No se pudo obtener el flujo");
+        return;
+      }
+      const decoded = base64ToUtf8(content);
       if (Platform.OS === "web") {
-        const blob = new Blob([content], { type: "application/json" });
+        const blob = new Blob([decoded], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -240,12 +251,12 @@ export const WhatsAppConnectionLayer = forwardRef<
         URL.revokeObjectURL(url);
       } else {
         await Share.share({
-          message: content,
+          message: decoded,
           title: filename,
         });
       }
-    } catch (e) {
-      alert.showError("Error al descargar el flujo");
+    } catch (e: any) {
+      alert.showError(e?.message || (L?.errorDownloadingFlow ?? "Error al descargar el flujo"));
     }
   };
 
@@ -264,7 +275,7 @@ export const WhatsAppConnectionLayer = forwardRef<
   }));
 
   const handleEdit = (instance: WhatsAppInstance) => {
-    setFormData({ whatsapp: instance.whatsapp, isActive: instance.isActive });
+    setFormData({ whatsapp: instance.whatsapp, isActive: instance.isActive, flowTemplateId: instance.flowTemplateId });
     setFormErrors({});
     setSelectedInstance(instance);
     setModalAlert(null);
@@ -436,13 +447,15 @@ export const WhatsAppConnectionLayer = forwardRef<
         );
       } else if (modalMode === "edit" && selectedInstance) {
         // Actualizar instancia existente
+        const updatePayload: Partial<WhatsAppInstancePayload> = {
+          whatsapp: whatsappValue,
+          isActive: formData.isActive,
+          flowTemplateId: formData.flowTemplateId,
+        };
         const updatedInstance = await CommercialService.updateWhatsAppInstance(
           company.id,
           selectedInstance.id,
-          {
-            whatsapp: whatsappValue,
-            isActive: formData.isActive,
-          },
+          updatePayload,
         );
 
         setInstances((prev) =>
@@ -693,7 +706,7 @@ export const WhatsAppConnectionLayer = forwardRef<
         {" "}
       </ThemedText>
     );
-    /** Una celda por columna: WhatsApp + 5 métricas + N8N + estado + acciones = 9 */
+    /** Una celda por columna: WhatsApp + Transacciones + Flujo + Estado + Acciones = 5 */
     return [
       {
         colSpan: 1,
@@ -707,26 +720,6 @@ export const WhatsAppConnectionLayer = forwardRef<
         colSpan: 1,
         align: "right" as const,
         content: footMetric(statsTotals.transactions),
-      },
-      {
-        colSpan: 1,
-        align: "right" as const,
-        content: footMetric(statsTotals.documents),
-      },
-      {
-        colSpan: 1,
-        align: "right" as const,
-        content: footMetric(statsTotals.operations),
-      },
-      {
-        colSpan: 1,
-        align: "right" as const,
-        content: footMetric(statsTotals.payments),
-      },
-      {
-        colSpan: 1,
-        align: "right" as const,
-        content: footMetric(statsTotals.executions),
       },
       { colSpan: 1, content: footEmpty },
       { colSpan: 1, content: footEmpty },
@@ -749,12 +742,12 @@ export const WhatsAppConnectionLayer = forwardRef<
     {
       key: "whatsapp",
       label: L?.columnWhatsApp ?? "WhatsApp",
-      width: "25px",
+      width: "25%",
     },
     {
       key: "monthTransactionsCount",
       label: L?.columnMonthTransactions ?? "Transacciones",
-      width: "7%",
+      width: "12%",
       align: "right",
       render: (instance) => (
         <ThemedText type="body2" style={metricCellTextStyle}>
@@ -763,98 +756,26 @@ export const WhatsAppConnectionLayer = forwardRef<
       ),
     },
     {
-      key: "monthDocumentsCount",
-      label: L?.columnMonthDocuments ?? "Documentos",
-      width: "7%",
-      align: "right",
-      render: (instance) => (
-        <ThemedText type="body2" style={metricCellTextStyle}>
-          {instance.monthDocumentsCount ?? 0}
-        </ThemedText>
-      ),
-    },
-    {
-      key: "monthOperationsCount",
-      label: L?.columnMonthOperations ?? "Órdenes",
-      width: "7%",
-      align: "right",
-      render: (instance) => (
-        <ThemedText type="body2" style={metricCellTextStyle}>
-          {instance.monthOperationsCount ?? 0}
-        </ThemedText>
-      ),
-    },
-    {
-      key: "monthPaymentsCount",
-      label: L?.columnMonthPayments ?? "Pagos",
-      width: "7%",
-      align: "right",
-      render: (instance) => (
-        <ThemedText type="body2" style={metricCellTextStyle}>
-          {instance.monthPaymentsCount ?? 0}
-        </ThemedText>
-      ),
-    },
-    {
-      key: "monthExecutionsCount",
-      label: L?.columnMonthExecutions ?? "Ejecuciones",
-      width: "7%",
-      align: "right",
-      render: (instance) => (
-        <ThemedText type="body2" style={metricCellTextStyle}>
-          {instance.monthExecutionsCount ?? 0}
-        </ThemedText>
-      ),
-    },
-    {
-      key: "chatIAFlow",
-      label: L?.columnChatIAFlow ?? "N8N",
-      width: "12%",
+      key: "flowTemplateId",
+      label: L?.columnFlow ?? "Flujo",
+      width: "18%",
       align: "center",
-      render: (instance: WhatsAppInstance) =>
-        instance.chatIAFlow && instance.chatIAFlowFilename ? (
-          <View style={styles.n8nCell}>
-            <Tooltip
-              text={L?.downloadChatIAFlowTooltip ?? "Descarga N8N"}
-              position="left"
-            >
-              <TouchableOpacity
-                onPress={() => handleDownloadFlow(instance)}
-                style={[
-                  styles.flowDownloadButton,
-                  {
-                    backgroundColor: colors.primary + "20",
-                    borderColor: colors.primary,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  L?.downloadChatIAFlowTooltip ?? "Descarga N8N"
-                }
-              >
-                <Ionicons
-                  name="download-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-                <ThemedText
-                  type="defaultSemiBold"
-                  style={[
-                    styles.flowDownloadButtonLabel,
-                    { color: colors.primary },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {L?.downloadChatIAFlowButton ?? "Descargar"}
-                </ThemedText>
-              </TouchableOpacity>
-            </Tooltip>
-          </View>
+      render: (instance: WhatsAppInstance) => {
+        const template = flowTemplates.find((t) => t.id === instance.flowTemplateId);
+        return template ? (
+          <Tooltip text={template.name} position="left">
+            <View style={{ alignItems: "center" }}>
+              <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "500" }} numberOfLines={1}>
+                {template.code}
+              </ThemedText>
+            </View>
+          </Tooltip>
         ) : (
           <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-            —
+            {flowTemplates.find((t) => t.isSystem)?.code || "—"}
           </ThemedText>
-        ),
+        );
+      },
     },
     {
       key: "isActive",
@@ -887,6 +808,17 @@ export const WhatsAppConnectionLayer = forwardRef<
                 onPress={() => handleViewQR(instance)}
               >
                 <Ionicons name="qr-code" size={18} color={actionIconColor} />
+              </TouchableOpacity>
+            </Tooltip>
+          )}
+          {/* Descarga del flujo n8n bajo demanda */}
+          {instance.id && (
+            <Tooltip text={L?.downloadChatIAFlowTooltip ?? "Descargar N8N"} position="left">
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleDownloadFlow(instance)}
+              >
+                <Ionicons name="download-outline" size={18} color={actionIconColor} />
               </TouchableOpacity>
             </Tooltip>
           )}
@@ -997,8 +929,7 @@ export const WhatsAppConnectionLayer = forwardRef<
               <View style={styles.modalFooter}>
                 <View style={styles.modalFooterActions}>
                   {modalMode === "edit" &&
-                    selectedInstance?.chatIAFlow &&
-                    selectedInstance?.chatIAFlowFilename && (
+                    selectedInstance?.id && (
                       <Button
                         onPress={() =>
                           selectedInstance &&
@@ -1118,6 +1049,66 @@ export const WhatsAppConnectionLayer = forwardRef<
                   {L?.whatsappCaption ??
                     "Número de WhatsApp o identificador IA"}
                 </ThemedText>
+
+                {/* Selector de flujo - Solo en modo edición */}
+                {modalMode === "edit" && (
+                  <View style={styles.inputGroup}>
+                    <Select
+                      label={L?.flowLabel ?? "Flujo"}
+                      placeholder={L?.flowPlaceholder ?? "Selecciona un flujo"}
+                      value={formData.flowTemplateId ?? flowTemplates.find((t) => t.isSystem)?.id}
+                      options={flowTemplates.map((tmpl) => ({
+                        value: tmpl.id,
+                        label: tmpl.code,
+                      }))}
+                      onSelect={(val) => {
+                        setFormData((prev) => ({ ...prev, flowTemplateId: val as string }));
+                      }}
+                      triggerStyle={{
+                        backgroundColor: colors.filterInputBackground,
+                      }}
+                    />
+                    {/* Nombre del flujo seleccionado */}
+                    {(() => {
+                      const selId = formData.flowTemplateId ?? flowTemplates.find((t) => t.isSystem)?.id;
+                      const tmpl = flowTemplates.find((t) => t.id === selId);
+                      if (!tmpl) return null;
+                      return (
+                        <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                          {tmpl.name}
+                        </ThemedText>
+                      );
+                    })()}
+                    {/* Vista previa de etapas del flujo seleccionado */}
+                    {(() => {
+                      const selectedFlowId = formData.flowTemplateId;
+                      const tmpl = flowTemplates.find((t) => t.id === selectedFlowId);
+                      if (!tmpl?.stages || tmpl.stages.length === 0) return null;
+                      const sorted = [...tmpl.stages].sort((a, b) => a.orderIndex - b.orderIndex);
+                      return (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                          {sorted.map((stage, idx) => (
+                            <React.Fragment key={stage.id || idx}>
+                              <View style={{
+                                paddingHorizontal: 8,
+                                paddingVertical: 3,
+                                borderRadius: 4,
+                                backgroundColor: colors.primary + "15",
+                              }}>
+                                <ThemedText type="caption" style={{ color: colors.primary, fontSize: 11 }}>
+                                  {stage.emoji || "⚙️"} {stage.stageCode}
+                                </ThemedText>
+                              </View>
+                              {idx < sorted.length - 1 && (
+                                <Ionicons name="arrow-forward" size={10} color={colors.textSecondary + "60"} />
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </View>
+                      );
+                    })()}
+                  </View>
+                )}
 
                 {/* Estado activo/inactivo - Solo en modo edición: etiqueta izquierda, switch derecha */}
                 {modalMode === "edit" && (
@@ -1333,8 +1324,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                   variant="outlined"
                   size="md"
                 />
-                {selectedInstance?.chatIAFlow &&
-                  selectedInstance?.chatIAFlowFilename && (
+                {selectedInstance?.id && (
                     <Button
                       title={
                         L?.downloadChatIAFlowTooltip ?? "Descarga N8N"

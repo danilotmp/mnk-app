@@ -142,6 +142,7 @@ function normalizeWhatsAppInstance(raw: Record<string, any>): WhatsAppInstance {
     monthExecutionsCount: parseNonNegativeInt(
       raw.monthExecutionsCount ?? raw.month_executions_count,
     ),
+    flowTemplateId: raw.flowTemplateId ?? raw.flow_template_id ?? null,
   };
 }
 
@@ -284,19 +285,20 @@ export const CommercialService = {
   },
 
   async updateProfile(companyId: string, payload: Partial<CommercialProfilePayload>): Promise<CommercialProfile> {
-    // Si no se están actualizando whatsappInstances, preservar las existentes
     let finalPayload: CommercialProfilePayload = {
       ...payload,
       companyId,
     };
     
+    // Si no se están actualizando whatsappInstances, preservar las existentes
     if (!payload.whatsappInstances) {
       const currentProfile = await this.getProfile(companyId);
-      finalPayload.whatsappInstances = currentProfile.whatsappInstances?.map(inst => ({
+      finalPayload.whatsappInstances = (currentProfile.whatsappInstances || []).map(inst => ({
         whatsapp: inst.whatsapp,
         whatsappQR: inst.whatsappQR,
         isActive: inst.isActive,
-      })) || [];
+        flowTemplateId: inst.flowTemplateId,
+      }));
     }
     
     return this.upsertProfile(finalPayload);
@@ -1383,7 +1385,7 @@ export const CommercialService = {
 
   async updateWhatsAppInstance(companyId: string, instanceId: string, payload: Partial<WhatsAppInstancePayload>): Promise<WhatsAppInstance> {
     const profile = await this.getProfile(companyId, true);
-    const instances = profile.whatsappInstances || [];
+    let instances = profile.whatsappInstances || [];
     const instanceIndex = instances.findIndex(inst => inst.id === instanceId);
     
     if (instanceIndex === -1) {
@@ -1393,7 +1395,6 @@ export const CommercialService = {
     // Si se está actualizando el QR, obtenerlo
     let qrCode: string | null = instances[instanceIndex].whatsappQR;
     if (payload.whatsapp && payload.whatsapp !== instances[instanceIndex].whatsapp) {
-      // Si cambió el whatsapp, obtener nuevo QR
       try {
         const qrResponse = await this.getWhatsAppQRCode(payload.whatsapp);
         qrCode = qrResponse.qrcode || null;
@@ -1402,20 +1403,31 @@ export const CommercialService = {
       }
     }
 
-    const updatedInstances = [...instances];
-    updatedInstances[instanceIndex] = {
-      ...updatedInstances[instanceIndex],
-      whatsapp: payload.whatsapp ?? updatedInstances[instanceIndex].whatsapp,
-      whatsappQR: qrCode ?? updatedInstances[instanceIndex].whatsappQR,
-      isActive: payload.isActive ?? updatedInstances[instanceIndex].isActive,
-    };
-
-    const updatedProfile = await this.updateProfile(companyId, {
-      whatsappInstances: updatedInstances.map(inst => ({
+    // Construir el array final: para la instancia editada usar el payload,
+    // para las demás preservar flowTemplateId del contexto
+    const whatsappPayload = instances.map((inst, idx) => {
+      if (idx === instanceIndex) {
+        return {
+          whatsapp: payload.whatsapp ?? inst.whatsapp,
+          whatsappQR: qrCode ?? inst.whatsappQR,
+          isActive: payload.isActive ?? inst.isActive,
+          flowTemplateId: payload.flowTemplateId !== undefined
+            ? payload.flowTemplateId
+            : inst.flowTemplateId,
+        };
+      }
+      return {
         whatsapp: inst.whatsapp,
         whatsappQR: inst.whatsappQR,
         isActive: inst.isActive,
-      })),
+        flowTemplateId: inst.flowTemplateId,
+      };
+    });
+
+    // Enviar directamente al upsert sin pasar por updateProfile (evita doble lectura)
+    const updatedProfile = await this.upsertProfile({
+      companyId,
+      whatsappInstances: whatsappPayload,
     });
 
     const updatedInstance = updatedProfile.whatsappInstances?.find(inst => inst.id === instanceId);

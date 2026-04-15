@@ -23,12 +23,16 @@ export interface WhatsAppInstance {
   monthOperationsCount?: number;
   monthPaymentsCount?: number;
   monthExecutionsCount?: number;
+  /** ID del template de flujo asignado a esta instancia */
+  flowTemplateId?: string | null;
 }
 
 export interface WhatsAppInstancePayload {
   whatsapp: string;
   whatsappQR?: string | null;
   isActive?: boolean;
+  /** ID del template de flujo asignado a esta instancia */
+  flowTemplateId?: string | null;
 }
 
 /** Respuesta unificada de create/conexión WhatsApp (POST create o POST whatsapp-connection). */

@@ -3,14 +3,14 @@
  */
 
 export { AccessGuard } from './access-guard/access-guard';
+export type { AccessGuardProps } from './access-guard/access-guard.types';
 export { AttributesEditor } from './attributes-editor/attributes-editor';
 export type { AttributesEditorProps } from './attributes-editor/attributes-editor.types';
-export type { AccessGuardProps } from './access-guard/access-guard.types';
 export { BranchSelector } from './branch-selector/branch-selector';
 export type { BranchSelectorProps } from './branch-selector/branch-selector.types';
-export { CustomSwitch } from './custom-switch/custom-switch';
 export { CurrencyInput } from './currency-input/currency-input';
 export type { CurrencyInputProps } from './currency-input/currency-input.types';
+export { CustomSwitch } from './custom-switch/custom-switch';
 export { DataTable } from './data-table/data-table';
 export type { DataTableProps, TableColumn } from './data-table/data-table.types';
 export { DatePicker } from './date-picker/date-picker';
@@ -21,12 +21,14 @@ export { EmailInput } from './email-input/email-input';
 export type { EmailInputProps } from './email-input/email-input.types';
 export { IconInput } from './icon-input/icon-input';
 export type { IconInputProps } from './icon-input/icon-input.types';
+export { JsonEditor } from './json-editor/json-editor';
+export type { JsonEditorProps } from './json-editor/json-editor.types';
+export { NumericInput } from './numeric-input/numeric-input';
+export type { NumericInputProps } from './numeric-input/numeric-input.types';
 export { PasswordInput } from './password-input/password-input';
 export type { PasswordInputProps } from './password-input/password-input.types';
 export { PhoneInput } from './phone-input/phone-input';
 export type { PhoneInputProps } from './phone-input/phone-input.types';
-export { NumericInput } from './numeric-input/numeric-input';
-export type { NumericInputProps } from './numeric-input/numeric-input.types';
 export { SearchFilterBar } from './search-filter-bar/search-filter-bar';
 export type { FilterConfig, FilterOption, SearchFilterBarProps } from './search-filter-bar/search-filter-bar.types';
 export { SearchInput } from './search-input/search-input';
