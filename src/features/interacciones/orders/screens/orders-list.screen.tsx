@@ -6,6 +6,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { SideModal } from "@/components/ui/side-modal";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -14,6 +15,7 @@ import { useCompany } from "@/src/domains/shared";
 import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
 import { SearchFilterBar } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar";
+import type { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
 import { ImageWithToken } from "@/src/features/interacciones/chat/components/image-with-token/image-with-token";
 import { apiClient } from "@/src/infrastructure/api";
 import { useTranslation } from "@/src/infrastructure/i18n";
@@ -34,8 +36,9 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { ChatOrdersService } from "../services";
 import type { ChatOrderRecord, ChatOrderReviewStatus } from "../types";
@@ -162,20 +165,31 @@ export default function OrdersListScreen() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [localFilter, setLocalFilter] = useState("");
-  const [remoteSearch, setRemoteSearch] = useState("");
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [activePeriod, setActivePeriod] = useState<string | null>("today");
+  const [filters, setFilters] = useState<{
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    reviewStatus?: string;
+    hasPay?: string;
+  }>({ dateFrom: todayISO, dateTo: todayISO });
   const [selectedOrder, setSelectedOrder] =
     useState<ChatOrderRecord | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null);
   const [imageViewerLoading, setImageViewerLoading] = useState(false);
+  const [editReviewStatus, setEditReviewStatus] = useState<string>("");
+  const [editComments, setEditComments] = useState("");
+  const [savingReview, setSavingReview] = useState(false);
   const limit = 10;
 
   const loadOrders = useCallback(
     async (opts?: { pull?: boolean; p?: number; search?: string }) => {
       const pull = opts?.pull === true;
       const currentPage = opts?.p ?? page;
-      const currentSearch = opts?.search ?? remoteSearch;
+      const currentSearch = opts?.search ?? filters.search;
       if (!company?.id) {
         setLoading(false);
         return;
@@ -188,6 +202,10 @@ export default function OrdersListScreen() {
           page: currentPage,
           limit,
           search: currentSearch || undefined,
+          dateFrom: filters.dateFrom || undefined,
+          dateTo: filters.dateTo || undefined,
+          reviewStatus: filters.reviewStatus || undefined,
+          hasPay: filters.hasPay === "true" ? true : filters.hasPay === "false" ? false : undefined,
         });
         setOrders(result.data);
         setTotal(result.meta.total);
@@ -199,25 +217,64 @@ export default function OrdersListScreen() {
         else setLoading(false);
       }
     },
-    [company?.id, page, remoteSearch],
+    [company?.id, page, filters],
   );
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
 
-  /** Filtro local: filtra en la data ya cargada */
+  /** Filtro local */
   const handleLocalFilterChange = useCallback((value: string) => {
     setLocalFilter(value);
   }, []);
 
-  /** Búsqueda remota: envía al backend */
+  /** Chips de periodo rápido */
+  const handlePeriodChip = useCallback((key: string) => {
+    setActivePeriod(key);
+    setPage(1);
+    const now = new Date();
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    switch (key) {
+      case "today":
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(now), dateTo: fmt(now) }));
+        break;
+      case "yesterday": {
+        const y = new Date(now);
+        y.setDate(y.getDate() - 1);
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(y), dateTo: fmt(y) }));
+        break;
+      }
+      case "thisWeek": {
+        const day = now.getDay();
+        const mon = new Date(now);
+        mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(mon), dateTo: fmt(now) }));
+        break;
+      }
+      case "thisMonth": {
+        const first = new Date(now.getFullYear(), now.getMonth(), 1);
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(first), dateTo: fmt(now) }));
+        break;
+      }
+      case "lastMonth": {
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(first), dateTo: fmt(last) }));
+        break;
+      }
+      case "all":
+        setFilters((prev) => ({ ...prev, dateFrom: undefined, dateTo: undefined }));
+        break;
+    }
+  }, []);
+
+  /** Búsqueda remota */
   const handleSearchSubmit = useCallback((search: string) => {
-    setRemoteSearch(search);
+    setFilters((prev) => ({ ...prev, search }));
     setLocalFilter("");
     setPage(1);
-    loadOrders({ p: 1, search });
-  }, [loadOrders]);
+  }, []);
 
   /** Data filtrada localmente */
   const filteredOrders = useMemo(() => {
@@ -243,6 +300,8 @@ export default function OrdersListScreen() {
 
   const openDetail = useCallback((o: ChatOrderRecord) => {
     setSelectedOrder(o);
+    setEditReviewStatus(o.reviewStatus || "PENDING");
+    setEditComments(o.comments || "");
     setDetailVisible(true);
   }, []);
 
@@ -253,10 +312,9 @@ export default function OrdersListScreen() {
 
   const handleContactClient = useCallback((order: ChatOrderRecord) => {
     if (!order.contactPhone) return;
-    Linking.openURL(
-      `https://wa.me/${order.contactPhone.replace(/\D/g, "")}`,
-    ).catch(() => {});
-  }, []);
+    router.push(`/interacciones/chat?phone=${encodeURIComponent(order.contactPhone)}` as any);
+    closeDetail();
+  }, [router, closeDetail]);
 
   const handleExport = useCallback(async () => {
     if (!company?.id) return;
@@ -317,6 +375,79 @@ export default function OrdersListScreen() {
       alert.showError(O?.receiptError || "Error");
     }
   }, [alert, O]);
+
+  const handleSaveReview = useCallback(async () => {
+    if (!selectedOrder) return;
+    setSavingReview(true);
+    try {
+      const updated = await ChatOrdersService.updateReview(selectedOrder.id, {
+        reviewStatus: editReviewStatus,
+        comments: editComments,
+      });
+      setSelectedOrder({ ...selectedOrder, ...updated });
+      setOrders((prev) => prev.map((o) => o.id === selectedOrder.id ? { ...o, ...updated } : o));
+      alert.showSuccess(O?.reviewSaved || "Guardado");
+    } catch {
+      alert.showError(O?.reviewSaveError || "Error");
+    } finally {
+      setSavingReview(false);
+    }
+  }, [selectedOrder, editReviewStatus, editComments, alert, O]);
+
+  const reviewStatusOptions = useMemo(() => [
+    { value: "PENDING", label: O?.reviewPending || "Pendiente" },
+    { value: "REVIEWED", label: O?.reviewReviewed || "Revisado" },
+    { value: "APPROVED", label: O?.reviewApproved || "Aprobado" },
+    { value: "REJECTED", label: O?.reviewRejected || "Rechazado" },
+  ], [O]);
+
+  const handleAdvancedFilterChange = useCallback((key: string, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value || undefined }));
+    setPage(1);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters({ dateFrom: todayISO, dateTo: todayISO });
+    setLocalFilter("");
+    setPage(1);
+  }, [todayISO]);
+
+  const filterConfigs: FilterConfig[] = useMemo(() => [
+    {
+      key: "dateFrom",
+      label: O?.filterDateFrom || "Desde",
+      type: "date" as const,
+      placeholder: "YYYY-MM-DD",
+    },
+    {
+      key: "dateTo",
+      label: O?.filterDateTo || "Hasta",
+      type: "date" as const,
+      placeholder: "YYYY-MM-DD",
+    },
+    {
+      key: "reviewStatus",
+      label: O?.reviewStatusLabel || "Revisión",
+      type: "select" as const,
+      options: [
+        { key: "all", value: "", label: O?.filterAll || "Todos" },
+        { key: "PENDING", value: "PENDING", label: O?.reviewPending || "Pendiente" },
+        { key: "REVIEWED", value: "REVIEWED", label: O?.reviewReviewed || "Revisado" },
+        { key: "APPROVED", value: "APPROVED", label: O?.reviewApproved || "Aprobado" },
+        { key: "REJECTED", value: "REJECTED", label: O?.reviewRejected || "Rechazado" },
+      ],
+    },
+    {
+      key: "hasPay",
+      label: O?.filterHasPay || "Pago",
+      type: "select" as const,
+      options: [
+        { key: "all", value: "", label: O?.filterAll || "Todos" },
+        { key: "true", value: "true", label: O?.filterWithPay || "Con pago" },
+        { key: "false", value: "false", label: O?.filterWithoutPay || "Sin pago" },
+      ],
+    },
+  ], [O]);
 
   const totalAmount = useMemo(
     () => orders.reduce((s, o) => s + (getListAmount(o) ?? 0), 0),
@@ -520,13 +651,20 @@ export default function OrdersListScreen() {
       {
         key: "createdAt",
         label: O?.colDate || "Fecha",
-        width: "10%",
+        width: 110,
         align: "right",
         render: (item) => (
           <ThemedText type="caption" style={{ color: colors.textSecondary, textAlign: "right", width: "100%" }}>
             {formatDate(item.createdAt, locale)}
           </ThemedText>
         ),
+      },
+      {
+        key: "reviewStatusCol",
+        label: O?.colReview || "Revisión",
+        width: 120,
+        align: "left",
+        render: (item) => renderReviewBadge(item),
       },
     ],
     [O, colors, locale, renderReviewBadge, renderPaymentBadge],
@@ -577,28 +715,128 @@ export default function OrdersListScreen() {
           </View>
         </View>
 
-        {/* KPI Cards */}
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiCard}>
-            <ThemedText style={styles.kpiLabel}>
-              {O?.kpiTotalOrders}
-            </ThemedText>
-            <ThemedText style={styles.kpiValue}>{total}</ThemedText>
+        {/* KPIs (izq) + Filtros de fecha (der) — en móvil apilados */}
+        <View style={{
+          flexDirection: isMobile ? "column" : "row",
+          gap: spacing.md,
+          paddingHorizontal: isMobile ? spacing.md : spacing.lg,
+          marginBottom: spacing.md,
+        }}>
+          {/* KPI Cards */}
+          <View style={{ flex: isMobile ? undefined : 1, flexDirection: "row", gap: spacing.md }}>
+            <View style={[styles.kpiCard, { flex: 1 }]}>
+              <ThemedText style={styles.kpiLabel}>{O?.kpiTotalOrders}</ThemedText>
+              <ThemedText style={styles.kpiValue}>{total}</ThemedText>
+            </View>
+            <View style={[styles.kpiCard, { flex: 1 }]}>
+              <ThemedText style={styles.kpiLabel}>{O?.kpiTotalAmount}</ThemedText>
+              <ThemedText style={styles.kpiValue}>{formatCurrency(totalAmount, "USD", locale)}</ThemedText>
+            </View>
           </View>
-          <View style={styles.kpiCard}>
-            <ThemedText style={styles.kpiLabel}>
-              {O?.kpiTotalAmount}
-            </ThemedText>
-            <ThemedText style={styles.kpiValue}>
-              {formatCurrency(totalAmount, "USD", locale)}
-            </ThemedText>
+
+          {/* Filtros de fecha */}
+          <View style={{
+            flex: isMobile ? undefined : 1,
+            backgroundColor: colors.background,
+            borderRadius: borderRadius.lg,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            padding: spacing.md,
+            ...shadows.sm,
+          }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                {([
+                  { key: "today", label: O?.periodToday || "Hoy" },
+                  { key: "yesterday", label: O?.periodYesterday || "Ayer" },
+                  { key: "thisWeek", label: O?.periodThisWeek || "Esta semana" },
+                  { key: "thisMonth", label: O?.periodThisMonth || "Este mes" },
+                  { key: "lastMonth", label: O?.periodLastMonth || "Mes anterior" },
+                  { key: "all", label: O?.periodAll || "Todo" },
+                ] as const).map((chip) => {
+                  const isActive = activePeriod === chip.key;
+                  return (
+                    <TouchableOpacity
+                      key={chip.key}
+                      onPress={() => handlePeriodChip(chip.key)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 7,
+                        borderRadius: borderRadius.md,
+                        borderWidth: 1,
+                        borderColor: isActive ? colors.primary : colors.border,
+                        backgroundColor: isActive ? colors.primary + "18" : "transparent",
+                      }}
+                    >
+                      <ThemedText style={{
+                        fontSize: 13,
+                        fontWeight: isActive ? "600" : "400",
+                        color: isActive ? colors.primary : colors.text,
+                      }}>
+                        {chip.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 4 }}>{O?.filterDateFrom}</ThemedText>
+                <TextInput
+                  style={{ backgroundColor: colors.surfaceVariant, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, fontSize: 13 }}
+                  value={filters.dateFrom || ""}
+                  onChangeText={(v) => { setFilters((prev) => ({ ...prev, dateFrom: v })); setActivePeriod(null); }}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 4 }}>{O?.filterDateTo}</ThemedText>
+                <TextInput
+                  style={{ backgroundColor: colors.surfaceVariant, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, fontSize: 13 }}
+                  value={filters.dateTo || ""}
+                  onChangeText={(v) => { setFilters((prev) => ({ ...prev, dateTo: v })); setActivePeriod(null); }}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Búsqueda + Exportar */}
-        <View style={{ paddingHorizontal: isMobile ? spacing.md : spacing.lg }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-            <View style={{ flex: 1 }}>
+        {/* Búsqueda + Selects + Exportar */}
+        <View style={{ paddingHorizontal: isMobile ? spacing.md : spacing.lg, marginBottom: spacing.md }}>
+          <View style={{ flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: spacing.sm }}>
+            <View style={{ flex: isMobile ? undefined : 1 }}>
+              <Select
+                placeholder={O?.reviewStatusLabel}
+                value={filters.reviewStatus || ""}
+                options={[
+                  { value: "", label: O?.filterAll || "Todos" },
+                  { value: "PENDING", label: O?.reviewPending || "Pendiente" },
+                  { value: "REVIEWED", label: O?.reviewReviewed || "Revisado" },
+                  { value: "APPROVED", label: O?.reviewApproved || "Aprobado" },
+                  { value: "REJECTED", label: O?.reviewRejected || "Rechazado" },
+                ]}
+                onSelect={(v) => { setFilters((prev) => ({ ...prev, reviewStatus: (v as string) || undefined })); setPage(1); }}
+                triggerStyle={{ backgroundColor: colors.surfaceVariant }}
+              />
+            </View>
+            <View style={{ flex: isMobile ? undefined : 1 }}>
+              <Select
+                placeholder={O?.filterHasPay}
+                value={filters.hasPay || ""}
+                options={[
+                  { value: "", label: O?.filterAll || "Todos" },
+                  { value: "true", label: O?.filterWithPay || "Con pago" },
+                  { value: "false", label: O?.filterWithoutPay || "Sin pago" },
+                ]}
+                onSelect={(v) => { setFilters((prev) => ({ ...prev, hasPay: (v as string) || undefined })); setPage(1); }}
+                triggerStyle={{ backgroundColor: colors.surfaceVariant }}
+              />
+            </View>
+            <View style={{ flex: isMobile ? undefined : 2 }}>
               <SearchFilterBar
                 filterValue={localFilter}
                 onFilterChange={handleLocalFilterChange}
@@ -611,10 +849,7 @@ export default function OrdersListScreen() {
             {Platform.OS === "web" && (
               <Tooltip text={O?.exportExcel} position="left">
                 <TouchableOpacity
-                  style={[
-                    styles.exportButton,
-                    { borderColor: colors.border, backgroundColor: colors.background },
-                  ]}
+                  style={[styles.exportButton, { borderColor: colors.border, backgroundColor: colors.background }]}
                   onPress={handleExport}
                   disabled={exporting || orders.length === 0}
                   activeOpacity={0.8}
@@ -622,11 +857,7 @@ export default function OrdersListScreen() {
                   {exporting ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
-                    <Ionicons
-                      name="download-outline"
-                      size={20}
-                      color={colors.primary}
-                    />
+                    <Ionicons name="download-outline" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               </Tooltip>
@@ -800,7 +1031,7 @@ export default function OrdersListScreen() {
               loading={loading}
               emptyMessage={O?.emptyMessage}
               keyExtractor={(item) => item.id}
-              showPagination={totalPages > 1}
+              showPagination
               pagination={{
                 page,
                 limit,
@@ -1262,50 +1493,74 @@ export default function OrdersListScreen() {
                 </ThemedText>
               </View>
               <View style={styles.detailCard}>
-                <View style={styles.detailRow}>
-                  <ThemedText style={styles.detailLabel}>
-                    {O?.reviewStatusLabel}
-                  </ThemedText>
-                  {renderReviewBadge(selectedOrder)}
-                </View>
+                {selectedOrder.reviewStatus === "APPROVED" || selectedOrder.reviewStatus === "REJECTED" ? (
+                  /* Solo lectura */
+                  <>
+                    <View style={styles.detailRow}>
+                      <ThemedText style={styles.detailLabel}>{O?.reviewStatusLabel}</ThemedText>
+                      {renderReviewBadge(selectedOrder)}
+                    </View>
+                    {selectedOrder.comments && (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <ThemedText style={[styles.detailLabel, { marginBottom: 4 }]}>{O?.commentsLabel}</ThemedText>
+                        <ThemedText style={[styles.detailValue, { fontWeight: "400" }]}>{selectedOrder.comments}</ThemedText>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  /* Editable */
+                  <>
+                    <Select
+                      label={O?.reviewStatusLabel}
+                      value={editReviewStatus}
+                      options={reviewStatusOptions}
+                      onSelect={(val) => setEditReviewStatus(val as string)}
+                      triggerStyle={{ backgroundColor: colors.background }}
+                    />
+                    <View style={{ marginTop: spacing.md }}>
+                      <ThemedText type="body2" style={{ fontWeight: "500", color: colors.text, marginBottom: spacing.sm }}>
+                        {O?.commentsLabel}
+                      </ThemedText>
+                      <TextInput
+                        style={{
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 8,
+                          padding: spacing.md,
+                          color: colors.text,
+                          fontSize: 14,
+                          minHeight: 80,
+                          textAlignVertical: "top",
+                        }}
+                        value={editComments}
+                        onChangeText={setEditComments}
+                        placeholder={O?.commentsPlaceholder}
+                        placeholderTextColor={colors.textSecondary}
+                        multiline
+                      />
+                    </View>
+                    <View style={{ marginTop: spacing.md }}>
+                      <Button
+                        title={savingReview ? (O?.saving || "...") : (O?.saveReview || "Guardar")}
+                        onPress={handleSaveReview}
+                        variant="primary"
+                        size="md"
+                        disabled={savingReview}
+                      />
+                    </View>
+                  </>
+                )}
                 {selectedOrder.reviewedBy && (
-                  <View style={styles.detailRow}>
-                    <ThemedText style={styles.detailLabel}>
-                      {O?.reviewedByLabel}
-                    </ThemedText>
-                    <ThemedText style={styles.detailValue}>
-                      {selectedOrder.reviewedBy}
-                    </ThemedText>
+                  <View style={[styles.detailRow, { marginTop: spacing.sm }]}>
+                    <ThemedText style={styles.detailLabel}>{O?.reviewedByLabel}</ThemedText>
+                    <ThemedText style={styles.detailValue}>{selectedOrder.reviewedBy}</ThemedText>
                   </View>
                 )}
                 {selectedOrder.reviewedAt && (
                   <View style={styles.detailRow}>
-                    <ThemedText style={styles.detailLabel}>
-                      {O?.reviewedAtLabel}
-                    </ThemedText>
-                    <ThemedText style={styles.detailValue}>
-                      {formatDate(selectedOrder.reviewedAt, locale)}
-                    </ThemedText>
-                  </View>
-                )}
-                {selectedOrder.comments && (
-                  <View style={{ marginTop: spacing.sm }}>
-                    <ThemedText
-                      style={[
-                        styles.detailLabel,
-                        { marginBottom: 4 },
-                      ]}
-                    >
-                      {O?.commentsLabel}
-                    </ThemedText>
-                    <ThemedText
-                      style={[
-                        styles.detailValue,
-                        { fontWeight: "400" },
-                      ]}
-                    >
-                      {selectedOrder.comments}
-                    </ThemedText>
+                    <ThemedText style={styles.detailLabel}>{O?.reviewedAtLabel}</ThemedText>
+                    <ThemedText style={styles.detailValue}>{formatDate(selectedOrder.reviewedAt, locale)}</ThemedText>
                   </View>
                 )}
               </View>

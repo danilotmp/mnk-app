@@ -3,24 +3,22 @@
  * Gestiona contactos, mensajes y resúmenes de contexto
  */
 
-import { Platform } from 'react-native';
 import { apiClient } from '@/src/infrastructure/api/api.client';
 import { ApiConfig } from '@/src/infrastructure/api/config';
+import { Platform } from 'react-native';
 import type {
-  Contact,
-  ContactPayload,
-  ContactWithLastMessage,
-  ContextSummary,
-  ContextSummaryPayload,
-  InteraccionesContextProfile,
-  InteraccionesDashboardPeriodData,
-  InteraccionesDashboardPeriodInstanceRow,
-  InteraccionesDashboardPeriodParams,
-  InteraccionesInstitutionalContextBody,
-  InteraccionesWhatsappInstance,
-  Message,
-  MessageAttachment,
-  MessagePayload,
+    Contact,
+    ContactPayload,
+    ContextSummary,
+    ContextSummaryPayload,
+    InteraccionesContextProfile,
+    InteraccionesDashboardPeriodData,
+    InteraccionesDashboardPeriodInstanceRow,
+    InteraccionesDashboardPeriodParams,
+    InteraccionesInstitutionalContextBody,
+    InteraccionesWhatsappInstance,
+    Message,
+    MessagePayload
 } from './types';
 
 const BASE_INTERACCIONES = '/interacciones';
@@ -250,13 +248,19 @@ export const InteraccionesService = {
     contactId: string,
     limit?: number,
     channelInstance?: string,
-  ): Promise<Message[]> {
+    page?: number,
+  ): Promise<{ data: Message[]; meta?: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean } }> {
     const endpoint = buildQuery(
       `${BASE_INTERACCIONES}/messages/contact/${contactId}`,
-      { limit, channelInstance },
+      { limit, channelInstance, page },
     );
-    const res = await apiClient.get<Message[]>(endpoint);
-    return res.data || [];
+    const res = await apiClient.get<any>(endpoint);
+    // Soportar respuesta paginada { data: [...], meta: {...} } o array directo
+    const raw = res.data;
+    if (raw && typeof raw === "object" && !Array.isArray(raw) && raw.data) {
+      return { data: raw.data || [], meta: raw.meta };
+    }
+    return { data: Array.isArray(raw) ? raw : [], meta: undefined };
   },
 
   async getMessageById(id: string): Promise<Message> {

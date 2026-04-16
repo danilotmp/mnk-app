@@ -48,7 +48,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { Image as ExpoImage } from "expo-image";
-import { Stack, useRouter, type Href } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -86,6 +86,7 @@ import type {
   WsMessageCreatedPayload,
 } from "./chat-ia.screen.types";
 import { ContactSpecialistAvatarRing } from "./components/contact-specialist-avatar-ring/contact-specialist-avatar-ring";
+import { useMessagesPagination } from "./hooks/use-messages-pagination.hook";
 import {
   contactsListsVisuallyEquivalent,
   getContactListActivityTimestamp,
@@ -97,8 +98,7 @@ import {
   getMediaDataUrl,
 } from "./utils/chat-media.utils";
 import {
-  compareMessagesByCreatedAtAsc,
-  sortMessagesChronologically,
+  compareMessagesByCreatedAtAsc
 } from "./utils/chat-message-order.utils";
 import { mergeContactWithWsUpdatePayload } from "./utils/chat-ws-merge.utils";
 
@@ -229,12 +229,22 @@ export default function ChatIAScreen() {
     }
   }, [selectedContact]);
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Paginación de mensajes
+  const {
+    messages,
+    setMessages,
+    loadingMessages,
+    loadingOlderMessages,
+    hasOlderMessages,
+    loadInitialMessages: loadInitialMsgs,
+    loadOlderMessages,
+    appendMessage,
+    refreshSilent: refreshMessagesSilentPaginated,
+    reset: resetMessagesPagination,
+  } = useMessagesPagination();
   const [shouldScrollToEnd, setShouldScrollToEnd] = useState(false);
-  // true = carga inicial (sin animación), false = mensaje nuevo (con animación)
   const [scrollAnimated, setScrollAnimated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
@@ -2210,29 +2220,19 @@ export default function ChatIAScreen() {
     getUserId();
   }, []);
 
-  // Cargar mensajes de un contacto
+  // Cargar mensajes de un contacto (paginado: page 1)
   const loadMessages = useCallback(
     async (contactId: string) => {
-      if (loadingMessages || !selectedChannelInstance) return; // Evitar llamadas duplicadas
-
+      if (loadingMessages || !selectedChannelInstance) return;
       try {
-        setLoadingMessages(true);
-        const messagesList = await InteraccionesService.getMessagesByContact(
-          contactId,
-          undefined,
-          selectedChannelInstance,
-        );
-        setMessages(sortMessagesChronologically(messagesList));
+        await loadInitialMsgs(contactId, selectedChannelInstance);
         setScrollAnimated(false);
         setShouldScrollToEnd(true);
       } catch (error: any) {
         console.error("Error al cargar mensajes:", error);
-        alert.showError(t.pages.chatIa.errorLoadMessages, error?.message);
-      } finally {
-        setLoadingMessages(false);
       }
     },
-    [alert, loadingMessages, t, selectedChannelInstance],
+    [loadingMessages, selectedChannelInstance, loadInitialMsgs],
   );
 
   // Refresco silencioso del chat activo (merge incremental, sin loaders)
@@ -2243,45 +2243,14 @@ export default function ChatIAScreen() {
 
       try {
         silentMessagesSyncingRef.current = true;
-        const messagesList = await InteraccionesService.getMessagesByContact(
-          contactId,
-          undefined,
-          selectedChannelInstance,
-        );
-
-        const ordered = sortMessagesChronologically(messagesList);
-
-        let hasNewMessages = false;
-        setMessages((prev) => {
-          const prevById = new Map(prev.map((m) => [m.id, m]));
-          hasNewMessages = ordered.some((m) => !prevById.has(m.id));
-
-          const unchanged =
-            prev.length === ordered.length &&
-            prev.every((item, index) => {
-              const next = ordered[index];
-              return (
-                item.id === next.id &&
-                item.updatedAt === next.updatedAt &&
-                item.content === next.content &&
-                item.status === next.status
-              );
-            });
-
-          return unchanged ? prev : ordered;
-        });
-
-        if (hasNewMessages) {
-          setScrollAnimated(true);
-          setShouldScrollToEnd(true);
-        }
+        await refreshMessagesSilentPaginated(contactId, selectedChannelInstance);
       } catch {
-        // Silencioso por diseño (fallback de resiliencia)
+        // Silencioso por diseño
       } finally {
         silentMessagesSyncingRef.current = false;
       }
     },
-    [selectedChannelInstance],
+    [selectedChannelInstance, refreshMessagesSilentPaginated],
   );
 
   // Fallback resiliente: polling del chat activo
@@ -2506,22 +2475,13 @@ export default function ChatIAScreen() {
       } else {
         setShowContactInfoPanel(true);
       }
-      // Cargar mensajes directamente sin depender del callback
+      // Cargar mensajes paginados (page 1)
       try {
-        setLoadingMessages(true);
-        const messagesList = await InteraccionesService.getMessagesByContact(
-          contact.id,
-          undefined,
-          selectedChannelInstance,
-        );
-        setMessages(sortMessagesChronologically(messagesList));
+        await loadInitialMsgs(contact.id, selectedChannelInstance);
         setScrollAnimated(false);
         setShouldScrollToEnd(true);
       } catch (error: any) {
         console.error("Error al cargar mensajes:", error);
-        alert.showError(t.pages.chatIa.errorLoadMessages, error?.message);
-      } finally {
-        setLoadingMessages(false);
       }
 
       if (contact.lastMessagePendingRead === true) {
@@ -2565,6 +2525,19 @@ export default function ChatIAScreen() {
     },
     [isMobile, alert, t, selectedChannelInstance],
   );
+
+  // Auto-seleccionar contacto por teléfono (desde órdenes u otra pantalla)
+  const searchParams = useLocalSearchParams<{ phone?: string }>();
+  const autoSelectPhoneRef = useRef<string | null>(searchParams.phone || null);
+  useEffect(() => {
+    const phone = autoSelectPhoneRef.current;
+    if (!phone || !contacts.length || !selectedChannelInstance) return;
+    const match = contacts.find((c) => c.phoneNumber === phone || c.phoneNumber?.includes(phone));
+    if (match) {
+      handleSelectContact(match);
+      autoSelectPhoneRef.current = null;
+    }
+  }, [contacts, selectedChannelInstance, handleSelectContact]);
 
   const handleToggleBotEnabled = useCallback(async () => {
     if (!selectedContact?.id || updatingBotEnabled) return;
@@ -3269,22 +3242,14 @@ export default function ChatIAScreen() {
       setAttachedFiles([]);
       setReplyingToMessage(null); // Limpiar respuesta
 
-      // Recargar mensajes del contacto actual directamente
+      // Recargar mensajes del contacto actual (refresco silencioso)
       if (selectedContact.id) {
         try {
-          setLoadingMessages(true);
-          const messagesList = await InteraccionesService.getMessagesByContact(
-            selectedContact.id,
-            undefined,
-            selectedChannelInstance,
-          );
-          setMessages(sortMessagesChronologically(messagesList));
-          setScrollAnimated(false);
+          await refreshMessagesSilentPaginated(selectedContact.id, selectedChannelInstance);
+          setScrollAnimated(true);
           setShouldScrollToEnd(true);
         } catch (error) {
           console.error("Error al recargar mensajes:", error);
-        } finally {
-          setLoadingMessages(false);
         }
       }
 
@@ -3300,13 +3265,13 @@ export default function ChatIAScreen() {
           const contactsWithMessages = await Promise.all(
             contactsList.map(async (contact) => {
               try {
-                const contactMessages =
+                const contactMessagesResult =
                   await InteraccionesService.getMessagesByContact(
                     contact.id,
                     1,
                     selectedChannelInstance,
                   );
-                const lastMessage = contactMessages[0] || undefined;
+                const lastMessage = contactMessagesResult.data[0] || undefined;
                 return {
                   ...contact,
                   lastMessage,
@@ -3373,7 +3338,7 @@ export default function ChatIAScreen() {
     }
     if (!isFocused) return;
     setSelectedContact(null);
-    setMessages([]);
+    resetMessagesPagination();
     setContacts([]);
     void loadContactsRef.current();
   }, [company?.id, selectedChannelInstance, channelProfileLoading, isFocused]);
@@ -4858,6 +4823,13 @@ export default function ChatIAScreen() {
                       style={styles.messagesArea}
                       contentContainerStyle={styles.messagesContent}
                       showsVerticalScrollIndicator={true}
+                      scrollEventThrottle={100}
+                      onScroll={(e) => {
+                        // Cargar mensajes más antiguos al llegar al tope
+                        if (e.nativeEvent.contentOffset.y < 50 && hasOlderMessages && !loadingOlderMessages) {
+                          loadOlderMessages();
+                        }
+                      }}
                       onContentSizeChange={() => {
                         if (shouldScrollToEnd && messagesScrollRef.current) {
                           const animate = scrollAnimated;
@@ -4901,6 +4873,22 @@ export default function ChatIAScreen() {
                         </View>
                       ) : (
                         <>
+                          {/* Indicador de carga de mensajes anteriores */}
+                          {loadingOlderMessages && (
+                            <View style={{ alignItems: "center", paddingVertical: 12 }}>
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            </View>
+                          )}
+                          {hasOlderMessages && !loadingOlderMessages && (
+                            <TouchableOpacity
+                              onPress={loadOlderMessages}
+                              style={{ alignItems: "center", paddingVertical: 8 }}
+                            >
+                              <ThemedText type="caption" style={{ color: colors.primary }}>
+                                {(t.pages?.chatIa as any)?.loadOlderMessages || "Cargar anteriores"}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          )}
                           {filteredMessages.map((message) => {
                             // Separador de mensajes no leídos
                             const showUnreadDivider = message.id === firstUnreadMessageId;

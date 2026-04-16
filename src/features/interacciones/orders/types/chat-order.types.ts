@@ -106,10 +106,20 @@ export interface ChatOrderRecord {
 /** Filtros para el listado de órdenes */
 export interface ChatOrderFilters {
   companyId: string;
+  contactId?: string;
   page?: number;
   limit?: number;
   search?: string;
   status?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  contactName?: string;
+  contactPhone?: string;
+  offeringCode?: string;
+  offeringName?: string;
+  reviewStatus?: string;
+  mediaIdentifier?: string;
+  hasPay?: boolean;
 }
 
 /** Respuesta paginada de órdenes */

@@ -272,6 +272,7 @@ export interface Translations {
     chatIa: {
       documentDetailFallback: string;
       mediaContextFieldPrefix: string;
+      loadOlderMessages: string;
       searchContactsPlaceholder: string;
       searchMessagesPlaceholder: string;
       messageInputPlaceholder: string;

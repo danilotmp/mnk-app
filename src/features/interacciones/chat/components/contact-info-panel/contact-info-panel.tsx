@@ -10,8 +10,9 @@ import {
     EmailInput,
     PhoneInput,
 } from "@/src/domains/shared/components";
+import { useTranslation } from "@/src/infrastructure/i18n";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Animated,
@@ -47,6 +48,55 @@ export const ContactInfoPanel = React.memo(
     const [saving, setSaving] = useState(false);
     const { company } = useCompany();
     const dateFormat = company?.settings?.dateFormat || "DD/MM/YYYY";
+    const { t, language } = useTranslation();
+    const locale = language === "en" ? "en-US" : "es-ES";
+
+    // Órdenes del contacto
+    const [contactOrders, setContactOrders] = useState<ChatOrderRecord[]>([]);
+    const [loadingOrders, setLoadingOrders] = useState(false);
+
+    const loadContactOrders = useCallback(async () => {
+      if (!company?.id || !contact.id) return;
+      setLoadingOrders(true);
+      try {
+        const result = await ChatOrdersService.getOrders({
+          companyId: company.id,
+          contactId: contact.id,
+          limit: 50,
+        });
+        setContactOrders(result.data);
+      } catch {
+        setContactOrders([]);
+      } finally {
+        setLoadingOrders(false);
+      }
+    }, [company?.id, contact.id]);
+
+    useEffect(() => {
+      if (activeTab === "agendamiento" || activeTab === "ordenes" || activeTab === "pagos") {
+        loadContactOrders();
+      }
+    }, [activeTab, loadContactOrders]);
+
+    // Separar órdenes futuras (agendamiento) y pasadas
+    const now = new Date();
+    const futureOrders = contactOrders.filter((o) => new Date(o.createdAt) >= now);
+    const pastOrders = contactOrders.filter((o) => new Date(o.createdAt) < now);
+    const paidOrders = contactOrders.filter((o) => o.paymentMessageId != null);
+
+    const ordersCount = contactOrders.length;
+    const paymentsCount = paidOrders.length;
+
+    const fmtDate = (iso: string) => {
+      try { return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)); }
+      catch { return iso; }
+    };
+    const fmtCurrency = (v: number | null | undefined, cur = "USD") => {
+      if (v == null) return "—";
+      return new Intl.NumberFormat(locale, { style: "currency", currency: cur, minimumFractionDigits: 2 }).format(v);
+    };
+    const getAmount = (o: ChatOrderRecord) => o.paymentAmount ?? o.mediaContextDetails?.monto?.valor ?? o.orderPayload?.prices?.[0]?.basePrice ?? null;
+    const getCurrency = (o: ChatOrderRecord) => o.paymentCurrency || o.mediaContextDetails?.monto?.moneda || "USD";
 
     const handleStartEdit = () => {
       setIsEditing(true);
@@ -174,7 +224,7 @@ export const ContactInfoPanel = React.memo(
                   type="caption"
                   style={{ marginLeft: 6, color: colors.textSecondary }}
                 >
-                  Agendamientos: 0
+                  Agendamientos: {futureOrders.length}
                 </ThemedText>
               </View>
               <View style={contactInfoPanelStyles.iconItem}>
@@ -187,7 +237,7 @@ export const ContactInfoPanel = React.memo(
                   type="caption"
                   style={{ marginLeft: 6, color: colors.textSecondary }}
                 >
-                  Órdenes: 0
+                  Órdenes: {ordersCount}
                 </ThemedText>
               </View>
               <View style={contactInfoPanelStyles.iconItem}>
@@ -196,7 +246,7 @@ export const ContactInfoPanel = React.memo(
                   type="caption"
                   style={{ marginLeft: 6, color: colors.textSecondary }}
                 >
-                  Pagos: 0
+                  Pagos: {paymentsCount}
                 </ThemedText>
               </View>
             </View>
@@ -659,135 +709,134 @@ export const ContactInfoPanel = React.memo(
           {/* Panel de Agendamiento */}
           {activeTab === "agendamiento" && (
             <View style={contactInfoPanelStyles.section}>
-              <View
-                style={[
-                  contactInfoPanelStyles.sectionHeader,
-                  { borderBottomColor: colors.border },
-                ]}
-              >
-                <ThemedText
-                  type="body2"
-                  style={{ color: colors.text, fontWeight: "600" }}
-                >
-                  Agendamiento
+              <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>
+                  {t.pages?.chatOrders?.periodToday ? t.pages.chatOrders.periodToday : "Agendamiento"}
                 </ThemedText>
               </View>
-              <View
-                style={[
-                  contactInfoPanelStyles.emptyState,
-                  {
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingVertical: 40,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={48}
-                  color={colors.textSecondary}
-                />
-                <ThemedText
-                  type="body2"
-                  style={{
-                    color: colors.textSecondary,
-                    marginTop: 16,
-                    textAlign: "center",
-                  }}
-                >
-                  No hay citas agendadas
-                </ThemedText>
-              </View>
+              {loadingOrders ? (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : futureOrders.length === 0 ? (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    {t.pages?.chatOrders?.emptyMessage || "Sin registros"}
+                  </ThemedText>
+                </View>
+              ) : (
+                futureOrders.map((o) => (
+                  <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <ThemedText type="body2" style={{ fontWeight: "600", color: colors.text, flex: 1 }} numberOfLines={1}>
+                        {o.offeringName || o.orderPayload?.name || "—"}
+                      </ThemedText>
+                      <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
+                        {fmtCurrency(getAmount(o), getCurrency(o))}
+                      </ThemedText>
+                    </View>
+                    <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                      {fmtDate(o.createdAt)}
+                      {o.selectedBranch?.name ? ` · ${o.selectedBranch.name}` : ""}
+                    </ThemedText>
+                  </View>
+                ))
+              )}
             </View>
           )}
 
           {/* Panel de Ordenes */}
           {activeTab === "ordenes" && (
             <View style={contactInfoPanelStyles.section}>
-              <View
-                style={[
-                  contactInfoPanelStyles.sectionHeader,
-                  { borderBottomColor: colors.border },
-                ]}
-              >
-                <ThemedText
-                  type="body2"
-                  style={{ color: colors.text, fontWeight: "600" }}
-                >
+              <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>
                   Órdenes
                 </ThemedText>
               </View>
-              <View
-                style={[
-                  contactInfoPanelStyles.emptyState,
-                  {
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingVertical: 40,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="cart-outline"
-                  size={48}
-                  color={colors.textSecondary}
-                />
-                <ThemedText
-                  type="body2"
-                  style={{
-                    color: colors.textSecondary,
-                    marginTop: 16,
-                    textAlign: "center",
-                  }}
-                >
-                  No hay órdenes registradas
-                </ThemedText>
-              </View>
+              {loadingOrders ? (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : pastOrders.length === 0 ? (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <Ionicons name="cart-outline" size={36} color={colors.textSecondary} />
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    {t.pages?.chatOrders?.emptyMessage || "Sin registros"}
+                  </ThemedText>
+                </View>
+              ) : (
+                pastOrders.map((o) => (
+                  <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <ThemedText type="body2" style={{ fontWeight: "600", color: colors.text, flex: 1 }} numberOfLines={1}>
+                        {o.offeringName || o.orderPayload?.name || "—"}
+                      </ThemedText>
+                      <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
+                        {fmtCurrency(getAmount(o), getCurrency(o))}
+                      </ThemedText>
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>
+                        {fmtDate(o.createdAt)}
+                        {o.selectedBranch?.name ? ` · ${o.selectedBranch.name}` : ""}
+                      </ThemedText>
+                      {o.offeringCode && (
+                        <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+                          {o.offeringCode}
+                        </ThemedText>
+                      )}
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           )}
 
           {/* Panel de Pagos */}
           {activeTab === "pagos" && (
             <View style={contactInfoPanelStyles.section}>
-              <View
-                style={[
-                  contactInfoPanelStyles.sectionHeader,
-                  { borderBottomColor: colors.border },
-                ]}
-              >
-                <ThemedText
-                  type="body2"
-                  style={{ color: colors.text, fontWeight: "600" }}
-                >
+              <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>
                   Pagos
                 </ThemedText>
               </View>
-              <View
-                style={[
-                  contactInfoPanelStyles.emptyState,
-                  {
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingVertical: 40,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="card-outline"
-                  size={48}
-                  color={colors.textSecondary}
-                />
-                <ThemedText
-                  type="body2"
-                  style={{
-                    color: colors.textSecondary,
-                    marginTop: 16,
-                    textAlign: "center",
-                  }}
-                >
-                  No hay pagos registrados
-                </ThemedText>
-              </View>
+              {loadingOrders ? (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : paidOrders.length === 0 ? (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <Ionicons name="card-outline" size={36} color={colors.textSecondary} />
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 8 }}>
+                    {t.pages?.chatOrders?.emptyMessage || "Sin registros"}
+                  </ThemedText>
+                </View>
+              ) : (
+                paidOrders.map((o) => (
+                  <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText type="body2" style={{ fontWeight: "600", color: colors.text }} numberOfLines={1}>
+                          {o.mediaContextDetails?.banco || o.offeringName || o.orderPayload?.name || "—"}
+                        </ThemedText>
+                        {o.mediaIdentifier && (
+                          <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+                            #{o.mediaIdentifier}
+                          </ThemedText>
+                        )}
+                      </View>
+                      <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
+                        {fmtCurrency(o.paymentAmount ?? o.mediaContextDetails?.monto?.valor, getCurrency(o))}
+                      </ThemedText>
+                    </View>
+                    <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                      {fmtDate(o.createdAt)}
+                      {o.mediaContextDetails?.ordenante ? ` · ${o.mediaContextDetails.ordenante}` : ""}
+                    </ThemedText>
+                  </View>
+                ))
+              )}
             </View>
           )}
         </ScrollView>

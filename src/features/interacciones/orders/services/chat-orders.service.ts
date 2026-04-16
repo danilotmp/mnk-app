@@ -19,11 +19,21 @@ export class ChatOrdersService {
   ): Promise<ChatOrderPaginatedResponse> {
     const params = new URLSearchParams();
     params.append("companyId", filters.companyId);
+    if (filters.contactId?.trim()) params.append("contactId", filters.contactId.trim());
     if (filters.page) params.append("page", filters.page.toString());
     if (filters.limit) params.append("limit", filters.limit.toString());
     if (filters.search?.trim()) params.append("search", filters.search.trim());
     if (typeof filters.status === "number")
       params.append("status", filters.status.toString());
+    if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+    if (filters.dateTo) params.append("dateTo", filters.dateTo);
+    if (filters.contactName?.trim()) params.append("contactName", filters.contactName.trim());
+    if (filters.contactPhone?.trim()) params.append("contactPhone", filters.contactPhone.trim());
+    if (filters.offeringCode?.trim()) params.append("offeringCode", filters.offeringCode.trim());
+    if (filters.offeringName?.trim()) params.append("offeringName", filters.offeringName.trim());
+    if (filters.reviewStatus) params.append("reviewStatus", filters.reviewStatus);
+    if (filters.mediaIdentifier?.trim()) params.append("mediaIdentifier", filters.mediaIdentifier.trim());
+    if (filters.hasPay !== undefined) params.append("hasPay", String(filters.hasPay));
 
     const qs = params.toString();
     const endpoint = qs ? `${this.BASE}?${qs}` : this.BASE;
@@ -105,5 +115,18 @@ export class ChatOrdersService {
   static getAttachmentUrl(messageId: string, attachmentId: string): string {
     const baseUrl = ApiConfig.getInstance().getBaseUrl();
     return `${baseUrl}/interacciones/messages/${messageId}/attachments/${attachmentId}`;
+  }
+
+  /**
+   * Actualiza el estado de revisión y/o comentarios de una orden.
+   * PATCH /interacciones/dashboard/chat-order-records/:id/review
+   */
+  static async updateReview(
+    id: string,
+    payload: { reviewStatus?: string; comments?: string },
+  ): Promise<any> {
+    const response = await apiClient.request<any>({ endpoint: `${this.BASE}/${id}/review`, method: "PATCH", body: payload });
+    if (response.result?.statusCode === SUCCESS_STATUS_CODE && response.data) return response.data;
+    throw new Error(response.result?.description || "Error al actualizar revisión");
   }
 }
