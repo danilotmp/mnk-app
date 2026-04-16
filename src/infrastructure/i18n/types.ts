@@ -266,6 +266,8 @@ export interface Translations {
       metricPayments: string;
       metricExecutions: string;
     };
+    /** Pantalla de Órdenes de Chat IA */
+    chatOrders: Record<string, string>;
     /** Pantalla Chat IA (interacciones) */
     chatIa: {
       documentDetailFallback: string;

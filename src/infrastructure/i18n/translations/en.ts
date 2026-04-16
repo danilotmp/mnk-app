@@ -263,6 +263,11 @@ export const en: Translations = {
       colDate: "Date",
       exportExcel: "Export to Excel",
       exportError: "Error exporting orders",
+      colReceipt: "Receipt",
+      document: "Document",
+      viewReceipt: "View receipt",
+      receiptError: "Error loading receipt",
+      noReceiptImage: "No receipt image found",
     },
     chatIa: {
       documentDetailFallback: "Document details",

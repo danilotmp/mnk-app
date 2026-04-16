@@ -262,6 +262,11 @@ export const es: Translations = {
       colDate: "Fecha",
       exportExcel: "Exportar a Excel",
       exportError: "Error al exportar las órdenes",
+      colReceipt: "Comprobante",
+      document: "Documento",
+      viewReceipt: "Ver comprobante",
+      receiptError: "Error al cargar el comprobante",
+      noReceiptImage: "No se encontró imagen del comprobante",
     },
     chatIa: {
       documentDetailFallback: "Detalle documental",

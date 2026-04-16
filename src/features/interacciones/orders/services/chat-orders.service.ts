@@ -84,4 +84,26 @@ export class ChatOrdersService {
     a.click();
     URL.revokeObjectURL(downloadUrl);
   }
+
+  /**
+   * Obtiene un mensaje específico por contactId y messageId.
+   */
+  static async getMessageByContact(
+    contactId: string,
+    messageId: string,
+  ): Promise<any> {
+    const response = await apiClient.get<any>(
+      `/interacciones/messages/contact/${contactId}?messageId=${messageId}`,
+    );
+    const data = response.data;
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  /**
+   * Construye la URL de un attachment para visualización con token.
+   */
+  static getAttachmentUrl(messageId: string, attachmentId: string): string {
+    const baseUrl = ApiConfig.getInstance().getBaseUrl();
+    return `${baseUrl}/interacciones/messages/${messageId}/attachments/${attachmentId}`;
+  }
 }

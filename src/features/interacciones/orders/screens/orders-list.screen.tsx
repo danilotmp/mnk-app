@@ -14,6 +14,8 @@ import { useCompany } from "@/src/domains/shared";
 import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
 import { SearchFilterBar } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar";
+import { ImageWithToken } from "@/src/features/interacciones/chat/components/image-with-token/image-with-token";
+import { apiClient } from "@/src/infrastructure/api";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,16 +24,18 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useState
+  useState,
 } from "react";
 import {
   ActivityIndicator,
   Linking,
+  Modal,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { ChatOrdersService } from "../services";
 import type { ChatOrderRecord, ChatOrderReviewStatus } from "../types";
@@ -162,6 +166,9 @@ export default function OrdersListScreen() {
   const [selectedOrder, setSelectedOrder] =
     useState<ChatOrderRecord | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null);
+  const [imageViewerLoading, setImageViewerLoading] = useState(false);
   const limit = 10;
 
   const loadOrders = useCallback(
@@ -262,6 +269,54 @@ export default function OrdersListScreen() {
       setExporting(false);
     }
   }, [company?.id, alert, O]);
+
+  /** Tabla: abre modal con imagen */
+  const handleShowReceipt = useCallback(async (order: ChatOrderRecord) => {
+    const msgId = order.paymentMessageId || order.confirmationMessageId;
+    if (!msgId || !order.contactId) return;
+    setImageViewerLoading(true);
+    setImageViewerVisible(true);
+    setImageViewerUrl(null);
+    try {
+      const msg = await ChatOrdersService.getMessageByContact(order.contactId, msgId);
+      const att = msg?.attachments?.[0];
+      if (att) {
+        setImageViewerUrl(ChatOrdersService.getAttachmentUrl(msgId, att.id));
+      }
+    } catch {
+      alert.showError(O?.receiptError || "Error");
+      setImageViewerVisible(false);
+    } finally {
+      setImageViewerLoading(false);
+    }
+  }, [alert, O]);
+
+  /** Detalle: descarga el archivo */
+  const handleDownloadReceipt = useCallback(async (order: ChatOrderRecord) => {
+    const msgId = order.paymentMessageId || order.confirmationMessageId;
+    if (!msgId || !order.contactId) return;
+    try {
+      const msg = await ChatOrdersService.getMessageByContact(order.contactId, msgId);
+      const att = msg?.attachments?.[0];
+      if (!att) return;
+      const url = ChatOrdersService.getAttachmentUrl(msgId, att.id);
+      const tokens = await apiClient.getTokens();
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${tokens?.accessToken || ""}` } });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const filename = att.fileName || `comprobante_${order.mediaIdentifier || msgId}`;
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch {
+      alert.showError(O?.receiptError || "Error");
+    }
+  }, [alert, O]);
 
   const totalAmount = useMemo(
     () => orders.reduce((s, o) => s + (getListAmount(o) ?? 0), 0),
@@ -404,6 +459,26 @@ export default function OrdersListScreen() {
             {item.selectedBranch?.name || "—"}
           </ThemedText>
         ),
+      },
+      {
+        key: "receipt",
+        label: O?.colReceipt || "Comprobante",
+        width: 140,
+        align: "left",
+        render: (item) => {
+          const hasReceipt = item.paymentMessageId || item.confirmationMessageId;
+          return hasReceipt && item.mediaIdentifier ? (
+            <TouchableOpacity
+              onPress={() => handleShowReceipt(item)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              <Ionicons name="document-attach-outline" size={16} color={colors.primary} />
+              <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600" }} numberOfLines={1}>
+                {item.mediaIdentifier || "—"}
+              </ThemedText>
+            </TouchableOpacity>
+          ) : null;
+        },
       },
       {
         key: "paymentAmount",
@@ -1039,9 +1114,20 @@ export default function OrdersListScreen() {
                     size={18}
                     color={colors.primary}
                   />
-                  <ThemedText style={styles.detailSectionTitleText}>
+                  <ThemedText style={[styles.detailSectionTitleText, { flex: 1 }]}>
                     {O?.sectionPayment}
                   </ThemedText>
+                  {(selectedOrder.paymentMessageId || selectedOrder.confirmationMessageId) && (
+                    <TouchableOpacity
+                      onPress={() => handleDownloadReceipt(selectedOrder)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                    >
+                      <Ionicons name="download-outline" size={16} color={colors.primary} />
+                      <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+                        {O?.viewReceipt}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View style={styles.detailCard}>
                   {selectedOrder.mediaContextDetails.banco && (
@@ -1227,6 +1313,38 @@ export default function OrdersListScreen() {
           </View>
         </SideModal>
       )}
+
+      {/* Modal visor de comprobante */}
+      <Modal
+        visible={imageViewerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImageViewerVisible(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center", alignItems: "center" }}
+          onPress={() => setImageViewerVisible(false)}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()} style={{ maxWidth: "90%", maxHeight: "90%", alignItems: "center" }}>
+            <TouchableOpacity
+              onPress={() => setImageViewerVisible(false)}
+              style={{ position: "absolute", top: -40, right: 0, zIndex: 10, padding: 8 }}
+            >
+              <Ionicons name="close-circle" size={32} color="#fff" />
+            </TouchableOpacity>
+            {imageViewerLoading ? (
+              <ActivityIndicator size="large" color="#fff" />
+            ) : imageViewerUrl ? (
+              <ImageWithToken
+                uri={imageViewerUrl}
+                style={{ width: 600, height: 600, borderRadius: 8 }}
+              />
+            ) : (
+              <ThemedText style={{ color: "#fff" }}>{O?.noReceiptImage}</ThemedText>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ThemedView>
   );
 }
