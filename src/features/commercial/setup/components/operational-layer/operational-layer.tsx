@@ -1567,20 +1567,24 @@ export function OperationalLayer({
                                                 mainPrice.basePrice,
                                               ).toFixed(2)}
                                             </ThemedText>
-                                            <ThemedText
-                                              type="body2"
-                                              style={{
-                                                color: colors.textSecondary,
-                                                fontSize: 12,
-                                              }}
-                                            >
-                                              Impuestos{" "}
-                                              {mainPrice.taxMode === "included"
-                                                ? (O?.taxesIncluded ??
-                                                  "Incluidos")
-                                                : (O?.taxesExcluded ??
-                                                  "Excluidos")}
-                                            </ThemedText>
+                                            {(offering as any)?.promotions?.[0]?.promotionPrice != null && (
+                                              <ThemedText
+                                                type="body2"
+                                                style={{
+                                                  color: colors.textSecondary,
+                                                  fontSize: 13,
+                                                  marginTop: 2,
+                                                }}
+                                              >
+                                                {(offering as any).promotions[0].discountType === "percentage"
+                                                  ? `${(offering as any).promotions[0].discountValue}% desc.`
+                                                  : `$${(offering as any).promotions[0].discountValue} desc.`}
+                                                {"  "}
+                                                <ThemedText style={{ fontWeight: "700", color: colors.textSecondary, fontSize: 14 }}>
+                                                  {commercialProfile?.currency || "USD"} {Number((offering as any).promotions[0].promotionPrice).toFixed(2)}
+                                                </ThemedText>
+                                              </ThemedText>
+                                            )}
                                           </>
                                         ) : (
                                           <ThemedText
@@ -1769,11 +1773,27 @@ export function OperationalLayer({
                                             >
                                               Impuestos{" "}
                                               {mainPrice.taxMode === "included"
-                                                ? (O?.taxesIncluded ??
-                                                  "Incluidos")
-                                                : (O?.taxesExcluded ??
-                                                  "Excluidos")}
+                                                ? (O?.taxesIncluded ?? "Incluidos")
+                                                : (O?.taxesExcluded ?? "Excluidos")}
                                             </ThemedText>
+                                            {(offering as any)?.promotions?.[0]?.promotionPrice != null && (
+                                              <ThemedText
+                                                type="body2"
+                                                style={{
+                                                  color: colors.textSecondary,
+                                                  fontSize: 13,
+                                                  marginTop: 2,
+                                                }}
+                                              >
+                                                {(offering as any).promotions[0].discountType === "percentage"
+                                                  ? `${(offering as any).promotions[0].discountValue}% desc.`
+                                                  : `$${(offering as any).promotions[0].discountValue} desc.`}
+                                                {"  "}
+                                                <ThemedText style={{ fontWeight: "700", color: colors.textSecondary, fontSize: 14 }}>
+                                                  {commercialProfile?.currency || "USD"} {Number((offering as any).promotions[0].promotionPrice).toFixed(2)}
+                                                </ThemedText>
+                                              </ThemedText>
+                                            )}
                                           </>
                                         ) : (
                                           <ThemedText

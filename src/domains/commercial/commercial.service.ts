@@ -485,6 +485,7 @@ export const CommercialService = {
           prices: prices.length > 0 ? prices : undefined, // Incluir precios si existen
           image: item.image ?? null,
           properties: item.properties ?? null,
+          promotions: item.promotions || undefined,
         };
       });
       return offerings;
