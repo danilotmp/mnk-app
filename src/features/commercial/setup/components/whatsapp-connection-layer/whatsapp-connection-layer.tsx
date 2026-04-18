@@ -261,7 +261,8 @@ export const WhatsAppConnectionLayer = forwardRef<
   };
 
   const handleCreate = () => {
-    setFormData({ whatsapp: "", isActive: true });
+    const defaultFlowId = flowTemplates.find((t) => t.isSystem)?.id ?? null;
+    setFormData({ whatsapp: "", isActive: true, flowTemplateId: defaultFlowId });
     setFormErrors({});
     setSelectedInstance(null);
     setModalAlert(null);
@@ -305,6 +306,10 @@ export const WhatsAppConnectionLayer = forwardRef<
     if (!formData.whatsapp.trim()) {
       errors.whatsapp =
         L?.whatsappRequired ?? "El número de WhatsApp es requerido";
+    }
+    if (!formData.flowTemplateId) {
+      errors.flowTemplateId =
+        L?.flowRequired ?? "Debes seleccionar un flujo";
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -354,6 +359,13 @@ export const WhatsAppConnectionLayer = forwardRef<
     if (!formData.whatsapp.trim()) {
       setFormErrors({
         whatsapp: L?.whatsappRequired ?? "El número de WhatsApp es requerido",
+      });
+      return;
+    }
+
+    if (!formData.flowTemplateId) {
+      setFormErrors({
+        flowTemplateId: L?.flowRequired ?? "Debes seleccionar un flujo",
       });
       return;
     }
@@ -429,6 +441,7 @@ export const WhatsAppConnectionLayer = forwardRef<
             whatsapp: whatsappValue,
             whatsappQR: generatedQR,
             isActive: true,
+            flowTemplateId: formData.flowTemplateId,
           });
 
         setInstances((prev) => [...prev, newInstance]);
@@ -970,7 +983,7 @@ export const WhatsAppConnectionLayer = forwardRef<
                       onPress={handleGenerateFromInput}
                       variant="primary"
                       size="md"
-                      disabled={generatingQR || !formData.whatsapp.trim()}
+                      disabled={generatingQR || !formData.whatsapp.trim() || !formData.flowTemplateId}
                     >
                       {generatingQR ? (
                         <ActivityIndicator
@@ -1050,8 +1063,8 @@ export const WhatsAppConnectionLayer = forwardRef<
                     "Número de WhatsApp o identificador IA"}
                 </ThemedText>
 
-                {/* Selector de flujo - Solo en modo edición */}
-                {modalMode === "edit" && (
+                {/* Selector de flujo */}
+                {flowTemplates.length > 0 && (
                   <View style={styles.inputGroup}>
                     <Select
                       label={L?.flowLabel ?? "Flujo"}
@@ -1063,11 +1076,24 @@ export const WhatsAppConnectionLayer = forwardRef<
                       }))}
                       onSelect={(val) => {
                         setFormData((prev) => ({ ...prev, flowTemplateId: val as string }));
+                        if (formErrors.flowTemplateId) {
+                          setFormErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.flowTemplateId;
+                            return next;
+                          });
+                        }
                       }}
                       triggerStyle={{
                         backgroundColor: colors.filterInputBackground,
+                        ...(formErrors.flowTemplateId ? { borderColor: colors.error } : {}),
                       }}
                     />
+                    {formErrors.flowTemplateId && (
+                      <ThemedText type="caption" style={{ color: colors.error, marginTop: 4 }}>
+                        {formErrors.flowTemplateId}
+                      </ThemedText>
+                    )}
                     {/* Nombre del flujo seleccionado */}
                     {(() => {
                       const selId = formData.flowTemplateId ?? flowTemplates.find((t) => t.isSystem)?.id;
