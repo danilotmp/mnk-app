@@ -89,6 +89,11 @@ export interface ChatOrderRecord {
   reviewedBy?: string | null;
   /** Fecha de revisión */
   reviewedAt?: string | null;
+  /** Datos de agendamiento recopilados del cliente */
+  customerData?: {
+    raw?: string[];
+    collected?: string;
+  } | null;
   /** ID de la oferta/producto */
   offeringId?: string | null;
   /** Código del producto */

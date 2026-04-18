@@ -280,6 +280,8 @@ export const en: Translations = {
       filterWithPay: "With payment",
       filterWithoutPay: "Without payment",
       colReview: "Review",
+      colScheduling: "Scheduling",
+      sectionScheduling: "Scheduling Data",
       periodToday: "Today",
       periodYesterday: "Yesterday",
       periodThisWeek: "This week",

@@ -8,8 +8,9 @@ import { ThemedText } from "@/components/themed-text";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
-import { TextInput, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { TouchableOpacity, View } from "react-native";
+import { DatePickerCalendar } from "./date-picker-calendar";
 import { datePickerStyles } from "./date-picker.styles";
 import type { DatePickerProps } from "./date-picker.types";
 
@@ -185,40 +186,46 @@ export function DatePicker({
       }
     }
   };
+  const inputRef = useRef<any>(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+
   return (
     <View style={style}>
-      <InputWithFocus
-        containerStyle={[
-          datePickerStyles.inputContainer,
-          {
-            borderColor: error ? colors.error : colors.border,
-            backgroundColor: colors.surface,
-          },
-        ]}
-        primaryColor={colors.primary}
-        error={error}
-      >
-        <View style={datePickerStyles.inputWrapper}>
-          <Ionicons
-            name="calendar-outline"
-            size={20}
-            color={colors.textSecondary}
-            style={datePickerStyles.icon}
-          />
-          <TextInput
-            style={[datePickerStyles.input, { color: colors.text }]}
-            value={displayValue}
-            onChangeText={handleChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={handleBlur}
-            placeholder={placeholder || displayFormat}
-            placeholderTextColor={colors.textSecondary}
-            editable={!disabled}
-            keyboardType="numeric"
-            maxLength={10}
-          />
-        </View>
-      </InputWithFocus>
+      <TouchableOpacity activeOpacity={0.8} onPress={() => !disabled && setCalendarVisible(true)}>
+        <InputWithFocus
+          containerStyle={[
+            datePickerStyles.inputContainer,
+            {
+              borderColor: error ? colors.error : colors.border,
+              backgroundColor: colors.filterInputBackground,
+              minHeight: 48,
+              borderRadius: 12,
+            },
+          ]}
+          primaryColor={colors.primary}
+          error={error}
+        >
+          <View style={datePickerStyles.inputWrapper}>
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={calendarVisible ? colors.primary : colors.textSecondary}
+              style={datePickerStyles.icon}
+            />
+            <ThemedText style={{ flex: 1, fontSize: 14, color: value ? colors.text : colors.textSecondary }}>
+              {value ? formatDateForDisplay(value, displayFormat) : (placeholder || displayFormat)}
+            </ThemedText>
+          </View>
+        </InputWithFocus>
+      </TouchableOpacity>
+      <DatePickerCalendar
+        visible={calendarVisible}
+        onClose={() => setCalendarVisible(false)}
+        value={value || null}
+        onChange={(d) => { onChange(d || null); setCalendarVisible(false); }}
+        minDate={minDate}
+        maxDate={maxDate}
+      />
       {error && errorMessage && (
         <ThemedText
           type="caption"

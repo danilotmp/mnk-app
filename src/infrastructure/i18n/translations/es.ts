@@ -279,6 +279,8 @@ export const es: Translations = {
       filterWithPay: "Con pago",
       filterWithoutPay: "Sin pago",
       colReview: "Revisión",
+      colScheduling: "Agendamiento",
+      sectionScheduling: "Datos de Agendamiento",
       periodToday: "Hoy",
       periodYesterday: "Ayer",
       periodThisWeek: "Esta semana",

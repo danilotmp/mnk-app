@@ -14,6 +14,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useCompany } from "@/src/domains/shared";
 import { DataTable } from "@/src/domains/shared/components/data-table/data-table";
 import type { TableColumn } from "@/src/domains/shared/components/data-table/data-table.types";
+import { DatePicker } from "@/src/domains/shared/components/date-picker/date-picker";
 import { SearchFilterBar } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar";
 import type { FilterConfig } from "@/src/domains/shared/components/search-filter-bar/search-filter-bar.types";
 import { ImageWithToken } from "@/src/features/interacciones/chat/components/image-with-token/image-with-token";
@@ -166,6 +167,7 @@ export default function OrdersListScreen() {
   const [total, setTotal] = useState(0);
   const [localFilter, setLocalFilter] = useState("");
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const tomorrowISO = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }, []);
   const [activePeriod, setActivePeriod] = useState<string | null>("today");
   const [filters, setFilters] = useState<{
     search?: string;
@@ -173,7 +175,7 @@ export default function OrdersListScreen() {
     dateTo?: string;
     reviewStatus?: string;
     hasPay?: string;
-  }>({ dateFrom: todayISO, dateTo: todayISO });
+  }>({ dateFrom: todayISO, dateTo: tomorrowISO });
   const [selectedOrder, setSelectedOrder] =
     useState<ChatOrderRecord | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -235,32 +237,33 @@ export default function OrdersListScreen() {
     setPage(1);
     const now = new Date();
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const nextDay = (d: Date) => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; };
     switch (key) {
       case "today":
-        setFilters((prev) => ({ ...prev, dateFrom: fmt(now), dateTo: fmt(now) }));
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(now), dateTo: fmt(nextDay(now)) }));
         break;
       case "yesterday": {
         const y = new Date(now);
         y.setDate(y.getDate() - 1);
-        setFilters((prev) => ({ ...prev, dateFrom: fmt(y), dateTo: fmt(y) }));
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(y), dateTo: fmt(now) }));
         break;
       }
       case "thisWeek": {
         const day = now.getDay();
         const mon = new Date(now);
         mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-        setFilters((prev) => ({ ...prev, dateFrom: fmt(mon), dateTo: fmt(now) }));
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(mon), dateTo: fmt(nextDay(now)) }));
         break;
       }
       case "thisMonth": {
         const first = new Date(now.getFullYear(), now.getMonth(), 1);
-        setFilters((prev) => ({ ...prev, dateFrom: fmt(first), dateTo: fmt(now) }));
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(first), dateTo: fmt(nextDay(now)) }));
         break;
       }
       case "lastMonth": {
         const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const last = new Date(now.getFullYear(), now.getMonth(), 0);
-        setFilters((prev) => ({ ...prev, dateFrom: fmt(first), dateTo: fmt(last) }));
+        setFilters((prev) => ({ ...prev, dateFrom: fmt(first), dateTo: fmt(nextDay(last)) }));
         break;
       }
       case "all":
@@ -407,7 +410,7 @@ export default function OrdersListScreen() {
   }, []);
 
   const handleClearFilters = useCallback(() => {
-    setFilters({ dateFrom: todayISO, dateTo: todayISO });
+    setFilters({ dateFrom: todayISO, dateTo: tomorrowISO });
     setLocalFilter("");
     setPage(1);
   }, [todayISO]);
@@ -590,6 +593,19 @@ export default function OrdersListScreen() {
             {item.selectedBranch?.name || "—"}
           </ThemedText>
         ),
+      },
+      {
+        key: "customerData",
+        label: O?.colScheduling || "Agendamiento",
+        width: 140,
+        render: (item) => {
+          if (!item.customerData?.raw?.length) return null;
+          return (
+            <ThemedText type="caption" style={{ color: colors.text }} numberOfLines={2}>
+              {item.customerData.raw.join(" · ")}
+            </ThemedText>
+          );
+        },
       },
       {
         key: "receipt",
@@ -782,23 +798,19 @@ export default function OrdersListScreen() {
             </ScrollView>
             <View style={{ flexDirection: "row", gap: spacing.sm }}>
               <View style={{ flex: 1 }}>
-                <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 4 }}>{O?.filterDateFrom}</ThemedText>
-                <TextInput
-                  style={{ backgroundColor: colors.surfaceVariant, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, fontSize: 13 }}
-                  value={filters.dateFrom || ""}
-                  onChangeText={(v) => { setFilters((prev) => ({ ...prev, dateFrom: v })); setActivePeriod(null); }}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
+                <DatePicker
+                  value={filters.dateFrom || null}
+                  onChange={(v) => { setFilters((prev) => ({ ...prev, dateFrom: v || undefined })); setActivePeriod(null); }}
+                  placeholder={O?.filterDateFrom}
+                  displayFormat="YYYY-MM-DD"
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 4 }}>{O?.filterDateTo}</ThemedText>
-                <TextInput
-                  style={{ backgroundColor: colors.surfaceVariant, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, fontSize: 13 }}
-                  value={filters.dateTo || ""}
-                  onChangeText={(v) => { setFilters((prev) => ({ ...prev, dateTo: v })); setActivePeriod(null); }}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
+                <DatePicker
+                  value={filters.dateTo || null}
+                  onChange={(v) => { setFilters((prev) => ({ ...prev, dateTo: v || undefined })); setActivePeriod(null); }}
+                  placeholder={O?.filterDateTo}
+                  displayFormat="YYYY-MM-DD"
                 />
               </View>
             </View>
@@ -1188,6 +1200,21 @@ export default function OrdersListScreen() {
                 )}
               </View>
             </View>
+
+            {/* Datos de Agendamiento */}
+            {selectedOrder.customerData?.raw && selectedOrder.customerData.raw.length > 0 && (
+              <View>
+                <View style={styles.detailSectionTitle}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                  <ThemedText style={styles.detailSectionTitleText}>{O?.sectionScheduling}</ThemedText>
+                </View>
+                <View style={styles.detailCard}>
+                  {selectedOrder.customerData.raw.map((item, idx) => (
+                    <ThemedText key={idx} style={[styles.detailValue, { marginBottom: 4 }]}>{item}</ThemedText>
+                  ))}
+                </View>
+              </View>
+            )}
 
             {/* Producto (JSON) */}
             {selectedOrder.orderPayload && (

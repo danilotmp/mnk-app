@@ -10,17 +10,21 @@ import {
     EmailInput,
     PhoneInput,
 } from "@/src/domains/shared/components";
+import { ChatOrdersService } from "@/src/features/interacciones/orders/services";
+import type { ChatOrderRecord } from "@/src/features/interacciones/orders/types";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Animated,
+    Modal,
+    Pressable,
     ScrollView,
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import { contactInfoPanelStyles } from "./contact-info-panel.styles";
 import type { ContactInfoPanelProps } from "./contact-info-panel.types";
@@ -54,34 +58,38 @@ export const ContactInfoPanel = React.memo(
     // Órdenes del contacto
     const [contactOrders, setContactOrders] = useState<ChatOrderRecord[]>([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
+    const [selectedOrderDetail, setSelectedOrderDetail] = useState<ChatOrderRecord | null>(null);
 
     const loadContactOrders = useCallback(async () => {
-      if (!company?.id || !contact.id) return;
+      const cid = company?.id;
+      const ctid = contact?.id;
+      if (!cid || !ctid) return;
       setLoadingOrders(true);
       try {
         const result = await ChatOrdersService.getOrders({
-          companyId: company.id,
-          contactId: contact.id,
-          limit: 50,
+          companyId: cid,
+          contactId: ctid,
+          limit: 100,
         });
-        setContactOrders(result.data);
+        setContactOrders(result.data || []);
       } catch {
         setContactOrders([]);
       } finally {
         setLoadingOrders(false);
       }
-    }, [company?.id, contact.id]);
+    }, [company?.id, contact?.id]);
 
     useEffect(() => {
-      if (activeTab === "agendamiento" || activeTab === "ordenes" || activeTab === "pagos") {
+      if (company?.id && contact?.id) {
         loadContactOrders();
       }
-    }, [activeTab, loadContactOrders]);
+    }, [company?.id, contact?.id, loadContactOrders]);
 
-    // Separar órdenes futuras (agendamiento) y pasadas
-    const now = new Date();
-    const futureOrders = contactOrders.filter((o) => new Date(o.createdAt) >= now);
-    const pastOrders = contactOrders.filter((o) => new Date(o.createdAt) < now);
+    // Separar: agendamiento = hoy y futuro, órdenes = pasadas, pagos = con pago
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const schedulingOrders = contactOrders.filter((o) => new Date(o.createdAt) >= todayStart);
+    const pastOrders = contactOrders.filter((o) => new Date(o.createdAt) < todayStart);
     const paidOrders = contactOrders.filter((o) => o.paymentMessageId != null);
 
     const ordersCount = contactOrders.length;
@@ -224,7 +232,7 @@ export const ContactInfoPanel = React.memo(
                   type="caption"
                   style={{ marginLeft: 6, color: colors.textSecondary }}
                 >
-                  Agendamientos: {futureOrders.length}
+                  Agendamientos: {schedulingOrders.length}
                 </ThemedText>
               </View>
               <View style={contactInfoPanelStyles.iconItem}>
@@ -710,15 +718,13 @@ export const ContactInfoPanel = React.memo(
           {activeTab === "agendamiento" && (
             <View style={contactInfoPanelStyles.section}>
               <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
-                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>
-                  {t.pages?.chatOrders?.periodToday ? t.pages.chatOrders.periodToday : "Agendamiento"}
-                </ThemedText>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>Agendamiento</ThemedText>
               </View>
               {loadingOrders ? (
                 <View style={{ alignItems: "center", paddingVertical: 30 }}>
                   <ActivityIndicator size="small" color={colors.primary} />
                 </View>
-              ) : futureOrders.length === 0 ? (
+              ) : schedulingOrders.length === 0 ? (
                 <View style={{ alignItems: "center", paddingVertical: 30 }}>
                   <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
                   <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 8 }}>
@@ -726,8 +732,8 @@ export const ContactInfoPanel = React.memo(
                   </ThemedText>
                 </View>
               ) : (
-                futureOrders.map((o) => (
-                  <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                schedulingOrders.map((o) => (
+                  <TouchableOpacity key={o.id} onPress={() => setSelectedOrderDetail(o)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                       <ThemedText type="body2" style={{ fontWeight: "600", color: colors.text, flex: 1 }} numberOfLines={1}>
                         {o.offeringName || o.orderPayload?.name || "—"}
@@ -736,11 +742,15 @@ export const ContactInfoPanel = React.memo(
                         {fmtCurrency(getAmount(o), getCurrency(o))}
                       </ThemedText>
                     </View>
+                    {o.customerData?.raw && o.customerData.raw.length > 0 && (
+                      <ThemedText type="caption" style={{ color: colors.primary, marginTop: 2 }} numberOfLines={1}>
+                        {o.customerData.raw.join(" · ")}
+                      </ThemedText>
+                    )}
                     <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
-                      {fmtDate(o.createdAt)}
-                      {o.selectedBranch?.name ? ` · ${o.selectedBranch.name}` : ""}
+                      {fmtDate(o.createdAt)}{o.selectedBranch?.name ? ` · ${o.selectedBranch.name}` : ""}
                     </ThemedText>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -750,9 +760,7 @@ export const ContactInfoPanel = React.memo(
           {activeTab === "ordenes" && (
             <View style={contactInfoPanelStyles.section}>
               <View style={[contactInfoPanelStyles.sectionHeader, { borderBottomColor: colors.border }]}>
-                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>
-                  Órdenes
-                </ThemedText>
+                <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>Órdenes</ThemedText>
               </View>
               {loadingOrders ? (
                 <View style={{ alignItems: "center", paddingVertical: 30 }}>
@@ -761,13 +769,11 @@ export const ContactInfoPanel = React.memo(
               ) : pastOrders.length === 0 ? (
                 <View style={{ alignItems: "center", paddingVertical: 30 }}>
                   <Ionicons name="cart-outline" size={36} color={colors.textSecondary} />
-                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    {t.pages?.chatOrders?.emptyMessage || "Sin registros"}
-                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 8 }}>{t.pages?.chatOrders?.emptyMessage || "Sin registros"}</ThemedText>
                 </View>
               ) : (
                 pastOrders.map((o) => (
-                  <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <TouchableOpacity key={o.id} onPress={() => setSelectedOrderDetail(o)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                       <ThemedText type="body2" style={{ fontWeight: "600", color: colors.text, flex: 1 }} numberOfLines={1}>
                         {o.offeringName || o.orderPayload?.name || "—"}
@@ -776,18 +782,10 @@ export const ContactInfoPanel = React.memo(
                         {fmtCurrency(getAmount(o), getCurrency(o))}
                       </ThemedText>
                     </View>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
-                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                        {fmtDate(o.createdAt)}
-                        {o.selectedBranch?.name ? ` · ${o.selectedBranch.name}` : ""}
-                      </ThemedText>
-                      {o.offeringCode && (
-                        <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-                          {o.offeringCode}
-                        </ThemedText>
-                      )}
-                    </View>
-                  </View>
+                    <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
+                      {fmtDate(o.createdAt)}{o.selectedBranch?.name ? ` · ${o.selectedBranch.name}` : ""}{o.offeringCode ? ` · ${o.offeringCode}` : ""}
+                    </ThemedText>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -814,7 +812,7 @@ export const ContactInfoPanel = React.memo(
                 </View>
               ) : (
                 paidOrders.map((o) => (
-                  <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <TouchableOpacity key={o.id} onPress={() => setSelectedOrderDetail(o)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                       <View style={{ flex: 1 }}>
                         <ThemedText type="body2" style={{ fontWeight: "600", color: colors.text }} numberOfLines={1}>
@@ -831,15 +829,80 @@ export const ContactInfoPanel = React.memo(
                       </ThemedText>
                     </View>
                     <ThemedText type="caption" style={{ color: colors.textSecondary, marginTop: 2 }}>
-                      {fmtDate(o.createdAt)}
-                      {o.mediaContextDetails?.ordenante ? ` · ${o.mediaContextDetails.ordenante}` : ""}
+                      {fmtDate(o.createdAt)}{o.mediaContextDetails?.ordenante ? ` · ${o.mediaContextDetails.ordenante}` : ""}
                     </ThemedText>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
           )}
         </ScrollView>
+
+        {/* Modal de detalle de orden */}
+        {selectedOrderDetail && (
+          <Modal visible={!!selectedOrderDetail} transparent animationType="fade" onRequestClose={() => setSelectedOrderDetail(null)}>
+            <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 16 }} onPress={() => setSelectedOrderDetail(null)}>
+              <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: colors.background, borderRadius: 12, width: "100%", maxWidth: 400, maxHeight: "80%", padding: 20 }}>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <ThemedText type="h4" style={{ color: colors.text, fontWeight: "700" }}>
+                      {selectedOrderDetail.offeringName || selectedOrderDetail.orderPayload?.name || "Detalle"}
+                    </ThemedText>
+                    <TouchableOpacity onPress={() => setSelectedOrderDetail(null)}>
+                      <Ionicons name="close" size={24} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                  {selectedOrderDetail.offeringCode && (
+                    <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600", marginBottom: 8 }}>{selectedOrderDetail.offeringCode}</ThemedText>
+                  )}
+                  <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 12 }}>{fmtDate(selectedOrderDetail.createdAt)}</ThemedText>
+                  {selectedOrderDetail.selectedBranch?.name && (
+                    <View style={{ marginBottom: 12 }}>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>Sucursal</ThemedText>
+                      <ThemedText type="body2" style={{ color: colors.text, fontWeight: "600" }}>{selectedOrderDetail.selectedBranch.name}</ThemedText>
+                      {selectedOrderDetail.selectedBranch.address?.street && (
+                        <ThemedText type="caption" style={{ color: colors.textSecondary }}>{selectedOrderDetail.selectedBranch.address.street}</ThemedText>
+                      )}
+                    </View>
+                  )}
+                  {selectedOrderDetail.customerData?.raw && selectedOrderDetail.customerData.raw.length > 0 && (
+                    <View style={{ marginBottom: 12 }}>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>Agendamiento</ThemedText>
+                      {selectedOrderDetail.customerData.raw.map((item, idx) => (
+                        <ThemedText key={idx} type="body2" style={{ color: colors.text }}>{item}</ThemedText>
+                      ))}
+                    </View>
+                  )}
+                  <View style={{ marginBottom: 12 }}>
+                    <ThemedText type="caption" style={{ color: colors.textSecondary }}>Monto</ThemedText>
+                    <ThemedText type="h4" style={{ color: colors.primary, fontWeight: "700" }}>
+                      {fmtCurrency(getAmount(selectedOrderDetail), getCurrency(selectedOrderDetail))}
+                    </ThemedText>
+                  </View>
+                  {selectedOrderDetail.mediaContextDetails && (
+                    <View style={{ marginBottom: 12 }}>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 4 }}>Comprobante</ThemedText>
+                      {selectedOrderDetail.mediaContextDetails.banco && (
+                        <ThemedText type="body2" style={{ color: colors.text }}>Banco: {selectedOrderDetail.mediaContextDetails.banco}</ThemedText>
+                      )}
+                      {selectedOrderDetail.mediaContextDetails.ordenante && (
+                        <ThemedText type="body2" style={{ color: colors.text }}>Ordenante: {selectedOrderDetail.mediaContextDetails.ordenante}</ThemedText>
+                      )}
+                      {selectedOrderDetail.mediaIdentifier && (
+                        <ThemedText type="body2" style={{ color: colors.primary }}>#{selectedOrderDetail.mediaIdentifier}</ThemedText>
+                      )}
+                      {selectedOrderDetail.mediaContextDetails.monto && (
+                        <ThemedText type="body2" style={{ color: colors.text, fontWeight: "700" }}>
+                          {selectedOrderDetail.mediaContextDetails.monto.texto || fmtCurrency(selectedOrderDetail.mediaContextDetails.monto.valor, selectedOrderDetail.mediaContextDetails.monto.moneda || "USD")}
+                        </ThemedText>
+                      )}
+                    </View>
+                  )}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
       </Animated.View>
     );
   },
