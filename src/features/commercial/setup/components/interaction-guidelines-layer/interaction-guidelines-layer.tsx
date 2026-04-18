@@ -421,7 +421,20 @@ export function InteractionGuidelinesLayer({
                     })
                   : guidelines;
 
-                return filteredGuidelines.map((guideline) => {
+                // Ordenar según el campo order de SYSTEM_GUIDELINE_NAMES; las no reconocidas van al final
+                const sortedGuidelines = [...filteredGuidelines].sort((a, b) => {
+                  const aMatch = SYSTEM_GUIDELINE_NAMES.find(
+                    (s) => s.title.toUpperCase() === (a.title || "").trim().toUpperCase(),
+                  );
+                  const bMatch = SYSTEM_GUIDELINE_NAMES.find(
+                    (s) => s.title.toUpperCase() === (b.title || "").trim().toUpperCase(),
+                  );
+                  const aOrder = aMatch?.order ?? Number.MAX_SAFE_INTEGER;
+                  const bOrder = bMatch?.order ?? Number.MAX_SAFE_INTEGER;
+                  return aOrder - bOrder;
+                });
+
+                return sortedGuidelines.map((guideline) => {
                   const isEditing = editingGuidelineId === guideline.id;
                   const formData = isEditing
                     ? editingFormData[guideline.id]
