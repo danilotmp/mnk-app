@@ -10,17 +10,16 @@
  */
 
 import { ThemedText } from "@/components/themed-text";
-import { InputWithFocus } from "@/components/ui/input-with-focus";
+import { SplitInput } from "@/components/ui/split-input";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { createAttributesEditorStyles } from "./attributes-editor.styles";
 import type { AttributesEditorProps } from "./attributes-editor.types";
@@ -316,34 +315,16 @@ export function AttributesEditor({
       return (
         <View>
           <TouchableOpacity
-            style={[
-              styles.emptyState,
-              {
-                borderColor: colors.border,
-                backgroundColor: colors.filterInputBackground + "40",
-              },
-            ]}
+            style={[styles.emptyState, { borderColor: colors.border, backgroundColor: colors.filterInputBackground + "40" }]}
             onPress={disabled ? undefined : handleAdd}
             disabled={disabled}
             activeOpacity={0.7}
           >
-            <ThemedText
-              type="body2"
-              style={[styles.emptyStateText, { color: colors.textSecondary }]}
-            >
-              {placeholder}
-            </ThemedText>
-            <ThemedText
-              type="caption"
-              style={{ color: colors.primary, marginTop: 4 }}
-            >
-              + {addButtonLabel}
-            </ThemedText>
+            <ThemedText type="body2" style={[styles.emptyStateText, { color: colors.textSecondary }]}>{placeholder}</ThemedText>
+            <ThemedText type="caption" style={[styles.emptyStateHint, { color: colors.primary }]}>+ {addButtonLabel}</ThemedText>
           </TouchableOpacity>
           {availableSuggestions.length > 0 && (
-            <View style={[styles.actionsRow, { marginTop: 8 }]}>
-              {renderSuggestions()}
-            </View>
+            <View style={styles.emptySuggestionsRow}>{renderSuggestions()}</View>
           )}
         </View>
       );
@@ -351,155 +332,53 @@ export function AttributesEditor({
 
     return (
       <View style={styles.listContainer}>
-          {showTreeLine && entries.length > 0 && rowMidpoints.length === entries.length && (
-            <>
-              {/* Línea vertical entre items */}
-              {entries.length > 1 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    left: (compact ? 16 : 0) + 0.25,
-                    top: rowMidpoints[0],
-                    height: rowMidpoints[rowMidpoints.length - 1] - rowMidpoints[0],
-                    width: 1,
-                    backgroundColor: colors.textSecondary + "30",
-                    pointerEvents: "none",
-                  }}
-                />
-              )}
-            </>
-          )}
-          {entries.map((e, i) => {
-            const treeLineColor = colors.textSecondary + "40";
-            return (
-            <View
-              key={i}
-              style={[styles.row, { position: "relative" }]}
-              onLayout={(ev) => {
-                const { y, height } = ev.nativeEvent.layout;
-                setRowMidpoints((prev) => {
-                  const next = [...prev];
-                  next[i] = y + height / 2;
-                  return next;
-                });
-              }}
-            >
-              {showTreeLine && (
-                <View style={{
-                  position: "absolute",
-                  left: (compact ? 16 : 0) + 0.75 - 3,
-                  top: "50%",
-                  marginTop: -3,
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: colors.textSecondary + "40",
-                  zIndex: 1,
-                }} />
-              )}
-              <View style={[styles.rowInputs, { flex: 1, paddingLeft: showTreeLine ? ((compact ? 16 : 0) + 12) : (compact ? 16 : 0) }]}>
-                <View
-                  style={{ flex: 1 }}
-                  onLayout={i === 0 ? (e) => setKeyColWidth(e.nativeEvent.layout.width) : undefined}
-                >
-                  <InputWithFocus
-                    containerStyle={[
-                      styles.keyInput,
-                      focusedKeyIndex === i
-                        ? {
-                            backgroundColor: colors.filterInputBackground,
-                            borderColor: colors.border,
-                            borderWidth: 1,
-                          }
-                        : {
-                            backgroundColor: "transparent",
-                            borderColor: "transparent",
-                            borderWidth: 0,
-                          },
-                    ]}
-                    primaryColor={colors.primary}
-                    error={false}
-                  >
-                    <TextInput
-                      style={[styles.keyInputText, { color: colors.text }]}
-                      placeholder={keyPlaceholder}
-                      placeholderTextColor={colors.textSecondary}
-                      value={e.key}
-                      onChangeText={(v) => handleChange(i, "key", v)}
-                      onFocus={() => setFocusedKeyIndex(i)}
-                      onBlur={() => setFocusedKeyIndex(null)}
-                      editable={!disabled}
-                    />
-                  </InputWithFocus>
-                </View>
-                <InputWithFocus
-                  containerStyle={[
-                    styles.valueInput,
-                    {
-                      backgroundColor: colors.filterInputBackground,
-                      borderColor: error ? (colors.error ?? "#ef4444") : colors.border,
-                    },
-                  ]}
-                  primaryColor={colors.primary}
-                  error={error}
-                  ref={focusedValueIndex === i ? (ref: any) => {
-                    // Auto-focus el input de valor cuando se agrega desde sugerencia
-                    if (ref && focusedValueIndex === i) {
-                      setFocusedValueIndex(null);
-                    }
-                  } : undefined}
-                >
-                  <TextInput
-                    style={[styles.valueInputText, { color: colors.text }]}
-                    placeholder={valuePlaceholder}
-                    placeholderTextColor={colors.textSecondary}
-                    value={e.value}
-                    onChangeText={(v) => handleChange(i, "value", v)}
-                    editable={!disabled}
-                    autoFocus={focusedValueIndex === i}
-                  />
-                </InputWithFocus>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemove(i)}
+        {showTreeLine && entries.length > 1 && rowMidpoints.length === entries.length && (
+          <View style={[styles.treeLine, { top: rowMidpoints[0], height: rowMidpoints[rowMidpoints.length - 1] - rowMidpoints[0] }]} />
+        )}
+        {entries.map((e, i) => (
+          <View
+            key={i}
+            style={styles.row}
+            onLayout={(ev) => {
+              const { y, height } = ev.nativeEvent.layout;
+              setRowMidpoints((prev) => { const next = [...prev]; next[i] = y + height / 2; return next; });
+            }}
+          >
+            {showTreeLine && <View style={styles.treeDot} />}
+            <View style={showTreeLine ? styles.rowInputsWithTree : styles.rowInputs}>
+              <View style={styles.inputWrapper}>
+                <SplitInput
+                  label=""
+                  leftPlaceholder={keyPlaceholder}
+                  rightPlaceholder={valuePlaceholder}
+                  leftValue={e.key}
+                  rightValue={e.value}
+                  onChangeLeft={(v) => handleChange(i, "key", v)}
+                  onChangeRight={(v) => handleChange(i, "value", v)}
                   disabled={disabled}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={compact ? 18 : 20}
-                    color={actionIconColor}
-                  />
-                </TouchableOpacity>
+                  containerStyle={error ? { borderColor: colors.error ?? "#ef4444" } : undefined}
+                />
               </View>
+              <TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(i)} disabled={disabled}>
+                <Ionicons name="trash-outline" size={compact ? 18 : 20} color={actionIconColor} />
+              </TouchableOpacity>
             </View>
-            );
-          })}
-          {/* Fila de acciones: Agregar + Sugerencias */}
-          <View style={{ marginTop: 6, paddingLeft: showTreeLine ? ((compact ? 16 : 0) + 12) : (compact ? 16 : 0), flexDirection: "row", alignItems: "center" }}>
+          </View>
+        ))}
+        <View style={showTreeLine ? styles.actionsRowMainWithTree : styles.actionsRowMain}>
+          <View style={styles.addButtonColumn}>
             <Tooltip text={addButtonLabel} position="top">
-              <TouchableOpacity
-                style={[
-                  styles.addButton,
-                  { borderColor: colors.primary },
-                ]}
-                onPress={handleAdd}
-                disabled={disabled}
-              >
+              <TouchableOpacity style={[styles.addButton, { borderColor: colors.primary }]} onPress={handleAdd} disabled={disabled}>
                 <Ionicons name="add" size={18} color={colors.primary} />
-                {!isMobile && (
-                  <ThemedText type="body2" style={{ color: colors.primary }}>
-                    {addButtonLabel}
-                  </ThemedText>
-                )}
+                {!isMobile && <ThemedText type="body2" style={{ color: colors.primary }}>{addButtonLabel}</ThemedText>}
               </TouchableOpacity>
             </Tooltip>
-            {availableSuggestions.length > 0 && keyColWidth > 0 && (
-              <View style={{ position: "absolute", left: (showTreeLine ? ((compact ? 16 : 0) + 12) : (compact ? 16 : 0)) + keyColWidth + 6, right: 0, flexDirection: "row", alignItems: "center" }}>
-                {renderSuggestions()}
-              </View>
-            )}
           </View>
+          {availableSuggestions.length > 0 && (
+            <View style={styles.suggestionsColumn}>{renderSuggestions()}</View>
+          )}
         </View>
-      );
+      </View>
+    );
   }
 }

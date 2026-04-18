@@ -9,4 +9,5 @@ export { SideModal } from './side-modal';
 export { ThemeToggle } from './theme-toggle';
 export { Tooltip } from './tooltip';
 export type { TooltipProps } from './tooltip';
+export { SplitInput } from './split-input';
 

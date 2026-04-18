@@ -27,6 +27,7 @@ export const createAttributesEditorStyles = (theme: AttributesEditorTheme, compa
       alignItems: compact ? "stretch" : "center",
       gap: compact ? 4 : 8,
       width: "100%",
+      position: "relative" as const,
     },
     rowInputs: {
       flexDirection: "row",
@@ -34,6 +35,19 @@ export const createAttributesEditorStyles = (theme: AttributesEditorTheme, compa
       gap: 6,
       paddingLeft: compact ? 16 : 0,
       flex: 1,
+    },
+    rowInputsWithTree: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingLeft: (compact ? 16 : 0) + 12,
+      flex: 1,
+    },
+    inputWrapper: {
+      flex: 1,
+    },
+    inputContainerError: {
+      borderColor: colors.border,
     },
     keyInput: {
       flex: compact ? 1 : 1,
@@ -93,6 +107,14 @@ export const createAttributesEditorStyles = (theme: AttributesEditorTheme, compa
     emptyStateText: {
       fontSize: compact ? 13 : 14,
     },
+    emptyStateHint: {
+      marginTop: 4,
+    },
+    emptySuggestionsRow: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+    },
     actionsRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -100,6 +122,32 @@ export const createAttributesEditorStyles = (theme: AttributesEditorTheme, compa
       flexWrap: "nowrap",
       paddingLeft: compact ? 16 : 0,
       marginTop: 6,
+    },
+    actionsRowMain: {
+      marginTop: 6,
+      paddingLeft: compact ? 16 : 0,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
+    },
+    actionsRowMainWithTree: {
+      marginTop: 6,
+      paddingLeft: (compact ? 16 : 0) + 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
+    },
+    addButtonColumn: {
+      flexShrink: 0,
+      marginRight: 8,
+    },
+    suggestionsColumn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      paddingLeft: 15,
+      paddingRight: 22
     },
     suggestionsScroll: {
       flexGrow: 0,
@@ -126,6 +174,24 @@ export const createAttributesEditorStyles = (theme: AttributesEditorTheme, compa
       padding: 4,
       justifyContent: "center",
       alignItems: "center",
+    },
+    // Árbol visual
+    treeLine: {
+      position: "absolute" as const,
+      left: (compact ? 16 : 0) + 0.25,
+      width: 1,
+      backgroundColor: colors.textSecondary + "30",
+    },
+    treeDot: {
+      position: "absolute" as const,
+      left: (compact ? 16 : 0) + 0.75 - 3,
+      top: "50%",
+      marginTop: -3,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.textSecondary + "40",
+      zIndex: 1,
     },
   });
 };

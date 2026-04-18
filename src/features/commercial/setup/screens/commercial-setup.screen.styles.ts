@@ -70,7 +70,9 @@ export interface CommercialSetupScreenStyles {
   titleMobile: TextStyle;
   subtitle: TextStyle;
   stepperCard: ViewStyle;
+  stepperCardMobile: ViewStyle;
   contentCard: ViewStyle;
+  contentCardMobile: ViewStyle;
   /** Smartphone: reduce 50% el espacio entre filtro y segundo título Ofertas */
   contentCardOfferingsMobile: ViewStyle;
   contentHeaderRow: ViewStyle;
@@ -166,10 +168,16 @@ export function createCommercialSetupScreenStyles(
       padding: t.spacing.md,
       marginBottom: 0,
     },
+    stepperCardMobile: {
+      paddingHorizontal: 5,
+    },
     contentCard: {
       padding: t.spacing.lg,
       marginBottom: t.spacing.md,
       gap: t.spacing.md,
+    },
+    contentCardMobile: {
+      paddingHorizontal: 8,
     },
     /** Smartphone Ofertas: minimizar separación entre contenedor (título+filtro) y sección (lista) */
     contentCardOfferingsMobile: {

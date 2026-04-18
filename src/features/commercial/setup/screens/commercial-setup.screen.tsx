@@ -11,8 +11,8 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/hooks/use-theme";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-  CommercialCapabilities,
-  LayerProgress,
+    CommercialCapabilities,
+    LayerProgress,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import { DynamicIcon, SearchFilterBar } from "@/src/domains/shared/components";
@@ -21,11 +21,11 @@ import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { CompanySetupLayer } from "../components/company-setup-layer/company-setup-layer";
@@ -35,8 +35,8 @@ import { OperationalLayer } from "../components/operational-layer/operational-la
 import { PaymentsLayer } from "../components/payments-layer/payments-layer";
 import { RecommendationsLayer } from "../components/recommendations-layer/recommendations-layer";
 import {
-  WhatsAppConnectionLayer,
-  WhatsAppConnectionLayerRef,
+    WhatsAppConnectionLayer,
+    WhatsAppConnectionLayerRef,
 } from "../components/whatsapp-connection-layer";
 import { WizardStep, WizardStepper } from "../components/wizard-stepper";
 import { createCommercialSetupScreenStyles } from "./commercial-setup.screen.styles";
@@ -453,7 +453,7 @@ export function CommercialSetupScreen() {
 
         {/* Stepper Visual (solo si no está en Capa 0) */}
         {!showLayer0 && (
-          <Card variant="elevated" style={styles.stepperCard}>
+          <Card variant="elevated" style={[styles.stepperCard, isMobile && styles.stepperCardMobile]}>
             <WizardStepper
               steps={wizardSteps}
               currentStep={currentLayer}
@@ -464,7 +464,7 @@ export function CommercialSetupScreen() {
 
         {/* Capa 0: Configuración de Empresa/Sucursal */}
         {showLayer0 ? (
-          <Card variant="elevated" style={styles.contentCard}>
+          <Card variant="elevated" style={[styles.contentCard, isMobile && styles.contentCardMobile]}>
             <CompanySetupLayer
               onComplete={() => {
                 setShowLayer0(false);
@@ -483,6 +483,7 @@ export function CommercialSetupScreen() {
               variant="elevated"
               style={[
                 styles.contentCard,
+                isMobile && styles.contentCardMobile,
                 { gap: 0 },
                 styles.contentCardOfferingsMobile,
               ]}

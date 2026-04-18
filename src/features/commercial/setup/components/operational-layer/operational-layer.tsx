@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputWithFocus } from "@/components/ui/input-with-focus";
 import { Select } from "@/components/ui/select";
+import { SplitInput } from "@/components/ui/split-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -16,44 +17,47 @@ import { useTheme } from "@/hooks/use-theme";
 import { CatalogService } from "@/src/domains/catalog";
 import { CommercialService } from "@/src/domains/commercial";
 import {
-    CommercialProfile,
-    Offering,
-    OfferingPrice,
-    OfferingPricePayload,
+  CommercialProfile,
+  Offering,
+  OfferingPrice,
+  OfferingPricePayload,
 } from "@/src/domains/commercial/types";
 import { useCompany } from "@/src/domains/shared";
 import {
-    AttributesEditor,
-    CurrencyInput,
-    DatePicker,
+  AttributesEditor,
+  CurrencyInput,
+  DatePicker,
 } from "@/src/domains/shared/components";
 import {
-    getStatusDescription,
-    RecordStatus,
+  getStatusDescription,
+  RecordStatus,
 } from "@/src/domains/shared/types/status.types";
 import { useTranslation } from "@/src/infrastructure/i18n";
 import { useAlert } from "@/src/infrastructure/messages/alert.service";
 import { TemplateService } from "@/src/infrastructure/templates/template.service";
+import { formatCode } from "@/src/infrastructure/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { ConditionsModal } from "../conditions-modal";
+import { PromotionsModal } from "../promotions-modal";
 
 import { styles } from "./operational-layer.styles";
 
@@ -70,7 +74,7 @@ export function OperationalLayer({
   onComplete,
   searchFilter = "",
 }: OperationalLayerProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const { t } = useTranslation();
   const O = t.wizard?.layers?.offerings;
@@ -110,6 +114,16 @@ export function OperationalLayer({
     Record<string, OfferingPrice | null>
   >({}); // Precios originales para detectar cambios
   const [saving, setSaving] = useState(false);
+  const [conditionsModalVisible, setConditionsModalVisible] = useState(false);
+  const [conditionsOfferingId, setConditionsOfferingId] = useState<string | undefined>(undefined);
+  const [conditionsOfferingLabel, setConditionsOfferingLabel] = useState("");
+  const [conditionsScope, setConditionsScope] = useState<"general" | "specific">("general");
+  const [promotionsModalVisible, setPromotionsModalVisible] = useState(false);
+  const [promotionsOfferingId, setPromotionsOfferingId] = useState<string | undefined>(undefined);
+  const [promotionsOfferingLabel, setPromotionsOfferingLabel] = useState("");
+  const [promotionsScope, setPromotionsScope] = useState<"general" | "specific">("general");
+  const [promotionsPreloaded, setPromotionsPreloaded] = useState<any[] | undefined>(undefined);
+  const [conditionsPreloaded, setConditionsPreloaded] = useState<any[] | undefined>(undefined);
   const [isLoadingOfferings, setIsLoadingOfferings] = useState(false); // Flag para evitar llamados repetitivos
   const [commercialProfile, setCommercialProfile] =
     useState<CommercialProfile | null>(null); // Perfil comercial para obtener defaultTaxMode, currency, timezone, language
@@ -518,6 +532,7 @@ export function OperationalLayer({
 
     // Actualizar oferta en memoria
     const updatedOffering: Partial<Offering> = {
+      code: offeringForm.code?.trim() || undefined,
       name: offeringForm.name.trim(),
       description: offeringForm.description.trim() || undefined,
       type: offeringType,
@@ -788,6 +803,7 @@ export function OperationalLayer({
         if (!newOffering.offering.name) continue;
         bulkPayloads.push({
           companyId: company.id,
+          code: newOffering.offering.code || undefined,
           name: newOffering.offering.name,
           description: newOffering.offering.description,
           type: newOffering.offering.type || "product",
@@ -822,6 +838,10 @@ export function OperationalLayer({
         bulkPayloads.push({
           id: offeringId,
           companyId: company.id,
+          code:
+            modified.offering.code !== undefined
+              ? modified.offering.code
+              : (originalOffering.code ?? undefined),
           name: modified.offering.name || originalOffering.name,
           description:
             modified.offering.description !== undefined
@@ -865,6 +885,7 @@ export function OperationalLayer({
         bulkPayloads.push({
           id: offeringId,
           companyId: company.id,
+          code: originalOffering.code ?? undefined,
           name: originalOffering.name,
           description: originalOffering.description,
           type: originalOffering.type,
@@ -1269,15 +1290,44 @@ export function OperationalLayer({
   }
 
   return (
+    <>
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       <View style={styles.formContainer}>
         {/* Sección: Ofertas */}
         <Card variant="elevated" style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="cube-outline" size={24} color={colors.primary} />
-            <ThemedText type="h4" style={styles.sectionTitle}>
-              {O?.sectionTitle ?? "Ofertas"}
-            </ThemedText>
+          <View style={[styles.sectionHeader, { justifyContent: "space-between" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="cube-outline" size={24} color={colors.primary} />
+              <ThemedText type="h4" style={styles.sectionTitle}>
+                {O?.sectionTitle ?? "Ofertas"}
+              </ThemedText>
+            </View>
+            <Tooltip text={(t as any).conditions?.conditionsButton || "Condiciones"} position="left">
+              <TouchableOpacity
+                onPress={() => { setConditionsModalVisible(true); setConditionsOfferingId(undefined); setConditionsScope("general"); }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons name="list-outline" size={20} color={colors.primary} />
+                {!isMobile && (
+                  <ThemedText type="body2" style={{ color: colors.primary, fontWeight: "600" }}>
+                    {(t as any).conditions?.conditionsButton || "Condiciones"}
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </Tooltip>
+            <Tooltip text={(t as any).promotions?.promotionsButton || "Promociones"} position="left">
+              <TouchableOpacity
+                onPress={() => { setPromotionsModalVisible(true); setPromotionsOfferingId(undefined); setPromotionsScope("general"); }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
+                {!isMobile && (
+                  <ThemedText type="body2" style={{ color: colors.primary, fontWeight: "600" }}>
+                    {(t as any).promotions?.promotionsButton || "Promociones"}
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </Tooltip>
           </View>
           <View
             style={[
@@ -1429,7 +1479,7 @@ export function OperationalLayer({
                                   <View
                                     style={[
                                       styles.listItemDetailRow,
-                                      { flexDirection: "row", alignItems: "flex-start" },
+                                      isMobile && styles.listItemDetailRowMobile,
                                     ]}
                                   >
                                     <View
@@ -1472,41 +1522,33 @@ export function OperationalLayer({
                                         Object.keys(offering.properties).length >
                                           0 ? (
                                         <View
-                                          style={{
-                                            marginTop: 10,
-                                            flexDirection: "row",
-                                            flexWrap: "wrap",
-                                            gap: 6,
-                                          }}
+                                          style={styles.propertiesChipsRow}
                                         >
                                           {Object.entries(
                                             offering.properties,
-                                          ).map(([k, v]) => (
+                                          ).slice(0, 4).map(([k, v]) => (
                                             <ThemedText
                                               key={k}
                                               type="caption"
-                                              style={{
-                                                color: colors.textSecondary,
-                                                backgroundColor:
-                                                  colors.filterInputBackground,
-                                                paddingHorizontal: 6,
-                                                paddingVertical: 2,
-                                                borderRadius: 4,
-                                              }}
+                                              style={[styles.propertyChip, { color: colors.textSecondary, backgroundColor: colors.filterInputBackground }]}
+                                              numberOfLines={1}
                                             >
                                               {k}: {String(v)}
                                             </ThemedText>
-                                        ))}
+                                          ))}
+                                          {Object.keys(offering.properties).length > 4 && (
+                                            <ThemedText
+                                              type="caption"
+                                              style={[styles.propertyChipMore, { color: colors.textSecondary, backgroundColor: colors.filterInputBackground }]}
+                                            >
+                                              +{Object.keys(offering.properties).length - 4}
+                                            </ThemedText>
+                                          )}
                                       </View>
                                     ) : null}
                                     </View>
                                     <View
-                                      style={{
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        alignSelf: "flex-end",
-                                      }}
+                                      style={[styles.listItemRight, isMobile && styles.listItemRightMobile]}
                                     >
                                         <View style={styles.alignEnd}>
                                           {mainPrice &&
@@ -1627,7 +1669,7 @@ export function OperationalLayer({
                                     </View>
                                   </View>
                                   {/* Fila 2: Detalle (izq) | Precio (der) */}
-                                  <View style={styles.listItemDetailRow}>
+                                  <View style={[styles.listItemDetailRow, isMobile && styles.listItemDetailRowMobile]}>
                                     <View
                                       style={[
                                         styles.listItemLeft,
@@ -1674,37 +1716,32 @@ export function OperationalLayer({
                                         {offering.properties &&
                                           Object.keys(offering.properties)
                                             .length > 0 && (
-                                            <View
-                                              style={{
-                                                marginTop: 10,
-                                                flexDirection: "row",
-                                                flexWrap: "wrap",
-                                                gap: 6,
-                                              }}
-                                            >
+                                            <View style={styles.propertiesChipsRow}>
                                               {Object.entries(
                                                 offering.properties,
-                                              ).map(([k, v]) => (
+                                              ).slice(0, 4).map(([k, v]) => (
                                                 <ThemedText
                                                   key={k}
                                                   type="caption"
-                                                  style={{
-                                                    color: colors.textSecondary,
-                                                    backgroundColor:
-                                                      colors.filterInputBackground,
-                                                    paddingHorizontal: 6,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                  }}
+                                                  style={[styles.propertyChip, { color: colors.textSecondary, backgroundColor: colors.filterInputBackground }]}
+                                                  numberOfLines={1}
                                                 >
                                                   {k}: {String(v)}
                                                 </ThemedText>
                                               ))}
+                                              {Object.keys(offering.properties).length > 4 && (
+                                                <ThemedText
+                                                  type="caption"
+                                                  style={[styles.propertyChipMore, { color: colors.textSecondary, backgroundColor: colors.filterInputBackground }]}
+                                                >
+                                                  +{Object.keys(offering.properties).length - 4}
+                                                </ThemedText>
+                                              )}
                                             </View>
                                           )}
                                       </View>
                                     </View>
-                                    <View style={styles.listItemRight}>
+                                    <View style={[styles.listItemRight, isMobile && styles.listItemRightMobile]}>
                                         <View style={styles.alignEnd}>
                                           {mainPrice &&
                                           mainPrice.basePrice > 0 ? (
@@ -1770,12 +1807,13 @@ export function OperationalLayer({
                             {isExpanded && (
                               <Card
                                 variant="outlined"
-                                style={styles.accordionCard}
+                                style={[styles.accordionCard, isMobile && styles.accordionCardMobile]}
                               >
                                 {/* Web: Imagen + Tipo + Estado en una fila, todo el ancho. Móvil: fila1=Imagen+Tipo, fila2=Estado (mismo margen que Nombre) */}
                                 <View
                                   style={[
                                     styles.expandableFormRowMargins,
+                                    isMobile && styles.expandableFormRowMarginsMobile,
                                     {
                                       flexDirection: isMobile ? "column" : "row",
                                       alignItems: "center",
@@ -1987,16 +2025,20 @@ export function OperationalLayer({
                                           width: "100%",
                                           marginTop: 8,
                                           overflow: "hidden",
+                                          flexDirection: "row",
+                                          alignItems: "center",
                                         }}
                                       >
                                         <ScrollView
                                           horizontal
                                           showsHorizontalScrollIndicator={false}
+                                          style={{ flex: 1 }}
                                         >
                                           <View
-                                            style={
-                                              styles.statusOptionsContainer
-                                            }
+                                            style={[
+                                              styles.statusOptionsContainer,
+                                              styles.statusOptionsContainerMobile,
+                                            ]}
                                           >
                                           <TouchableOpacity
                                             style={[
@@ -2148,6 +2190,29 @@ export function OperationalLayer({
                                           </TouchableOpacity>
                                         </View>
                                       </ScrollView>
+                                      <Tooltip text={(t as any).conditions?.conditionsButton || "Condiciones"} position="left">
+                                        <TouchableOpacity
+                                          onPress={async () => {
+                                            const oid = expandedOfferingId || undefined;
+                                            setConditionsOfferingId(oid);
+                                            setConditionsScope("specific");
+                                            if (oid) {
+                                              try {
+                                                const { apiClient: api } = await import("@/src/infrastructure/api");
+                                                const res = await api.get<any>(`/commercial/offerings/${oid}`);
+                                                const raw = res.data?.conditions || res.data?.data?.conditions || [];
+                                                setConditionsPreloaded(Array.isArray(raw) ? raw.filter((c: any) => c.scope === "specific") : []);
+                                                const o = offerings.find((x) => x.id === oid);
+                                                setConditionsOfferingLabel(o ? `${o.code || ""} — ${o.name}` : "");
+                                              } catch { setConditionsPreloaded([]); setConditionsOfferingLabel(""); }
+                                            }
+                                            setConditionsModalVisible(true);
+                                          }}
+                                          style={{ padding: 8 }}
+                                        >
+                                          <Ionicons name="list-outline" size={22} color={isDark ? colors.primaryDark : colors.primary} />
+                                        </TouchableOpacity>
+                                      </Tooltip>
                                     </View>
                                   </>
                                   ) : (
@@ -2459,6 +2524,29 @@ export function OperationalLayer({
                                               </ThemedText>
                                             </TouchableOpacity>
                                           </View>
+                                          <Tooltip text={(t as any).conditions?.conditionsButton || "Condiciones"} position="left">
+                                            <TouchableOpacity
+                                              onPress={async () => {
+                                                const oid = expandedOfferingId || undefined;
+                                                setConditionsOfferingId(oid);
+                                                setConditionsScope("specific");
+                                                if (oid) {
+                                                  try {
+                                                    const { apiClient: api } = await import("@/src/infrastructure/api");
+                                                    const res = await api.get<any>(`/commercial/offerings/${oid}`);
+                                                    const raw = res.data?.conditions || res.data?.data?.conditions || [];
+                                                    setConditionsPreloaded(Array.isArray(raw) ? raw.filter((c: any) => c.scope === "specific") : []);
+                                                    const o = offerings.find((x) => x.id === oid);
+                                                    setConditionsOfferingLabel(o ? `${o.code || ""} — ${o.name}` : "");
+                                                  } catch { setConditionsPreloaded([]); setConditionsOfferingLabel(""); }
+                                                }
+                                                setConditionsModalVisible(true);
+                                              }}
+                                              style={{ padding: 8 }}
+                                            >
+                                              <Ionicons name="list-outline" size={22} color={isDark ? colors.primaryDark : colors.primary} />
+                                            </TouchableOpacity>
+                                          </Tooltip>
                                       </View>
                                     </View>
                                     </>
@@ -2467,9 +2555,9 @@ export function OperationalLayer({
 
                                 {/* Resto del formulario alineado con la fila de imagen (mismo margen) */}
                                 <View
-                                  style={styles.expandableFormRowMargins}
+                                  style={[styles.expandableFormRowMargins, isMobile && styles.expandableFormRowMarginsMobile]}
                                 >
-                                  {/* Fila 2: Nombre de la oferta y Precio Base en la misma línea (desktop) o apilados (móvil) */}
+                                  {/* Fila 2: mantener 50/50 original: (izq) Código 20% + Nombre 80% ; (der) Precio Base */}
                                   <View
                                     style={[
                                       styles.rowContainer,
@@ -2482,47 +2570,32 @@ export function OperationalLayer({
                                         isMobile && { width: "100%" },
                                       ]}
                                     >
-                                      <ThemedText
-                                        type="body2"
-                                        style={[
-                                          styles.label,
-                                          { color: colors.text, marginTop: 16 },
-                                        ]}
-                                      >
-                                        {O?.nameLabel ?? "Nombre *"}
-                                      </ThemedText>
-                                      <InputWithFocus
-                                        containerStyle={[
-                                          styles.inputContainer,
-                                          {
-                                            backgroundColor:
-                                              colors.filterInputBackground,
-                                            borderColor: colors.border,
-                                          },
-                                        ]}
-                                        primaryColor={colors.primary}
-                                      >
-                                        <TextInput
-                                          style={[
-                                            styles.input,
-                                            { color: colors.text },
-                                          ]}
-                                          placeholder={
-                                            O?.namePlaceholder ??
-                                            "Ej: Habitación estándar"
-                                          }
-                                          placeholderTextColor={
-                                            colors.textSecondary
-                                          }
-                                          value={offeringForm.name}
-                                          onChangeText={(val) =>
-                                            setOfferingForm((prev) => ({
-                                              ...prev,
-                                              name: val,
-                                            }))
-                                          }
-                                        />
-                                      </InputWithFocus>
+                                      <SplitInput
+                                        label={O?.nameLabel ?? "Nombre *"}
+                                        labelStyle={styles.label}
+                                        wrapperStyle={{ marginTop: 16 }}
+                                        leftPlaceholder="Codigo"
+                                        rightPlaceholder={
+                                          O?.namePlaceholder ??
+                                          "Nombre"
+                                        }
+                                        leftValue={offeringForm.code}
+                                        rightValue={offeringForm.name}
+                                        onChangeLeft={(val) =>
+                                          setOfferingForm((prev) => ({
+                                            ...prev,
+                                            code: formatCode(val),
+                                          }))
+                                        }
+                                        onChangeRight={(val) =>
+                                          setOfferingForm((prev) => ({
+                                            ...prev,
+                                            name: val,
+                                          }))
+                                        }
+                                        leftTopCaption="Codigo"
+                                        disabled={saving}
+                                      />
                                     </View>
                                     <View
                                       style={[
@@ -2530,34 +2603,60 @@ export function OperationalLayer({
                                         isMobile && { width: "100%" },
                                       ]}
                                     >
-                                      <ThemedText
-                                        type="body2"
-                                        style={[
-                                          styles.label,
-                                          { color: colors.text, marginTop: 16 },
-                                        ]}
-                                      >
-                                        {O?.basePriceLabel ?? "Precio Base *"}
-                                      </ThemedText>
-                                      <CurrencyInput
-                                        value={priceForm.basePrice}
-                                        onChangeText={(val) =>
-                                          setPriceForm((prev) => ({
-                                            ...prev,
-                                            basePrice: val,
-                                          }))
-                                        }
-                                        currency={
-                                          commercialProfile?.currency || "USD"
-                                        }
-                                        disabled={saving}
-                                      />
+                                      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16 }}>
+                                        <ThemedText
+                                          type="body2"
+                                          style={[styles.label, { color: colors.text }]}
+                                        >
+                                          {O?.basePriceLabel ?? "Precio Base *"}
+                                        </ThemedText>
+                                      </View>
+                                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                        <View style={{ flex: 1 }}>
+                                          <CurrencyInput
+                                            value={priceForm.basePrice}
+                                            onChangeText={(val) =>
+                                              setPriceForm((prev) => ({
+                                                ...prev,
+                                                basePrice: val,
+                                              }))
+                                            }
+                                            currency={
+                                              commercialProfile?.currency || "USD"
+                                            }
+                                            disabled={saving}
+                                          />
+                                        </View>
+                                        <Tooltip text={(t as any).promotions?.promotionsButton || "Promociones"} position="left">
+                                          <TouchableOpacity
+                                            onPress={async () => {
+                                              const oid = expandedOfferingId || undefined;
+                                              setPromotionsOfferingId(oid);
+                                              setPromotionsScope("specific");
+                                              if (oid) {
+                                                try {
+                                                  const { apiClient: api } = await import("@/src/infrastructure/api");
+                                                  const res = await api.get<any>(`/commercial/offerings/${oid}`);
+                                                  const raw = res.data?.promotions || res.data?.data?.promotions || [];
+                                                  setPromotionsPreloaded(Array.isArray(raw) ? raw.filter((p: any) => p.scope === "specific") : []);
+                                                  const o = offerings.find((x) => x.id === oid);
+                                                  setPromotionsOfferingLabel(o ? `${o.code || ""} — ${o.name}` : "");
+                                                } catch { setPromotionsPreloaded([]); setPromotionsOfferingLabel(""); }
+                                              }
+                                              setPromotionsModalVisible(true);
+                                            }}
+                                            style={{ padding: 4 }}
+                                          >
+                                            <Ionicons name="pricetag-outline" size={22} color={isDark ? colors.primaryDark : colors.primary} />
+                                          </TouchableOpacity>
+                                        </Tooltip>
+                                      </View>
                                     </View>
                                   </View>
 
-                                  {/* Descripción y Atributos 50-50 */}
-                                  <View style={[styles.rowContainer, { marginTop: 16 }]}>
-                                    <View style={styles.halfWidth}>
+                                  {/* Descripción y Atributos 50-50 (columna en móvil) */}
+                                  <View style={[styles.rowContainer, isMobile && styles.rowContainerMobile, { marginTop: 16 }]}>
+                                    <View style={[styles.halfWidth, isMobile && styles.halfWidthMobile]}>
                                       <ThemedText
                                         type="body2"
                                         style={[
@@ -2603,7 +2702,7 @@ export function OperationalLayer({
                                         />
                                       </InputWithFocus>
                                     </View>
-                                    <View style={styles.halfWidth}>
+                                    <View style={[styles.halfWidth, isMobile && styles.halfWidthMobile]}>
                                       <AttributesEditor
                                         key={expandedOfferingId ?? "new"}
                                         value={offeringForm.properties}
@@ -3262,5 +3361,25 @@ export function OperationalLayer({
         </Modal>
       </View>
     </ScrollView>
+
+    <ConditionsModal
+      visible={conditionsModalVisible}
+      onClose={() => { setConditionsModalVisible(false); setConditionsOfferingId(undefined); setConditionsPreloaded(undefined); }}
+      companyId={company?.id || ""}
+      scope={conditionsScope}
+      offeringId={conditionsOfferingId}
+      offeringLabel={conditionsOfferingLabel}
+      preloadedConditions={conditionsPreloaded}
+    />
+    <PromotionsModal
+      visible={promotionsModalVisible}
+      onClose={() => { setPromotionsModalVisible(false); setPromotionsOfferingId(undefined); setPromotionsPreloaded(undefined); }}
+      companyId={company?.id || ""}
+      scope={promotionsScope}
+      offeringId={promotionsOfferingId}
+      offeringLabel={promotionsOfferingLabel}
+      preloadedPromotions={promotionsPreloaded}
+    />
+    </>
   );
 }

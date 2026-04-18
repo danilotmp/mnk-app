@@ -225,8 +225,8 @@ const createWizardStepperStyles = (colors: any) => {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 16,
-      paddingHorizontal: 8,
+      paddingVertical: 15,
+      paddingHorizontal: 0,
     },
     stepContainer: {
       flex: 1,

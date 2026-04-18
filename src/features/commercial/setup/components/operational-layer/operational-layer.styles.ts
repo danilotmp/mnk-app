@@ -90,6 +90,10 @@ export const styles = StyleSheet.create({
     gap: 12,
     minWidth: 0,
   },
+  listItemDetailRowMobile: {
+    flexDirection: "column",
+    gap: 8,
+  },
   listItemMobile: {
     alignItems: "flex-start",
   },
@@ -109,9 +113,32 @@ export const styles = StyleSheet.create({
     marginLeft: 20,
     marginRight: 20,
   },
+  expandableFormRowMarginsMobile: {
+    marginLeft: 10,
+    marginRight: 10,
+  },
   /** Contenedor con hijos alineados al final */
   alignEnd: {
     alignItems: "flex-end",
+  },
+  propertiesChipsRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingRight: 8,
+  },
+  propertyChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    maxWidth: 180,
+  },
+  propertyChipMore: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontWeight: "600",
   },
   listItemContentMobile: {
     flex: 1,
@@ -129,6 +156,9 @@ export const styles = StyleSheet.create({
     gap: 8,
     justifyContent: "flex-end",
   },
+  listItemRightMobile: {
+    alignSelf: "flex-end",
+  },
   formCard: {
     padding: 16,
     marginTop: 8,
@@ -139,6 +169,9 @@ export const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     gap: 16,
+  },
+  accordionCardMobile: {
+    paddingHorizontal: 8,
   },
   saveAllContainer: {
     marginTop: 16,
@@ -187,8 +220,28 @@ export const styles = StyleSheet.create({
     gap: 16,
     alignItems: "flex-start",
   },
+  rowContainerMobile: {
+    flexDirection: "column",
+    gap: 12,
+  },
   halfWidth: {
     flex: 1,
+    minWidth: 0,
+  },
+  halfWidthMobile: {
+    flex: 0,
+    flexBasis: "auto",
+    width: "100%",
+  },
+  codeFieldWidth: {
+    flexBasis: "20%",
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  nameFieldWidth: {
+    flexBasis: "80%",
+    flexGrow: 1,
+    flexShrink: 1,
   },
   typeSelector: {
     flexDirection: "row",
@@ -230,15 +283,22 @@ export const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
   },
+  statusOptionsContainerMobile: {
+    gap: 4,
+  },
   /** En web: los botones de estado cubren el ancho disponible */
   statusOptionsContainerWeb: {
     flex: 1,
   },
   statusOption: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
+  },
+  statusOptionMobile: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   /** En web: cada opción de estado crece para cubrir el ancho */
   statusOptionWeb: {
