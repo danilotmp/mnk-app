@@ -18,54 +18,70 @@ export const SYSTEM_GUIDELINE_NAMES = [
   },
   {
     title: "GLOSARIO",
-    usage: "Equivalencias para búsqueda de productos (formato: clave: valor1, valor2, una por línea)",
+    usage:
+      "Equivalencias para búsqueda de productos (formato: clave: valor1, valor2, una por línea)",
     defaultContent:
       "habitacion: habitación, habitaciones, room, rooms\ndisponibilidad: disponibilidad, fechas, reservar",
   },
   {
     title: "PLACEHOLDER_LISTA_PRODUCTOS",
-    usage: "Formato para mostrar varias opciones (lista sin precios, etapa DESCUBRIMIENTO)",
+    usage:
+      "Formato para mostrar varias opciones (lista sin precios, etapa DESCUBRIMIENTO)",
     defaultContent:
       "{número opción} *{nombre del producto}*\n_{descripción corta}_",
   },
   {
     title: "PLACEHOLDER_DETALLE_PRODUCTO",
-    usage: "Formato para mostrar UN producto seleccionado (con precio, etapa EVALUACION)",
+    usage:
+      "Formato para mostrar UN producto seleccionado (con precio, etapa EVALUACION)",
     defaultContent:
       "*{name}*\n_{description}_\n\n*Precio:* {price} USD\n\n*Notas:*\n- {condiciones relevantes}",
   },
   {
     title: "PLACEHOLDER_DATOS_PRECALIFICACION",
-    usage: "Datos a recopilar antes de la búsqueda (behavior PRE_COLLECT). Se concatenan al searchterm para filtrar resultados.",
+    usage:
+      "Datos a recopilar antes de la búsqueda (behavior PRE_COLLECT). Se concatenan al searchterm para filtrar resultados.",
     defaultContent:
       "*Fecha de llegada:*\n*Fecha de salida:*\n*Número de huéspedes:*",
   },
   {
     title: "PLACEHOLDER_DATOS_AGENDAMIENTO",
-    usage: "Datos a solicitar antes de formalizar (behavior COLLECT, etapa REQUISITOS)",
+    usage:
+      "Datos a solicitar antes de formalizar (behavior COLLECT, etapa REQUISITOS)",
     defaultContent: "*Cédula:*\n*Nombres Completos:*\n*Fecha y horario:*",
   },
   {
     title: "REQUISITOS_AGENDAMIENTO",
-    usage: "Política de confirmación: anticipo, comprobante, condiciones (etapa REQUISITOS/VALIDACION)",
+    usage:
+      "Política de confirmación: anticipo, comprobante, condiciones (etapa REQUISITOS/VALIDACION)",
     defaultContent:
       "Antes de agendar:\n1. Recopilar datos de {PLACEHOLDER_DATOS_AGENDAMIENTO}\n2. Solicitar selección de sucursal si hay varias\n3. Informar anticipo del 50% por transferencia\n4. Esperar comprobante del anticipo",
   },
   {
+    title: "SOLICITUD_ESPECIALISTA",
+    usage:
+      "Mensaje de derivación a especialista cuando no se encuentra el producto tras 2 intentos de búsqueda. Usa {DATOS_AGENDAMIENTO} para incluir los campos de agendamiento. Desactiva el bot y asigna a un especialista.",
+    defaultContent:
+      "No hemos encontrado lo que buscas en nuestro catálogo. Vamos a direccionar tu solicitud a uno de nuestros especialistas para brindarte una atención personalizada.\n\nPor favor, compártenos los siguientes datos:\n\n{DATOS_AGENDAMIENTO}\n\n_Un especialista se comunicará contigo a la brevedad._",
+  },
+  {
     title: "PLACEHOLDER_CONFIRMACION_AGENDAMIENTO",
-    usage: "Formato del mensaje de confirmación de cita/reserva (etapa CONFIRMACION/CIERRE)",
+    usage:
+      "Formato del mensaje de confirmación de cita/reserva (etapa CONFIRMACION/CIERRE)",
     defaultContent:
       "Tu {tipo_solicitud} ha sido confirmada:\n*Producto:* {nombre_producto}\n*Sucursal:* {sucursal}\n*Fecha:* {fecha}\n*Cliente:* {nombres}",
   },
   {
     title: "PLACEHOLDER_CONFIRMACION_COMPROBANTE",
-    usage: "Formato del mensaje al validar comprobante de pago (etapa CONFIRMACION)",
+    usage:
+      "Formato del mensaje al validar comprobante de pago (etapa CONFIRMACION)",
     defaultContent:
       "Hemos recibido tu comprobante:\n*Monto:* {monto}\n*Fecha:* {fecha}\n*Referencia:* {referencia}\n\n¿Los datos son correctos?",
   },
   {
     title: "INFORMACION_VENTA_PAGO",
-    usage: "Métodos de pago disponibles y condiciones (etapa REQUISITOS/VALIDACION)",
+    usage:
+      "Métodos de pago disponibles y condiciones (etapa REQUISITOS/VALIDACION)",
     defaultContent:
       "Efectivo: en el establecimiento. Transferencia: cuentas configuradas, enviar comprobante para confirmar.",
   },
@@ -83,13 +99,15 @@ export const SYSTEM_GUIDELINE_NAMES = [
   },
   {
     title: "BUSQUEDA_OFERTA_PRECIOS",
-    usage: "Comportamiento al ofrecer productos y precios (etapa DESCUBRIMIENTO)",
+    usage:
+      "Comportamiento al ofrecer productos y precios (etapa DESCUBRIMIENTO)",
     defaultContent:
       'Ofrece productos del catálogo configurado. NUNCA digas "no tengo" o "no hay". Si algo no está, solicita más detalle para ayudarle.',
   },
   {
     title: "NOTAS_AGENDAMIENTO",
-    usage: "(Opcional) Notas de procedimiento para el cierre (llegada, preparación)",
+    usage:
+      "(Opcional) Notas de procedimiento para el cierre (llegada, preparación)",
     defaultContent:
       "Recuerda la hora acordada y la dirección del establecimiento. Llegada unos minutos antes si aplica.",
   },
@@ -101,5 +119,6 @@ export const SYSTEM_GUIDELINE_NAMES = [
       '{"DESCUBRIMIENTO":{"tipo":"RECETAS","obligatorio":false,"mnsError":"No hemos logrado reconocer el documento. Por favor digita su contenido."},"PAGOS":{"tipo":"TRANSFERENCIA","obligatorio":true,"validacion":true,"mnsError":"No se ha reconocido el comprobante. Un especialista lo revisará."}}',
   },
 ] as const;
+
 
 export type SystemGuidelineName = (typeof SYSTEM_GUIDELINE_NAMES)[number];
