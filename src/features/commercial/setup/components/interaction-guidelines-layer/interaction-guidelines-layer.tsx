@@ -34,7 +34,7 @@ import {
     View,
 } from "react-native";
 
-import { SYSTEM_GUIDELINE_NAMES } from "@/src/config/system-guidelines.config";
+import { INTERACTIVE_ELEMENTS_HELP, SYSTEM_GUIDELINE_NAMES } from "@/src/config/system-guidelines.config";
 
 interface InteractionGuidelinesLayerProps {
   onProgressUpdate?: (progress: number) => void;
@@ -90,6 +90,7 @@ export function InteractionGuidelinesLayer({
 
   const [showSystemNamesModal, setShowSystemNamesModal] = useState(false);
   const [usageModalText, setUsageModalText] = useState<string | null>(null);
+  const [showInteractiveHelpModal, setShowInteractiveHelpModal] = useState(false);
 
   // Nombres del sistema que aún no están usados por directrices existentes
   const availableSystemNames = React.useMemo(() => {
@@ -384,26 +385,37 @@ export function InteractionGuidelinesLayer({
         {/* Lista de directrices */}
         {guidelines.length > 0 && (
           <Card variant="elevated" style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="list-outline" size={24} color={colors.primary} />
-              <ThemedText type="h4" style={styles.sectionTitle}>
-                {L?.sectionTitleConfigured ?? "Directrices Configuradas"} (
-                {(() => {
-                  const filteredGuidelines = searchFilter.trim()
-                    ? guidelines.filter((g) => {
-                        const searchLower = searchFilter.toLowerCase().trim();
-                        const title = (g.title || "").toLowerCase();
-                        const description = (g.description || "").toLowerCase();
-                        return (
-                          title.includes(searchLower) ||
-                          description.includes(searchLower)
-                        );
-                      })
-                    : guidelines;
-                  return filteredGuidelines.length;
-                })()}
-                )
-              </ThemedText>
+            <View style={[styles.sectionHeader, { justifyContent: "space-between" }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+                <Ionicons name="list-outline" size={24} color={colors.primary} />
+                <ThemedText type="h4" style={styles.sectionTitle}>
+                  {L?.sectionTitleConfigured ?? "Directrices Configuradas"} (
+                  {(() => {
+                    const filteredGuidelines = searchFilter.trim()
+                      ? guidelines.filter((g) => {
+                          const searchLower = searchFilter.toLowerCase().trim();
+                          const title = (g.title || "").toLowerCase();
+                          const description = (g.description || "").toLowerCase();
+                          return (
+                            title.includes(searchLower) ||
+                            description.includes(searchLower)
+                          );
+                        })
+                      : guidelines;
+                    return filteredGuidelines.length;
+                  })()}
+                  )
+                </ThemedText>
+              </View>
+              <TouchableOpacity
+                  onPress={() => setShowInteractiveHelpModal(true)}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4, paddingHorizontal: 8 }}
+                >
+                  <Ionicons name="help-circle-outline" size={18} color={actionIconColor} />
+                  <ThemedText type="caption" style={{ color: actionIconColor, fontWeight: "500" }}>
+                    Botones interactivos
+                  </ThemedText>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.listContainer}>
@@ -1386,6 +1398,96 @@ export function InteractionGuidelinesLayer({
           )}
         </View>
       </View>
+
+      {/* Modal: ayuda de elementos interactivos (fuera del Card para evitar problemas de overflow en web) */}
+      <Modal
+        visible={showInteractiveHelpModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInteractiveHelpModal(false)}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: colors.overlay,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+          onPress={() => setShowInteractiveHelpModal(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: colors.surfaceVariant,
+              borderRadius: 12,
+              padding: 24,
+              maxWidth: 560,
+              width: "100%",
+              maxHeight: "85%",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
+              <ThemedText type="h4" style={{ flex: 1 }}>Elementos interactivos en directrices</ThemedText>
+              <TouchableOpacity onPress={() => setShowInteractiveHelpModal(false)}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {INTERACTIVE_ELEMENTS_HELP.map((section, sIdx) => (
+                <View key={sIdx} style={{ marginBottom: 20 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <Ionicons name={section.icon} size={18} color={colors.primary} />
+                    <ThemedText type="body1" style={{ fontWeight: "700", color: colors.text }}>
+                      {section.title}
+                    </ThemedText>
+                  </View>
+                  {section.subtitle && (
+                    <ThemedText type="caption" style={{ color: colors.textSecondary, marginBottom: 8, marginLeft: 26 }}>
+                      {section.subtitle}
+                    </ThemedText>
+                  )}
+                  {section.items.map((item, iIdx) => (
+                    <View key={iIdx} style={{ marginLeft: 26, marginBottom: 6 }}>
+                      <View style={{
+                        backgroundColor: colors.primary + "12",
+                        borderRadius: 6,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        alignSelf: "flex-start",
+                        marginBottom: 2,
+                      }}>
+                        <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "600", fontFamily: "monospace" }}>
+                          {item.syntax}
+                        </ThemedText>
+                      </View>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary, lineHeight: 18 }}>
+                        {item.description}
+                      </ThemedText>
+                    </View>
+                  ))}
+                  {"notes" in section && section.notes && (section.notes as readonly string[]).map((note, nIdx) => (
+                    <View key={nIdx} style={{ flexDirection: "row", marginLeft: 26, marginTop: 4, gap: 6 }}>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary }}>•</ThemedText>
+                      <ThemedText type="caption" style={{ color: colors.textSecondary, lineHeight: 18, flex: 1 }}>
+                        {note}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+            <Button
+              title="Entendido"
+              onPress={() => setShowInteractiveHelpModal(false)}
+              variant="outlined"
+              size="md"
+              style={{ marginTop: 16, alignSelf: "flex-end" }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }

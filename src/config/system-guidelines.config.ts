@@ -8,9 +8,9 @@ export const SYSTEM_GUIDELINE_NAMES = [
   {
     order: 1,
     title: "SALUDO",
-    usage: "Mensaje de bienvenida (etapa INICIO)",
+    usage: "Mensaje de bienvenida (etapa INICIO). Soporta botones interactivos con sintaxis {texto|ETAPA|respuesta}.",
     defaultContent:
-      "¡Hola! Te has comunicado con [nombre de la empresa]. ¿En qué podemos ayudarte?",
+      "¡Hola! Te has comunicado con [nombre de la empresa]. ¿En qué podemos ayudarte?\n\n{Servicios|SEARCH|¿Qué servicio te interesa?} {Información|CONSULTA_GENERAL|¿Qué información necesitas?} {Ayuda|RECOMENDACION|¿En qué podemos ayudarte?}",
   },
   {
     order: 2,
@@ -23,7 +23,7 @@ export const SYSTEM_GUIDELINE_NAMES = [
     order: 3,
     title: "GLOSARIO",
     usage:
-      "Equivalencias para búsqueda de productos (formato: clave: valor1, valor2, una por línea)",
+      "Equivalencias para búsqueda de productos (formato: clave: valor1, valor2, una por línea). Permite que los clientes busquen con palabras coloquiales y el sistema las traduzca a los términos técnicos del catálogo.",
     defaultContent:
       "habitacion: habitación, habitaciones, room, rooms\ndisponibilidad: disponibilidad, fechas, reservar",
   },
@@ -50,16 +50,16 @@ export const SYSTEM_GUIDELINE_NAMES = [
     usage:
       "Formato para mostrar varias opciones (lista sin precios, etapa DESCUBRIMIENTO)",
     defaultContent:
-      "{número opción} *{nombre del producto}*\n_{descripción corta}_",
+      "*{name}*\n_{description}_",
   },
   // ── 3. Evaluación del producto ──
   {
     order: 7,
     title: "PLACEHOLDER_DETALLE_PRODUCTO",
     usage:
-      "Formato para mostrar UN producto seleccionado (con precio, etapa EVALUACION)",
+      "Formato para mostrar UN producto seleccionado (con precio, etapa EVALUACION). Soporta {texto|urlImage} para enviar imagen y {texto|url} para botón de enlace.",
     defaultContent:
-      "*{name}*\n_{description}_\n\n*Precio:* {price} USD\n\n*Notas:*\n- {condiciones relevantes}",
+      "*{name}*\n_{description}_\n\n*Precio:* {prices.basePrice} USD\n\n*Notas:*\n{conditions}",
   },
   // ── 4. Agendamiento y requisitos ──
   {
@@ -132,17 +132,70 @@ export const SYSTEM_GUIDELINE_NAMES = [
     usage:
       "Mensaje de derivación a especialista cuando no se encuentra el producto tras 2 intentos de búsqueda. Usa {DATOS_AGENDAMIENTO} para incluir los campos de agendamiento. Desactiva el bot y asigna a un especialista.",
     defaultContent:
-      "No hemos encontrado lo que buscas en nuestro catálogo. Vamos a direccionar tu solicitud a uno de nuestros especialistas para brindarte una atención personalizada.\n\nPor favor, compártenos los siguientes datos:\n\n{DATOS_AGENDAMIENTO}\n\n_Un especialista se comunicará contigo a la brevedad._",
+      "No hemos encontrado lo que buscas en nuestro catálogo. Vamos a direccionar tu solicitud a uno de nuestros especialistas.\n\nPor favor, compártenos los siguientes datos:\n\n{DATOS_AGENDAMIENTO}\n\n_Un especialista se comunicará contigo a la brevedad._",
   },
   {
     order: 17,
     title: "CONTEXTUALIZADOR_DOCUMENTOS",
     usage:
-      "Configuración de análisis de documentos/imágenes por etapa (tipo, obligatorio, validacion, mnsError)",
+      'Configuración de análisis de documentos/imágenes por etapa (tipo, obligatorio, validacion, mnsError)',
     defaultContent:
       '{"DESCUBRIMIENTO":{"tipo":"RECETAS","obligatorio":false,"mnsError":"No hemos logrado reconocer el documento. Por favor digita su contenido."},"PAGOS":{"tipo":"TRANSFERENCIA","obligatorio":true,"validacion":true,"mnsError":"No se ha reconocido el comprobante. Un especialista lo revisará."}}',
   },
 ] as const;
 
 
+
 export type SystemGuidelineName = (typeof SYSTEM_GUIDELINE_NAMES)[number];
+
+/**
+ * Secciones de ayuda para elementos interactivos en directrices.
+ * Cada sección se renderiza como un bloque visual en el modal de ayuda.
+ */
+export const INTERACTIVE_ELEMENTS_HELP = [
+  {
+    icon: "information-circle-outline" as const,
+    title: "Regla principal",
+    items: [
+      { syntax: "{campo}", description: "Se reemplaza por el valor real (nombre, precio, etc.)" },
+      { syntax: "{texto|acción}", description: "Se convierte en un botón o acción interactiva" },
+    ],
+  },
+  {
+    icon: "radio-button-on-outline" as const,
+    title: "Botones de respuesta rápida",
+    subtitle: "Máximo 3 botones. Si hay más, se convierten en lista automáticamente.",
+    items: [
+      { syntax: "{Texto visible|ETAPA_DESTINO|Respuesta del bot}", description: "Sintaxis general" },
+      { syntax: "{Reservar|SEARCH|¿Qué deseas reservar?}", description: "Ejemplo: botón que lleva a búsqueda de productos" },
+    ],
+    notes: [
+      "Etapas disponibles: SEARCH (productos), CONSULTA_GENERAL (info), RECOMENDACION (ayuda)",
+      "Si el cliente escribe texto libre en vez de tocar un botón, el flujo continúa normalmente",
+    ],
+  },
+  {
+    icon: "image-outline" as const,
+    title: "Imagen del producto",
+    items: [
+      { syntax: "{Texto|urlImage}", description: "Sintaxis" },
+      { syntax: "{Ver imagen|urlImage}", description: "Ejemplo: envía la imagen del producto como adjunto en WhatsApp" },
+    ],
+  },
+  {
+    icon: "link-outline" as const,
+    title: "Botón de enlace",
+    items: [
+      { syntax: "{Texto|url}", description: "Sintaxis" },
+      { syntax: "{Más detalles|url}", description: "Ejemplo: abre un enlace externo al tocar el botón" },
+    ],
+  },
+  {
+    icon: "list-outline" as const,
+    title: "Lista desplegable dinámica",
+    items: [
+      { syntax: "[{campo.display|campo.valor}]", description: "Sintaxis" },
+      { syntax: "[{branches.name|branches.code}]", description: "Ejemplo: genera un menú con las sucursales del sistema" },
+    ],
+  },
+] as const;

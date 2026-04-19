@@ -139,7 +139,7 @@ export const AppConfig = {
 
 // Re-export: Nombres predefinidos de directrices del sistema (IA).
 // Ubicación: src/config/system-guidelines.config.ts
-export { SYSTEM_GUIDELINE_NAMES } from './system-guidelines.config';
+export { INTERACTIVE_ELEMENTS_HELP, SYSTEM_GUIDELINE_NAMES } from './system-guidelines.config';
 
 // Configuración específica por plataforma
 export const PlatformConfig = {
